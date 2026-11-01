@@ -24,7 +24,7 @@ steered, and no group here ran from New Game.
 | a03c_03 | end position good, AREA04 sub 1 loads | end block: health 58 for 56 |
 | a03d_00 | **passes** (chain and card) | the seal [23] |
 | a03d_01 | **passes** from its card (door [24], AREA04 sub 1's load); the chain a03d, which runs on from a03d_00, fails it: the player is bitten at the door and door [24] is not opened | |
-| a04c_00 | fail-stop | see "the held face" |
+| a04c_00 | end position good | runs through the held face to the end; health 44 by a low byte (D_0081085A) |
 | a04c_01 | not passed | the creatures kill the player: superseded by a04d_01 |
 | a04c_02 | not re-run since AREA07's assets came in | it played to the load before |
 | a04d_00 | **passes** (chain and card) | 0x825040's polygon, script 0x829020 (8,155 frames), the items |
@@ -107,10 +107,13 @@ in (3, 1) and (4, 1).
   logic runs.
 - **001C81C0 has no oracle** of its own; its parts are em_pose_host's (001C8480,
   001C8F10, 001C90D0, 001C92C0, 001CA0A0, 001CA1C0, proven there), the loop is new.
-- **The held face** (a04c_00, fail-stop): in AREA04 sub 1's event with the player at
-  infection 100 (mode 1), 001CB3C0 of the player faults at 001D3F08: the face a script
-  holds is not in the regions. It stays a fail-stop; a04d_00 (infection 85) does not
-  reach it. A run at infection 100 stops there.
+- **The held face** (a04c_00): in AREA04 sub 1's event with the player at infection 100
+  (+0x2FF 0x40), 001B81D0 holds D_0028A490 row 0x1B and 001CB3C0 reads it by address.
+  The retained resources held rows 0x18 and 0x19 only, so 001D3F08 faulted.
+  `tools/export_coat_face.py` now adds rows 0x1A and 0x1B too (extract/chunk03 f18_id1a,
+  f19_id1b, equal to RAM at the table's words in the a04c_00 fork capture); run it once
+  on assets/scene_snow/roger/resources.emrs. The texels of these faces are not compared
+  with an original frame.
 - a03b_01's crawl, the chains a03b and a04c (they stop where the single beats stop).
 - 0019DB50's no-span path (the original walks its caller's registers) returns -1, as
   0019D770 does.

@@ -54,7 +54,8 @@ heading and action are compared.
   battery page; a13c_00 ends with the recorded charge.
 - **The player's face in the coat**: 001B81D0 picks D_0028A490 row 0x19 while
   +0x2FF is 0x3E; `tools/export_coat_face.py` adds extract/chunk03/f17_id19.bin
-  to the retained resources (RAM equals the file in the fork capture).
+  (and rows 0x1A, 0x1B, docs/AREA03X_PORT.md) to the retained resources (RAM equals
+  the file in the fork capture).
 - **The menu player in the coat**: 0020E6F0 binds D_0028A588 with D_00810C60 = 1;
   `tools/export_status_coat.py`, em_status_models load_coat (optional: without the
   files such a page faults at 001CA6E0). **Card-only**: no fork capture shows the
