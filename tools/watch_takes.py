@@ -36,7 +36,8 @@ TAKES = ROOT.parent / 'Extermination/build/human_play'
 OUT = ROOT / 'build/takes'
 BIN = ROOT / 'build/extermination'
 COLS = ('step counter mv ph btn lx ly rx ry area sub entry bd8 s8d t9 tb x y z yaw seg off cap af').split()
-HEADER = ['# EMREC 1', '# source ps2-takes', '# mode recording', '# tick_hz 59.94', '#cols ' + ' '.join(COLS)]
+HEADER = ['# EMREC 1', '# source ps2-takes', '# mode recording', '# area0 world', '# tick_hz 59.94',
+          '#cols ' + ' '.join(COLS)]
 SAME = 0.01             # position difference a float print can leave
 
 

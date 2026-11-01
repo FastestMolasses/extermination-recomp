@@ -10,7 +10,10 @@
  *
  * Sync phase of a tick, from the state the tick starts from (the state the
  * original shows at its main-loop top 0x001AAF28):
- *   T  title / front end: D_00810700 (area) == 0
+ *   T  title / front end: D_00810700 (area) == 0. A recording marked "# area0
+ *      world" (the user's takes) keeps AREA00's own play out of it: there the
+ *      title is area 0 with the slot-0 task's +9 not 5, its +0xB zero and the
+ *      world-frame selector clear
  *   L  load: D_00275BD8 != 0 (001ADF50 / 001AD4E0 set it and wait for 0)
  *      or the slot-0 task's +9 == 5 (001AD250's load state, which also
  *      covers the load veil's tail after the busy byte clears)
@@ -64,6 +67,7 @@ static struct {
     uint32_t movie_index;
     long max_overrun;
     int done;
+    int area0_world;
     /* live segment tracking (record and playback) */
     char prev_phase;
     uint32_t cur_seg;  /* playback: recorded segment; record: live count - 1 */
@@ -83,7 +87,8 @@ static struct {
 static char live_phase(const EmSceneState *st)
 {
     const EmTask *t0 = em_task_slot(0);
-    if (st->d810700 == 0) return 'T';
+    if (st->d810700 == 0 && !(s.area0_world && t0 && (t0->user[1] == 5 || t0->user[3] || st->spad3B8D)))
+        return 'T';
     if (st->d275BD8 || (t0 && t0->user[1] == 5)) return 'L';
     if (st->spad3B8D) return 'C';
     return 'P';
@@ -139,6 +144,7 @@ static int load_recording(const char *path)
         if (line[0] == '#') {
             if (!strncmp(line, "# " REC_MAGIC, strlen("# " REC_MAGIC))) magic = 1;
             if (!strncmp(line, "#cols ", 6)) cols = !strncmp(line + 6, REC_COLS, strlen(REC_COLS));
+            if (!strncmp(line, "# area0 world", 13)) s.area0_world = 1;
             continue;
         }
         unsigned step, counter, btn, lx, ly, rx, ry;
