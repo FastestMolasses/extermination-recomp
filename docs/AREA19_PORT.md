@@ -32,10 +32,10 @@ No row comparison has been made for AREA19 yet: nothing here is row-exact.
 | a19d_12, 13, 14 | cards start in mid-air on a bar; they need the chain, and the chain does not reach them |
 | a19d_15 | the latch runs (kind 0, 0021FB40 then 0021FED0); ends on the recording's block and position, past the dropped quad |
 
-20 of 34 beats pass alone; no beat stops at a fault any more. Chains, as last run
-before the EFU drop below: a19 passes a19_00 and a19_01, then a19_02's infection byte
-differs; a19b and a19c stopped at the streak quad in their first beats (not re-run);
-a19d passes a19d_00, takes the ladder and the ceiling, and the player dies there at
+20 of 34 beats pass alone; no beat stops at a fault any more. Chains: a19 passes a19_00
+and a19_01, then a19_02's infection byte differs; a19b (2026-11-01) runs past the streak
+quad, a19b_01 as alone, a19b_02 stalls at the ladder's bites; a19c (2026-11-01) runs
+through a19c_04 with vitals differing and stalls in a19c_05; a19d passes a19d_00, takes the ladder and the ceiling, and the player dies there at
 a19d_01..02 (bites the recording did not take), so it never reaches a19d_11. a13_05 ends in AREA19, and
 a15_00, a15b_00 .. a15b_04 run through AREA15's doors into it (all pass).
 
@@ -137,6 +137,23 @@ behaviour defects until a row comparison says so.
    P = 0 at each zero and compares the kicked packets with that primitive's rows taken
    out (every head on the plane, one head at the start and in the middle of a batch,
    a zero screen length).
-2. **Not drawn**: 001CB1F0, 001CB130, 001CB060, the tendril field's and the worms'
-   draw methods, whose VU1 programs have no translation; reported once.
+2. **Not drawn**: 001CB1F0, 001CB130, 001CB060, the draw methods of the tendril pieces
+   (001546C0 -> 00154F00, also AREA03, AREA04 sub 1, and AREA08's and AREA07's "boxes")
+   and the worms; reported once; class 6's 001CB2B0 (AREA15 sub 1's [3]) is their
+   sibling. Letting them run stops at once at 001C7420 on channel 3 from this path. What
+   a lane needs, read from the original (2026-11-01): the three VU1 programs read the
+   object kernel's vertex blocks (32 vertices, 4 qwords each, as em_vu1_object_kernel.h)
+   and kick one 32-vertex packet per batch from the tag at dmem 1020, with no MSCNT
+   entry. Position, CLIP window, ADC bit, Q and fog are the kernel's. Only ST and colour
+   differ:
+   - kind 10, D_0023D4D0 (001D42E0, TEX0 0x2004818599422020): ST = (rotated normal + 1)
+     / 2, a sphere map; RGB = dmem 1013's, A = 20 + 1013.w * position y, capped at 128.
+   - kind 9, D_0023D0C0 (001CB070 -> 001D40E0; class 6 uses it through 001D4440): the
+     same ST; colour = dmem 1013 as it stands; a texture and palette upload first.
+   - kind 8, D_0023CC50 (001D3F60): ST from the position pushed 0.03 along the normal,
+     projected, as ((x - 1792) / 512, (y - 1936) / 224): it samples D_00275678, a copy
+     of the screen, so it needs the frame copy (001D6B10, 001D6BA0) in the page order.
+   Each needs: the channel-3 calls on this path, the unit parsed as em_owner_draw_live's
+   class-2 unit is, the program's translation with chain_page_model's oracle, and a
+   renderer path for the texture. Kind 8 is the hardest (a copy of the frame so far).
 3. **a19b_00**, the arrival by the hatch [63], is the AREA13 side's.

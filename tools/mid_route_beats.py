@@ -346,15 +346,20 @@ RESTORE = {'a08_01', 'a08_02', 'a08_03', 'a08_04', 'a08_05', 'a08_06', 'a07_00',
            'a07b_03', 'a07b_04', 'a07b_05', 'a07b_06', 'a07b_07'}
 
 
+# The actions whose motion the stick or a script drives directly, where steering
+# only harms: hangs 32, 34, 40; the crawl 44, 45, 46 (a junction turns on the
+# stick); the slide 48; the scripted walks 62, 65.
+RAW_ACTIONS = (32, 34, 40, 44, 45, 46, 48, 62, 65)
+
+
 def raw_rows(traces, lead):
-    """The script frames of the recorded hangs (actions 32, 34, 40) and crawls (44, 45, 46): the stick
-    is the recorded one there, steering would turn the hand-over-hand or the junction."""
+    """The script frames of RAW_ACTIONS: the stick is the recorded one there."""
     out, base = [], traces[0]['first_counter']
     for t in traces:
         off = t['first_counter'] - base + lead
         at = None
         for r in t['rows']:
-            if r['m1F0'] in (32, 34, 40, 44, 45, 46, 48):
+            if r['m1F0'] in RAW_ACTIONS:
                 at = r['f'] if at is None else at
                 end = r['f']
             elif at is not None:

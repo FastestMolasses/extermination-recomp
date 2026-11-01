@@ -30,7 +30,7 @@ beats keep the default, so their results do not move.
 | a13c_01 (roof ladder, walkway) | `a13c_01` | **passes** (with a path edit, below) | not compared |
 | a13c_02 ([44], the battery page) | `a13c_02` | **passes** | 6..1176: 1,170 of 1,171, 1,170 consecutive |
 | a13c_03 (the blast, [45]) | `a13c_03` | **passes** | scene 464..1283: 817 of 820, 817 consecutive; the player stands still for most of it |
-| a13c_04 (g[3], the cure) | `a13c_04` | block equal (health 100, infection 0), 5.21 from the recorded end: the hit's slide comes at another time. **Fails the 4-unit rule** | not compared |
+| a13c_04 (g[3], the cure) | `a13c_04` | **passes** since the scripted actions 62, 65 run on the recorded stick (the steering dragged the hit's slide back): block equal (health 100, infection 0) | not compared |
 | a13c_05 (the boom, [7]'s scene) | `a13c_05` | **passes** (path edit, EM_START_AT_FINE=2) | 1140..1813: 0 identical, the player stands 0.3 from the recorded trigger spot; [7]'s script ran to its end |
 | a13c_06 (the south region) | `a13c_06` | **passes** | not compared |
 | a13d_00 .. a13d_05 | their cards | **pass** | not compared (steered) |
@@ -98,7 +98,6 @@ hold no such action), so the live path rests on their oracles.
 ## Open items
 
 - **a13b_05** and **a13b_s0**: steering misses (above). No fault.
-- **a13c_04**: the end position, 5.21.
 - **Row-exact**: nothing here runs from New Game. It waits for a chain lane; AREA19's
   host is on main, so the route can now cross a19_00 .. a19_02 into a13b_00.
 - **The menu player in the coat** has no original frame to compare.
