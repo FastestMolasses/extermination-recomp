@@ -27,12 +27,13 @@
  * results in the options' load row are 0 on both ports. The format word,
  * when asked (the card check 002280F0), is 1: the host card is a formatted
  * card, the only value on which the card check moves on (a fresh,
- * unformatted card in the fork answers 0, docs/SAVE_GAME.md section 6.2). A
- * free-count pointer (only the save mode's card check passes one, on a card
- * without the game's directory), a slot other than 0, a port other than
- * 0 / 1 or a missing directory faults: no recording shows what the card
- * server returns then. The store of a result goes to the caller (the binder
- * writes the words at the addresses the original passes).
+ * unformatted card in the fork answers 0, docs/SAVE_GAME.md section 6.2). The
+ * free count (only the save mode's card check asks it, on a card without the
+ * game's directory) is 8000, an empty formatted card's answer (docs/SAVE_GAME.md
+ * section 5). A slot other than 0, a port
+ * other than 0 / 1 or a missing directory faults: no recording shows what the
+ * card server returns then. The store of a result goes to the caller (the
+ * binder writes the words at the addresses the original passes).
  *
  * One storage for the card helpers' globals 001FE9A0 / 001FECB0 / 001FE920
  * / 001FE8D0 read and write: D_00275C58..D_00275C6F, D_00264E30..D_00264E3B
@@ -111,6 +112,14 @@ const char *em_memcard_root(void);
  * with any mode but 1 (read) faults, Mkdir included, so nothing on the card
  * is ever changed. Off by default; kept across em_memcard_reset. */
 void em_memcard_set_read_only(int on);
+/* A card that answers as the fork's fresh, unformatted cards did (test input
+ * only: em_frontend reads EM_TEST_CARD_FRESH=N where it reads
+ * EM_TEST_MEMCARD_ROOT; docs/SAVE_GAME.md section 6.2): `until` 0 off, 1 the
+ * whole run, else until `counter()` (0x70003B64) reaches it, then the normal
+ * card. GetInfo: type 2 (3 on a port whose Format has failed), free 0, format
+ * 0; Format: busy for 133 Syncs, then -2; a file command faults. Off by
+ * default; kept across em_memcard_reset. */
+void em_memcard_set_fresh(uint32_t until, uint32_t (*counter)(void));
 
 /* A word the SDK stores through a pointer its caller passed. */
 typedef struct {
@@ -133,8 +142,9 @@ uint8_t *em_memcard_globals(uint32_t address, uint32_t size);
  * (reported). */
 int em_memcard_00114988(int32_t port, int32_t slot, uint32_t type, uint32_t free_words, uint32_t format,
                         int32_t *v0, EmMemcardStore stores[3], unsigned *n);
-/* 00114848(mode, cmd, result): *v0 -1 (no command), 0 (busy; never at host
- * speed) or 1 (done: the command and result stored). 0, or -1 on a fault. */
+/* 00114848(mode, cmd, result): *v0 -1 (no command), 0 (busy: a fresh card's
+ * Format only; the command stored) or 1 (done: the command and result
+ * stored). 0, or -1 on a fault. */
 int em_memcard_00114848(int32_t mode, uint32_t cmd, uint32_t result, int32_t *v0, EmMemcardStore stores[2],
                         unsigned *n);
 
@@ -149,8 +159,12 @@ int em_memcard_00114630(const EmMemcardMemory *m, int32_t fd, uint32_t buf, int3
 int em_memcard_00114AC0(const EmMemcardMemory *m, int32_t port, int32_t slot, uint32_t name, int32_t mode,
                         int32_t max, uint32_t table, int32_t *v0);
 
-/* 1 when `target` is one of the eight libmc entries this module answers
- * (00114988, 00114848 and the six above), else 0. */
+/* 00114D18 Format(port, slot), command 0x10: only a fresh card answers it
+ * (em_memcard_set_fresh); on the host card, always formatted, it faults. */
+int em_memcard_00114D18(int32_t port, int32_t slot, int32_t *v0);
+
+/* 1 when `target` is one of the nine libmc entries this module answers
+ * (00114988, 00114848, the six above and 00114D18), else 0. */
 int em_memcard_is_sdk(uint32_t target);
 /* One libmc call by its original address with the argument registers'
  * 64-bit images a[0..na) (a 32-bit argument as the EE holds it); the words

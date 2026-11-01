@@ -59,8 +59,8 @@ from test_player_slide_reference import RETURN, STACK_TOP  # noqa: E402
 MASK, MASK64 = 0xFFFFFFFF, 0xFFFFFFFFFFFFFFFF
 MC = S.MC
 OPEN, MKDIR, CLOSE, WRITE, GETDIR, SYNC = S.OPEN, S.MKDIR, S.CLOSE, S.WRITE, S.GETDIR, S.SYNC
-GETINFO, READ = 0x114988, 0x114630
-SDK_ARGS = {GETINFO: 5, SYNC: 3, OPEN: 4, MKDIR: 3, CLOSE: 1, WRITE: 3, READ: 3, GETDIR: 6}
+GETINFO, READ, FORMAT = 0x114988, 0x114630, 0x114D18
+SDK_ARGS = {GETINFO: 5, SYNC: 3, OPEN: 4, MKDIR: 3, CLOSE: 1, WRITE: 3, READ: 3, GETDIR: 6, FORMAT: 2}
 LOAD = 0x2283B0                     # the card screen's load enumeration (state +2)
 DIR = 'BASCUS-97112-DS00-00'
 SLOTS = ['%s/EX_DATA.%02d' % (DIR, n) for n in range(5)]
@@ -93,6 +93,7 @@ def build_lib():
                                   C.POINTER(C.c_uint64)]
     m.em_memcard_set_root.argtypes = [C.c_char_p]
     m.em_memcard_set_read_only.argtypes = [C.c_int]
+    m.em_memcard_set_fresh.argtypes = [C.c_uint32, C.c_void_p]
     m.em_memcard_fault.restype = C.c_char_p
     m.em_memcard_is_sdk.argtypes = [C.c_uint32]
     return m
@@ -482,7 +483,40 @@ def unit(tmp):
     refused(WRITE, (0, 0xFFF0, 0x100), 'outside the caller', write_only)
     refused(OPEN, (0, 0, 0xFFFFFF00, 0x203), 'outside the caller')
     refused(0x114510, (0, 0, 0), 'not a libmc entry')
-    refused(GETINFO, (0, 0, TYPE, FREE_WORD, FORMAT_WORD), 'free count')
+    refused(FORMAT, (0, 0), 'formatted card')                # the host card never needs it
+    # The free count: an empty formatted card's answer (SAVE_GAME.md 5).
+    fresh(root)
+    assert do(GETINFO, 0, 0, TYPE, FREE_WORD, FORMAT_WORD) == 0 and sync() == (1, 0)
+    assert (m.word(TYPE), m.word(FREE_WORD), m.word(FORMAT_WORD)) == (2, 8000, 1)
+    # The fresh card (SAVE_GAME.md 6.2): the recorded answers, Format's 133
+    # busy Syncs and -2, type 3 on that port alone; file commands fault. With
+    # a counter it answers so until the counter reaches the value.
+    clock = [0]
+    counter = C.CFUNCTYPE(C.c_uint32)(lambda: clock[0])
+
+    def info(port=0):
+        assert do(GETINFO, port, 0, TYPE, FREE_WORD, FORMAT_WORD) == 0 and sync() == (1, 0)
+        return m.word(TYPE), m.word(FREE_WORD), m.word(FORMAT_WORD)
+    try:
+        LIB.em_memcard_set_fresh(1, None)
+        fresh(root)
+        assert info() == (2, 0, 0) and info(1) == (2, 0, 0)
+        assert do(FORMAT, 0, 0) == 0 and do(GETINFO, 0, 0, TYPE, 0, 0) == 0x10   # pending
+        for _ in range(133):
+            assert do(SYNC, 1, CMD, RES) == 0 and m.word(CMD) == 0x10
+        assert do(SYNC, 1, CMD, RES) == 1 and (m.word(CMD), m.word(RES) & MASK) == (0x10, MASK - 1)
+        assert do(SYNC, 1, CMD, RES) == -1
+        assert info() == (3, 0, 0) and info(1) == (2, 0, 0)
+        rc, _, fault = call(GETDIR, (0, 0, name(DIR), 0, 1, TABLE), rd, wr)
+        assert rc == -1 and 'fresh' in fault, fault
+        LIB.em_memcard_set_fresh(100, counter)
+        fresh(root)
+        clock[0] = 99
+        assert info() == (2, 0, 0)
+        clock[0] = 100
+        assert info() == (2, 8000, 1)
+    finally:
+        LIB.em_memcard_set_fresh(0, None)
     # A read-only card (EM_START_AT's start-point card, em_memcard_set_read_only):
     # the boot check makes nothing, reads answer, every other Open mode and Mkdir
     # fault, and the card's files are unchanged.

@@ -1301,6 +1301,13 @@ void em_frontend_install(void)
     const char *card = f.test || (play && play[0]) ? getenv("EM_TEST_MEMCARD_ROOT") : NULL;
     if (card && card[0])
         em_memcard_set_root(card);
+    /* Test input only, as EM_TEST_MEMCARD_ROOT: EM_TEST_CARD_FRESH=N, the
+     * host card answers as the fork's fresh, unformatted cards do until the
+     * counter 0x70003B64 reaches N (1: the whole run), for a take played on
+     * them (tools/watch_takes.py; docs/SAVE_GAME.md section 6.2). */
+    const char *fresh = f.test || (play && play[0]) ? getenv("EM_TEST_CARD_FRESH") : NULL;
+    if (fresh && fresh[0])
+        em_memcard_set_fresh((uint32_t)strtoul(fresh, NULL, 0), em_frame_counter);
     /* EM_START_AT=<name> (em_start_at.h, checked at launch): the start-point
      * card, read-only, for the whole run; the boot runs unpaced to the
      * loaded area's control. */

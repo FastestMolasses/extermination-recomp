@@ -30,7 +30,7 @@
  * name; a combination with EM_NEW_GAME=1 or a fixture that drives the pad
  * or chooses another route, input or card (EM_SKIP_STARTUP, any EM_*TEST
  * but EM_START_AT_TEST / EM_INPUT_TEST, any EM_CAPTURE*, EM_SCENE,
- * EM_TEST_MEMCARD_ROOT, EM_INPUT_RECORD / PLAY, the level smoke's and the
+ * EM_TEST_MEMCARD_ROOT, EM_TEST_CARD_FRESH, EM_INPUT_RECORD / PLAY, the level smoke's and the
  * other scripts' variables: fixture_set in em_start_at.c); a card that is missing or not the builder's (start.json
  * missing or not this name's, a file missing, extra or not the SHA-256
  * start.json records, a symlink, slot2 not empty, the slot not one checked
