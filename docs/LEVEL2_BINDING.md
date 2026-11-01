@@ -155,8 +155,7 @@ frame early); a01_s1, a01_s2, a01_s5 up to their pickup's page request
 (AREA01's page reads answer at host speed). LEVEL_SMOKE.md "a01_01..a01_07
 and the side beats".
 
-**Still faults:** accepting the save terminal (00225AC0: module 0x2A, the
-memory-card screens); the AREA00 arrival after the exit (level 3's assets
+**Still faults:** the AREA00 arrival after the exit (level 3's assets
 and binding). Not reached: a bug hit and the bug's reaction, deep water,
 the nest crate (north room), the conditional reaction effects and hang /
 ledge branches LEVEL2_CRASHES.md lists.
@@ -179,7 +178,8 @@ restored 0015C420 spawn store), canonical player targets and per-world
 hulls (001AA4E0's class-2 entries, 00185A10 / 00183C40), room transitions
 and the original interaction requests (00157F60, 001BB400 / 7C0 / 7F0,
 001B1DE0), the terminal's confirmation and No (0020CDC0 request 6,
-00225A00; Yes, phase 6 / 00225AC0, still faults), bug hits (001B41F0,
+00225A00; Yes, phase 6 / 00225AC0(1), bound since 2026-11-01, SAVE_GAME.md
+section 6.5), bug hits (001B41F0,
 001ED7A0, 001FC580) and the duct's frame-counter view (001C02E0). Its
 re-exports (streams, effect tables plus `export_area01_water_effects.py`,
 boot scripts) are in STARTUP.md.

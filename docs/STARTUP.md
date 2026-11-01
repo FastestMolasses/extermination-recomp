@@ -466,7 +466,7 @@ recording-derived and stay in the ignored `build/`.
   `EM_INPUT_TEST` (`EM_STARTUP_TEST`, the `EM_*_TEST` scripts such as
   `EM_AIM_FIRE_TEST`, `EM_NEW_GAME_STATE_TEST`, `EM_AUDIO_TEST`), every
   `EM_CAPTURE*` (the capture scripts inject input), `EM_SCENE`,
-  `EM_TEST_MEMCARD_ROOT`, `EM_INPUT_RECORD`, `EM_INPUT_PLAY`,
+  `EM_TEST_MEMCARD_ROOT`, `EM_TEST_CARD_FRESH`, `EM_INPUT_RECORD`, `EM_INPUT_PLAY`,
   `EM_STARTUP_MENU_WAIT`, the level smoke's `EM_LEVEL_SMOKE_UNTIL`,
   `EM_AIM_PAD_SCRIPT` and `EM_A01_ARRIVAL_TICKS`,
   `EM_AREA01_EXPLORE_SCRIPT` / `_PHASE`, `EM_CLIP_DEMO`,

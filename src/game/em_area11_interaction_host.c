@@ -798,6 +798,33 @@ static int pages_frame(void *context, EmStatusPagesFrame *frame)
     return frame->message && frame->c62 && frame->cb4 ? 1 : 0;
 }
 
+/* 0020CDC0 phase 6: 00225AC0(1), the save terminal's card screen, on the
+ * options binding (docs/SAVE_GAME.md section 6.5). */
+static int save_page(void *context, uint32_t *result)
+{
+    (void)context;
+    EmOptionsFrame frame;
+    if (!world.options) {
+        fprintf(stderr, "AREA11 interaction: 00225AC0(1) without the options binding (the status "
+                        "pages' data lacks its windows: python3 tools/export_status_pages.py)\n");
+        return 0;
+    }
+    return em_scene_bindings_options_frame(&frame) == 0 &&
+           em_options_live_00225AC0(world.options, &frame, 1, result) == 0;
+}
+
+static int save_render(void *context, EmGfx *gfx)
+{
+    (void)context;
+    return em_options_live_render(world.options, gfx);
+}
+
+static void save_release(void *context)
+{
+    (void)context;
+    em_options_live_deactivate(world.options);
+}
+
 static EmStatusRuntimeHooks native_status_hooks(void)
 {
     return (EmStatusRuntimeHooks){.read_inventory = read_inventory,
@@ -805,7 +832,8 @@ static EmStatusRuntimeHooks native_status_hooks(void)
         .frame_event = status_frame_event, .page_event = status_page_event,
         .sound = status_sound, .battery_page = battery_page, .hub_display = hub_display,
         .hub_models = hub_models, .hub_models_draw = hub_models_draw,
-        .message_words = message_words, .pages_frame = pages_frame};
+        .message_words = message_words, .pages_frame = pages_frame, .save_page = save_page,
+        .save_render = save_render, .save_release = save_release};
 }
 
 static int align_player(void *context, const float position[3])

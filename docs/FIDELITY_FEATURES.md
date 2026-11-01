@@ -2010,10 +2010,25 @@ layout.
   test-title-load-game`) is checked against the original code's own steps
   only (no recording loads a game), and loading from the options
   (bound since 2026-10-28) has not been run end to end;
-  saving (the first level has no save point) and
-  quitting with Yes are not recorded and stop the game or are untested; the
-  host card's format word (1) follows the code's test, its free count is
-  unanswered (no recording); pixels and sounds are not compared.
+  saving is off this route (the first level has no save point; it works from
+  AREA01's terminal on, see the entry on saving) and quitting with Yes is not
+  recorded and is untested; the host card's format word (1) follows the code's
+  test; pixels and sounds are not compared.
+
+**Saving at a terminal, as in the original**
+
+Yes at a save terminal's prompt opens the original's save screens: the memory
+card choice, the slot list and the confirmation, and the game writes the
+original's save directory (the header, the icon, icon.sys and the five slots)
+to a folder on the host, where LOAD GAME reads it back. The save's eight files
+are byte for byte the ones the original wrote on the same route in PCSX2,
+played from the user's own take (a formatted card, docs/SAVE_GAME.md section
+6.2). The screens run the original code's translation, frame for frame against
+the original code (`make test-options-card-live`). The user's take on an
+unformatted card plays through the same screens and leaves them on the original's
+tick. The card answers at host speed, so a save takes under a second where the
+original's took three, as the code-is-the-oracle rule has it. The screens' pixels
+are drawn by the GPU overlay as the load screen's, and are not compared.
 
 **Off the main route in the first level: the optional pickups, the other ladders, breaking boxes, the elevator back up, declining the panel and talking to Roger, as in the original**
 

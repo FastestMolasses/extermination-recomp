@@ -135,6 +135,10 @@ int fx_card(const char *root, const uint8_t *c58, const uint8_t *e30, const uint
     return 1;
 }
 
+/* The fresh, unformatted card (docs/SAVE_GAME.md section 6.2) for the flows
+ * after this call; 0 the host card. */
+void fx_fresh(int on) { em_memcard_set_fresh(on ? 1u : 0u, NULL); }
+
 int fx_globals(uint8_t *c58, uint8_t *e30, uint8_t *s840)
 {
     memcpy(c58, em_memcard_globals(0x00275C58u, 0x18), 0x18);

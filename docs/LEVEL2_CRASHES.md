@@ -323,8 +323,8 @@ The next status boundary is now bound. Request 6 borrows the actual live
 type-38 terminal fields, runs existing `00225A00` through the original
 memset boundary on scene-owned `00810040..00810113`, and enters the existing
 BATTERY confirmation via the original `0020CDC0` cold branch. Its default
-No selection and return use the existing page owner. Accepting still reaches
-unbound phase 6 / `00225AC0`; no card I/O or load-game state is provided.
+No selection and return use the existing page owner. Accepting reaches phase
+6 / `00225AC0(1)`, bound since 2026-11-01 (SAVE_GAME.md section 6.5).
 
 The canonical reset compares 48 original cases over 16 captures. ASan/UBSan
 checks exact aliases, bounds, lifetime, 256 actor types, signed costs and
@@ -545,7 +545,7 @@ level, whose 20 phases, side runs and damage runs pass unchanged.
 | `em_collision_world.c/.h` (**AREA11**) | per-world hull provider (`em_collision_world_bind_area_hulls`, cleared on unload, no fallback after a refusal); 001B1DE0 list push for slider/terminal owners |
 | `em_actor_collision.c/.h` (**AREA11**) | 001B1DE0's push split out of the class walk (same list, same order) |
 | `em_panel.c/.h` (**AREA11**) | one scalar owner for every 00157F60 model branch, shared by the AREA11 panel wrapper and the AREA01 terminal |
-| `em_status_page.c/.h` (**AREA11**) | request 6's cold entry (0020CDC0 case 0: 00225A00 reset, BATTERY); accepted phase 6 / 00225AC0 still faults |
+| `em_status_page.c/.h` (**AREA11**) | request 6's cold entry (0020CDC0 case 0: 00225A00 reset, BATTERY); accepted phase 6 / 00225AC0(1) (bound 2026-11-01, SAVE_GAME.md section 6.5) |
 | `em_area11_interaction_host.c` (**AREA11**) | the status page's reset event; request 6's 0020E060 reads through the live AREA01 terminal instead of the AREA11 panel |
 | `em_effects_live.c` (**AREA11**) | counted gap removed; 001EB7F0 / 001EC270 through em_area01_render_hud, 001ECB00 / 001ED7A0 through em_area00_hud |
 | `em_aim_fire_runtime.c` (**AREA11**) | target +34 reads and model regions for AREA01 targets (gated by the arrival scene); bug-hit cue through 001FC580's owner |
@@ -735,10 +735,8 @@ nothing). No fault.
 
 **Not reached, or still a fault when reached** (in order of how easily a
 player meets it):
-1. Accepting the save terminal's prompt: 00225AC0 (phase 6) loads screen
-   module 0x2A, the memory-card save screens; untranslated, it faults.
-   Needs a memory-card storage design (a user decision) and a recording
-   with a memory card.
+1. (Since closed: the save terminal's Yes, 00225AC0(1), saves on the host
+   card, SAVE_GAME.md section 6.5.)
 2. The level's exit: the AREA00 arrival (level 3) needs its world texture
    catalog, shadow receivers and binding (as chain C11 EXIT did for
    AREA01).

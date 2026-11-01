@@ -48,6 +48,14 @@ machine sets, handed to both sides) and 00225AC0's state 3, which returns
 the slot screen's result 2; the other LOAD GAME flows stop the frame after
 the Read (EM_TEST_FULL=1 runs every one to the end).
 
+The save mode (docs/SAVE_GAME.md section 6.5) the same way, from 00225AC0(1)'s
+card screen: saves to a new card (the free count, 001AF2C0, block_copy
+00121870, the scratchpad 0x70000000..C7F and the button masks equal every
+frame, the eight files equal at the end, EX.ico the recording's bytes against
+the EMSP's window), into a directory that exists, a declined confirmation, and
+the fresh card (em_memcard_set_fresh on both sides): the format prompt, No, and
+Yes with its failed Format, then Cross and Triangle out.
+
 Every flow on both recordings, about 12 s of CPU warm (30 s wall under
 load), 30 to 50 s more on a first run (it builds the fixture).
 """
@@ -73,6 +81,7 @@ from test_player_slide_reference import RETURN, STACK_TOP  # noqa: E402
 
 MASK = 0xFFFFFFFF
 MC = 0x810040
+SPAD, SPAD_SIZE = 0x70000000, 0xC80    # the bytes a save overwrites (docs/SAVE_GAME.md 2.1)
 OUT = ROOT / 'build' / 'options_card_live'
 EMSP = ROOT / 'assets/status_pages/status_pages.emsp'
 EMMD = ROOT / 'assets/message/message_data.emmd'
@@ -87,7 +96,7 @@ FRAMES = 600
 CFLAGS = ['-std=c11', '-O1', '-Wall', '-Wextra', '-Werror', '-ffp-contract=off', '-Isrc']
 MODULES = IH.MODULES        # the interaction host's options binding and everything it links
 EXPORTS = ['init', 'message_size', 'card', 'globals', 'memcard_fault', 'frame', 'read', 'seed', 'calls',
-           'trace']
+           'trace', 'fresh']
 
 
 def build_fixture():
@@ -120,6 +129,7 @@ def build_fixture():
     fx.fx_init.argtypes = [C.c_char_p, C.c_char_p]
     fx.fx_card.argtypes = [C.c_char_p, P8, P8, P8]
     fx.fx_globals.argtypes = [P8, P8, P8]
+    fx.fx_fresh.argtypes = [C.c_int]
     fx.fx_memcard_fault.restype = C.c_char_p
     fx.fx_frame.argtypes = [P8, C.c_uint32, P8, P8, P8, P8, P8, P16, C.POINTER(C.c_int16), C.c_uint8,
                             C.c_int16, C.c_uint16, C.c_uint16, C.c_uint16, C.c_uint16, C.c_uint8,
@@ -236,12 +246,12 @@ class Live:
         self.bufs = [self.settings, self.task, self.mc, self.progress, self.message, self.busy]
         self.ptrs = [(C.c_uint8 * len(b)).from_buffer(b) for b in self.bufs]
 
-    def frame(self, e74, e78):
+    def frame(self, e74, e78, mode):
         r = C.c_uint32(0)
         p = self.ptrs
         rc = self.fx.fx_frame(p[0], self.task_address, p[1], p[2], p[3], p[4], p[5], self.masks, self.offset,
                               self.read_phase, self.fade, self.held, e74, e78, self.pad_mode, self.pad_phase,
-                              self.b90, self.b93, 0, C.byref(r))
+                              self.b90, self.b93, mode, C.byref(r))
         return rc, r.value
 
     def own(self, address, size):
@@ -285,16 +295,28 @@ def flows():
         add(2, present=(2,), drop=('icon.sys',), goal={'err': 0x10})
         add(1, present=(2,), drop=('EX_DATA.03',), goal={'err': 0x40})             # one save file missing
         add('read', port=1, present=(0, 3), goal={'slot': 3})                      # rows with saves 0 and 3
+        # the save mode: a new directory, one that exists, a declined Yes
+        add('save', mode=1, present=None, goal={'slot': 0})
+        add('save', mode=1, present=None, port=1, goal={'slot': 2})
+        add('save', mode=1, present=(1, 3), goal={'slot': 1})                      # over a saved slot
+        add('save', mode=1, present=(1,), goal={'slot': 3})                        # an empty slot
+        add(2, mode=1, present=(1,), goal={'slot': 1, 'yes': False, 'then': 0x10})
+        # the fresh card: the format prompt's No, and its Yes (Format fails)
+        add(1, mode=1, present=None, fresh=1, goal={'format': False})
+        add(1, mode=1, present=None, fresh=1, goal={'err': 0x40})
+        add(2, mode=1, present=None, fresh=1, goal={'err': 0x10})
     return out
 
 
 def run_flow(fx, tmp, tag, beat, knobs, stats):
-    port, present = knobs.get('port', 0), knobs['present']
+    port, present, mode = knobs.get('port', 0), knobs['present'], knobs.get('mode', 2)
+    fx.fx_fresh(knobs.get('fresh', 0))
+    MH.LIB.em_memcard_set_fresh(knobs.get('fresh', 0), None)
     files = None if present is None else CS.card_files(beat, set(present), knobs.get('drop', ()))
     roots = [Path(tmp) / tag / side for side in ('oracle', 'live')]
     for r in roots:
         write_card(r, port, files)
-    b = CS.rec(2, port) + CS.helpers() + CS.records(beat, ()) + [(MC, 1, 1), (MC + 0x16, 0, 1)]
+    b = CS.rec(mode, port) + CS.helpers() + CS.records(beat, ()) + [(MC, 1, 1), (MC + 0x16, 0, 1)]
     ram = bytearray(R.IMAGES[beat][0])
     for at, v, size in b:
         ram[at:at + size] = (v & ((1 << 8 * size) - 1)).to_bytes(size, 'little')
@@ -308,6 +330,7 @@ def run_flow(fx, tmp, tag, beat, knobs, stats):
     assert fx.fx_card(str(roots[1]).encode(), *g) == 1, tag
     for a, n in OWN:                   # the binding's buffers start as the recording holds them
         assert fx.fx_seed(a, arr(bytes(ram[a:a + n])), n) == 0, hex(a)
+    assert fx.fx_seed(SPAD, arr(bytes(spad[:SPAD_SIZE])), SPAD_SIZE) == 0
     packet = ee.load(PACKET)
     goal = knobs['goal']
     then, confirming, reads, read_frame = None, False, 0, None
@@ -317,13 +340,13 @@ def run_flow(fx, tmp, tag, beat, knobs, stats):
             e74, e78 = (0, 0) if frame & 1 else (then, 0)
         for at, v, n in ((E74, e74, 2), (E78, e78, 2), (PACKET, packet, 4)):
             ee.save(at, v, n)
-        ee.r[4], ee.r[29], ee.r[31] = 0, STACK_TOP, RETURN
+        ee.r[4], ee.r[29], ee.r[31] = mode, STACK_TOP, RETURN
         calls0 = len(ee.calls)
         ee.trace = []
         ee.run(0x225AC0)
         want = ee.r[2] & MASK
         read_now = [c for c in ee.calls[calls0:] if c[0] == READ and c[1][1] == 0x810700]
-        rc, got = live.frame(e74, e78)
+        rc, got = live.frame(e74, e78, mode)
         assert rc == 0, (tag, 'the binding faulted', frame, fx.fx_memcard_fault())
         if read_now:
             # LOAD GAME's read of the slot into D_00810700 (all 0x640 bytes,
@@ -351,12 +374,14 @@ def run_flow(fx, tmp, tag, beat, knobs, stats):
         for a, n in OWN:
             assert live.own(a, n) == bytes(ee.mem[a:a + n]), (tag, frame, 'buffer', hex(a))
         assert bytes(live.progress) == bytes(ee.mem[0x810700:0x810D40]), (tag, frame, 'the progress block')
+        assert live.own(SPAD, SPAD_SIZE) == bytes(ee.spad[:SPAD_SIZE]), (tag, frame, 'the scratchpad')
+        assert bytes(live.masks) == bytes(ee.spad[0x3B74:0x3B84]), (tag, frame, 'the button masks')
         if read_frame is not None and not knobs.get('to_end') and frame == read_frame + 1:
             # the default run: the frame after the read checked, the rest
             # of this load (the done message, the fade) only on the
             # recording's first read flow (EM_TEST_FULL=1: on every flow)
             return frame + 1, 'read'
-        if reads and ee.load(MC, 1) == 2 and live.fade != 2:
+        if (reads or knobs['end'] == 'save') and ee.load(MC, 1) == 2 and live.fade != 2:
             # after the load 00225AC0 (state 2) waits for the fade-out its
             # 001AEDE0(8, 0) started; the frame machine runs the fade, not
             # this screen: its end (D_0028A9A0 = 2) is handed to both sides
@@ -378,9 +403,15 @@ def run_flow(fx, tmp, tag, beat, knobs, stats):
                 assert reads == 1 and ee.load(MC, 1) == 3 and want == ee.load(MC + 0x16, 1) == 2, \
                     (tag, frame, reads, ee.load(MC, 1), want)
                 ended = 'read'
+            elif knobs['end'] == 'save':
+                # the save done: 00225AC0's state 3 returns the result 2
+                assert ee.load(MC, 1) == 3 and want == ee.load(MC + 0x16, 1) == 2, (tag, frame, want)
+                ended = 'save'
             assert ended == knobs['end'], (tag, frame, 'ended with', ended, 'not', knobs['end'])
             o, n = MH.card_files(roots[0], port), MH.card_files(roots[1], port)
             assert o == n, (tag, 'the host cards differ')
+            if ended == 'save':
+                assert len(n) == 8, (tag, sorted(n))
             return frame + 1, ended
     raise AssertionError((tag, 'no end in %d frames' % FRAMES))
 

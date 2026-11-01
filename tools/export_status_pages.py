@@ -70,7 +70,7 @@ DATA_WINDOWS = [
 # and sets D_0028A490[slot] = 0xB00000 + the slot's entry offset,
 # docs/DISC_TEXTURES.md section 2): the DATABASE helper 001FCF30 reads the
 # record container *D_0028A49C (slot 3) by address.
-BOOT_MODULE, BOOT_BASE, RECORD_SLOT, HELP_SLOT = 0, 0x00B00000, 3, 2
+BOOT_MODULE, BOOT_BASE, RECORD_SLOT, HELP_SLOT, ICON_SLOT = 0, 0x00B00000, 3, 2, 4
 # The page modules the first level can load (0020CDC0 phase 3 and the ITEM
 # root / SPR4 child loads), docs/STATUS_PAGES.md section 1.
 MODULES = [0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31,
@@ -135,6 +135,12 @@ def build(disc: G.Disc, extract: Path, assets: Path) -> dict:
     help_container = BOOT_BASE + offsets[HELP_SLOT]
     windows.append((0x0028A498, struct.pack('<I', help_container)))
     windows.append((help_container, disc.read(boot.offset + region, size)))
+    # the icon container *D_0028A4A0 (slot 4): the save writer's EX.ico and
+    # the free-space test 00228320 (docs/SAVE_GAME.md section 2)
+    label, region, size = G.module_slot(disc, boot, ICON_SLOT, table)
+    icon_container = BOOT_BASE + offsets[ICON_SLOT]
+    windows.append((0x0028A4A0, struct.pack('<I', icon_container)))
+    windows.append((icon_container, disc.read(boot.offset + region, size)))
     body = bytearray()
     body += struct.pack('<I', len(windows))
     for start, data in windows:

@@ -255,6 +255,60 @@ int em_options_001AF1C0(EmArea01Ui *s)
     return em_options_001AF470(s, ui_lbu(s, D_00810708));
 }
 
+/* 001AF2C0, New Game's progress reset (byte-matched C), over the views: the
+ * 0x640-byte memset, the settings' copies, 001AF470, the default stores and
+ * 001C40B0(0x10, 2) on the block just cleared (+2 at C74 and C63, CB4 += 60,
+ * C62 = 30 as it was 0; the bound test does not fire at 2). The save's
+ * 001AF220 is its only caller on the card screen: the blocks it makes fill
+ * a new directory's other slots (docs/SAVE_GAME.md 2.1). */
+int em_options_001AF2C0(EmArea01Ui *s)
+{
+    if (begin(s, 0x001AF2C0u) < 0) return -1;
+    UiFrame fr = ui_enter(s, 0x001AF2C0u, 0x10);
+    (void)ui_call3(s, OP_00121A28, 0x00810700u, 0, 0x640);
+    ui_sb(s, D_00810708, ui_lbu(s, D_00810118));
+    ui_sb(s, D_00810709, ui_lbu(s, D_00810118 + 1u));
+    ui_sb(s, D_0081070C, ui_lbu(s, D_00810118 + 4u));
+    ui_sh(s, D_00810754, ui_lhu(s, D_00810118 + 8u));
+    ui_sh(s, D_00810756, ui_lhu(s, D_00810118 + 0xAu));
+    (void)em_options_001AF470(s, ui_lbu(s, D_00810708));
+    ui_sb(s, 0x00810703u, 0xFF);
+    ui_sb(s, 0x00810704u, 0xFF);
+    ui_sb(s, 0x00810705u, 0xFF);
+    ui_sb(s, 0x00810706u, 0);
+    ui_sb(s, 0x00810707u, 0);
+    ui_sw(s, 0x00810858u, 0x42C80000u); /* 100.0f */
+    ui_sw(s, 0x0081085Cu, 0);
+    ui_sb(s, 0x00810C60u, 0);
+    ui_sb(s, 0x00810D20u, 1);
+    ui_sb(s, 0x00810D21u, 1);
+    ui_sb(s, 0x00810D22u, 1);
+    ui_sb(s, 0x00810D23u, 1);
+    ui_sb(s, 0x00810C7Bu, 1);
+    ui_sb(s, 0x00810CB7u, 0);
+    ui_sh(s, 0x00810CB2u, 0);
+    ui_sb(s, 0x00810C69u, 1);
+    ui_sb(s, 0x00810C64u, 1);
+    ui_sb(s, 0x00810C6Bu, 1);
+    ui_sb(s, 0x00810CA4u, 0xFF);
+    ui_sb(s, 0x00810CA6u, 0);
+    ui_sb(s, 0x00810CA5u, 5);
+    ui_sb(s, 0x00810CA7u, 7);
+    ui_sb(s, 0x00810C61u, 0);
+    /* 001C40B0(0x10, 2) */
+    ui_sb(s, 0x00810C74u, 2);
+    ui_sb(s, 0x00810C63u, 2);
+    ui_sb(s, 0x00810C62u, 0x1E);
+    ui_sh(s, 0x00810CB4u, 0x3C);
+    ui_sb(s, 0x00810D3Cu, 0);
+    ui_sh(s, 0x00810CAAu, 0);
+    ui_sh(s, 0x00810CA8u, 0);
+    ui_sh(s, 0x00810CB0u, 0);
+    ui_sh(s, 0x00810CACu, 0);
+    ui_sh(s, 0x00810CAEu, 0);
+    return ui_leave(s, fr);
+}
+
 /* 001AF150: the reverse copy, with the offset also into 0x70003B94 / 96,
  * then a tail jump to 001AF470(type). */
 int em_options_001AF150(EmArea01Ui *s)

@@ -13,6 +13,7 @@ typedef struct {
     uint8_t inventory_primary, inventory_secondary;                  /*810CA4/A6 */
     int32_t saved_module;                                            /* UI+8 */
     EmItemRoot item;
+    uint8_t save_result; /* phase 6: 00225AC0(1)'s result, a worker's output */
 } EmStatusPage;
 
 typedef enum {
@@ -31,7 +32,8 @@ typedef enum {
     EM_STATUS_PAGE_BACK_SOUND,     /*0020CD60 */
     EM_STATUS_PAGE_PAGE_TICK,      /* phase 3 sub-state 2, argument t[0x10]: 1 0020F950 MAP,
                                     * 2 00211970 SPR4, 3 00214020 DATABASE */
-    EM_STATUS_PAGE_SAVE_RESET      /*00225A00: reset canonical D_00810040[0xD4] */
+    EM_STATUS_PAGE_SAVE_RESET,     /*00225A00: reset canonical D_00810040[0xD4] */
+    EM_STATUS_PAGE_SAVE_TICK       /* phase 6: 00225AC0(1), its result in state->save_result */
 } EmStatusPageEvent;
 
 /* All side effects return1 only after accepted work. Actual asynchronous
@@ -44,12 +46,10 @@ typedef int (*EmStatusPageWorker)(void *context, EmStatusPage *state, EmStatusPa
  * Cold entry follows 0020CDC0 case 0's request map (docs/STATUS_PAGES.md
  * section 1) for every request, including 6 (terminal BATTERY confirmation).
  * With no request a nonzero D_008106C5 (the passcode pages) faults before any side
- * effect. Accepting the terminal confirmation reaches unsupported phase 6
- * (00225AC0), which faults; declining follows the existing page exit. Phase 3
- * loads the module of pages 0..3, ticks them and returns to
- * the hub on any other page id; the passcode pages 4 / 5 and page 8 (phase
- * 2) fault. None of the faulting branches is reachable in AREA11; in AREA01
- * the terminal's Yes reaches phase 6 and faults (LEVEL2_CRASHES.md). */
+ * effect. Accepting the terminal confirmation reaches phase 6, the card
+ * screen 00225AC0(1) in save mode (docs/SAVE_GAME.md section 6.5); declining
+ * follows the existing page exit. Phase 3 loads the module of pages 0..3,
+ * ticks them and returns to the hub on any other page id. */
 int em_status_page_tick(EmStatusPage *state, unsigned buttons, EmStatusPageWorker worker,
                         void *context);
 

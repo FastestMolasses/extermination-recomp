@@ -11,7 +11,11 @@ starts on the port's first tick of that phase.
 
 The run writes a log of what the port did, and every tick is then compared with
 the original's: where the position first leaves the recording in each segment.
-A viewer's saves are not touched: the run uses its own empty card folder.
+A viewer's saves are not touched: the run uses its own empty card folder. A
+take whose start.json has no "card" key was played on the fork's fresh,
+unformatted cards, so until the chain's first formatted take the port answers
+as that card did (EM_TEST_CARD_FRESH, docs/SAVE_GAME.md section 6.2): a save
+attempt there fails as it failed on the original.
 
 Close the window to stop; the comparison covers what played.
 
@@ -83,6 +87,17 @@ def stitch(names, path):
     return sum(line.split()[2] == '0' for line in rows)
 
 
+def fresh_until(names):
+    """EM_TEST_CARD_FRESH: the first counter of the chain's first take on a
+    formatted card (its start.json has a "card" key), past every counter when
+    all of them played on the fresh cards."""
+    for name in names:
+        if 'card' in json.loads((TAKES / name / 'start.json').read_text()):
+            rows = (line.split() for line in (TAKES / name / 'take.rec').read_text().splitlines())
+            return next(int(r[1]) for r in rows if r[0][0] != '#' and r[2] == '0')
+    return 0xFFFFFFFF
+
+
 def parse(path):
     rows = []
     for line in path.read_text(errors='replace').splitlines():
@@ -147,6 +162,7 @@ def main():
     env = {k: v for k, v in os.environ.items() if not k.startswith('EM_')}
     env.update(EM_INPUT_PLAY=str(rec), EM_INPUT_RECORD=str(log), EM_PS2_DISC_DRIVE_TIMING='1',
                EM_REPLAY_MAX_OVERRUN='3600', EM_TEST_MEMCARD_ROOT=str(out / 'card'))
+    env.update(EM_TEST_CARD_FRESH=str(fresh_until(names)))
     if args.check:
         env.update(EM_HEADLESS='1', EM_UNCAPPED='1', EM_MUTE='1')
     with (out / 'run.log').open('w') as text:

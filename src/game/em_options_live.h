@@ -19,9 +19,9 @@
  *   001281C0              em_player_float_to_int
  *   0020CD40 / 60 / A0    the cues (em_sul_*, the host's 001FB9F0)
  *   00114988 / 00114848 / 00114360 / 00114448 / 00114480 / 00114708 /
- *   00114630 / 00114AC0   em_memcard_call (the card I/O boundary: GetInfo,
- *                         Sync, Open, Mkdir, Close, Write, Read, GetDir)
- *                         over the views
+ *   00114630 / 00114AC0 / 00114D18   em_memcard_call (the card I/O boundary:
+ *                         GetInfo, Sync, Open, Mkdir, Close, Write, Read,
+ *                         GetDir, Format) over the views
  *   001D2830, 00200970, 001AEE10 / 001AEDE0, 001FBC50, 001FABB0, 001FF080,
  *   001B61C0              the host's workers
  *   002267A0 / 00227300   em_card_002267A0 / em_card_00227300 (the card
@@ -29,13 +29,16 @@
  *                         section 6) on this binding's state
  *   00122D10, 00123020    sprintf (the conversions d and s) and strcmp
  *                         over the views
- *   00114D18, 00121870, 001AF2C0   fault: the save mode's Format, block
- *                         copy and New Game block (docs/OPTIONS.md 4.2)
+ *   00121870              block_copy over the views
+ *   001AF2C0              em_options_001AF2C0, the New Game block a new
+ *                         directory's other slots hold (docs/SAVE_GAME.md 2.1)
  *
  * Its own storage for the card code's buffers (GetDir's table
  * D_00821500, the header D_00821980, the staging blocks D_008219D0 /
  * D_00822050 / D_00822690, the slot path D_00822010, the row text
- * D_00275C94..9F) and views of em_area_title's place names and D_00289B40.
+ * D_00275C94..9F) and the scratchpad bytes a save overwrites (0x70000000..
+ * 0x70000C7F, no other port module's), views of em_area_title's place names
+ * and D_00289B40, and the icon container *D_0028A4A0 as an EMSP window.
  *
  * Fail-stop: a missing view, a refused draw or a failing worker latches
  * the call's fault (reported); the caller stops the game. */
@@ -88,6 +91,10 @@ typedef struct {
     uint8_t pad_phase;          /* D_00810E50 */
     uint8_t spad3B90, spad3B93;
 } EmOptionsFrame;
+
+/* This tick's frame over the game's storage (em_scene_bindings.c): the
+ * running task's record, the pads and the fade. 0, or -1. */
+int em_scene_bindings_options_frame(EmOptionsFrame *frame);
 
 /* Over the status pages' GS memory (em_status_pages_live_gs). NULL when the
  * data the binding reads (the .data windows of the EMSP) is missing. */

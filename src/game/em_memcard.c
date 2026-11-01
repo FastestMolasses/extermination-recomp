@@ -16,6 +16,16 @@
 #define NAME_MAX_SDK 0x3FFu     /* 00114360 / 00114AC0 copy at most 0x3FF bytes of a name */
 #define ENTRY_NAME 32u          /* a card name: at most 31 bytes and its NUL */
 #define IO_MAX 0x800000         /* a Write / Read size above a card's 8 MiB is refused */
+/* GetInfo's free count on the host card: the answer an empty formatted card
+ * gave (docs/SAVE_GAME.md section 5). The host folder has room, so it stays
+ * this; its one reader is 00228320's test free >= 18 + the icon's KiB, on a
+ * card without the game's directory. */
+#define FREE_KIB 8000
+/* The fresh card's Format (docs/SAVE_GAME.md section 6.2): every recorded
+ * one stayed busy for 133 Syncs, one per frame, ended with -2 and left its
+ * port answering type 3. */
+#define FORMAT_BUSY_SYNCS 133
+#define FORMAT_RESULT (-2)
 
 typedef struct {
     int open;
@@ -35,6 +45,9 @@ static struct {
     int32_t pending;        /* D_00241D68: the command Sync waits for (0 none, 1 GetInfo) */
     int32_t result;         /* D_0027C680: the server's result of the pending command */
     int known[2];           /* the card server's per-port "asked since the boot" */
+    int format_left;        /* a fresh card's Format: the Syncs it stays busy */
+    int format_port;
+    int format_failed[2];   /* a fresh card's port whose Format has failed */
     Fd fd[FDS];
     int initialised;
     const char *fault;
@@ -51,6 +64,8 @@ static int fail(const char *why)
 
 static char root[512] = EM_MEMCARD_DIR;
 static int read_only;
+static uint32_t fresh_until;
+static uint32_t (*fresh_counter)(void);
 
 void em_memcard_set_root(const char *dir)
 {
@@ -58,6 +73,17 @@ void em_memcard_set_root(const char *dir)
 }
 
 void em_memcard_set_read_only(int on) { read_only = on != 0; }
+
+void em_memcard_set_fresh(uint32_t until, uint32_t (*counter)(void))
+{
+    fresh_until = until;
+    fresh_counter = counter;
+}
+
+static int fresh(void)
+{
+    return fresh_until == 1 || (fresh_until > 1 && fresh_counter && fresh_counter() < fresh_until);
+}
 
 const char *em_memcard_root(void) { return root; }
 
@@ -134,8 +160,8 @@ uint8_t *em_memcard_globals(uint32_t address, uint32_t size)
  * the type, free and format words through the pointers given: the type 2
  * and, when asked, the format word 1 (the host card is a formatted card:
  * the card check 002280F0 moves on only on 1, and the fork's fresh,
- * unformatted cards answer 0, docs/SAVE_GAME.md section 6.2). The free count
- * still faults: no recording shows a formatted card's answer. */
+ * unformatted cards answer 0, docs/SAVE_GAME.md section 6.2). The free count:
+ * see FREE_KIB. */
 int em_memcard_00114988(int32_t port, int32_t slot, uint32_t type, uint32_t free_words, uint32_t format,
                         int32_t *v0, EmMemcardStore stores[3], unsigned *n)
 {
@@ -149,23 +175,23 @@ int em_memcard_00114988(int32_t port, int32_t slot, uint32_t type, uint32_t free
     }
     if (port < 0 || port > 1 || slot != 0)
         return fail("00114988 on a port other than 0 / 1 or a slot other than 0 (no recording)");
-    if (free_words)
-        return fail("00114988 asked for the free count (no recording shows a formatted card's answer)");
     if (!present(port))
         return fail("00114988 on a slot whose directory data/memcard/slotN is missing (no recording "
                     "shows a missing card)");
     M.result = M.known[port] ? 0 : -1;
     M.known[port] = 1;
     M.pending = 1;
-    if (type) stores[(*n)++] = (EmMemcardStore){type, 2};
-    if (format) stores[(*n)++] = (EmMemcardStore){format, 1};
+    const int card = fresh();
+    if (type) stores[(*n)++] = (EmMemcardStore){type, card && M.format_failed[port] ? 3 : 2};
+    if (free_words) stores[(*n)++] = (EmMemcardStore){free_words, card ? 0 : FREE_KIB};
+    if (format) stores[(*n)++] = (EmMemcardStore){format, card ? 0 : 1};
     *v0 = 0;
     return 0;
 }
 
-/* 00114848: no command pending returns -1; else (the server answered at
- * host speed) *cmd = D_00241D68, D_00241D68 = 0, *result = D_0027C680 and
- * 1. */
+/* 00114848: no command pending returns -1; else *cmd = D_00241D68 and, the
+ * server having answered, D_00241D68 = 0, *result = D_0027C680 and 1. The
+ * server answers at host speed but for a fresh card's Format: 0 until then. */
 int em_memcard_00114848(int32_t mode, uint32_t cmd, uint32_t result, int32_t *v0, EmMemcardStore stores[2],
                         unsigned *n)
 {
@@ -179,6 +205,12 @@ int em_memcard_00114848(int32_t mode, uint32_t cmd, uint32_t result, int32_t *v0
         return 0;
     }
     if (cmd) stores[(*n)++] = (EmMemcardStore){cmd, M.pending};
+    if (M.format_left > 0) {
+        --M.format_left;
+        *v0 = 0;
+        return 0;
+    }
+    if (M.pending == 0x10) M.format_failed[M.format_port] = 1;
     M.pending = 0;
     if (result) stores[(*n)++] = (EmMemcardStore){result, M.result};
     *v0 = 1;
@@ -201,6 +233,26 @@ static void issue(int32_t number, int32_t result, int32_t *v0)
     M.pending = number;
     M.result = result;
     *v0 = 0;
+}
+
+/* 00114D18 (byte-matched C): as the other commands, number 0x10. Only a
+ * fresh card answers it: the host card is formatted, so its format word is
+ * always 1 and the card check never reaches the format prompt. */
+int em_memcard_00114D18(int32_t port, int32_t slot, int32_t *v0)
+{
+    ensure();
+    if (M.fault) return -1;
+    if (!v0) return fail("00114D18 without its output");
+    if (busy(v0)) return 0;
+    if (port < 0 || port > 1 || slot != 0)
+        return fail("00114D18 on a port other than 0 / 1 or a slot other than 0 (no recording)");
+    if (!fresh())
+        return fail("00114D18 (Format) on the host card, which is a formatted card: the card check never "
+                    "offers it (no recording shows it on a formatted card)");
+    M.format_left = FORMAT_BUSY_SYNCS;
+    M.format_port = port;
+    issue(0x10, FORMAT_RESULT, v0);
+    return 0;
 }
 
 /* The name at `at` as the SDK copies it (at most 0x3FF bytes). */
@@ -255,6 +307,7 @@ static int card_name(const EmMemcardMemory *m, int32_t port, int32_t slot, uint3
     if (port < 0 || port > 1 || slot != 0)
         return fail("a card file command on a port other than 0 / 1 or a slot other than 0 (no recording)");
     if (!present(port)) return fail("a card file command on a missing data/memcard/slotN (no recording)");
+    if (fresh()) return fail("a card file command on a fresh, unformatted card (the card check stops before any)");
     if (read_name(m, at, name) < 0) return -1;
     if (!valid_name(name, wild))
         return fail("a card name that is not a relative path of card names (no recording shows the server's "
@@ -487,6 +540,7 @@ int em_memcard_is_sdk(uint32_t target)
     switch (target) {
     case 0x00114988u: case 0x00114848u: case 0x00114360u: case 0x00114448u:
     case 0x00114480u: case 0x00114708u: case 0x00114630u: case 0x00114AC0u:
+    case 0x00114D18u:
         return 1;
     default:
         return 0;
@@ -509,12 +563,12 @@ int em_memcard_call(uint32_t target, const uint64_t *a, unsigned na, const EmMem
 {
     ensure();
     if (M.fault) return -1;
-    static const unsigned need[8] = {5, 3, 4, 3, 1, 3, 3, 6};
-    static const uint32_t order[8] = {0x00114988u, 0x00114848u, 0x00114360u, 0x00114448u,
-                                      0x00114480u, 0x00114708u, 0x00114630u, 0x00114AC0u};
+    static const unsigned need[9] = {5, 3, 4, 3, 1, 3, 3, 6, 2};
+    static const uint32_t order[9] = {0x00114988u, 0x00114848u, 0x00114360u, 0x00114448u, 0x00114480u,
+                                      0x00114708u, 0x00114630u, 0x00114AC0u, 0x00114D18u};
     unsigned k = 0;
-    while (k < 8 && order[k] != target) ++k;
-    if (k == 8) return fail("em_memcard_call on an address that is not a libmc entry");
+    while (k < 9 && order[k] != target) ++k;
+    if (k == 9) return fail("em_memcard_call on an address that is not a libmc entry");
     if (!a || !v0 || na < need[k]) return fail("em_memcard_call without its argument registers");
 #define I(i) ((int32_t)(uint32_t)a[i])
 #define U(i) ((uint32_t)a[i])
@@ -530,7 +584,8 @@ int em_memcard_call(uint32_t target, const uint64_t *a, unsigned na, const EmMem
     case 4: rc = em_memcard_00114480(I(0), &r); break;
     case 5: rc = em_memcard_00114708(m, I(0), U(1), I(2), &r); break;
     case 6: rc = em_memcard_00114630(m, I(0), U(1), I(2), &r); break;
-    default: rc = em_memcard_00114AC0(m, I(0), I(1), U(2), I(3), I(4), U(5), &r); break;
+    case 7: rc = em_memcard_00114AC0(m, I(0), I(1), U(2), I(3), I(4), U(5), &r); break;
+    default: rc = em_memcard_00114D18(I(0), I(1), &r); break;
     }
 #undef I
 #undef U
