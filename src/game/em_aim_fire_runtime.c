@@ -6,6 +6,8 @@
 #include "game/em_aim_fire_cable_live.h"
 #include "game/em_aim_fire_flash.h"
 #include "game/em_aim_fire_trail.h"
+#include "game/em_aim_fire_burst.h"
+#include "game/em_area01_rcl_workers.h"
 #include "game/em_bone_burst.h"
 #include "game/em_effect_001F77B0.h"
 #include "game/em_game_internal.h"
@@ -50,6 +52,7 @@ static uint32_t cable_points[12][4];       /* D_00821400..D_008214BF */
 static uint32_t scratch_38C0[20];          /* 0x700038C0..0x7000390F (00186A60: the muzzle at 0x70003900) */
 static uint32_t scratch_37A0[16];          /* 0x700037A0..0x700037DF: 00186A60's look-at matrix */
 static uint32_t scratch_3A38[2];           /* 0x70003A38..0x70003A3F: its spread and first angle */
+static uint32_t scratch_3A30[2];           /* 0x70003A30..0x70003A37: the burst 001E4CE0's, written before each read */
 static uint32_t shot_flag;                 /* 0x700031E8 */
 /* 0x70003600..0x7000363F: the sight sprite 001CD520 (0x70003600..1F), the
  * beam 001E2BA0 and the hit call 001B41F0 (0x70003600 / 0x70003610) write
@@ -97,7 +100,7 @@ static struct {
     EmArea00HudVu vu;
     int vf23_valid;
     uint32_t self_word[EM_ACTOR_POOL_CAPACITY]; /* original pointer encodings */
-    EmPoseRegion bss[26];
+    EmPoseRegion bss[28];
     uint32_t piece_start;                /* 001F3E30 mode 2: its unit's start */
     int piece_model;
     uint32_t d28A56C;                    /* D_0028A490[0x37], read-only */
@@ -128,6 +131,7 @@ static EmActor *pool_actor(uint32_t address)
     if (offset%EM_ACTOR_RECORD_SIZE || offset/EM_ACTOR_RECORD_SIZE>=EM_ACTOR_POOL_CAPACITY) return NULL;
     return &R.pool->records[offset/EM_ACTOR_RECORD_SIZE];
 }
+EmActor *em_aim_fire_pool_actor(uint32_t address) { return pool_actor(address); }
 static void *pool_field(uint32_t address,size_t size,int write)
 {
     if (!R.pool || address<EM_ACTOR_POOL_BASE) return NULL;
@@ -216,11 +220,18 @@ static void *external_map(void *context,uint32_t a,size_t n,int write)
     }
     if (!p) p=write ? em_rcl_bytes_mut(a,(uint32_t)n) : (void *)em_rcl_bytes(a,(uint32_t)n);
     if (!p && !write) p=library_globals(a,n);
+    /* D_008112C0..D_00811CBF: the clipper's stage (em_shadow_live's). */
+    if (!p && a>=0x008112C0u && (uint64_t)a+n<=0x00811CC0u) {
+        uint8_t *stage=em_shadow_live_stage_bytes();
+        if (stage) p=stage+(a-0x008112C0u);
+    }
     if (!p) p=em_effects_live_node_field(a,n,write);
     if (!p) p=em_aim_fire_world_live_map(&R.world,a,n,write);
     if (!p) p=pool_field(a,n,write);
     if (!p && !write) p=(void *)em_scene_bindings_target_model_bytes(a,(uint32_t)n);
     if (!p && !write) p=(void *)em_effects_live_window(a,(uint32_t)n);
+    /* A burst's mesh sets D_002542D0.. (001E4CE0 stores the set's +0x70). */
+    if (!p && write) p=em_effects_live_window_mutable(a,(uint32_t)n);
     if (!p && !write) p=(void *)em_scene_bindings_grid_node_bytes(a,(uint32_t)n);
     /* D_008105D0, the camera's eye (00187780's view attenuation reads it):
      * the live camera's own word, read only. */
@@ -450,6 +461,9 @@ static int external_call(void *context,EmAimFireLive *live,EmAimFireTargetCall *
         const int burst=em_bone_burst_call(f);
         if (burst<0) return -1;
         if (burst>0) return 0;
+        const int blast=em_aim_fire_burst_call(live,f);
+        if (blast<0) return -1;
+        if (blast>0) return 0;
     }
     switch (f->function) {
     case 0x1FC580:return target_sound(live,f);
@@ -503,6 +517,22 @@ static int external_call(void *context,EmAimFireLive *live,EmAimFireTargetCall *
         return em_aim_fire_render_live_call(&R.render,f);
     case 0x1CD370: case 0x1CB5F0: case 0x1CB6B0: case 0x1CB900:
         return em_aim_fire_render_live_call(&R.render,f);
+    case 0x1CB950: {
+        /* The ring's 001CDDC0 (a burst): the TEX0 packet on the chain. */
+        EmArea01Call c={.function=f->function,.na=3,.a={f->a[0],f->a[1],f->a[2]}};
+        uint32_t at=0;
+        if (em_area01_rcl_workers_call(&c,&at)!=0) return -1;
+        f->v0=c.v0;return 0;
+    }
+    case 0x1CF470: {
+        /* The ring's 001CDDC0: 001CF470(D_008112C0, m), the shadow's one
+         * clipper over its stage. */
+        const void *m=em_aim_fire_live_map(live,(uint32_t)f->a[1],64,0);
+        if (!m || (uint32_t)f->a[0]!=0x008112C0u) return -1;
+        uint32_t matrix[16];int32_t count=0;memcpy(matrix,m,64);
+        TRY(em_shadow_live_001CF470(matrix,&count));
+        f->v0=(uint64_t)(int64_t)count;return 0;
+    }
     case 0x102870: {
         /* The beam's (001E2BA0) quadword divide: em_area00_low's translation
          * over the two quadwords it addresses (low four bits ignored). */
@@ -555,13 +585,15 @@ static int external_call(void *context,EmAimFireLive *live,EmAimFireTargetCall *
     }
     case 0x1B17A0: {
         /* 001B17A0(node) of a record this composition allocated (the
-         * marker, the muzzle node): the interaction host's byte-matched
-         * translation over the record's
+         * marker, the muzzle node) or runs (a burst): the interaction
+         * host's byte-matched translation over the record's
          * +0x02 / +0x03 / +0x0D / +0x2E / +0xB0..+0xB8; it stores +0x01. */
         EmActor *a=pool_actor((uint32_t)f->a[0]);
         if (!a || !a->allocated) return -1;
         unsigned i=(unsigned)(a-R.pool->records);
-        if ((!R.rec[i].used && !em_aim_fire_flash_owns(a)) || R.rec[i].generation!=a->generation) return -1;
+        uint32_t node;
+        if (!em_effects_live_node_identity(a,&node) &&
+            ((!R.rec[i].used && !em_aim_fire_flash_owns(a)) || R.rec[i].generation!=a->generation)) return -1;
         EmOwnerServicesOwner o;memset(&o,0,sizeof o);
         o.cls=a->cls;o.kind=a->model;o.model_id=a->param;o.flags2=a->flags2;
         memcpy(o.pos,a->pos,sizeof o.pos);
@@ -961,7 +993,7 @@ static int other_tick(void *context,uint32_t node,uint32_t callback)
         return a->allocated && a->generation==generation ? 1 : 0;
     }
     if (callback==0x001E2E80u || callback==0x001F6FB0u || callback==0x001E7310u || callback==0x001E7440u ||
-        callback==0x001E7570u) {
+        callback==0x001E7570u || callback==EM_AIM_FIRE_BURST_CALLBACK || callback==EM_AIM_FIRE_RING_CALLBACK) {
         /* The spat hazard node 001E2E80 (em_area00_hud) and the creatures'
          * glow node 001F6FB0 (em_area00_fx), through the composition, with
          * D_00275B40 = its +0x110 (the walk's 001CB590); 1 while its record
@@ -1032,6 +1064,7 @@ static int add_windows(void)
     if (glow) R.bss[n++]=(EmPoseRegion){0x25D800,0x90,glow,1};
     R.bss[n++]=(EmPoseRegion){0x700036E0,sizeof scratch_36E0,(uint8_t *)scratch_36E0,1};
     R.bss[n++]=(EmPoseRegion){0x7E000000,sizeof ramp_stack,ramp_stack,1};
+    R.bss[n++]=(EmPoseRegion){0x70003A30,sizeof scratch_3A30,(uint8_t *)scratch_3A30,1};
     R.bss[n++]=(EmPoseRegion){0x70003680,sizeof scratch_3680,(uint8_t *)scratch_3680,1};
     /* The flash node 001E7310's ramp data (CREATURE_EFFECT_WINDOWS):
      * 001DEE80's D_0026E970 and 001DF180's colour D_0026E860, read only;

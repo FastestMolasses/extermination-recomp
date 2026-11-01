@@ -91,6 +91,7 @@
 #include "game/em_hud.h"
 #include "game/em_manager_008257A0.h"
 #include "game/em_game_internal.h"
+#include "game/em_aim_fire_burst.h"
 #include "game/em_opening_runtime.h"
 #include "game/em_pickup_original.h"
 #include "game/em_player.h"
@@ -1229,6 +1230,9 @@ static uint8_t *area_records(void *ctx, uint32_t address, uint32_t size)
             return view;
         return pl ? pl->bytes + (address - EM_SCENE_D_008102B0) : NULL;
     }
+    /* A burst's extent table (+0x30): 001E4CE0's rows D_00254230.. */
+    if (address >= 0x00254230u && address < 0x002542D0u)
+        return (uint8_t *)(uintptr_t)em_effects_live_window(address, size);
     if (!s_pool || address < EM_ACTOR_POOL_BASE)
         return NULL;
     const uint32_t i = (address - EM_ACTOR_POOL_BASE) / EM_ACTOR_RECORD_SIZE;
@@ -1236,9 +1240,13 @@ static uint8_t *area_records(void *ctx, uint32_t address, uint32_t size)
         return NULL;
     const uint32_t base = EM_ACTOR_POOL_BASE + i * EM_ACTOR_RECORD_SIZE;
     EmActor *a = &s_pool->records[i];
-    if (!a->allocated || a->callback != EM_AREA11_EFFECT_CALLBACK || size > EM_ACTOR_RECORD_SIZE ||
-        address - base > EM_ACTOR_RECORD_SIZE - size)
+    /* The bursts (001E4CE0 / 001E4610) are class 0xD too, type 5: 001A8970,
+     * and 001A9000's blast walks them against the class-4 records, the boxes
+     * above all, whose +0x36 it stores (001A8F40 / 001A8E80). */
+    if (!a->allocated || size > EM_ACTOR_RECORD_SIZE || address - base > EM_ACTOR_RECORD_SIZE - size)
         return NULL;
+    if (address == base + 0x36u && size == 2)
+        return (uint8_t *)&a->h36;
     em_actor_pool_record_image(s_pool, a, s_flame_image);
     return s_flame_image + (address - base);
 }
@@ -1288,6 +1296,10 @@ static int flame_behaviour(void *ctx, uint32_t fn, uint32_t entry, uint32_t play
 {
     (void)ctx;
     (void)player_b0;
+    /* The bursts' +0x34 (001E4CE0's 001E49F0, 001E4610's 001E4600): empty
+     * functions (byte-matched C). */
+    if ((fn == 0x001E49F0u || fn == 0x001E4600u) && player == EM_SCENE_D_008102B0)
+        return 0;
     EmPlayerLiveActor *pl = player_states_actor_mut();
     if (fn != EM_AREA11_EFFECT_CONTACT || player != EM_SCENE_D_008102B0 || !pl || !s_pool ||
         entry < EM_ACTOR_POOL_BASE || (entry - EM_ACTOR_POOL_BASE) % EM_ACTOR_RECORD_SIZE != 0 ||
@@ -2215,6 +2227,8 @@ static const Binding k_bindings[] = {
     {0x001F18C0u, "knife trail: em_area00_fx 001F18C0 (em_aim_fire_trail, em_effects_live)",
      tick_effect_node, NULL},
     {0x001F2BA0u, "box debris: em_area00_fx 001F2BA0 (em_aim_fire_trail, em_effects_live)", tick_effect_node, NULL},
+    {0x001E4CE0u, "burst: em_area02_misc 001E4CE0 (em_aim_fire_burst, em_effects_live)", tick_effect_node, NULL},
+    {0x001E4610u, "burst ring: em_level11_port 001E4610 (em_aim_fire_burst, em_effects_live)", tick_effect_node, NULL},
     {0x0022BBC0u, "bone burst: em_area01_ui 0022BBC0 (em_bone_burst, em_effects_live)", tick_effect_node, NULL},
     {0x001E2E80u, "spat hazard: em_area00_hud 001E2E80 (em_aim_fire_world_live, em_effects_live)",
      tick_effect_node, NULL},
@@ -2361,7 +2375,12 @@ void em_area11_bindings_set_spawn_fallback(EmArea11SpawnFallback fn)
  * a callback with no row here goes to the area fallback first. */
 static int bind_spawned(EmActor *actor)
 {
-    if (actor && !binding_for(actor->callback) && s_spawn_fallback) {
+    /* The bursts' rows are AREA11's own host: elsewhere the area runtime runs
+     * them, as the fallback decides. */
+    const int burst = actor && (actor->callback == EM_AIM_FIRE_BURST_CALLBACK ||
+                                actor->callback == EM_AIM_FIRE_RING_CALLBACK);
+    if (actor && (!binding_for(actor->callback) || (burst && s_scene && s_scene->d810700 != 0x0B)) &&
+        s_spawn_fallback) {
         const int r = s_spawn_fallback(actor);
         if (r != 0)
             return r > 0 ? 0 : -1;

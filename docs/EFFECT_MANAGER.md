@@ -344,6 +344,7 @@ RENDER_CONTEXT.md section 8).
 | 001F0310 | w_001AFCA0's 001D0660, after the pool reset (the effect and equipment binders attach there); 001D1C10 (the movie frame) does not run |
 | 001EFD90 | the player closure's workers (the footsteps 00187EE0, the climb's 0017DEB0, the slide, the walk's skid 001612D0, the fall and reaction spawns), with the record's whole +0xC0 quadword; the crates' 001551B0 |
 | 001EFD20 | the truck 00823FF0's 32 spawns, the drums' 00156620, the weather node 001C1EA0 (0x80000017) |
+| 001E4CE0, 001E4610 | the blast of a drum (0x80000013 + 0x8000001C / 0x8000002E, the class-0xD, type-5 emitter and ring): rows 0x1E4CE0 and 0x1E4610 of em_area11_bindings through em_aim_fire_burst in AREA11; the area runtime everywhere else (em_area02_misc / em_level11_port). AREA11's blast was checked against a scripted run of the original (the bursts, the chain to the second drum and the crate, every record's lifetime, tick by tick) |
 | 001F0120 | 0015C420 (the player's 0x3B), Roger's 001BA8E0 (0x47) |
 | 001EA240, 001E2560 | the pool walk 001AFD70, rows 0x1EA240 and 0x1E2560 of em_area11_bindings |
 | the draw block of 001F1180 (001F0A60) | the pickup owner's tick (em_area11_interaction_host `aura_draw`, the owner's +0xD0 matrix, through the hook `em_area11_interaction_host_set_aura_draw` the bindings' effect attach sets; unset it faults) |

@@ -385,3 +385,22 @@ over idle04 at a gameplay window: PASS).
 - **Constants.** FINDINGS s62 quotes the fall gravity as 0.0519999. The
   constant is 0x3D54FDF4 = 0.052000001. The module uses hex-float literals
   for every constant.
+
+## The blast in AREA11 (2026-11-01)
+
+A shot drum's break spawns the burst emitter 001E4CE0 (0x80000013, variant 2)
+and the ring 001E4610 (0x8000001C for models 0x18 / 0x2A), class-0xD, type-5
+nodes. In the original their entries on the class-0xD list drive 001A9000, which
+is what breaks the neighbours: 001A8F40 stores +0x36 = 0x2014 on the other drum
+and 001A8E80 stores 0x14 on the crate. The port runs the same passes: AREA11's
+record view (em_area11_bindings `area_records`) gives them any allocated pool
+record, with +0x36 writable, and the rows run the nodes through
+em_aim_fire_burst.
+
+Checked against a hidden scripted run of the original (New Game pad of `run1`,
+then R1, the aim and six shots at the drum across from the spawn; the same pad in
+the port through EM_INPUT_PLAY): from counter 3208 to the end, every pool record's
+allocation, and for the drums, crates, debris, puff drivers and both bursts the
+header, callback, +0x30, the bursts' +0x34, +0xB0, +0xC0 and the bursts' +0x1F0
+block, tick by tick: 0 differences in 3,307 record-ticks, with the same rand()
+call order on the blast ticks. The pictures show the same fire at the same place.
