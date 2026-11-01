@@ -347,14 +347,14 @@ RESTORE = {'a08_01', 'a08_02', 'a08_03', 'a08_04', 'a08_05', 'a08_06', 'a07_00',
 
 
 def raw_rows(traces, lead):
-    """The script frames of the recorded hangs (actions 32, 34, 40): the stick
-    is the recorded one there, steering would turn the hand-over-hand."""
+    """The script frames of the recorded hangs (actions 32, 34, 40) and crawls (44, 45, 46): the stick
+    is the recorded one there, steering would turn the hand-over-hand or the junction."""
     out, base = [], traces[0]['first_counter']
     for t in traces:
         off = t['first_counter'] - base + lead
         at = None
         for r in t['rows']:
-            if r['m1F0'] in (32, 34, 40):
+            if r['m1F0'] in (32, 34, 40, 44, 45, 46):
                 at = r['f'] if at is None else at
                 end = r['f']
             elif at is not None:

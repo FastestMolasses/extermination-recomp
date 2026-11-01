@@ -15,7 +15,7 @@ steered, and no group here ran from New Game.
 | Beat | Status | Stops and why |
 |---|---|---|
 | a03b_00 | no fault, door [13] reached, end position good | end block: health 5 for 65, infection 50 for 30 (steered back into the steam, below) |
-| a03b_01 | fails | the crawl overshoots the junction (557, 735.5) and ends at (582.9, 55, 735.5); health 25 for 45. a03b_02 and a03c_01 cross the same ducts |
+| a03b_01 | end position good | the crawl's junction turns on the stick, so crawls run on the recorded stick (the steering overshot it); health 25 for 45, infection 70 for 30 (bites) |
 | a03b_02 .. a03b_05 | **pass** | [22]'s script 0x827170, flag 0x29, items, the ducts, the curtains, the slider |
 | a03b_06 | **passes** (the lift, AREA08's load, with lane P1's assets) | |
 | a03c_00 | **passes** (chain and card) | |
@@ -114,7 +114,7 @@ in (3, 1) and (4, 1).
   f19_id1b, equal to RAM at the table's words in the a04c_00 fork capture); run it once
   on assets/scene_snow/roger/resources.emrs. The texels of these faces are not compared
   with an original frame.
-- a03b_01's crawl, the chains a03b and a04c (they stop where the single beats stop).
+- The chains a03b and a04c (they stop where the single beats stop).
 - 0019DB50's no-span path (the original walks its caller's registers) returns -1, as
   0019D770 does.
 - AREA03 sub 2's registry has 49 ids `unbound bank`, and they do no harm. Their records
