@@ -16,10 +16,10 @@ No row comparison has been made for AREA19 yet: nothing here is row-exact.
 | Beat | Status alone from its card |
 |---|---|
 | a19_00, a19_01, a19_02 | ends on the recording's block and position |
-| a19b_01 | stops: ERCPR of zero, frame ~800 (open item 1) |
+| a19b_01 | runs to its end past the dropped quad; 21.08 off (y 170, the recording's 190), infection differs |
 | a19b_02 | no end in 240 s: bugs bite at frame ~204 where the recording climbs the ladder (the creatures' rand() stream) |
 | a19c_00 | position right; D_00810ACE, a first bite the recording took a beat later (rand() stream) |
-| a19c_01 | stops: ERCPR of zero, frame ~500 (open item 1) |
+| a19c_01 | position right past the dropped quad; health and infection words differ (the fight's stream) |
 | a19c_02, a19c_04, a19c_06, a19c_07 | ends on the recording's block and position |
 | a19c_03 | 10.68 off the end: on the slide the recording's yaw turns to -0.52 from frame 968, the port's stays 0 until 1008. Not resolved: the path steering replaces the stick there; the slide code has its oracle |
 | a19c_05 | walks off the y-170 step 1.3 from the recorded path and falls to y 150: steering |
@@ -30,14 +30,13 @@ No row comparison has been made for AREA19 yet: nothing here is row-exact.
 | a19d_07 | card artefact: the recording starts inside the status page and uses the health item there; the card does not |
 | a19d_11 | card artefact: the area script at 0x82E050 fires again at the arrival (3B8D 2 for the whole beat) |
 | a19d_12, 13, 14 | cards start in mid-air on a bar; they need the chain, and the chain does not reach them |
-| a19d_15 | the latch runs (kind 0, 0021FB40 then 0021FED0); then stops: ERCPR of zero, frame ~500 (open item 1) |
+| a19d_15 | the latch runs (kind 0, 0021FB40 then 0021FED0); ends on the recording's block and position, past the dropped quad |
 
-19 of 34 beats pass alone. No beat stops at an unbound owner any more; the three
-stops left are all open item 1. Chains on the final tree: a19 passes a19_00 and
-a19_01, then a19_02's infection byte differs; a19b stops at open item 1 in
-a19b_01; a19c stops at open item 1 in a19c_01; a19d passes a19d_00, takes the
-ladder and the ceiling, and the player dies there at a19d_01..02 (bites the
-recording did not take), so it never reaches a19d_11. a13_05 ends in AREA19, and
+20 of 34 beats pass alone; no beat stops at a fault any more. Chains, as last run
+before the EFU drop below: a19 passes a19_00 and a19_01, then a19_02's infection byte
+differs; a19b and a19c stopped at the streak quad in their first beats (not re-run);
+a19d passes a19d_00, takes the ladder and the ceiling, and the player dies there at
+a19d_01..02 (bites the recording did not take), so it never reaches a19d_11. a13_05 ends in AREA19, and
 a15_00, a15b_00 .. a15b_04 run through AREA15's doors into it (all pass).
 
 A card loads a saved progress block, so the creatures' rand() stream is not the
@@ -116,18 +115,27 @@ behaviour defects until a row comparison says so.
 
 ## Open items
 
-1. **ERCPR and ERLENG of zero** (`em_vu1_page_programs.h`). A streak quad whose
-   head has w exactly 0 stops the page: "VU1 translation fault ... (2)". The head
-   (1056.25, 160, 920) sits on the camera plane: the exact w is 2.2e-5, which the
-   truncating sum takes to 0. It is not rare: a19b_01, a19c_01 and a19d_15 all hit
-   it, so a player in AREA19's streak rooms can too.
-   Measured on the fork, a VU1 program of ours started by a VIF1 MSCAL from the BIOS
-   (recompiler, MTVU off): ERCPR(1.0) = 1.0, ERCPR(+0) = 0x7F800000, ERLENG(0,0,0) =
-   0x7F800000; MULx by that P gives 0x7F800000 for 1.0, 0xFF800000 for -2.0 and
-   0xFFC00000 for 0.0. That is the emulator's IEEE behaviour, not a hardware
-   measurement, and the rest of the quad (the lanes after P, VFTOI4 of those words,
-   what the GS does with them) was not measured. The translation stays fail-stop:
-   choosing a result is the user's decision.
+1. **ERCPR and ERLENG of zero: the port drops that one primitive** (user decision,
+   2026-11-01; `em_vu1_page_programs.h`, emvup_efu_zero). This is the port's one choice
+   here, not the original's behaviour. A streak quad whose head has w exactly 0 reaches
+   the EFU with a zero operand: the head (1056.25, 160, 920) sits on the camera plane,
+   the exact w is 2.2e-5, which the truncating sum takes to 0. It is not rare: a19b_01,
+   a19c_01 and a19d_15 all hit it, so a player in AREA19's streak rooms does too.
+   What the hardware's EFU returns for a zero operand is not established. The fork
+   measured a VU1 program of ours started by a VIF1 MSCAL from the BIOS (recompiler, MTVU
+   off): ERCPR(1.0) = 1.0, ERCPR(+0) = 0x7F800000, ERLENG(0,0,0) = 0x7F800000; MULx by
+   that P gives 0x7F800000 for 1.0, 0xFF800000 for -2.0 and 0xFFC00000 for 0.0. Those
+   are the emulator's IEEE values, not a hardware measurement, and the rest of the quad
+   (the lanes after P, VFTOI4 of those words, what the GS does with them) was never
+   measured, so the port does not use them. Instead the streak and kind-2 programs
+   drop that one quad or line, lower the batch's NLOOP and draw the rest; a batch left
+   with nothing kicks nothing. The primitive's other arithmetic runs on P = 0, and
+   nothing it writes is read by the next one. The grid, floor and ripple programs'
+   ERLENG keep the fail-stop: their lengths are not on a camera plane and no run has
+   met one. `tools/test_chain_page_reference.py` E runs the original microcode with
+   P = 0 at each zero and compares the kicked packets with that primitive's rows taken
+   out (every head on the plane, one head at the start and in the middle of a batch,
+   a zero screen length).
 2. **Not drawn**: 001CB1F0, 001CB130, 001CB060, the tendril field's and the worms'
    draw methods, whose VU1 programs have no translation; reported once.
 3. **Scene 27's ramp** faults at +0x74; no recorded beat reaches it.

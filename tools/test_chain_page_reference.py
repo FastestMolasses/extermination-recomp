@@ -58,7 +58,9 @@ C. Synthetic sprite and snow batches: random descriptors over the captured rows
 D. The timing premise of the translation: in every A..C run the oracle logs
    which producer each Q, MAC-flag, clip-flag and (streak, kind 2) P read sees; it
    must be the one the header names (em_vu1_page_programs.h).
-E. Faults: an exponent-255 word on a live lane faults both programs (the
+E. Faults: an EFU zero drops that one primitive, the port's one choice
+   (docs/AREA19_PORT.md): the translation kicks the original program's
+   packets without it; an exponent-255 word on a live lane faults both programs (the
    oracle raises); malformed pages (END tag, unknown MPG, an MSCAL before
    any program, ITOP, REGLIST, an A+D FRAME write, an unmapped REF, too
    little room) latch the documented fault.
@@ -981,35 +983,113 @@ def operand_faults(lib, elf, stats, seeds):
             vu.mem[:] = mem
             if compare_mscal(lib, vu, program, f'operand fault {program:#x} row {r}', stats):
                 fail(f'an exponent-255 word on a live lane of {program:#x} did not fault')
-    # The EFU's unestablished operands: K's w column (rows 118..121) zero
-    # makes every head's w zero (ERCPR of zero); both sides fault.
-    mem = bytearray(streak_seed(elf, seeds[M.PROGRAM_SPRITE][0])[0])
+    efu_zero_drops(lib, elf, stats, seeds)
+
+
+def compare_drop(lib, vu, program, where, stats, rows, want):
+    """The port's one choice (docs/AREA19_PORT.md): an EFU zero drops that
+    primitive. The oracle runs the original microcode with P = 0 at each
+    zero and logs the primitive; the translation must kick the same packets
+    without those primitives' `rows` rows and with NLOOP lowered, and none
+    for a batch left with no primitive."""
+    r, dm, k = regs_of(vu), DMEM.from_buffer_copy(vu.mem), Kicks()
+    vu.kicks, vu.events, vu.watch = [], [], set()
+    vu.pending, vu.cycle, vu.q_ready, vu.p_ready = [], 0, 0, 0
+    vu.ready = [[0] * 4 for _ in range(32)]
+    vu.efu_drop, vu.efu_zeros = True, set()
+    vu.run(0)
+    rc = lib.shim_mscal(PROGRAM_ID[program], C.byref(r), dm, C.byref(k))
+    if rc:
+        fail(f'{where}: the translation faulted ({rc})')
+    if not vu.efu_zeros:
+        fail(f'{where}: the case holds no EFU zero')
+    want = want(vu.efu_zeros)
+    packets = []
+    kicks = [e for e in vu.events if e[0] == 'kick']
+    for j, e in enumerate(kicks):
+        gone = sorted(p for kick, p in vu.efu_zeros if kick == j)
+        head = list(struct.unpack('<IIII', e[3][:16]))
+        count = head[0] & 0x7FFF
+        if not all(p < count for p in gone):
+            fail(f'{where}: a dropped primitive past the count')
+        if len(gone) == count:
+            continue
+        head[0] -= len(gone)
+        kept = (e[3][16 + rows * 16 * p:16 + rows * 16 * (p + 1)] for p in range(count) if p not in gone)
+        packets.append((e[1], struct.pack('<IIII', *head) + b''.join(kept)))
+    if k.n != len(packets):
+        fail(f'{where}: {k.n} XGKICKs, {len(packets)} after the drop')
+    raw = bytes(k.mem)
+    for j, (at, data) in enumerate(packets):
+        if k.at[j] != at or M.sh.gif_raw(raw[16384 * j:16384 * (j + 1)], at) != data:
+            fail(f'{where}: XGKICK {j} differs from the original\'s without the dropped primitive')
+        stats['kicked_packet_bytes'] += len(data)
+    if not want:
+        fail(f'{where}: drops {sorted(vu.efu_zeros)} are not the case\'s')
+    stats['efu_drops'] += len(vu.efu_zeros)
+
+
+def efu_zero_drops(lib, elf, stats, seeds):
+    def oracle(program, mem):
+        vu = Oracle()
+        load_program(vu, elf, program)
+        vu.mem[:] = mem
+        return vu
+
+    def batch(program):
+        """A synthetic case whose last batch has three primitives or more,
+        with the memory the oracle left: the records K does not touch."""
+        rng = random.Random(0x1900 + program)
+        make = streak_case if program == M.PROGRAM_STREAK else kind2_case
+        seed = streak_seed(elf, seeds[M.PROGRAM_SPRITE][0], program)
+        for _ in range(200):
+            mem = bytearray(make(rng, seed, elf)[0])
+            probe = oracle(program, mem)
+            probe.events, probe.efu_drop, probe.efu_zeros = [], True, set()
+            try:
+                probe.run(0)
+            except M.ModelError:
+                continue
+            kicks = [e for e in probe.events if e[0] == 'kick']
+            if kicks and struct.unpack('<I', kicks[-1][3][:4])[0] & 0x7FFF >= 3:
+                return mem, probe.mem, len(kicks) - 1
+        fail(f'no case of {program:#x} with a batch of three')
+
+    streak_mem = None
+    for program, rows in ((M.PROGRAM_STREAK, 13), (M.PROGRAM_KIND2, 4)):
+        name = PROGRAM_NAME[program]
+        mem, after, last = batch(program)
+        if program == M.PROGRAM_STREAK:
+            streak_mem = mem
+        # K's w column (rows 118..121) zero makes every head's w zero.
+        vu = oracle(program, mem)
+        for r in range(118, 122):
+            w = row(vu.mem, r)
+            w[3] = 0
+            set_row(vu.mem, r, w)
+        compare_drop(lib, vu, program, f'{name}: every head on the camera plane', stats, rows, lambda z: True)
+        # One particle's head: w = x - x(j) is exactly zero for particle j
+        # alone.
+        for j in (0, 2):
+            xj = row(after, 0x88 + 4 * j)[0]
+            vu = oracle(program, mem)
+            for r, w3 in ((118, 0x3F800000), (119, 0), (120, 0), (121, xj ^ 0x80000000)):
+                w = row(vu.mem, r)
+                w[3] = w3
+                set_row(vu.mem, r, w)
+            compare_drop(lib, vu, program, f'{name}: head {j} on the camera plane', stats, rows,
+                         lambda z: (last, j) in z)
+    # ERLENG of a zero vector: K's x and y columns and row 127's z zero make
+    # the streak's 2D difference and its third lane zero.
+    vu = oracle(M.PROGRAM_STREAK, streak_mem)
     for r in range(118, 122):
-        w = row(mem, r)
-        w[3] = 0
-        set_row(mem, r, w)
-    vu = Oracle()
-    load_program(vu, elf, M.PROGRAM_STREAK)
-    vu.mem[:] = mem
-    before = stats['operand_faults']
-    if compare_mscal(lib, vu, M.PROGRAM_STREAK, 'EFU fault: ERCPR of zero', stats) or \
-            stats['operand_faults'] != before + 1:
-        fail('ERCPR of a zero w did not fault')
-    stats['efu_faults'] += 1
-    # The kind-2 program's ERCPR: the same rows (its head through 118..121).
-    mem = bytearray(streak_seed(elf, seeds[M.PROGRAM_SPRITE][0], M.PROGRAM_KIND2)[0])
-    for r in range(118, 122):
-        w = row(mem, r)
-        w[3] = 0
-        set_row(mem, r, w)
-    vu = Oracle()
-    load_program(vu, elf, M.PROGRAM_KIND2)
-    vu.mem[:] = mem
-    before = stats['operand_faults']
-    if compare_mscal(lib, vu, M.PROGRAM_KIND2, 'EFU fault: kind-2 ERCPR of zero', stats) or \
-            stats['operand_faults'] != before + 1:
-        fail('the kind-2 ERCPR of a zero w did not fault')
-    stats['efu_faults'] += 1
+        w = row(vu.mem, r)
+        w[0] = w[1] = 0
+        set_row(vu.mem, r, w)
+    w = row(vu.mem, 127)
+    w[2] = 0
+    set_row(vu.mem, 127, w)
+    compare_drop(lib, vu, M.PROGRAM_STREAK, 'streak: a zero screen length', stats, 13, lambda z: True)
 
 
 def tag(tid, qwc, addr):
@@ -1157,7 +1237,7 @@ def main():
            f"{stats['mscal_streak']} streak and {stats['mscal_kind2']} kind-2 MSCALs compared "
            f"({stats['synthetic_lane']}, {stats['synthetic_sprite']}, {stats['synthetic_snow']}, "
            f"{stats['synthetic_streak']} and {stats['synthetic_kind2']} synthetic; "
-           f"{stats['efu_faults']} EFU operand faults)",
+           f"{stats['efu_drops']} EFU zeros dropped)",
            f"{stats['kicks']} XGKICKs, {stats['kicked_packet_bytes']:,} packet bytes",
            f"{stats['operand_faults']} operand faults, {stats['fault_cases']} page fault cases",
            f"the 001D0F20 blend-preset bank equal in {stats['preset_captures']} captures"

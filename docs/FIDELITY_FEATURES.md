@@ -2922,12 +2922,18 @@ shooting and knifing anywhere also run without a fault.
 - How: the overlay's owners run in the shared composition from their translations
   and the byte-matched C (docs/AREA19_PORT.md).
 - Evidence: original-instruction oracles for the owners (the ledge, bar and ceiling
-  states have none yet); `mid_route_beats.py --single`: 19 of 34 beats end on their
+  states have none yet); `mid_route_beats.py --single`: 20 of 34 beats end on their
   recordings' progress blocks and positions; the SFX lockstep with the original
   driver over 0x44F past its loop.
-- Status: **PARTIAL**. From cards, nothing row-exact; three beats stop at the VU1
-  result of a streak on the camera plane (ERCPR of zero, not established); the
-  tendril field and the worms are not drawn.
+- Status: **PARTIAL**. From cards, nothing row-exact; the tendril field and the worms
+  are not drawn.
+- **The port's one choice here (user, 2026-11-01):** a streak or kind-2 line whose EFU
+  operand is exactly zero (a head on the camera plane) is dropped, that one primitive
+  only, and the rest of its batch draws. The hardware's result is not established: the
+  values the fork measured are the emulator's IEEE ones, so the port uses none of them.
+  Drawing nothing for that one quad is a choice, not a reproduction
+  (docs/AREA19_PORT.md open item 1). `tools/test_chain_page_reference.py` E proves the
+  other primitives equal the original microcode's.
 
 ### AREA08 and AREA07 from their start cards
 
