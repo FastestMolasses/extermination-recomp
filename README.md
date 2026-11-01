@@ -163,8 +163,22 @@ into AREA19 (docs/LEVEL_SMOKE.md). Starting from a point is a different path: a 
 puts creatures, timers and the random numbers where a save does, so a run from
 one plays the same code but can go differently from that route. `python3
 tools/mid_route_beats.py` reports which beats play through from their points
-(docs/LEVEL8_PORT.md "Start-card runs"). AREA19 is not ported yet, so the ladder
-at `a13_05` stops at its load.
+(docs/LEVEL8_PORT.md "Start-card runs").
+
+### Watching the recorded playthrough
+
+`python3 tools/watch_recording.py` plays everything recorded from the original
+back in the port's window, as live gameplay from the recorded pad: New Game
+through `a13_05` in one run (about 30 minutes, row-exact to the recording), then
+AREA19 to AREA07 section by section from start cards (about 45 minutes). The
+card sections can drift from the recording, and the creatures can kill the
+player there; the next beat then starts from its own card. Your saves are not
+touched.
+
+Close the window to skip to the next section; Ctrl+C in the terminal stops it
+all. `--list` shows the sections, `--from <section or beat>` starts part 2
+there, `--only <section or beat>` plays just that section, and `--boss` takes
+the New Game run through the first boss fight instead of on to `a13_05`.
 
 ## Status
 

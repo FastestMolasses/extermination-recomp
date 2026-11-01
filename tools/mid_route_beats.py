@@ -50,6 +50,12 @@ import reference_root as refs  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 BIN = Path(os.environ.get('EM_MID_ROUTE_BIN', str(ROOT / 'build/extermination')))
 OUT = ROOT / 'build/mid_route'
+# The host switches of a run: headless, unpaced, silent; tools/watch_recording.py
+# replaces them to show the same run in a window.
+HOST = dict(EM_HEADLESS='1', EM_UNCAPPED='1', EM_MUTE='1')
+# Seconds without a new pad frame line before a run gives up (None: the timeout
+# alone). A player who died stops the script's clock.
+STALL = None
 END_RADIUS = 4.0
 BLOCK, SIZE = 0x810700, 0x640
 # The block bytes a loaded game or the run's clock owns (see the docstring).
@@ -469,8 +475,9 @@ def run(name, card, beats, timeout):
     pad, path, marks, traces = prepare(name, beats)
     log_path = OUT / f'{name}.log'
     env = {k: v for k, v in os.environ.items() if not k.startswith('EM_')}
-    env.update(EM_START_AT=card, EM_START_AT_PAD=str(pad), EM_START_AT_PATH=str(path), EM_HEADLESS='1',
-               EM_UNCAPPED='1', EM_MUTE='1', EM_START_AT_RAND=f'{source_rand(beats[0]):08x}',
+    env.update(HOST)
+    env.update(EM_START_AT=card, EM_START_AT_PAD=str(pad), EM_START_AT_PATH=str(path),
+               EM_START_AT_RAND=f'{source_rand(beats[0]):08x}',
                EM_START_AT_FADE=str(row0_fade(beats[0])))
     if marks:
         env['EM_START_AT_MARKS'] = ','.join(map(str, marks))
@@ -499,8 +506,9 @@ def run(name, card, beats, timeout):
             env['EM_START_AT_LOADS'] = str(loads)
         if beats[0] in RESTORE_STEERED:
             env['EM_START_AT_RESTORE'] = restore_anchor(beats[0])
-    start = time.time()
+    start = moved = time.time()
     ended = False
+    clock = 0
     with open(log_path, 'w') as log:
         proc = subprocess.Popen([str(BIN)], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
         try:
@@ -512,6 +520,11 @@ def run(name, card, beats, timeout):
                     break
                 if FAULT.search(text) or time.time() - start > timeout:
                     break
+                if STALL:
+                    if text.count('pad frame') != clock:
+                        clock, moved = text.count('pad frame'), time.time()
+                    elif time.time() - moved > STALL:
+                        break
         finally:
             if proc.poll() is None:
                 proc.terminate()

@@ -347,6 +347,26 @@ def prefix_report(out, until):
             break
 
 
+def watch(mode, binary, env, out):
+    """The route for a viewer: the run's inputs and anchors, a window (or the
+    window's drawing offscreen), the phases as they pass. The card folder is
+    empty, so a viewer's own saves are neither read nor written."""
+    card = out / 'card'
+    card.mkdir(parents=True, exist_ok=True)
+    env.update(EM_HEADLESS='0' if mode == 'window' else '1', EM_UNCAPPED='0', EM_HEADLESS_RASTER='1',
+               EM_TEST_MEMCARD_ROOT=str(card))
+    for name in ('EM_AREA_CHANGE_LOG', 'EM_RAND_TRACE', 'EM_MUTE'):
+        env.pop(name, None)
+    with (out / 'run.log').open('w') as log:
+        proc = subprocess.Popen([str(binary)], cwd=ROOT, env=env, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, errors='replace')
+        for line in proc.stdout:
+            log.write(line)
+            if re.match(r'level smoke: (\S+: PASS|PASS|FAIL)|em_scene: FAULT', line):
+                print(line.rstrip()[:160], flush=True)
+    return proc.wait()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group()
@@ -369,6 +389,9 @@ def main():
                              'comparison-only drive replay (EM_PS2_DRIVE_REPLAY)')
     replay.add_argument('--no-drive-replay', action='store_true',
                         help='no replay: the drive as the environment selects (host speed by default)')
+    parser.add_argument('--watch', choices=('window', 'offscreen'), default=None,
+                        help='the same run paced at 59.94 Hz with drawing, sound and an empty card, and no row '
+                             'check: tools/watch_recording.py')
     args = parser.parse_args()
     until, out = args.until or a01r.ROUTE_PHASES[-1], args.out.resolve()
     if args.until and not (args.run or args.prepare):
@@ -429,6 +452,8 @@ def main():
                    reference=refs.label(), until=until, path=a01r.phase_path(until), pad_changes=count,
                    pad_manifest=str(out / 'pads/area01r/manifest.json'), native_parity=False,
                    drive_replay=replay_info, rand_replay=str(rand_table) if rand_table else None)
+    if args.watch:
+        return watch(args.watch, binary, env, out)
     with (out / 'run.log').open('w') as log:
         result = subprocess.run([str(binary)], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=3600)
     receipt.update(run_returncode=result.returncode, seconds=round(time.monotonic() - started, 3))
