@@ -134,6 +134,35 @@ def main():
                 assert n.au_track(0)==1
                 assert tuple(n.au_start_gain(0,side)&0xFFFFFFFF for side in (0,1))==event[3:]
         loop_completed+=1
+    # 001FBE80 (AREA08's sliders): the voice's gain by distance, its stop out of
+    # range, -1 for no voice or a voice not playing.
+    voice_completed=0;voice_paths=set()
+    for case in range(pick(600,120)):
+        for a,size in regions:store(a,rng.randbytes(size))
+        words(0x6800B0,list(map(F,(rng.choice((0.,20.,90.,500.)),0.,10.,1.))))
+        words(0x810360,[0,0,0,F(1)]);words(0x8105D0,list(map(F,(13.,4.,17.,1.))))
+        words(0x81027C,[F(.4)]);store(0x28215B,bytes([case%3]));ee.save(0x26C5D0,0xFFFFFFFF)
+        voice=(-1,0,7,47)[case%4];status=2 if case%3 else 0
+        radius=F(rng.choice((100.,300.)));scale=F(rng.choice((1.,512.,4096.)))
+        n.au_loop_state((C.c_int32*48)(*[-1]*48),(C.c_int32*48)(*[-1]*48),0,0,status)
+        events=[]
+        def status_call(e):
+            assert e.arg(0)==1;e.ret_int(status)
+        def request_call(e):events.append(('request',*(e.arg(i)&0xFFFFFFFF for i in range(3))))
+        def stop_call(e):events.append(('stop',e.arg(0)&0xFFFFFFFF))
+        ee.hooks={0x119890:status_call,0x11A218:request_call,0x11A070:stop_call}
+        ee.call(0x1FBE80,(0x680000,voice&0xFFFFFFFF),tuple(struct.unpack('<f',struct.pack('<I',v))[0] for v in (radius,scale)))
+        assert n.au_call(0x1FBE80,voice&0xFFFFFFFF,radius,scale,0,0)==0,(case,events)
+        assert n.au_result()&0xFFFFFFFF==ee.r[2]&0xFFFFFFFF,(case,'v0')
+        for a,size in regions:
+            expected=bytes(ee.read(a,size));actual=native(a,size)
+            assert actual==expected,(case,0x1FBE80,hex(a),next((i,x,y) for i,(x,y) in enumerate(zip(actual,expected)) if x!=y))
+        for event in events:
+            if event[0]=='stop':assert n.au_track(event[1])==0
+            else:assert tuple(n.au_gain(event[1],side)&0xFFFFFFFF for side in (0,1))==event[2:]
+        voice_paths.add(events[0][0] if events else 'none')
+        voice_completed+=1
+    assert voice_paths=={'request','stop','none'},voice_paths
     # On a live update the original stores an unchanged handle. A refused
     # canonical write must fault after the request, without clearing tables.
     for deny in (0,1,2):
@@ -144,6 +173,6 @@ def main():
         assert rc==(-1 if deny else 0)
         assert native(0x6F0000,4)==struct.pack('<I',7) and n.au_requested()[7]==0x44E
         assert n.au_stores()==(0 if deny==1 else 1)
-    print(f'PASS {MODE}: {completed} original audio/gain/pan chains + {loop_completed} loop/release chains; actual canonical SFX table/voice owner, exact scratch/output/submit comparisons; missing/alias/store refusal')
+    print(f'PASS {MODE}: {completed} original audio/gain/pan chains + {loop_completed} loop/release chains + {voice_completed} 001FBE80 updates; actual canonical SFX table/voice owner, exact scratch/output/submit comparisons; missing/alias/store refusal')
 
 if __name__=='__main__':main()

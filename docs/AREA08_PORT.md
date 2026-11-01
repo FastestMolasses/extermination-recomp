@@ -31,7 +31,7 @@ row-exact from New Game.
   test_coll_segment_walkers_reference),
   001F28D0 (`em_area08_route`, the particle ring AREA07 sub 0 and AREA19 meet,
   155 of 155 reachable words),
-  001FBE80 (`em_area01_audio_services`: composed from the translated 001FBF50 and
+  001FBE80 (`em_area01_audio_services`, test_area01_audio_services_reference: composed from the translated 001FBF50 and
   the driver's status, request and stop; **no oracle case of its own yet**).
 - **Shared with AREA19 (lane J1's bindings, one definition each):** the grab
   00130AB0 and 00133CD0 (`em_level10_port`, test_level10_port_reference), the
@@ -87,7 +87,6 @@ row-exact from New Game.
 - **Restored 001BF6B0 nodes** (anchor and both modes only): a08_02 and a08_03 fault
   at 001D0D60 over a restored node's track pointer. Steered runs do not restore, so
   those beats run in steer mode.
-- 001FBE80 needs an oracle case.
 
 ## Beats
 
