@@ -117,5 +117,10 @@ in (3, 1) and (4, 1).
 - a03b_01's crawl, the chains a03b and a04c (they stop where the single beats stop).
 - 0019DB50's no-span path (the original walks its caller's registers) returns -1, as
   0019D770 does.
-- AREA03 sub 2's registry has 49 ids `unbound bank` (group 4 bank 2's handle was freed
-  in a03b_05): a sound of that bank is silent.
+- AREA03 sub 2's registry has 49 ids `unbound bank`, and they do no harm. Their records
+  (0x2603A8..0x260417) are not sound records: sub 2's remap points past the real table
+  into other data, so `group` and `bank` are junk. 00119EA0's own checks, evaluated over
+  the a03b_05 and a08_06 captures, return -1 for 47 of them: silent is what the original
+  does. Only 0x483 and 0x4D3 (record 0, -1, 1, 2) reach a live bank, handle 0's script
+  1 / 2; no immediate or data word in the boot ELF or AREA03.BIN names either id, so
+  nothing is known to request them.

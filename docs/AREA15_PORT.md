@@ -63,7 +63,7 @@ says what stopped the exploration (six 0013D2D0 creatures, two rounds held).
 - `em_sfx_bank`: controller B0 0A (00118418's pan slide, 00116598's second
   slide) and B0 60 (00118790's loop), SFX_SEQUENCER.md. EM_SFX_OP_MAX is 64.
 - `em_area01_timeline`: 0022EC30's whole table and 0022EEF0's audio track and
-  leading switch (scene 27's 3852..3960 ramp faults at +0x74: not translated).
+  leading switch, scene 27's 3852..3960 ramp included.
 - `em_area_script`: op0B sub 5 (001B8020's bone_init_default_2).
 - `em_area01_actor_view`: a read inside the 16 header bytes of a record freed in
   the window answers the zeros 001AFC10 left (0x824510 reads +0xD after

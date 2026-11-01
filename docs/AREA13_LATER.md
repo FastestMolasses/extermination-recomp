@@ -102,10 +102,10 @@ hold no such action), so the live path rests on their oracles.
 - **Row-exact**: nothing here runs from New Game. It waits for a chain lane; AREA19's
   host is on main, so the route can now cross a19_00 .. a19_02 into a13b_00.
 - **The menu player in the coat** has no original frame to compare.
-- **Fail-stops**: the four callees above.
 - A tick-logged run and a plain run of a13c_01 once went different ways; the plain
   run that missed door [17] later hit a chain page "VU1 translation fault" with
   detail 2 after thousands of frames in the east room, seen in several runs, not
   traced (detail 2 is an exponent-255 operand or an FTOI out of range; they were
   not told apart). The game task stops there and mid_route_beats reports a timeout.
-  Lane J1's a19b_01 stops on a VU1 fault too; whether they are one cause is not known.
+  a19b_01's VU1 fault was the streak's EFU zero, dropped since 2026-11-01
+  (docs/AREA19_PORT.md open item 1); whether this one had the same cause is not known.
