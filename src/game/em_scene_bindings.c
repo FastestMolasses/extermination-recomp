@@ -4004,13 +4004,19 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
             return -1;
         }
     }
-    if ((s_state.d810700 == 2 || s_state.d810700 == 4 || s_state.d810700 == 6 || s_state.d810700 == 0x0D ||
-         s_state.d810700 == 0x0F || s_state.d810700 == 3 || s_state.d810700 == 0x13 || s_state.d810700 == 8 ||
-         s_state.d810700 == 7) && fn == 0x001E4CE0u)
+    /* The effect table's boot owners (D_00259C70) the area runtime has a
+     * translation of run the same in any area the runtime hosts: the burst
+     * emitter 001E4CE0 and the ring 001E4610 a box's or a drum's break spawns
+     * (AREA00's drum, uid 0300), 001F4840's pieces, the breath 001E7050,
+     * 001F28D0, the creature effects 001F7E40 / 001F88C0 and the debris
+     * spawner 0021AE90. AREA11 has its own rows (em_area11_bindings). */
+    switch (fn) {
+    case 0x001E4CE0u: case 0x001E4610u: case 0x001F4840u: case 0x001E7050u: case 0x001F28D0u:
+    case 0x001F7E40u: case 0x001F88C0u: case 0x0021AE90u:
         goto bind;
-    /* The creature's death effect (001B4CF0's 001EFD90: em_level11_port). */
-    if (s_state.d810700 == 4 && (fn == 0x001F4840u || fn == 0x001F88C0u || fn == 0x001F7E40u))
-        goto bind;
+    default:
+        break;
+    }
     /* AREA04's pool owners (em_area04_port through em_area01_runtime area
      * 4; docs/AREA04_PORT.md) and its boot owner 001C1A80. */
     if (s_state.d810700 == 4 && (fn >= 0x00823500u || fn == 0x001C1A80u)) {
@@ -4124,10 +4130,7 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
      * 0021AE90 (effect 0x80000044; em_area06_port through em_area01_runtime
      * dispatch_a06). The infection node 001F8350 (effect 0x80000048,
      * 0021C190's when the player turns) in any area the runtime runs. */
-    if ((s_state.d810700 == 6 || s_state.d810700 == 0x0D || s_state.d810700 == 0x13) &&
-        (fn == 0x00219870u || fn == 0x0021AE90u))
-        goto bind;
-    if (s_state.d810700 == 0x0D && fn == 0x001E7050u)  /* the breath, effect 0x80000018 */
+    if ((s_state.d810700 == 6 || s_state.d810700 == 0x0D || s_state.d810700 == 0x13) && fn == 0x00219870u)
         goto bind;
     if (fn == 0x001F8350u)
         goto bind;
@@ -4174,24 +4177,17 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
     }
 }
 /* The effect binder's area fallback (em_area11_bindings_set_spawn_fallback):
- * in AREA00, a node 001EF9D0 allocated with a resident-overlay callback
- * (001EFD20's effect types whose callback is an AREA00 owner: the switch
- * 00825920's puffs 00823820, func_overlay_AREA00_008237E0, byte-identical C,
- * em_area00_ovl_00823820) runs through the same AREA00 runtime as the
- * roster's owners (area01_rebind's AREA00 list). Elsewhere, and for any
- * other callback, the AREA11 rows decide as before. */
+ * a node 001EF9D0 allocated with no AREA11 row, or a burst (001E4CE0 /
+ * 001E4610: the rows are AREA11's own host), runs through the area runtime
+ * as the roster's owners do (area01_rebind; in AREA00 the switch 00825920's
+ * puffs 00823820, func_overlay_AREA00_008237E0, byte-identical C,
+ * em_area00_ovl_00823820). In AREA11 itself the rows decide. */
 static int area00_spawned_fallback(EmActor *a)
 {
-    if (a && a->callback == 0x001F8350u && s_state.d810700 != 11)
-        return area01_rebind(NULL, a, a->callback) == 0 ? 1 : 0;
-    /* AREA02: any boot owner the area runtime runs too, e.g. the car's
-     * 001EFD20 spawns (0x8242F0 past x 140): the burst emitter 001E4CE0
-     * (em_area02_misc, area 2) and 001E3D90 (em_area01_sys). */
-    if ((s_state.d810700 == 2 || s_state.d810700 == 4 || s_state.d810700 == 6 || s_state.d810700 == 0x0D ||
-         s_state.d810700 == 0x16 || s_state.d810700 == 0x0F || s_state.d810700 == 3 || s_state.d810700 == 0x13 ||
-         s_state.d810700 == 8 || s_state.d810700 == 7) && a)
-        return area01_rebind(NULL, a, a->callback) == 0 ? 1 : 0;
-    if ((s_state.d810700 != 0 && s_state.d810700 != 2) || !a || a->callback < 0x00823500u)
+    /* Any area but AREA11 runs the area runtime: any owner it runs too, e.g.
+     * the car's 001EFD20 spawns (0x8242F0 past x 140), a drum's in AREA00:
+     * the burst emitter 001E4CE0 (em_area02_misc) and 001E3D90 (em_area01_sys). */
+    if (s_state.d810700 == 11 || !a)
         return 0;
     return area01_rebind(NULL, a, a->callback) == 0 ? 1 : 0;
 }
@@ -4384,6 +4380,9 @@ static int area01_contact(void *ctx, uint32_t function, uint32_t entry, uint32_t
         memset(&m, 0, sizeof m);
         return em_area02_misc_001E49F0(&m);
     }
+    /* The ring 001E4610's: 001E4600, an empty function (byte-matched C). */
+    if (function == 0x001E4600u && player == EM_AREA01_PLAYER_BASE && player_b0 == player + 0xB0u)
+        return 0;
     /* 0x823B10: AREA06's contact word (0x823B50's record +0x34; another
      * overlay's code at the address never reaches here: only AREA06
      * records hold it). */

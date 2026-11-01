@@ -770,11 +770,9 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
             return fail(r, m.fault_address ? m.fault_address : c->function);
         return 0;
     }
-    if ((r->area == 2 || r->area == 4 || r->area == 6 || r->area == 0x0D || r->area == 0x0F || r->area == 3 ||
-         r->area == 0x13 || r->area == 8 || r->area == 7) &&
-        c->function == 0x001E4CE0u) {
+    if (c->function == 0x001E4CE0u) {
         /* The burst emitter node 001E4CE0 (spawned by the car's 001EFD20,
-         * by a drum's in AREA04 and by AREA06's g[11] 00219870):
+         * by a drum's in any area and by AREA06's g[11] 00219870):
          * em_area02_misc's translation over this runtime's bytes. */
         if (c->na < 1 || c->nf) return fail(r, c->function);
         EmArea02Misc m;
