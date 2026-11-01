@@ -12,16 +12,18 @@ instruction of the original is reproduced here.
 
 | Part | Original | Port | Checked by |
 |---|---|---|---|
-| The save writer | 00228A90 and its steps 00228530, 002285A0, 002288A0, 00229640, 00229680, 002284F0, 001AF220 | translated (em_save_original), not wired | test-save-reference |
-| The card file commands | 001FE6B0 (one file), 001FE9E0 Open, 001FEB90 Write, 001FEA70 Close, 001FEDD0 Mkdir, 001FEC20 GetDir | translated (em_save_original), not wired | test-save-reference |
-| The card screen past the slot choice | 00227300 and the routines below it (002280F0, 00228320, 002293B0, 00229170, 00227980, 00227010, 00227160, 00226E90, 00227C60, 00227DE0, 00228070, 001FED40, 00227270, 00226B90, 002267A0, 00226D50; section 6) | translated (em_card_original); wired into the options binding (section 6.1): live in load mode through LOAD GAME's read into the progress block (one storage since save2 round 2), the done message and the fade, to the result 2 | test-card-screen-reference, test-options-card-live |
-| The load side | 002283B0 (the load enumeration), 00228EB0 (the five slots read), 00228B60 (LOAD GAME's read), 00228C90, 00228C50, 001FE7C0 / 001FEB00 (read) | translated (em_save_original), not wired (section 4) | test-load-reference |
+| The save terminal's Yes | 0020CDC0 phase 6: 00225AC0(1) until it reports, then 0020E080, 001AFEB0, the cue 0xD (section 6.5) | live (em_status_page, em_status_runtime, the interaction host) | test-status-page-reference, test-options-card-live, tools/watch_takes.py |
+| The save writer | 00228A90 and its steps 00228530, 002285A0, 002288A0, 00229640, 00229680, 002284F0, 001AF220 | translated (em_save_original), live through the save mode since 2026-11-01 | test-save-reference, test-options-card-live, the original's own save (section 6.2) |
+| The card file commands | 001FE6B0 (one file), 001FE9E0 Open, 001FEB90 Write, 001FEA70 Close, 001FEDD0 Mkdir, 001FEC20 GetDir | translated (em_save_original), live through the save mode | test-save-reference, test-options-card-live |
+| The card screen past the slot choice | 00227300 and the routines below it (002280F0, 00228320, 002293B0, 00229170, 00227980, 00227010, 00227160, 00226E90, 00227C60, 00227DE0, 00228070, 001FED40, 00227270, 00226B90, 002267A0, 00226D50; section 6) | translated (em_card_original); wired into the options binding (section 6.1): live in load mode through LOAD GAME's read into the progress block (one storage since save2 round 2), the done message and the fade, to the result 2, and in save mode (section 6.5) | test-card-screen-reference, test-options-card-live |
+| The load side | 002283B0 (the load enumeration), 00228EB0 (the five slots read), 00228B60 (LOAD GAME's read), 00228C90, 00228C50, 001FE7C0 / 001FEB00 (read) | translated (em_save_original), live through the card screen (section 6.1) | test-load-reference, test-options-card-live |
 | The progress block as one storage | D_00810700..D_00810D3F, which 00228B60 reads into and a save's Write reads (section 6.1) | every byte one storage (em_scene_state.h; save2 round 2); 001AF2C0's effect on all 0x640 bytes | test-continue-reset-reference, test-options-card-live |
 | LOAD GAME after the read: the title | 001AC070 state 5's r == 2 (001AF150, D_00275BE0 = 1), state 4's 001AB790(001ACEC0); 001ACEC0 state 0 / 2, 001ADF50 on the block's area, 0x1AE040 state 0's 001B07C0(0) from the load pose, 001B0460's clear (section 6.3) | wired (save2 round 3): the title's LOAD GAME after a death enters the slot's area | the side run dmg_load_game (`make test-level-smoke-damage`) |
 | LOAD GAME on the boot's title | the same 001AC070 states 2 / 5 / 4 and 00225AC0(0) before any game (section 6.4) | wired (save2 round 5): the card screen on the boot title's own binding (the GS memory cleared, module 0x2A's upload applied), then the loaded game's handoff em_game_install_loaded_001AC070 into the slot's area | `make test-title-load-game` |
 | LOAD GAME after the read: the options | 0022A650's r == 2 (001AEBA0, 001AF150, 001D2610, D_00275BE0 = 1, the game task to 3 / 5) | bound (2026-10-28): 001D2610 is the render context's em_rcl_001D2610 (w_001D2610); the game task then runs the area read of the title's load (section 6.3). Not run end to end (no side run loads from the options) | test-scene-frame-reference (the r == 2 arm), test-render-context-live-reference (em_rcl_001D2610) |
-| The host card | em_memcard (since save2 round 6 also read-only, for EM_START_AT): GetInfo (the type, and the format word 1; the free count faults), Sync, and the file commands Open 00114360, Mkdir 00114448, Close 00114480, Write 00114708, Read 00114630, GetDir 00114AC0 (section 5) | answered at host speed on data/memcard/slotN; the options binding routes all eight through em_memcard_call | test-memcard-host, test-options-card-live |
-| The fork recording on a card | the save terminal's Yes and the card screen in save mode on the emulator's own fresh cards (section 6.2) | recorded once: the fresh cards are unformatted and the game's Format fails on them, so no save was written | the lane's build/side-save-r5/card_rec/summary.json |
+| The host card | em_memcard (since save2 round 6 also read-only, for EM_START_AT): GetInfo (the type, the format word 1 and the free count), Sync, and the file commands Open 00114360, Mkdir 00114448, Close 00114480, Write 00114708, Read 00114630, GetDir 00114AC0 (section 5) | answered at host speed on data/memcard/slotN; the options binding routes all nine, Format 00114D18 among them, through em_memcard_call | test-memcard-host, test-options-card-live |
+| The fresh card | a card the fork's sessions create unformatted, on which the game's Format fails (section 6.2) | EM_TEST_CARD_FRESH, test input only: the takes played on those cards replay through the same screens | tools/watch_takes.py, test-memcard-host, test-options-card-live |
+| A save against the original's | the save a take's pad wrote on a formatted card in the fork (section 6.2) | all eight files byte-identical | tools/compare_card_image.py |
 | Start-point saves | the save terminal's pose step (00159B90's two copies 00102948) and the save writer 00228A90 over each area's arrival state, read back by 002283B0 and 00228B60 (section 7) | built by `tools/build_start_saves.py` into the ignored build/start_saves/ (round 6; the load pose since save2 round 4) | test-start-saves, dmg_load_game |
 | `EM_START_AT` | the boot title's LOAD GAME (001AC070, section 6.4) on a start-point save | built (save2 round 6; docs/STARTUP.md "Developer switches"): the start-point card read-only, the title load test's presses, the boot unpaced to control; area01 reaches control in AREA01; area00 and area01-revisit are placed at their load poses, then stop (section 8) | `make test-start-at`, test-memcard-host (the read-only card) |
 
@@ -49,6 +51,10 @@ section against the files the original handed to Write):
 A new directory is written in that order (GetDir, Mkdir, the header file,
 EX.ico, icon.sys, the five slots). Over an existing directory only the
 chosen slot's file is written (002288A0).
+
+The layout is confirmed by the original itself: the save test1's pad wrote on
+a formatted card in the fork holds exactly these eight files, and the port's
+save of the same route equals them byte for byte (section 6.2).
 
 ### 2.1 A slot
 
@@ -144,7 +150,7 @@ quick run.
 ## 4. The load side
 
 What the original's load code does, as test-load-reference runs it (the
-translations are in em_save_original, prefix em_save_, not wired yet; they
+translations are in em_save_original, prefix em_save_; they
 follow the decomp's byte-matched C, and the instructions for 00228C90,
 NEARMISS there as a register permutation):
 
@@ -237,6 +243,7 @@ Open with mode 0x40, its pending number then set to 0xB.
 | Write(fd, buf, size) | 6 | size | writes the EE bytes at the descriptor's offset |
 | Read(fd, buf, size) | 5 | the bytes read (0 at the end) | the bytes reach EE memory at buf |
 | GetDir(port, slot, name, 0, max, table) | 0xD | the entries stored | see below |
+| Format(port, slot) | 0x10 | only a fresh card answers it (section 6.2) | the host card is formatted, so the card check never reaches it: a fail-stop there |
 
 GetDir with a plain name stores that one entry if it exists (result 1) and
 nothing if not (0): 00228530 / 002283B0 / 00229A70 ask
@@ -257,7 +264,7 @@ descriptor not open, a Write on a read-only or a Read on a write-only one,
 a size outside 0..8 MiB, and memory outside the caller's. The bytes Write is
 handed are read, and the bytes Read and GetDir store are written, when the
 command is issued; nothing reads them before the Sync that completes it.
-`em_memcard_call(target, registers, ...)` answers any of the eight entries
+`em_memcard_call(target, registers, ...)` answers any of the nine entries
 by address; the options binding (em_options_live) routes the card screen's
 calls through it (section 6.1).
 
@@ -280,11 +287,17 @@ PASS (2 saves, 2 round trips, 3.7 s), EM_TEST_FULL=1 PASS (40 saves on
 both recordings, every slot and port, 12 round trips, 852 libmc calls).
 Eight mutants of em_memcard (Read's count, GetDir's names, its plain-name
 count, the dots, Mkdir's result, the Write offset, the first descriptor)
-all fail it. The server's own answers (the descriptor numbers, GetDir's
-entry order and its first 0x20 bytes, the result on a fresh card) are
-what the original EE code accepts, not yet what the IOP was recorded
-answering: section 6.2's recording wrote no save, so that is still a next
-step (section 8).
+all fail it. Since the save on a formatted card (section 6.2) these answers are recorded:
+result 0, type 2, format 1, free 8000 on the empty card; GetDir's 0 and 1 for
+the directory; descriptor 0 for every file (each is closed before the next
+opens); Mkdir 0, Write its size, Close 0; and the 26 commands of a new directory
+in the order section 2 gives. Still what the EE code accepts rather than a
+recording: GetDir's entry order and its first 0x20 bytes, a save's other
+descriptors, and the load enumeration over a card that holds a save. The card
+tool's format stands in for the BIOS browser's, so the 8000 is mcserv's answer on
+that card. The port's two ports always hold a card; the take's session had slot
+2 disabled (GetInfo -11), so a press that moves the slot choice's cursor to slot
+2 has no counterpart there.
 
 ## 6. The card screen past the slot choice
 
@@ -455,8 +468,8 @@ then the done message 00227010 (45 frames), 00225AC0's fade-out
 001AEDE0(8, 0), its wait for the fade's end, the texture restore
 00200970(1) and its state 3, which returns 2 (a game loaded). On the
 title the loaded game then begins (section 6.3); in the options, 0022A650's
-r == 2 runs 001AEBA0 and 001AF150 (the settings back from the block) and
-faults at 001D2610 (not bound). Section 8 has the next step.
+r == 2 runs 001AEBA0, 001AF150 (the settings back from the block) and
+001D2610 (bound 2026-10-28, not run end to end). Section 8 has the next step.
 
 **The progress block is one storage** (save2 round 2). The read can store
 all 0x640 bytes because every byte of D_00810700..D_00810D3F now has one
@@ -490,16 +503,10 @@ bytes, the vitals and C61 / C62 / CB4 (per call or the frame's pointers, the
 same storage in the game) and views the rest of the block; the options
 binding views the whole block.
 
-A save has the wall the read had (the Write of the live block reads all
-0x640 bytes, now one storage) and others before it:
-the save mode is reached only from the save terminal's Yes (0020CDC0
-request 6) and 001AD740, neither wired; its card check asks the free count
-(em_memcard faults: no recording), its Format 00114D18, the New Game block
-001AF2C0 and block_copy 00121870 are unbound (fault), and the icon file's
-source, the icon container *D_0028A4A0 (the boot bank module 0's slot 4),
-is not a window yet. 002267A0 is dispatched but unreachable on the host
-card (it runs only when GetInfo stops reporting a PS2 card, and em_memcard
-faults on a missing card).
+The save mode is reached from the save terminal's Yes (section 6.5);
+001AD740 (AREA21's end-of-game save) is not wired. 002267A0 is dispatched and
+runs only on the fresh card: the host card always reports a PS2 card, and
+em_memcard faults on a missing one.
 
 `make test-options-card-live` (`tools/test_options_card_live.py`, fixture
 `tests/options_card_live_fixture.c`, linked from the interaction host test's
@@ -575,34 +582,69 @@ survive by construction: the cue's first and second volumes swapped (every
 cue passes 0x1000 for all three) and the style colour's high byte dropped
 (zero in both styles the card screen uses).
 
-### 6.2 The fork recording on a card
+### 6.2 The fork's cards: fresh and formatted
 
 The user's decisions of 2026-10-09 (HANDOFF item 9: a separate card file,
 never the user's own). The fork's launcher gives every session two fresh
 8 MB card files (`Mcd001.ps2`, `Mcd002.ps2` in the session's scratch
-folder), which the emulator creates unformatted. One recording (save lane
-round 5), from the route state 15_level_exit: the east room, the save
-terminal [20], the battery prompt's Yes (Left moves its cursor to Yes: the
-game's pad word 0x8000), then the card screen in save mode (the lane's
-`build/side-save-r5/card_rec/summary.json`, the card record and the libmc
-words each frame):
+folder), which the emulator creates unformatted. The takes recorded before
+the decomp's tools/ps2_card.py (test1 and run1; their start.json has no
+"card" key) played on those. Replaying test1 hidden with the card record
+D_00810040 and the libmc words in a table (the decomp's
+build/save_yes_probe, 2026-11-01) shows what a fresh card answers:
 
-- GetInfo on a fresh card: result 0, type 2, free 0, format 0 (the card
-  check's seven tries, then error screen 0: the format prompt). So the
-  format word of an unformatted PS2 card is 0, and the card check's test
-  for 1 is the formatted case; em_memcard answers 1 (the host card is a
-  formatted card), the one value on which the card check moves on.
-- The game's Format 00114D18 (Yes on the prompt) took 133 frames on each
-  card and ended with result -2: the format failed (00227270's message),
-  and the card then answered type 3 on some GetInfo calls and 2 on others.
-  Retried on port 1: the same. No save was written, so the free count, the
-  descriptors, GetDir's table and the card files the IOP writes are still
-  unrecorded. Whether -2 is the emulator's card or the original's server
-  is open (a card formatted another way, such as the BIOS browser's, is the
-  next attempt).
+- GetInfo, port 0 and port 1: result 0, type 2, free 0, format 0, so the
+  card check takes its seven tries and shows error screen 0, the format
+  prompt. The format word of an unformatted PS2 card is 0; em_memcard answers
+  1 (the host card is a formatted card), the one value on which the card
+  check moves on.
+- The game's Format 00114D18 (Yes on the prompt): 133 Syncs busy, one per
+  frame, with the command word 0x10 stored by the first of them, then result
+  -2, the same on both cards (counters 13618..13751 and 14654..14787): the
+  format failed (00227270's message).
+- From then on that port answers type 3 with result 0, and the other port
+  still answers type 2. The older note that "the card answered 3 on some
+  calls and 2 on others" was this: the slot screen polls the two ports in
+  turn. With both ports failed the slot choice has no card (line 0xB).
 - The battery charge D_00810CB2 stayed 8: the save mode takes its 4
   half-units at the confirmation's Yes or after a successful format
   (section 6), and neither was reached.
+
+**A formatted card** (2026-11-01): tools/ps2_card.py in the decomp writes what
+a format leaves, and test1's pad replayed on that card wrote a real save
+(the decomp's build/card_test/t1: replay_card_end.ps2). On a formatted card
+the card check's format word is 1, so the format prompt and Format are not
+reached at all, and whether -2 came from the emulator's card or the original's
+server no longer matters to the port. That replay, read the same way (the
+decomp's build/save_yes_probe/formatted), gives the card's answers section 5
+lists. The save itself took 179 frames against the port's 50 or so: the card is
+hardware time, which the port does not reproduce.
+
+The port's save of the same route equals it byte for byte: the replay's rows
+made into an EMREC recording, played by the port on a scratch host card
+(tick for tick inside each segment, 17,092 ticks on the recording), and
+tools/compare_card_image.py over `replay_card_end.ps2` and the host folder: all
+eight files equal, the chosen slot's 0x640 bytes included, so its play time, the
+world frame counter D_00810750, the battery charge (4 half-units lower), the load
+pose and the check byte. That slot then loads through the boot title's LOAD GAME
+(the fixture `loadgame`): AREA01 01 00 08, placed at the terminal's load pose
+(167.0, 0.0, -617.9) heading 3.14159, health 95, the block equal to the slot
+after the read, the handoff and the placement, and at control but for
+D_00810750; the card folder unchanged.
+
+**The fresh-card mode.** EM_TEST_CARD_FRESH=N (read only where
+EM_TEST_MEMCARD_ROOT is, under an EM_STARTUP_TEST run or a replay, and refused
+with EM_START_AT, so a player cannot reach it; em_memcard_set_fresh): the host
+card answers as above until the counter 0x70003B64 reaches N, then as the
+normal card; 1, or any value above every counter of the run, means the whole
+run. GetInfo: type 2, or 3 on a port whose Format has failed, free 0, format 0;
+Format: as recorded; a file command faults (the card check stops before any).
+tools/watch_takes.py sets N to the first counter of the chain's first take
+whose start.json has a "card" key, or 0xFFFFFFFF when there is none, so a chain
+from fresh-card takes into formatted-card takes changes card at their join.
+The port's counter runs behind the original's after loads, which the port
+makes at host speed (test1 ends at 18,786 against 19,138), so the change comes
+that much later in a playback than in the original's own counter.
 
 ### 6.3 A loaded game begins (the title)
 
@@ -786,6 +828,58 @@ boot title was looked at once (the slot choice: the LOAD title, the button
 legend and the two slot rows); no recording of that screen exists to
 compare it with.
 
+### 6.5 The save terminal's Yes
+
+The terminal's prompt is the ITEM root's BATTERY page with request 6
+(0020CDC0 case 0, 00225A00 clearing the card record); its Yes leaves the page
+with phase 6 (002149F0). The port (2026-11-01):
+
+- **Phase 6** (em_status_page.c): one call of 00225AC0(1) per tick until it
+  reports, then 0020E080 (0021BAE0(0), D_008106C5 = D_008106B0 = 0,
+  D_002821B4 = 2), 001AFEB0, the cue 0xD and t[0..3] = 0. Its result (1 out of
+  the screen, 2 a game saved) is tested only against zero by 0x1AE040; the
+  inventory's module is not reloaded here, as phase 5's exit does.
+- **The call** (em_status_runtime save_tick, the interaction host's save_page):
+  em_options_live_00225AC0 with mode 1 over the frame em_scene_bindings_options_frame
+  builds, the status frames' tick. The page core keeps per-call views of
+  D_00275BD8 and the message words; they are stored before the call and loaded
+  after it, or the module load's busy byte would be lost.
+- **The module load** (00225AC0 m[1] 2): D_00275BD8 = 1, 001FF080(0, 0x2A), the
+  status runtime's loader steps from inside a status screen, in AREA01 as in
+  AREA11; the chunk is applied as the status pages' GS step. 00225AC0's
+  00200970(1) (0x70003B90 is 2 in the game task) restores what it overwrote.
+  At host speed the load takes 9 ticks where the take's took 18: no drive time
+  is recorded for this module.
+- **The draw**: the status frame's DRAW_CARD, em_options_live_render, the same
+  em_page_draw stream as the options and the title's load screen, over the
+  shared UI texture slot (released at the screen's end). The GPU overlay draws
+  it in both profiles, not the GS field; looked at in a headless capture (the
+  slot choice, the slot list with a saved row, "Save complete"); no recording
+  of these frames has been compared.
+- **The leaves** (em_options_live dispatch): block_copy 00121870 over the views;
+  001AF2C0, em_options_001AF2C0 over the views (the card screen's only caller
+  is 001AF220, so its 001AF470 and its block stores run there, as the
+  original's, and 001AF220 puts the block back); the scratchpad bytes a save
+  overwrites, 0x70000000..0x70000C7F, are the binding's card_bss.spad (no other
+  port module holds them); the icon container D_0028A4A0 and its bytes
+  0x00B1B000 (71,680 bytes, slot 4 of module 0) are EMSP windows
+  (tools/export_status_pages.py); GetInfo's free count and Format are
+  em_memcard's (sections 5, 6.2).
+- **The return**: 0x1AE040 state 3's exit as for any status screen; the
+  terminal and play go on (test1's next segments are on the recording).
+
+Checked by: test-options-card-live's save flows (the ORIGINAL 00225AC0(1)
+against the binding frame by frame: a new directory on both ports, a slot over
+a directory that exists, an empty slot, a declined confirmation; the fresh card's
+No, and its Yes with the failed Format, out by Cross and by Triangle; every
+frame the card record, the block, the helpers' globals, the staging buffers, the
+scratchpad bytes, the button masks and the draw and cue calls, and at the end
+the host cards); test-status-page-reference (phase 6 against the original on the
+results 0, 1, 2); `python3 tools/watch_takes.py --check test1` (the user's take:
+the card screens of both visits play their segments' full length, 592 and 705
+ticks, so each left the screen on the original's tick); the formatted route
+(section 6.2).
+
 ## 7. Start-point saves (round 6)
 
 What `EM_START_AT` loads (docs/STARTUP.md "Developer switches", since save2 round 6): one memory card
@@ -898,23 +992,20 @@ larger than RUN_MAX at 00297710 and no control comes within 300 s;
 area01-revisit is placed at its load pose, then faults at 00823CD0, both
 areas still being finished on port main): a side run of LOAD GAME from
 the options (0022A650's r == 2 is bound since 2026-10-28, never run end to
-end); the save terminal's Yes path (0020CDC0, request 6) and the save
-mode's leaves (GetInfo's free count, Format 00114D18, 001AF2C0, block_copy
-00121870, the icon container *D_0028A4A0 as a window); a fork recording of
-a save at AREA01's save terminal on a separate, formatted card file (the
-user's decisions of 2026-10-09, HANDOFF item 9: never the user's own card;
-the BIOS browser's format on a bios-only session, then that card file
-passed to the game session), whose libmc results check em_memcard's
-answers and whose files check section 2 against the card the IOP wrote
-(section 6.2's attempt on the emulator's fresh card files wrote nothing).
+end); the save mode's other caller 001AD740 (AREA21's end-of-game save, with
+00225D20 state 0's prompt); a save made over a card that already holds one,
+and a load of it, in the fork, against em_memcard's GetDir answers (section 5);
+the takes recorded on formatted cards (their start.json has a "card" key), which
+tools/compare_card_image.py compares with the port's card when they end.
 
 ## 9. Re-exports
 
-`python3 tools/export_status_pages.py` after merging section 6.1: the
+`python3 tools/export_status_pages.py` after merging section 6.1 or 6.5: the
 status pages' EMSP carries the card code's .data windows (the icon.sys
 image, the names and paths, the formats, the slot rows' line config and
-style); an EMSP without them makes the card screen fault at its first read
-of one. `python3 tools/build_start_saves.py` after the fork recordings or the save
+style) and the icon container (D_0028A4A0 and its bytes); an EMSP without the
+former makes the card screen fault at its first read of one, and without the
+latter the save mode stops with the exporter's name. `python3 tools/build_start_saves.py` after the fork recordings or the save
 code change (test-start-saves fails on a stale `build/start_saves`).
 Otherwise none: the save code is in the boot ELF, and the tests read the
 recordings in the reference `tools/reference_root.py` selects.

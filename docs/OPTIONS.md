@@ -25,7 +25,7 @@ original's; no instruction of the original is reproduced here.
 | Quit | 0022B420 (No: back; Yes: r == 3, 001AD140 as the death does) | live; Yes is bound but no recording plays it | test-options-reference; opt_08 |
 | Closing | r == 1: 001AF1C0 (the settings into the progress block, 001AF470), the cue 0xD, 001FAE70(0) | live | test-options-reference; opt_00..08 |
 | The title's LOAD GAME after a death | 001AC070 state 2's 00225A00 and D_00275BE0 = 1, state 5's 00225AC0(0) every tick, its r == 2: 001AF150 and state 4's loaded game | live (section 4.3; the loaded game: SAVE_GAME.md section 6.3); on the boot's title too, on the title's own binding (SAVE_GAME.md section 6.4) | test-title-menu-reference, test-options-reference; dmg_load, dmg_load_game; test-title-load-game |
-| Saving | 00225AC0(1) from 0020CDC0 (request 6) and 001AD740 | unreachable in AREA11 (section 7); the writer below the card screen is translated and dispatched, but its callers are not wired and its save mode stops at the free count, Format, the New Game block and the full-block Write (SAVE_GAME.md section 6.1) | decomp save_scan.json; test-save-reference |
+| Saving | 00225AC0(1) from 0020CDC0 (request 6) and 001AD740 | unreachable in AREA11 (section 7); live from a save terminal since 2026-11-01 (SAVE_GAME.md section 6.5); 001AD740 not wired | test-options-card-live; the original's own save (SAVE_GAME.md 6.2) |
 
 ## 2. Opening and closing
 
@@ -141,9 +141,10 @@ past the slot choice) are dispatched to their translations
 (em_card_original) on the binding's state, with sprintf 00122D10 (the
 conversions d and s), strcmp 00123020, the slot rows' text (001CC1E0 with the
 style 0 or D_00275898, 001FC770 with the config 0 or D_002671A0) and the card
-code's buffers (section 4.1) under them; the save mode's Format 00114D18,
-block copy 00121870 and New Game block 001AF2C0 fault (docs/SAVE_GAME.md
-section 6.1). A missing view, a refused draw or a failing worker latches
+code's buffers (section 4.1) under them; the save mode's block copy
+00121870 and New Game block 001AF2C0 run over the views, and Format 00114D18
+goes to em_memcard, which answers it only on the test's fresh card
+(docs/SAVE_GAME.md sections 6.2, 6.5). A missing view, a refused draw or a failing worker latches
 the call's fault and the coordinator stops.
 
 ### 4.3 The title's load screen
@@ -240,8 +241,8 @@ stand-in and leaves zeros. Nothing reads the record before 001AF6F0 /
   (the game task's +9 = 3, set only after AREA21's store to 0x70003B93).
   Proof: decomp CAPTURES_C10.md "Save paths: the first level offers none"
   (`build/c10/options/save_scan.json`). The save writer that the card
-  screen runs in save mode (00228A90 and its steps) and the card layout it
-  writes: SAVE_GAME.md.
+  screen runs in save mode (00228A90 and its steps), the card layout it
+  writes and the terminal's route, live in AREA01 and later: SAVE_GAME.md.
 - **A chosen slot and a load** (002267A0, 00227300; r == 2): no first-level
   recording chooses a slot. Since the save lane's binding the card screen
   past the slot choice runs live (checked against the original by
