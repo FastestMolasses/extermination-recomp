@@ -185,9 +185,10 @@ the New Game run through the first boss fight instead of on to `a13_05`.
 `python3 tools/watch_takes.py` plays the takes you recorded on the original
 (the decomp's `tools/record_original_play.py`) in the port as one continuous run:
 `run1` and every take recorded after it, from the title, with no restart or save
-load between them. Run `record_original_play.py trace <take>` once per take first.
-When it ends, every tick is compared with the original and the first place the
-run leaves the recording in each segment is printed. Your saves are not touched.
+load between them. When it ends, every tick is compared with the original and the
+first place the position or heading leaves the recording in each segment is
+printed. Your saves are not touched. If a fault stops the game the run stays frozen
+for a minute, then ends; close the window to stop sooner.
 
 ## Status
 

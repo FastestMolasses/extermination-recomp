@@ -22,8 +22,16 @@
  *   P  play: otherwise
  * A segment is a run of ticks with one phase. The PCSX2 side
  * (tools/video_compare/ps2.py) computes the same phases from the same
- * addresses. */
+ * addresses.
+ *
+ * A recording with a last column "rand" (the user's takes) holds rand()'s state
+ * per tick, and past the first segment each tick starts from the original's.
+ * The port's loads have their own length and a voice line can end a tick early
+ * (a face's draws then come a tick sooner), and one such slip would change every
+ * later random outcome, the creatures' included. So a difference in a take's
+ * playback comes from the logic, not from the stream. */
 #include "game/em_replay.h"
+#include "game/em_random.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -46,6 +54,7 @@
 typedef struct {
     uint16_t btn;
     uint8_t axis[4]; /* lx ly rx ry, raw bytes (0x80 = centre) */
+    uint32_t rand;   /* rand()'s state at the tick's start, with s.rands */
 } RecPad;
 
 typedef struct {
@@ -68,6 +77,7 @@ static struct {
     long max_overrun;
     int done;
     int area0_world;
+    int rands;
     /* live segment tracking (record and playback) */
     char prev_phase;
     uint32_t cur_seg;  /* playback: recorded segment; record: live count - 1 */
@@ -143,7 +153,10 @@ static int load_recording(const char *path)
     while (fgets(line, sizeof line, f)) {
         if (line[0] == '#') {
             if (!strncmp(line, "# " REC_MAGIC, strlen("# " REC_MAGIC))) magic = 1;
-            if (!strncmp(line, "#cols ", 6)) cols = !strncmp(line + 6, REC_COLS, strlen(REC_COLS));
+            if (!strncmp(line, "#cols ", 6)) {
+                cols = !strncmp(line + 6, REC_COLS, strlen(REC_COLS));
+                s.rands = !strncmp(line + 6 + strlen(REC_COLS), " rand", 5);
+            }
             if (!strncmp(line, "# area0 world", 13)) s.area0_world = 1;
             continue;
         }
@@ -156,7 +169,9 @@ static int load_recording(const char *path)
             fclose(f);
             return -1;
         }
-        RecPad pad = {(uint16_t)btn, {(uint8_t)lx, (uint8_t)ly, (uint8_t)rx, (uint8_t)ry}};
+        const char *last = strrchr(line, ' ');
+        RecPad pad = {(uint16_t)btn, {(uint8_t)lx, (uint8_t)ly, (uint8_t)rx, (uint8_t)ry},
+                      s.rands && last ? (uint32_t)strtoul(last + 1, NULL, 16) : 0};
         if (mv) {
             if (!movie_open) {
                 if (!(s.movie_skip = grow(s.movie_skip, &s.cap_movies, s.nmovies + 1, 1))) goto oom;
@@ -340,6 +355,7 @@ static void filter(EmPadState *pad, void *user)
             const RecSeg *g0 = &s.segs[s.cur_seg];
             const uint32_t i = s.off < g0->len ? s.off : g0->len - 1;
             pad_set(pad, &s.ticks[g0->start + i]);
+            if (s.rands && s.cur_seg && s.off < g0->len) em_random_seed(s.ticks[g0->start + i].rand);
             if ((long)s.off - (long)g0->len > s.max_overrun) stop("desync: segment overran the recording");
             if (s.cur_seg + 1 == s.nsegs && s.off + 1 >= g0->len) stop("recording used up");
             if (s.capture && phase != 'T' && s.off % s.capture_every == 0) {

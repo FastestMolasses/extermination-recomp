@@ -10,7 +10,7 @@ load, a cutscene or a menu each side keeps its own timing and the next segment
 starts on the port's first tick of that phase.
 
 The run writes a log of what the port did, and every tick is then compared with
-the original's: where the position first leaves the recording in each segment.
+the original's: where position or heading first leaves the recording in each segment.
 A viewer's saves are not touched: the run uses its own empty card folder. A
 take whose start.json has no "card" key was played on the fork's fresh,
 unformatted cards, so until the chain's first formatted take the port answers
@@ -25,12 +25,16 @@ Usage (native arm64 macOS; build/extermination first, native):
   python3 tools/watch_takes.py test1           # another chain
   python3 tools/watch_takes.py --check test1   # no window, full speed, comparison only
 
+rand()'s state follows the recording tick by tick (em_replay.c says why), so a
+difference comes from the logic and not from a load's length.
+
 Output: build/takes/<first take>/ (derived from the disc: never committed).
 """
 import argparse
 import json
 import math
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -41,8 +45,9 @@ OUT = ROOT / 'build/takes'
 BIN = ROOT / 'build/extermination'
 COLS = ('step counter mv ph btn lx ly rx ry area sub entry bd8 s8d t9 tb x y z yaw seg off cap af').split()
 HEADER = ['# EMREC 1', '# source ps2-takes', '# mode recording', '# area0 world', '# tick_hz 59.94',
-          '#cols ' + ' '.join(COLS)]
+          '#cols ' + ' '.join(COLS) + ' rand']
 SAME = 0.01             # position difference a float print can leave
+TURNED = 0.001          # the same for the heading, in radians
 
 
 def chain(first):
@@ -104,7 +109,7 @@ def parse(path):
         if line.startswith('#'):
             continue
         parts = line.split()
-        if len(parts) == len(COLS) and parts[2] == '0':
+        if len(parts) >= len(COLS) and parts[2] == '0':
             rows.append(dict(zip(COLS, parts)))
     return rows
 
@@ -131,19 +136,20 @@ def compare(rec, log):
         pos = [float(row[c]) for c in 'xyz']
         target = [float(want[c]) for c in 'xyz']
         away = math.dist(pos, target)
-        same_area = row['area'] == want['area'] and row['sub'] == want['sub']
+        turned = abs(math.remainder(float(row['yaw']) - float(want['yaw']), math.tau))
+        same = away <= SAME and turned <= TURNED and row['area'] == want['area'] and row['sub'] == want['sub']
         ticks += 1
-        exact += away <= SAME and same_area
+        exact += same
         entry = per.setdefault(seg, dict(ticks=0, first=None, worst=0.0, phase=want['ph'], area=want['area'], sub=want['sub']))
         entry['ticks'] += 1
         entry['worst'] = max(entry['worst'], away)
-        if entry['first'] is None and (away > SAME or not same_area):
-            entry['first'] = (off, int(want['counter']), away, row['area'], row['sub'])
+        if entry['first'] is None and not same:
+            entry['first'] = (off, int(want['counter']), away, turned)
     print(f'{ticks} ticks compared, {exact} on the recording ({100 * exact / max(ticks, 1):.1f}%)')
     for seg, e in sorted(per.items()):
         state = 'exact' if e['first'] is None else \
             f'leaves at offset {e["first"][0]} (original counter {e["first"][1]}), {e["first"][2]:.2f} away, ' \
-            f'worst {e["worst"]:.2f}'
+            f'heading {e["first"][3]:.3f} off, worst {e["worst"]:.2f}'
         print(f'  segment {seg} {e["phase"]} area {e["area"]} sub {e["sub"]}: {e["ticks"]} ticks, {state}')
     return ticks, exact
 
@@ -155,7 +161,9 @@ def main():
     args = parser.parse_args()
     names = chain(args.take)
     out = OUT / args.take
-    (out / 'card').mkdir(parents=True, exist_ok=True)
+    if (out / 'card').exists():
+        shutil.rmtree(out / 'card')     # every run starts from an empty card, as the take did
+    (out / 'card').mkdir(parents=True)
     rec, log = out / 'stitched.rec', out / 'played.rec'
     ticks = stitch(names, rec)
     print(f'{" + ".join(names)}: {ticks} ticks, {ticks / 59.94 / 60:.1f} minutes', flush=True)
@@ -167,11 +175,15 @@ def main():
         env.update(EM_HEADLESS='1', EM_UNCAPPED='1', EM_MUTE='1')
     with (out / 'run.log').open('w') as text:
         result = subprocess.run([str(BIN)], cwd=ROOT, env=env, stdout=text, stderr=subprocess.STDOUT)
+    faulted = False
     for line in (out / 'run.log').read_text(errors='replace').splitlines():
         if line.startswith('replay:') or 'FAULT' in line or 'fail-stop' in line:
             print(line[:200], flush=True)
+            faulted = faulted or 'FAULT' in line
     print(f'port exit {result.returncode}', flush=True)
     compare(rec, log)
+    if faulted:
+        print('The game stopped at the FAULT above: a difference after it is the stopped game, not a new one.')
     return result.returncode
 
 
