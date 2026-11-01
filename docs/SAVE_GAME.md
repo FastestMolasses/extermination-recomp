@@ -878,7 +878,11 @@ the host cards); test-status-page-reference (phase 6 against the original on the
 results 0, 1, 2); `python3 tools/watch_takes.py --check test1` (the user's take:
 the card screens of both visits play their segments' full length, 592 and 705
 ticks, so each left the screen on the original's tick); the formatted route
-(section 6.2).
+(section 6.2). Run 2026-11-01: test-options-card-live PASS, 46 flows, 3,058 frames
+equal, 8 saves; --check test1 17,212 ticks on the recording, 100.0%. Mutants, each
+failing: 001AF2C0's C74 store dropped and block_copy one byte short
+(test-options-card-live), Format's busy count 100 and its port left at type 2
+(test-memcard-host).
 
 ## 7. Start-point saves (round 6)
 
