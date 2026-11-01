@@ -21,7 +21,7 @@ No row comparison has been made for AREA19 yet: nothing here is row-exact.
 | a19c_00 | position right; D_00810ACE, a first bite the recording took a beat later (rand() stream) |
 | a19c_01 | position right past the dropped quad; health and infection words differ (the fight's stream) |
 | a19c_02, a19c_04, a19c_06, a19c_07 | ends on the recording's block and position |
-| a19c_03 | 10.68 off the end: on the slide the recording's yaw turns to -0.52 from frame 968, the port's stays 0 until 1008. Not resolved: the path steering replaces the stick there; the slide code has its oracle |
+| a19c_03 | position right since slides (action 48) run on the recorded stick; infection differs (a bite) |
 | a19c_05 | walks off the y-170 step 1.3 from the recorded path and falls to y 150: steering |
 | a19d_00, 02, 05, 06, 08, 09, 10, 16, 17, 18, 19, 20 | ends on the recording's block and position; a19d_20 through door [50] into AREA15 |
 | a19d_01 | no end in 240 s alone: earlier bites move the player off the ladder at (892, 929.5). In the chain it takes the ladder and reaches the ceiling |

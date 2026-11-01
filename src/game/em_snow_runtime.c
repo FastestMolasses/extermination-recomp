@@ -100,6 +100,8 @@ static int refuse(const char *what, uint32_t address)
     return -1;
 }
 
+static int draw_tiles(EmWeather *weather, const EmSnowConfig *config, const EmWeatherFrame *frame, const float eye[3]);
+
 int em_snow_runtime_tick_actor(EmWeather *weather, const float eye[3], unsigned selector,
                                unsigned transition, unsigned fade_state)
 {
@@ -109,6 +111,11 @@ int em_snow_runtime_tick_actor(EmWeather *weather, const float eye[3], unsigned 
     if (frame.released)
         return 1;
     if (frame.draw != 1) return 0;
+    return draw_tiles(weather, &snow.config, &frame, eye);
+}
+
+static int draw_tiles(EmWeather *weather, const EmSnowConfig *config, const EmWeatherFrame *frame, const float eye[3])
+{
     /* 001E55F0 state 1, intensity above 0: the channel-3 cursor it reads
      * before 001E67C0 (the list's start). */
     const uint8_t *d275674 = em_rcl_bytes(0x00275674u, 4);
@@ -123,7 +130,7 @@ int em_snow_runtime_tick_actor(EmWeather *weather, const float eye[3], unsigned 
      * 0021B9A0(1, 0.0, 0.0) restores the mode-1 pair at the end. */
     if (em_rcl_0021B9A0(2, 0, 0) < 0 || em_rcl_0021B9A0(3, 0, UINT32_C(0x43960000)) < 0)
         return refuse("001E67C0's 0021B9A0 faulted (the render context)", 0x0021B9A0u);
-    if (em_snow_tiles(weather, &snow.config, frame.strength, eye, sdk_sine, NULL, snow.tiles) < 0)
+    if (em_snow_tiles(weather, config, frame->strength, eye, sdk_sine, NULL, snow.tiles) < 0)
         return refuse("001E67C0's SDK 00102900 or 0011E2A8 faulted", 0x001E67C0u);
     uint32_t fault = 0, first = 0;
     uint32_t p3 = 0, uniform = 1;
@@ -307,15 +314,25 @@ int em_snow_runtime_tick_outdoor(EmWeather *weather, uint32_t self, uint32_t fla
     *d8106BF = frame.intensity;
     if (frame.draw == 0) return 0;
     if (frame.draw != 2) {
-        /* 001E67C0's branch (AREA15 sub 1's weather): the state above runs,
-         * the picture does not (no snow config outside AREA11's scene; only
-         * the picture depends on it). Open item, docs/AREA15_PORT.md.
-         * AREA13 never takes it: a fail-stop there. */
-        static int reported;
-        if (area == 0x0D) return refuse("001E67C0 in AREA13 (no exported snow config)", 0x001E67C0u);
-        if (!reported) fprintf(stderr, "snow: 001E67C0: area %02X's snow is not drawn\n", area);
-        reported = 1;
-        return 0;
+        /* 001E67C0's branch. AREA15 sub 1's weather is AREA11's emission (flags
+         * & 2 clear) with D_002551F0 = 0xA, its case 0xF01; the camera is
+         * D_008105D0. The other keys of its switch (AREA21) and the reversed
+         * row (flags & 2) are not this translation's. AREA13 never takes it. */
+        if (area != 0x0F || sub != 1 || (flags & 2u))
+            return refuse("001E67C0 outside AREA11 and AREA15 sub 1", 0x001E67C0u);
+        static EmSnowConfig config15;
+        static int config15_loaded;
+        if (!config15_loaded) {
+            if (!em_snow_config_load(&config15, "assets/scene_snow/snow.emsn"))
+                return refuse("no assets/scene_snow/snow.emsn", 0x001E67C0u);
+            memcpy(&config15.descriptor[8][0], (const uint32_t[]){0xAu}, 4);  /* D_002551F0 */
+            config15_loaded = 1;
+        }
+        const uint8_t *eye_bytes = em_camera_live_bytes(0x008105D0u, 12);
+        if (!eye_bytes) return refuse("D_008105D0 is not mapped", 0x008105D0u);
+        float eye[3];
+        memcpy(eye, eye_bytes, sizeof eye);
+        return draw_tiles(weather, &config15, &frame, eye);
     }
     if (!s_wx_data_ready) {
         const uint8_t *elf = em_effects_live_window(WX_DATA, WX_DATA_SIZE);

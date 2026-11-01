@@ -354,7 +354,7 @@ def raw_rows(traces, lead):
         off = t['first_counter'] - base + lead
         at = None
         for r in t['rows']:
-            if r['m1F0'] in (32, 34, 40, 44, 45, 46):
+            if r['m1F0'] in (32, 34, 40, 44, 45, 46, 48):
                 at = r['f'] if at is None else at
                 end = r['f']
             elif at is not None:
