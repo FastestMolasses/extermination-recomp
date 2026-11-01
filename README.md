@@ -182,13 +182,47 @@ the New Game run through the first boss fight instead of on to `a13_05`.
 
 ### Watching your own recorded takes
 
-`python3 tools/watch_takes.py` plays the takes you recorded on the original
-(the decomp's `tools/record_original_play.py`) in the port as one continuous run:
-`run1` and every take recorded after it, from the title, with no restart or save
-load between them. When it ends, every tick is compared with the original and the
-first place the position or heading leaves the recording in each segment is
-printed. Your saves are not touched. If a fault stops the game the run stays frozen
-for a minute, then ends; close the window to stop sooner.
+Record your play on the original with the decomp's
+`tools/record_original_play.py` (see the README in `../Extermination`). Then
+`tools/watch_takes.py` plays those takes here, from your exact pad input, and compares
+every tick with what the original did. Native arm64 macOS; run `make` first.
+
+Watch a run in the window, from the title, with sound at normal speed:
+
+```bash
+python3 tools/watch_takes.py
+```
+
+That plays `run1` and every take recorded after it (`--after`) as one continuous run,
+with no restart or save load between takes. Close the window to stop; the comparison
+covers what played. To start from another take:
+
+```bash
+python3 tools/watch_takes.py test1
+```
+
+To run the comparison alone, with no window, at full speed and silent:
+
+```bash
+python3 tools/watch_takes.py --check run1
+```
+
+**Reading the result.** `N ticks compared, M on the recording` counts ticks where
+position, heading and area match the original. Each segment (one stretch of play,
+cutscene or menu, or load) reports `exact`, or where it first leaves the recording. A
+`FAULT` line means the port stopped at something it does not implement yet; everything
+after it is the stopped game, so fix that first. The game stays frozen for a minute,
+then the run ends.
+
+**What the playback does for you.** Each side keeps its own load and cutscene lengths,
+and the next segment starts on the port's own first tick of that phase. rand()'s state
+follows the original's tick by tick, because a load's length would otherwise change
+every later random outcome. So a difference comes from the logic. Your saves are not
+touched: a run uses its own empty card in `build/takes/<take>/card`. Takes played on an
+unformatted card (`run1`, `test1`) fail their saves here as they did there.
+
+Output: `build/takes/<take>/` (`stitched.rec`, `played.rec`, `run.log`), derived from
+your disc and never committed.
 
 ## Status
 
