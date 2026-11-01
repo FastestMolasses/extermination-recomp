@@ -177,9 +177,10 @@ def main():
         result = subprocess.run([str(BIN)], cwd=ROOT, env=env, stdout=text, stderr=subprocess.STDOUT)
     faulted = False
     for line in (out / 'run.log').read_text(errors='replace').splitlines():
-        if line.startswith('replay:') or 'FAULT' in line or 'fail-stop' in line:
+        stopped = 'FAULT' in line or 'player stage worker' in line or ' fault code ' in line
+        if line.startswith('replay:') or stopped or 'fail-stop' in line:
             print(line[:200], flush=True)
-            faulted = faulted or 'FAULT' in line
+            faulted = faulted or stopped
     print(f'port exit {result.returncode}', flush=True)
     compare(rec, log)
     if faulted:
