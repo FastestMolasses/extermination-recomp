@@ -154,6 +154,8 @@ FUNCS = {
     0x146110: ('em_level11_port_00146110', 0x394, [U, U, S], I),
     0x1464B0: ('em_level11_port_001464B0', 0x288, [U, U], I),
     0x1469B0: ('em_level11_port_001469B0', 0x140, [U, U, S], None),
+    0x146AF0: ('em_level11_port_00146AF0', 0x1E8, [U, U, F], I),
+    0x146F80: ('em_level11_port_00146F80', 0x260, [U, S], I),
     0x146CE0: ('em_level11_port_00146CE0', 0x294, [U, U], I),
     0x1471E0: ('em_level11_port_001471E0', 0x1AC, [U, U], None),
     0x118418: ('em_level11_port_00118418', 0x294, [U], I),
@@ -185,6 +187,7 @@ HOOKS = [
 # BEGIN GENERATED HOOKS
     ('w_001000E0', 0x1000E0, [(Q, 4), (Q, 5)], I),
     ('w_001026A0', 0x1026A0, [(U, 4), (U, 5), (U, 6)], None),
+    ('w_00102738', 0x102738, [(U, 4), (U, 5)], F),
     ('w_00102760', 0x102760, [(U, 4), (U, 5)], None),
     ('w_00102850', 0x102850, [(U, 4), (U, 5), (F, 12)], None),
     ('w_001028B8', 0x1028B8, [(U, 4), (U, 5), (U, 6)], None),
@@ -202,6 +205,7 @@ HOOKS = [
     ('w_0011DE90', 0x11DE90, [(F, 12)], F),
     ('w_0011DF78', 0x11DF78, [(F, 12)], F),
     ('w_0011E2A8', 0x11E2A8, [(F, 12)], F),
+    ('w_0011E420', 0x11E420, [(F, 12)], F),
     ('w_0011E620', 0x11E620, [(F, 12), (F, 13)], F),
     ('w_00122BB8', 0x122BB8, [], I),
     ('w_001274B0', 0x1274B0, [(Q, 4), (Q, 5)], Q),
@@ -220,6 +224,7 @@ HOOKS = [
     ('w_00146AF0', 0x146AF0, [(U, 4), (U, 5), (F, 12)], I),
     ('w_00146F80', 0x146F80, [(U, 4)], I),
     ('w_00182F90', 0x182F90, [(U, 4), (U, 5)], None),
+    ('w_0019A310', 0x19A310, [(U, 4)], I),
     ('w_0019A570', 0x19A570, [(U, 4), (U, 5), (I, 6), (I, 7)], I),
     ('w_0019AB20', 0x19AB20, [(U, 4), (U, 5), (U, 6), (I, 7)], I),
     ('w_0019AD00', 0x19AD00, [(U, 4), (U, 5), (I, 6)], I),
@@ -307,7 +312,7 @@ BY_ADDRESS = {address: (name, args, result) for name, address, args, result in H
 # poisoned (Oracle.rehearse).
 RUN = {0x1000E0, 0x11DE90, 0x11DF78, 0x11E2A8, 0x11E620, 0x1274B0, 0x128250, 0x128350, 0x1B1240, 0x1B12B0,
        0x1B13F0, 0x1B1470, 0x1B15D0, 0x1026A0, 0x102850, 0x1028B8, 0x1028D0, 0x102900, 0x102918, 0x102948, 0x102958,
-       0x1029C0, 0x102BB0, 0x102C58, 0x102760}
+       0x1029C0, 0x102BB0, 0x102C58, 0x102760, 0x102738, 0x11E420}
 
 # Jump tables (runtime address of the jump -> (table, words)), in the boot
 # .rodata (checked against the ELF before any case).
@@ -2110,6 +2115,26 @@ def creature_cases(add, rng):
                 base + [(e + 0x34, h16(hp)), (e + 0x36, h16(hit)), (d + 0x72, b8(d72)), (d + 0x7B, b8(d7b)),
                         (d + 0x73, b8(d73)), (d + 0x7D, b8(d7d)), (e + 4, b8(b4)), (d + 0x66, h16(d66)),
                         (d + 0x74, b8(d74)), (0x8106BD, b8(f6bd))])
+    # 00146AF0: the aim's acceptance
+    for mode, sel, v, d5c in ((0, 0, 13.0, 1.0), (0x31, 0, 13.0, 1.0), (0x32, 1, 13.0, 1.0), (0x31, 1, 13.0, 90.0),
+                              (0x32, 0, 13.0, 40.0), (0x30, 1, 13.0, 1.0), (0x33, 0, 13.0, 1.0)):
+        add('actor 146AF0 m%X s%d %g %g' % (mode, sel, v, d5c), B, 0x146AF0, [e, d, fb(v)],
+            base + [(0x8104A0, b8(mode)), (0x8104A1, b8(sel)), (d + 0x5C, f32b(d5c)), (0x8102D0, w32(hitobj)),
+                    (hitobj + 0xC0, fw(0.3, 0.5, 0.8, 1.0)), (0x810374, f32b(0.7))])
+    # 00146F80: the ground ahead of the carry
+    for tag, kind, b2, b3, want in (('fixed', 2, 4, 6, 1), ('other', 2, 4, 7, 0), ('t1C', 1, 0, 0x1C, 1),
+                                    ('t1E', 1, 0, 0x1E, 1), ('t1F', 3, 0, 0x1F, 1), ('t20', 1, 0, 0x20, 0),
+                                    ('t1D', 2, 3, 0x1D, 0)):
+        add('actor 146F80 hit %s' % tag, B, 0x146F80, [e],
+            base + [(hitobj + 2, b8(b2)), (hitobj + 3, b8(b3))],
+            queues={0x19AD00: [Scribble(1, [(0x700031D8, w32(kind)), (0x700031D4, w32(hitobj))])]})
+    for frames, nest in ((0, 0), (1, 0), (2, 1), (5, -1), (8, 4)):
+        for r, flag, ang in ((0, 0, 0.0), (1, 0x2000, 0.0), (1, 0, 1.0), (1, 0, 0.5), (1, 0x10, 0.7853982)):
+            add('actor 146F80 miss %d %d %d %X %g' % (frames, nest, r, flag, ang), B, 0x146F80, [e],
+                base + [(hitobj + 0x1A, h16(flag))],
+                spad=[(0x70003B68, w32(frames)), (0x70003B8A, h16(nest)), (0x700031D0, w32(hitobj))],
+                queues={0x19AD00: [0], 0x19AFE0: [r],
+                        0x19A310: [Scribble(1, [(STACK_TOP - 4, f32b(ang))])]})
     # 001471E0: the zone
     for area, z, r1, r2, r3 in ((0xD, 980.0, 0, 0, 0), (0xD, 970.0, 0, 0, 0), (0xD, 969.0, 1, 0, 0),
                                 (0xD, 900.0, 0, 1, 0), (0xD, 900.0, 0, 0, 1), (0xD, 900.0, 0, 0, 0),
@@ -3517,7 +3542,7 @@ DEFAULT_KEEP = frozenset([
     'stage 1455A0 s2 1000 0 0',
     'stage 1455A0 s4',
 ])
-SURVIVORS = ('survivor ',)
+SURVIVORS = ('actor 146AF0', 'actor 146F80', 'survivor ',)
 
 
 def select_cases(elf):

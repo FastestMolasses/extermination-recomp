@@ -22,6 +22,11 @@
 #define S_700038B8 0x700038B8u
 #define S_700038BC 0x700038BCu
 #define S_70003A20 0x70003A20u
+#define S_70003A24 0x70003A24u
+#define S_700036A0 0x700036A0u
+#define S_700031D0 0x700031D0u
+#define S_700031D4 0x700031D4u
+#define S_700031D8 0x700031D8u
 
 #define PLAYER_BLOCK 0x008102B0u /* its first byte too: bit 1 is set by every grab */
 #define PLAYER_XZ    0x00810360u
@@ -912,6 +917,99 @@ static void l11_00145850(L11 *o, uint32_t e)
     l11_c_001AFC10(o, e);
 }
 
+/* ------------------------------------------------------------------------
+ * 00146AF0 (e, d, v): the aim's acceptance. 0 unless D_008104A0 is '1' or
+ * '2'. The facing a: with D_008104A1 == 1 the XZ of D_008102D0 +0xC0
+ * normalised (00102948, y = 0, 00102760); else (0, 0, 1, 1) turned by
+ * D_00810374 (001029C0, 00102BB0, 001026A0). The bearing to e 001B1240(the
+ * player, e +0xB0, e +0xB8) at 0x70003A24 turns (0, 0, 1, 1) the same way
+ * into b. 0x70003A24 = 0011E420(00102738(a, b)); r = 0011E2A8 of it times d
+ * +0x5C; 1 unless v < r. */
+static int32_t l11_00146AF0(L11 *o, uint32_t e, uint32_t d, uint32_t v)
+{
+    uint32_t mode = l11_u8(o, 0x008104A0u);
+    if (mode != 0x31u && mode != 0x32u) return 0;
+    if (l11_u8(o, 0x008104A1u) != 1u) {
+        l11_w32(o, S_700038A0, 0);
+        l11_w32(o, S_700038A4, 0);
+        l11_w32(o, S_700038A8, F_ONE);
+        l11_w32(o, S_700038AC, F_ONE);
+        if (l11_c_001029C0(o, S_700036A0)) return 0;
+        if (l11_c_00102BB0(o, S_700036A0, S_700036A0, l11_u32(o, PLAYER_YAW))) return 0;
+        if (l11_c_001026A0(o, S_700038A0, S_700036A0, S_700038A0)) return 0;
+    } else {
+        if (l11_c_00102948(o, S_700038A0, l11_u32(o, 0x008102D0u) + 0xC0)) return 0;
+        l11_w32(o, S_700038A4, 0);
+        if (l11_c_00102760(o, S_700038A0, S_700038A0)) return 0;
+    }
+    uint32_t r = 0;
+    uint32_t x = l11_u32(o, e + 0xB0);
+    if (l11_c_001B1240(o, PLAYER_XZ, x, l11_u32(o, e + 0xB8), &r)) return 0;
+    l11_w32(o, S_70003A24, r);
+    l11_w32(o, S_700038B0, 0);
+    l11_w32(o, S_700038B4, 0);
+    l11_w32(o, S_700038B8, F_ONE);
+    l11_w32(o, S_700038BC, F_ONE);
+    if (l11_c_001029C0(o, S_700036A0)) return 0;
+    if (l11_c_00102BB0(o, S_700036A0, S_700036A0, l11_u32(o, S_70003A24))) return 0;
+    if (l11_c_001026A0(o, S_700038B0, S_700036A0, S_700038B0)) return 0;
+    if (l11_c_00102738(o, S_700038A0, S_700038B0, &r)) return 0;
+    if (l11_c_0011E420(o, r, &r)) return 0;
+    l11_w32(o, S_70003A24, r);
+    if (l11_c_0011E2A8(o, r, &r)) return 0;
+    r = L11_MUL(l11_u32(o, d + 0x5C), r);
+    return L11_LT(v, r) ? 0 : 1;
+}
+
+/* ------------------------------------------------------------------------
+ * 00146F80 (e): the ground ahead of the carry. (0, 5, 15, 1) through e's
+ * frame to the world (0x700038A0), 0019AD00(e, it, 2): a hit returns 1, first
+ * setting the halfword +0x36 of the hit object (0x700031D4) when it is a
+ * fixed surface (0x700031D8 == 2, +2 == 4, +3 == 6) or its +3 is 0x1C, 0x1E
+ * or 0x1F. A miss: the two points of row (0x70003B68 + 0x70003B8A) % 3 of
+ * D_00245A00 (0x20 bytes each) to the world, 0019AFE0(e, them, 4): a miss
+ * returns 0; a hit returns 1 when the stage record's (0x700031D0) +0x1A has
+ * bit 0x2000, else 0019A310's slope (preset pi / 2, at sp - 4) above pi / 4. */
+static int32_t l11_00146F80(L11 *o, uint32_t e, uint32_t sp)
+{
+    int32_t r = 0;
+    l11_w32(o, S_700038A0, 0);
+    l11_w32(o, S_700038A4, 0x40A00000u); /* 5.0 */
+    l11_w32(o, S_700038A8, 0x41700000u); /* 15.0 */
+    l11_w32(o, S_700038AC, F_ONE);
+    if (l11_c_001B2B10(o, e, S_700038A0, S_700038A0)) return 0;
+    if (l11_c_001028B8(o, S_700038A0, e + 0xB0, S_700038A0)) return 0;
+    if (l11_c_0019AD00(o, e, S_700038A0, 2, &r)) return 0;
+    if (r != 0) {
+        uint32_t special = 0;
+        if (l11_u32(o, S_700031D8) == 2u) {
+            uint32_t hit = l11_u32(o, S_700031D4);
+            special = hit != 0 && l11_u8(o, hit + 2) == 4u && l11_u8(o, hit + 3) == 6u;
+        }
+        if (!special) {
+            uint32_t type = l11_u8(o, l11_u32(o, S_700031D4) + 3);
+            special = type == 0x1Cu || type - 0x1Eu < 2u;
+        }
+        if (special) l11_w16(o, l11_u32(o, S_700031D4) + 0x36, 1);
+        return 1;
+    }
+    int32_t nest = l11_s16(o, 0x70003B8Au);
+    int32_t idx = (int32_t)(l11_u32(o, 0x70003B68u) + (uint32_t)nest) % 3;
+    uint32_t row = 0x00245A00u + (uint32_t)idx * 0x20u;
+    if (l11_c_00102948(o, S_700038A0, row)) return 0;
+    if (l11_c_00102948(o, S_700038B0, row + 0x10)) return 0;
+    if (l11_c_001B2B10(o, e, S_700038A0, S_700038A0)) return 0;
+    if (l11_c_001B2B10(o, e, S_700038B0, S_700038B0)) return 0;
+    if (l11_c_001028B8(o, S_700038A0, e + 0xB0, S_700038A0)) return 0;
+    if (l11_c_001028B8(o, S_700038B0, e + 0xB0, S_700038B0)) return 0;
+    if (l11_c_0019AFE0(o, e, S_700038A0, S_700038B0, 4, &r)) return 0;
+    if (r == 0) return 0;
+    l11_w32(o, sp - 4u, 0x3FC90FDBu);
+    if (l11_u16(o, l11_u32(o, S_700031D0) + 0x1A) & 0x2000u) return 1;
+    if (l11_c_0019A310(o, sp - 4u, &r)) return 0;
+    return L11_LT(F_QPI, l11_u32(o, sp - 4u)) ? 1 : 0;
+}
+
 #define L11_ENTRY_ED(name, call)                                                                     \
     int name(const EmLevel11PortHooks *h, uint32_t e, uint32_t d, EmLevel11PortFault *fault)         \
     {                                                                                                \
@@ -930,3 +1028,25 @@ L11_ENTRY_ED(em_level11_port_00145210, l11_00145210(&o, e, d))
 L11_ENTRY_ED(em_level11_port_001453C0, l11_001453C0(&o, e, d))
 L11_ENTRY_ED(em_level11_port_001455A0, l11_001455A0(&o, e, d))
 L11_ENTRY_ED(em_level11_port_00145850, ((void)d, l11_00145850(&o, e)))
+
+int em_level11_port_00146AF0(const EmLevel11PortHooks *h, uint32_t e, uint32_t d, float v, int32_t *result,
+                             EmLevel11PortFault *fault)
+{
+    L11 o;
+    if (!result || l11_begin(&o, h, fault)) return -1;
+    int32_t r = l11_00146AF0(&o, e, d, l11_bits(v));
+    if (l11_end(&o)) return -1;
+    *result = r;
+    return 0;
+}
+
+int em_level11_port_00146F80(const EmLevel11PortHooks *h, uint32_t e, uint32_t sp, int32_t *result,
+                             EmLevel11PortFault *fault)
+{
+    L11 o;
+    if (!result || l11_begin(&o, h, fault)) return -1;
+    int32_t r = l11_00146F80(&o, e, sp);
+    if (l11_end(&o)) return -1;
+    *result = r;
+    return 0;
+}

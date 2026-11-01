@@ -79,6 +79,7 @@ typedef struct {
 /* BEGIN GENERATED HOOKS */
     int (*w_001000E0)(void *ctx, uint64_t q0, uint64_t q1, int32_t *result);
     int (*w_001026A0)(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2);
+    int (*w_00102738)(void *ctx, uint32_t a0, uint32_t a1, float *result);
     int (*w_00102760)(void *ctx, uint32_t a0, uint32_t a1);
     int (*w_00102850)(void *ctx, uint32_t a0, uint32_t a1, float f2);
     int (*w_001028B8)(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2);
@@ -96,6 +97,7 @@ typedef struct {
     int (*w_0011DE90)(void *ctx, float f0, float *result);
     int (*w_0011DF78)(void *ctx, float f0, float *result);
     int (*w_0011E2A8)(void *ctx, float f0, float *result);
+    int (*w_0011E420)(void *ctx, float f0, float *result);
     int (*w_0011E620)(void *ctx, float f0, float f1, float *result);
     int (*w_00122BB8)(void *ctx, int32_t *result);
     int (*w_001274B0)(void *ctx, uint64_t q0, uint64_t q1, uint64_t *result);
@@ -114,6 +116,7 @@ typedef struct {
     int (*w_00146AF0)(void *ctx, uint32_t a0, uint32_t a1, float f2, int32_t *result);
     int (*w_00146F80)(void *ctx, uint32_t a0, int32_t *result);
     int (*w_00182F90)(void *ctx, uint32_t a0, uint32_t a1);
+    int (*w_0019A310)(void *ctx, uint32_t a0, int32_t *result);
     int (*w_0019A570)(void *ctx, uint32_t a0, uint32_t a1, int32_t n2, int32_t n3, int32_t *result);
     int (*w_0019AB20)(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2, int32_t n3, int32_t *result);
     int (*w_0019AD00)(void *ctx, uint32_t a0, uint32_t a1, int32_t n2, int32_t *result);
@@ -247,6 +250,10 @@ int em_level11_port_00146110(const EmLevel11PortHooks *h, uint32_t e, uint32_t d
 int em_level11_port_001464B0(const EmLevel11PortHooks *h, uint32_t e, uint32_t d, int32_t *result,
                              EmLevel11PortFault *fault);
 int em_level11_port_001469B0(const EmLevel11PortHooks *h, uint32_t e, uint32_t d, uint32_t sp, EmLevel11PortFault *fault);
+int em_level11_port_00146AF0(const EmLevel11PortHooks *h, uint32_t e, uint32_t d, float v, int32_t *result,
+                             EmLevel11PortFault *fault);
+int em_level11_port_00146F80(const EmLevel11PortHooks *h, uint32_t e, uint32_t sp, int32_t *result,
+                             EmLevel11PortFault *fault);
 int em_level11_port_00146CE0(const EmLevel11PortHooks *h, uint32_t e, uint32_t d, int32_t *result,
                              EmLevel11PortFault *fault);
 int em_level11_port_001471E0(const EmLevel11PortHooks *h, uint32_t e, uint32_t d, EmLevel11PortFault *fault);

@@ -90,11 +90,10 @@ a13c_05's corner on [44]'s platform); no pad byte changes.
 
 ## Fail-stops that remain
 
-These callees of the beasts have no live binding, so they fault at their address:
-00146F80 (00144040 state 4's ground probe), 0021BED0, 0021BF90, 0021C040 (the grab
-that holds the player, reaction 0x3C). No recorded AREA13 beat shows reaction 0x3C
-or 0x3D (the rows hold no such action), so the route does not need them, but free
-play near a beast can reach them.
+None of the beasts' callees: 00146F80 (00144040 state 4's ground probe), 00146AF0 (the
+stalk's aim test) and 0021BED0, 0021BF90, 0021C040 (the grab that holds the player,
+reaction 0x3C) are bound. No recorded AREA13 beat shows reaction 0x3C or 0x3D (the rows
+hold no such action), so the live path rests on their oracles.
 
 ## Open items
 

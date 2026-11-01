@@ -570,14 +570,11 @@ keep their earlier bindings. What a host must do, as that binding does:
   callees (every hook not in the RUN list above) are not verified here,
   and the helpers run as original code need port translations paired by
   address. Behaviour 5 (001437E0) is `em_level12_port_001437E0`.
-- **Callees with no live binding** (the runtime's fail-stop stops at the
-  address when they are reached; nothing stands in): 00146F80 (the ground
-  probe of 00144040's state 4: a move probe ahead, then a two-ray slope
-  probe; no translation in the port), 0021BED0 (the player's action-blocked
-  test, state 3's grab), 0021BF90 (starts the player's reaction 0x3C, state 3's
-  hold) and 0021C040 (its follow-up: the release of a held player in 00143610,
-  00144040, 00145210, 001453C0 and 001455A0, only with d +0x7B set, which only
-  that hold sets). Each exists only as a hook of the level ports.
+- **The beasts' probes** 00146AF0 (the stalk's aim test) and 00146F80 (the ground
+  probe of 00144040's state 4: a move probe ahead, then a two-ray slope probe) are
+  entries here since 2026-11-01, from byte-matched C, with their oracle cases;
+  0021BED0, 0021BF90 and 0021C040 run in the later dispatch. No recorded beat has
+  taken these paths live.
 
 ## Known gaps
 
