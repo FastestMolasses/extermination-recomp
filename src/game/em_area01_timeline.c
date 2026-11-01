@@ -65,6 +65,31 @@ static void bars(Frame *f,int wide,uint32_t extra)
     uint32_t w=read32(f,0x008106C8u)&0xF1FFFF8Fu;
     write32(f,0x008106C8u,wide ? w|0x02000000u : w|extra);
 }
+/* 0011E0A8, newlib's modff (byte-matched C): the fraction of x, *ip its
+ * integral part. */
+static uint32_t modff_bits(uint32_t x,uint32_t *ip)
+{
+    const int exp=(int)(x>>23&0xFF)-0x7F;
+    if(exp<0) { *ip=x&0x80000000u;return x; }
+    if(exp>=23) { *ip=em_ee_mul_bits(x,em_ee_bits(1.0f));return x&0x80000000u; }
+    const uint32_t mask=0x007FFFFFu>>exp;
+    if(!(x&mask)) { *ip=x;return x&0x80000000u; }
+    *ip=x&~mask;
+    return em_ee_sub_bits(x,*ip);
+}
+/* Scene 27's 3852..3960: 0x70003A20 = (t - 3852) / 10, 0x70003A24 and
+ * 0x70003A28 its whole and fraction; 001B1E20(6, 5) on each whole step. */
+static void ramp27(Frame *f,float t)
+{
+    uint32_t x=em_ee_sub_bits(em_ee_bits(t),em_ee_bits(3852.0f)),whole=0;
+    write32(f,0x70003A20u,x);
+    x=em_ee_div_bits(x,em_ee_bits(10.0f));
+    write32(f,0x70003A20u,x);
+    const uint32_t part=modff_bits(x,&whole);
+    write32(f,0x70003A24u,whole);
+    write32(f,0x70003A28u,part);
+    if(em_ee_c_eq_bits(part,0))call(f,0x001B1E20u,2,6,5,0,0,0);
+}
 /* 0022EEF0's leading switch (decomp func_0022EEF0.c). */
 static void scene_steps(Frame *f,int scene)
 {
@@ -85,8 +110,7 @@ static void scene_steps(Frame *f,int scene)
         break;
     case 27:
         at_time(f,t,2431.0f,1,0x28);at_time(f,t,3491.0f,5,0xA0);at_time(f,t,3580.0f,8,0x46);
-        /* its 3852..3960 ramp (0011E0A8 over 0x70003A24) is not translated */
-        if(t>=3852.0f && t<3960.0f)f->fault=f->cam+0x74;
+        if(t>=3852.0f && t<3960.0f)ramp27(f,t);
         at_time(f,t,4260.0f,4,0x32);at_time(f,t,4508.0f,2,0xF);at_time(f,t,4609.0f,2,0xF);
         break;
     case 29:

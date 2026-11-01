@@ -96,7 +96,8 @@ behaviour defects until a row comparison says so.
   whatever the accumulator was (they jump with one left over);
   test_area11_sfx_reference runs 0x44F in lockstep past its first loop.
 - **Timeline**: every scene id 0022EC30's table knows runs over a blank track
-  against the original (test_area01_timeline_reference).
+  against the original (test_area01_timeline_reference), scene 27's ramp 3852..3960
+  included; no recorded beat reaches that ramp.
 
 ## Shared code this changed (each from the original)
 
@@ -138,5 +139,4 @@ behaviour defects until a row comparison says so.
    a zero screen length).
 2. **Not drawn**: 001CB1F0, 001CB130, 001CB060, the tendril field's and the worms'
    draw methods, whose VU1 programs have no translation; reported once.
-3. **Scene 27's ramp** faults at +0x74; no recorded beat reaches it.
-4. **a19b_00**, the arrival by the hatch [63], is the AREA13 side's.
+3. **a19b_00**, the arrival by the hatch [63], is the AREA13 side's.
