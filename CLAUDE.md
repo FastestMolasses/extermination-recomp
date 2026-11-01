@@ -215,6 +215,10 @@ message and the relevant doc.
   captures and save states = oracle inputs), the user's save-state slots 01–15,
   `assets/` (regenerable but slow), and receipts a committed doc cites (until
   the doc stops citing them).
+- **Never delete a recording** (user, 2026-11-01: they want to watch them again in
+  the port): `build/drive_replay*`, `build/rand_replay*`, `build/beat_rands`,
+  `build/start_saves`, `build/boss_fight`, and in the decomp `build/fork_refs/**`
+  and `build/human_play/**`. Disk cleanup never touches them.
 - **Checkpoints.** (1) Before a work package's final commit: delete its
   intermediate screenshots/BMP/PNG, emulator snapshots (state.p2s, eeMemory,
   gs dumps) and private lane builds that no doc or test references. (2) At

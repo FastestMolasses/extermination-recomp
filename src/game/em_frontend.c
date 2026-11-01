@@ -1293,10 +1293,12 @@ void em_frontend_install(void)
     f.capture_dir = getenv("EM_STARTUP_CAPTURE_DIR");
     f.test = getenv("EM_STARTUP_TEST");
     f.load_test = f.test && strcmp(f.test, "loadgame") == 0;
-    /* Test input only (EM_STARTUP_TEST runs): the host card folder for the
-     * whole run, set before the boot's card check (the level smoke's
-     * dmg_load_game loads a copy of a start-point card). */
-    const char *card = f.test ? getenv("EM_TEST_MEMCARD_ROOT") : NULL;
+    /* Test input only (EM_STARTUP_TEST runs, and a replay, whose saves must
+     * not reach the player's card): the host card folder for the whole run,
+     * set before the boot's card check (the level smoke's dmg_load_game loads
+     * a copy of a start-point card). */
+    const char *play = getenv("EM_INPUT_PLAY");
+    const char *card = f.test || (play && play[0]) ? getenv("EM_TEST_MEMCARD_ROOT") : NULL;
     if (card && card[0])
         em_memcard_set_root(card);
     /* EM_START_AT=<name> (em_start_at.h, checked at launch): the start-point

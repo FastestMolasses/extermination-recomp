@@ -1443,10 +1443,11 @@ int em_status_pages_live_tick(EmStatusPagesLive *l, uint32_t page, const EmStatu
         fprintf(stderr, "status pages: MAP 0020F950 / the keypad 002072C0 has no UI pool (em_status_models)\n");
         return -1;
     }
-    if (f->models) {
-        em_status_models_set_node(f->models, NODE_002101C0, node_002101C0, l);
+    /* One behaviour at a time: each page's pool holds its own nodes. */
+    if (f->models && page == 0x002072C0u)
         em_status_models_set_node(f->models, NODE_00207350, node_00207350, l);
-    }
+    else if (f->models)
+        em_status_models_set_node(f->models, NODE_002101C0, node_002101C0, l);
     if (l->trace) {
         trace_byte(l, 'T');
         trace_u32(l, page);

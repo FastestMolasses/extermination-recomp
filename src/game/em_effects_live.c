@@ -393,6 +393,7 @@ const uint8_t *em_effects_live_window(uint32_t address, uint32_t size)
             address - S.overlay_source[i].address <= 0x90u - size)
             return S.overlay_source[i].bytes + (address - S.overlay_source[i].address);
     const uint8_t *table = em_aim_fire_tables_bytes(address, size);
+    if (!table && em_aim_fire_tables_load() == 0) table = em_aim_fire_tables_bytes(address, size);
     return table ? table : em_boot_constants(address, size);
 }
 

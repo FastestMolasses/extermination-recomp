@@ -180,6 +180,15 @@ all. `--list` shows the sections, `--from <section or beat>` starts part 2
 there, `--only <section or beat>` plays just that section, and `--boss` takes
 the New Game run through the first boss fight instead of on to `a13_05`.
 
+### Watching your own recorded takes
+
+`python3 tools/watch_takes.py` plays the takes you recorded on the original
+(the decomp's `tools/record_original_play.py`) in the port as one continuous run:
+`run1` and every take recorded after it, from the title, with no restart or save
+load between them. Run `record_original_play.py trace <take>` once per take first.
+When it ends, every tick is compared with the original and the first place the
+run leaves the recording in each segment is printed. Your saves are not touched.
+
 ## Status
 
 - macOS: window + Metal clear/present + input loop — **working**.
