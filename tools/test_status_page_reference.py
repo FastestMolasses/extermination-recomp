@@ -26,12 +26,14 @@ ITEM_FIELDS = [(n, a - 0x900000 + UI if 0x900000 <= a < 0x900020 else a, s)
 
 
 class State(C.Structure):
-    _fields_ = [(n, C.c_uint8 if s == 1 else C.c_int32) for n, _, s in FIELDS] + [('item', Item)]
+    _fields_ = [(n, C.c_uint8 if s == 1 else C.c_int32) for n, _, s in FIELDS] + [('item', Item),
+                                                                                  ('save_result', C.c_uint8)]
 
 
 class Original(Base):
-    def __init__(self, elf, state, buttons):
+    def __init__(self, elf, state, buttons, card=0):
         super().__init__(elf, 0)
+        self.card = card        # 00225AC0(1)'s result this call (phase 6)
         for name, address, size in FIELDS:
             self.put(address, getattr(state, name), size)
         for name, address, size in ITEM_FIELDS:
@@ -47,7 +49,8 @@ class Original(Base):
                    0x200970: (6, (1,)), 0x20EE50: (7, (UI,)),
                    0x15C7B0: (9, (0x8102B0,)), 0x21BAE0: (10, (0,)),
                    0x20CD60: (12, ()), 0x20F950: (13, (UI,)),
-                   0x211970: (13, (UI,)), 0x214020: (13, (UI,)), 0x225A00: (14, ())}
+                   0x211970: (13, (UI,)), 0x214020: (13, (UI,)), 0x2072C0: (13, (UI,)),
+                   0x225A00: (14, ())}
         pages = {0x20F950: 1, 0x211970: 2, 0x214020: 3}
         for _ in range(1800):
             if pc == RETURN:
@@ -57,7 +60,14 @@ class Original(Base):
             if pc in workers:
                 event, args = workers[pc]
                 assert tuple(self.r[4:4 + len(args)]) == args, (hex(pc), self.r[4:8], args)
-                self.events.append((event, 1 if event == 6 else pages.get(pc, 0)))
+                page = self.get(UI + 0x10, 1) if pc == 0x2072C0 else pages.get(pc, 0)
+                self.events.append((event, 1 if event == 6 else page))
+                pc = self.r[31] & 0xFFFFFFFF
+                continue
+            if pc == 0x225AC0:
+                assert self.r[4] == 1
+                self.events.append((15, 0))
+                self.r[2] = self.card
                 pc = self.r[31] & 0xFFFFFFFF
                 continue
             if pc == 0x1FB9F0:
@@ -152,6 +162,12 @@ def main():
     for screen, buttons, busy in itertools.product((1, 2, 3, 6, 7, 8, 9, 0x62, 0x63, 0xFF),
                                                    (0, 0x810), (0, 1)):
         cases.append((3, 2, 0, busy, 0, 0, buttons, screen, 1, 0, 0, 0, 0x82))
+    # D_008106C5 without a request opens the passcode pages (not 2: page 4,
+    # module 0x25; 2: page 5, 0x26), which tick at 002072C0.
+    for status in (1, 2, 0xFF):
+        cases.append((0, 0, 0, 0, 0, status, 0, 0, 0, 0, 0, 0, 0x82))
+    for screen, step in itertools.product((4, 5), (1, 2)):
+        cases.append((3, step, 0, 0, 0, 0, 0, screen, 1, 0, 0, 0, 0x82))
     for case in cases:
         if len(case) == 13:
             case = case + (3,)
@@ -167,29 +183,35 @@ def main():
         assert bytes(got) == bytes(expected), (phase, step, transition, list(bytes(got)), list(bytes(expected)))
         assert actual == events and result == wanted, (phase, step, actual, events, result, wanted)
         checks += 1
-    # The branches that reach untranslated pages fault before any side
-    # effect (none is reachable in AREA11, docs/STATUS_PAGES.md section 1):
-    # accepted-save phase 6, a nonzero D_008106C5 without a request (the
-    # passcode pages 002072C0), and phase 3 on page ids 4 and 5.
-    faults = 0
-    for phase, step, request, status, screen in ((6, 0, 6, 0, 0), (0, 0, 0, 2, 0), (0, 0, 0, 0xFF, 0),
-                                                 (0, 0, 0, 1, 0), (3, 1, 0, 0, 4), (3, 1, 0, 0, 5),
-                                                 (3, 2, 0, 0, 4), (3, 2, 0, 0, 5)):
-        state = State(1, phase, step, 0, 1, 0, request, 0x82, status, 0, 0, 0, -1,
-                      Item(2, 0, 5, screen, 3, 3, 0x21, 0, 4, 1, 7, 1))
-        before = bytes(state)
+    # Phase 6, the save terminal's Yes: 00225AC0(1) until it reports, then the
+    # tear down. The page returns 1 for any nonzero result (0x1AE040 tests it
+    # only against zero).
+    for card in (0, 1, 2):
+        initial = State(1, 6, 0, 0, 1, 2, 6, 0x82, 0xFF, 0, 0, 0, 7, Item(2, 0, 5, 0, 3, 3, 0x21, 0, 4, 1, 7, 1))
+        expected, events, wanted = Original(elf, initial, 0, card).run()
+        assert wanted == card
+        got = State.from_buffer_copy(initial)
         actual = []
-        worker = Worker(lambda _, __, event, arg: (actual.append((event, arg)), 1)[1])
-        assert native.em_status_page_tick(C.byref(state), 0, worker, None) == -1
-        assert bytes(state) == before and actual == [], (phase, step, request, status, screen)
-        faults += 1
+
+        def save(_, state, event, arg):
+            actual.append((event, arg))
+            if event == 15:
+                state[0].save_result = card
+            return 1
+        worker = Worker(save)
+        result = native.em_status_page_tick(C.byref(got), 0, worker, None)
+        assert got.save_result == card
+        got.save_result = 0
+        assert bytes(got) == bytes(expected), (card, list(bytes(got)), list(bytes(expected)))
+        assert actual == events and result == (card != 0), (card, actual, events, result)
+        checks += 1
     # The next transition after root Back is the actual hub worker, not exit.
     state = State(1, 1, 0, 0, 1, 1, 0, 0x82, 0, 0, 0, 0, -1, Item())
     actual = []
     worker = Worker(lambda _, __, event, arg: (actual.append((event, arg)), -1)[1])
     assert native.em_status_page_tick(C.byref(state), 0, worker, None) == -1
     assert state.phase == 1 and actual == [(8, 1)]
-    report = {'original_state_and_call_cases': checks, 'unreached_branch_faults': faults, 'status_entry_and_exit': 'PASS',
+    report = {'original_state_and_call_cases': checks, 'status_entry_and_exit': 'PASS',
               'module_reload_and_busy_gates': 'PASS', 'root_back_requires_actual_hub': 'PASS',
               'boundaries': 'UI camera/draw, sound, module I/O, ITEM/child/hub workers'}
     (out / 'result.json').write_text(json.dumps(report, indent=2) + '\n')

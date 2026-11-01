@@ -20,7 +20,7 @@ typedef struct {
     unsigned intensity;
 } TrailTriangle;
 
-enum { DRAW_NONE, DRAW_BATTERY, DRAW_ITEM, DRAW_OTHER, DRAW_HUB, DRAW_PAGE };
+enum { DRAW_NONE, DRAW_BATTERY, DRAW_ITEM, DRAW_OTHER, DRAW_HUB, DRAW_PAGE, DRAW_CARD };
 
 /* The hub's 0020A7A0 tile (0020CDC0 phase 1/2 step 1). */
 #define HUB_BACKGROUND_TEX0 UINT64_C(0x20045EE59D421E40)
@@ -300,6 +300,36 @@ static int pages_tick(EmStatusRuntime *runtime, uint32_t address)
     if (result < 0)
         return 0;
     runtime->draw_kind = DRAW_PAGE;
+    return 1;
+}
+
+/* 0020CDC0 phase 6's 00225AC0(1). The card screen writes the original bytes
+ * the page core holds per-call views of, D_00275BD8 at its module load and
+ * the message words through em_options_live: they are stored before the call
+ * and loaded after it, as battery_tick and pages_tick do. */
+static int save_tick(EmStatusRuntime *runtime)
+{
+    EmStatusPage *page = &runtime->page;
+    int32_t *words[4] = {NULL, NULL, NULL, NULL};
+    if (!runtime->hooks.save_page || !runtime->hooks.save_render || !runtime->hooks.message_words ||
+        !runtime->d275BD8 || runtime->hooks.message_words(runtime->hooks.context, words) != 1)
+        return 0;
+    *words[0] = (int32_t)page->item.message_mode;
+    *words[1] = (int32_t)page->item.message_phase;
+    *words[2] = (int32_t)page->item.message_line;
+    *words[3] = (int32_t)page->item.message_group;
+    *runtime->d275BD8 = page->item.asset_busy;
+    uint32_t r = 0;
+    const int accepted = runtime->hooks.save_page(runtime->hooks.context, &r) == 1;
+    page->item.message_mode = (uint32_t)*words[0];
+    page->item.message_phase = (uint32_t)*words[1];
+    page->item.message_line = (uint32_t)*words[2];
+    page->item.message_group = (uint32_t)*words[3];
+    page->item.asset_busy = *runtime->d275BD8;
+    if (!accepted || r > 0xFFu)
+        return 0;
+    page->save_result = (uint8_t)r;
+    runtime->draw_kind = DRAW_CARD;
     return 1;
 }
 
@@ -660,6 +690,8 @@ static int page_worker(void *context, EmStatusPage *page, EmStatusPageEvent even
         if (!restore_gs(runtime))
             return 0;
         return runtime->hooks.page_event(runtime->hooks.context, event, argument) == 1;
+    case EM_STATUS_PAGE_SAVE_TICK:
+        return save_tick(runtime);
     case EM_STATUS_PAGE_HUB_TICK:
         if (runtime->hub)
             return hub_tick(runtime);
@@ -938,6 +970,10 @@ static void release_slot(EmStatusRuntime *runtime)
     case DRAW_PAGE:
         em_status_pages_live_deactivate(runtime->pages);
         break;
+    case DRAW_CARD:
+        if (runtime->hooks.save_release)
+            runtime->hooks.save_release(runtime->hooks.context);
+        break;
     default:
         break;
     }
@@ -1153,6 +1189,12 @@ int em_status_runtime_render(EmStatusRuntime *runtime, EmGfx *gfx)
         result = field < 0 ? 0 : field ? 1 : em_status_pages_live_render(runtime->pages, gfx);
         break;
     }
+    case DRAW_CARD:
+        /* The card screen is drawn as the options screen's and the title's
+         * load screen: em_page_draw's overlay stream over the status pages'
+         * GS memory (module 0x2A's upload applied). */
+        result = runtime->hooks.save_render(runtime->hooks.context, gfx);
+        break;
     default:
         break;
     }

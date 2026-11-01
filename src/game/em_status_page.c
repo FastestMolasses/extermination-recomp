@@ -63,8 +63,8 @@ int em_status_page_tick(EmStatusPage *state, unsigned buttons, EmStatusPageWorke
         return -1;
     switch (state->phase) {
     case 0:
-        /* Request 6 enters the existing BATTERY confirmation; only its
-         * accepted-save follow-up (phase 6 / 00225AC0) remains unsupported. */
+        /* Request 6 enters the BATTERY confirmation; its Yes leaves the page
+         * with phase 6 (002149F0), the card screen below. */
         if (!emit(worker, context, state, EM_STATUS_PAGE_BLACK_HOLD, 0) ||
             !emit(worker, context, state, EM_STATUS_PAGE_OPEN_SOUND, 0))
             return -1;
@@ -215,6 +215,28 @@ int em_status_page_tick(EmStatusPage *state, unsigned buttons, EmStatusPageWorke
         break;
     case 5:
         return exit_tick(state, worker, context);
+    case 6:
+        /* r = 00225AC0(1) until nonzero (1 out of the screen, 2 a game
+         * saved; 0x1AE040 tests it only against zero), then 0020E080
+         * (0021BAE0(0), D_008106C5 = D_008106B0 = 0, D_002821B4 = 2),
+         * 001AFEB0, 001FB9F0(0xD, 0x1000, 0x1000, 0x1000) and t[0..3] = 0.
+         * The module of the inventory is not reloaded here (phase 5's
+         * exit does that). */
+        state->save_result = 0;
+        if (!emit(worker, context, state, EM_STATUS_PAGE_SAVE_TICK, 0))
+            return -1;
+        if (!state->save_result)
+            return 0;
+        if (!emit(worker, context, state, EM_STATUS_PAGE_END_PROJECTION, 0))
+            return -1;
+        state->status_request = 0;
+        state->request = 0;
+        state->item.message_phase = 2;
+        if (!emit(worker, context, state, EM_STATUS_PAGE_CLEAR_DRAW, 0) ||
+            !emit(worker, context, state, EM_STATUS_PAGE_CLOSE_SOUND, 0))
+            return -1;
+        state->active = state->phase = state->step = state->transition_step = 0;
+        return 1;
     default:
         return -1;
     }

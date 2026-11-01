@@ -5535,6 +5535,11 @@ static int options_frame(EmOptionsFrame *f)
     return f->message ? 0 : -1;
 }
 
+int em_scene_bindings_options_frame(EmOptionsFrame *f)
+{
+    return options_frame(f);
+}
+
 static int w_0022A650(void *ctx)
 {
     (void)ctx;

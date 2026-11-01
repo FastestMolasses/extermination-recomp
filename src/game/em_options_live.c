@@ -41,6 +41,9 @@ enum { MAX_VIEWS = 160, STACK_BASE = 0x01FF0000u, STACK_SIZE = 0x10000u, CALLS =
 #define D_002671A0 0x002671A0u /* the slot rows' 001FC770 config */
 #define BLOCK_SIZE 0x640u
 #define TITLE_REGIONS 8u
+#define D_0028A4A0 0x0028A4A0u  /* the icon container pointer (an EMSP window) */
+#define SPAD_SAVE 0x70000000u   /* the two copies 001AF220 keeps (docs/SAVE_GAME.md 2.1) */
+#define SPAD_SAVE_SIZE 0xC80u
 
 /* The card buffers above (D_00821500..D_00822690 in .bss, D_00275C94..9F
  * in .sbss): ONE copy for the whole process, as the original has one, so
@@ -51,6 +54,7 @@ enum { MAX_VIEWS = 160, STACK_BASE = 0x01FF0000u, STACK_SIZE = 0x10000u, CALLS =
 static struct {
     uint8_t getdir[0x480], header[0x48], name[0x40], card_text[CARD_TEXT_SIZE];
     uint8_t stage_load[BLOCK_SIZE], stage_save[BLOCK_SIZE], stage_new[BLOCK_SIZE];
+    uint8_t spad[SPAD_SAVE_SIZE];
 } card_bss;
 
 struct EmOptionsLive {
@@ -180,6 +184,7 @@ static void build_views(EmOptionsLive *l, const EmOptionsFrame *f)
     view(l, D_00822050, BLOCK_SIZE, card_bss.stage_load);
     view(l, D_00822690, BLOCK_SIZE, card_bss.stage_new);
     view(l, D_00275C94, CARD_TEXT_SIZE, card_bss.card_text);
+    view(l, SPAD_SAVE, SPAD_SAVE_SIZE, card_bss.spad);
     uint32_t toff = 0;
     for (unsigned i = 0; i < l->title_count; ++i) {
         memcpy(l->title_copy + toff, l->titles[i].bytes, l->titles[i].size);
@@ -706,13 +711,22 @@ static int dispatch(void *ctx, uint32_t target, uint32_t sp, const uint64_t *a, 
     /* the memory card: the eight libmc entries em_memcard answers (GetInfo,
      * Sync and the file commands), over the views */
     case 0x00114988u: case 0x00114848u: case 0x00114360u: case 0x00114448u:
-    case 0x00114480u: case 0x00114708u: case 0x00114630u: case 0x00114AC0u: {
+    case 0x00114480u: case 0x00114708u: case 0x00114630u: case 0x00114AC0u:
+    case 0x00114D18u: {
         const EmMemcardMemory mem = {l, mem_read, mem_write};
         return em_memcard_call(target, a, na, &mem, v0) < 0 ? -1 : 0;
     }
-    case 0x00114D18u:
-        return report(l, target, "(libmc Format, the save mode's unformatted card): no recording shows the "
-                                 "card server's answer (docs/SAVE_GAME.md section 6.2)");
+    /* the save writer's two leaves (docs/SAVE_GAME.md sections 2.1, 6.5) */
+    case 0x00121870u: { /* block_copy(dst, src, n): over the views, the block's several among them */
+        uint8_t copy[BLOCK_SIZE];
+        if (U(2) > sizeof copy) return report(l, target, "copies more than a progress block");
+        if (mem_read(l, U(1), copy, U(2)) < 0 || mem_write(l, U(0), copy, U(2)) < 0)
+            return report(l, target, "copies outside the views");
+        *v0 = A(0);
+        return 0;
+    }
+    case 0x001AF2C0u:
+        return em_options_001AF2C0(&l->s);
     /* the card screen past the slot choice (em_card_original): 00226070's
      * card poll 002267A0 and 00225D20's 00227300 */
     case 0x002267A0u:
@@ -880,6 +894,19 @@ int em_options_live_0022A650(EmOptionsLive *l, const EmOptionsFrame *f, uint32_t
 
 int em_options_live_00225AC0(EmOptionsLive *l, const EmOptionsFrame *f, uint32_t mode, uint32_t *result)
 {
+    if (l && mode == 1) {
+        /* The save mode reads the icon container: an EMSP from before its
+         * window says so here, not as a fault deep in the card check. */
+        const EmGsDataWindow *w;
+        const unsigned n = em_gs_texture_windows(l->gs, &w);
+        unsigned found = 0;
+        for (unsigned i = 0; i < n; ++i) found += w[i].address == D_0028A4A0;
+        if (!found) {
+            fprintf(stderr, "options: the EMSP has no icon container window, 00225AC0(1) cannot save "
+                            "(python3 tools/export_status_pages.py)\n");
+            return -1;
+        }
+    }
     return run(l, f, RUN_00225AC0, mode, result);
 }
 
@@ -904,7 +931,7 @@ static uint8_t *card_buffer(const EmOptionsLive *l, uint32_t address, uint32_t s
         {D_00821980, sizeof card_bss.header, card_bss.header},
         {D_008219D0, BLOCK_SIZE, card_bss.stage_save}, {D_00822010, sizeof card_bss.name, card_bss.name},
         {D_00822050, BLOCK_SIZE, card_bss.stage_load}, {D_00822690, BLOCK_SIZE, card_bss.stage_new},
-        {D_00275C94, CARD_TEXT_SIZE, card_bss.card_text}};
+        {D_00275C94, CARD_TEXT_SIZE, card_bss.card_text}, {SPAD_SAVE, SPAD_SAVE_SIZE, card_bss.spad}};
     for (unsigned i = 0; i < sizeof own / sizeof own[0]; ++i)
         if (address >= own[i].base && (uint64_t)address + size <= (uint64_t)own[i].base + own[i].size)
             return own[i].bytes + (address - own[i].base);

@@ -90,6 +90,7 @@ int em_options_0022B420(EmArea01Ui *s, uint32_t w, int32_t x, uint32_t colours, 
 int em_options_001AF6F0(EmArea01Ui *s);
 int em_options_001AF1C0(EmArea01Ui *s);
 int em_options_001AF150(EmArea01Ui *s);
+int em_options_001AF2C0(EmArea01Ui *s);
 int em_options_001AF470(EmArea01Ui *s, uint32_t type);
 /* x, y, group and line as the 64-bit register images the caller holds;
  * style is the packed word (low 24 bits the colour, high byte the glyph). */

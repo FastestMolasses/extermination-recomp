@@ -123,6 +123,12 @@ typedef struct {
      * D_008104E4, and the main-loop counter. The runtime fills the status
      * block, the busy byte, the pads and the gauge records. 1 bound. */
     int (*pages_frame)(void *, EmStatusPagesFrame *);
+    /* 0020CDC0 phase 6, the save terminal's card screen: one call of
+     * 00225AC0(1) (the options binding em_options_live), 1 accepted with
+     * its result in *result, and its draw stream of that call. */
+    int (*save_page)(void *, uint32_t *result);
+    int (*save_render)(void *, EmGfx *);
+    void (*save_release)(void *); /* its uploads no longer in the UI slot */
 } EmStatusRuntimeHooks;
 
 EmStatusRuntime *em_status_runtime_load(const char *battery_path, const char *item_path,
