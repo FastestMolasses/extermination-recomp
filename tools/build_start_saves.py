@@ -294,7 +294,78 @@ START_POINTS = {
     'a04e_01': {'route': 'levels-recordings-20261102-1/s87/route_a04e', 'first': 'a04e_01_', 'area': 4},
     'a02c_00': {'route': 'levels-recordings-20261102-1/s87/route_a02c', 'first': 'a02c_00_', 'area': 2},
     'a02c_01': {'route': 'levels-recordings-20261102-1/s87/route_a02c', 'first': 'a02c_01_', 'area': 2},
+    'k01_01': {'route': 'levels-recordings-20261102-1/s87/route_k01', 'first': 'k01_01_', 'area': 0},
+    'k01_02': {'route': 'levels-recordings-20261102-1/s87/route_k01', 'first': 'k01_02_', 'area': 0},
 }
+
+
+# Constructed starts (docs/EIGHTEENTH_LEVEL_ROUTE.md "Constructed starts"): a real recording's END
+# state (the beat folder's own snapshot) plus a listed delta, each byte from a named definition;
+# the save is then made by the original writer as for every start point. The player record's
+# position / rotation patches become the load pose through the terminal's copies (at_terminal).
+# Never a played route: the beats that load these are named k00_ and on.
+PI = 3.14159274
+CONSTRUCTED = {
+    'k00': {
+        'state': 'levels-recordings-20261102-1/s87/route_a02c/a02c_01_door22', 'area': 0,
+        'patches': [
+            (0x810700, bytes((0x00, 0x02, 0x00, 0x01)),
+             'area AREA00, sub 2 (D_00810730[0] = 0x82, AREA15 0x823C80), entry 0 (door [15] / AREA01 [9]),'
+             ' previous area 1: what AREA01 sub 1 door [9] (id 0x80: AREA00 entry 0, sub D_00810730[0]) gives'),
+            (0x810C88, bytes((0x01,)),
+             'item 0x24 = 1: AREA19 sub 1 [53] 0x827550 calls 001C47A0(0x24, 1) at its script\'s end'),
+            (0x81077E, bytes((0xFF,)),
+             'flag 0x26 = 0xFF: the same script 0x82D590 (op06/0 sets 1, its op07/5 end 0xFF)'),
+            (0x810350, struct.pack('<4f', -40.0, -35.0, -1290.0, 1.0),
+             'the player at AREA00 sub 2 spawn entry 0 (D_0024D650: (-40, -35, -1290)), via the load pose'),
+            (0x810370, struct.pack('<4f', 0.0, PI, 0.0, 1.0),
+             'facing entry 0\'s yaw pi, via the load pose'),
+        ],
+    },
+}
+# k01: k00 plus what AREA00 sub 2's reader [19], slider [20] and pickup g[3] give (their room is
+# behind the arrival corridor's player-only walls 1584..1586 in this sub; EIGHTEENTH_LEVEL_ROUTE.md
+# "Constructed starts"), the player again at entry 0.
+CONSTRUCTED['k01'] = dict(CONSTRUCTED['k00'], patches=CONSTRUCTED['k00']['patches'] + [
+    (0x810841, bytes((0x14,)),
+     'D_00810841 |= 0x10: the reader [19] (00158810, model 0x13) with item 0x24: 001576E0 (BM) script'
+     ' 0x246C20, its op09 001580C0 (BM) ORs 1 << +0x2E (4) into the area\'s lock byte'),
+    (0x810C8A, bytes((0x01,)),
+     'item 0x26 = 1: g[3] (0015AFA0, pickup 8) behind the slider [20] (lock bit 4): 001C47A0(0x26)'),
+    (0x810861, bytes((0x01,)),
+     'taken bit 8 of AREA00 (D_00810860 row 0, word 0 bit 8): 001B1190(8) when g[3] is taken, which'
+     ' deferred condition 1 (001B6660 / 001B11E0) tests'),
+])
+
+# The AREA14 arrival at the end of k01_02 (a run on from the constructed start k01): no delta;
+# a card for the next lane's AREA14 beats.
+CONSTRUCTED['area14k'] = {'state': 'levels-recordings-20261102-1/s87/route_k01/k01_02_item26', 'area': 14,
+                          'patches': [], 'check_area00_sub': False}
+
+
+def constructed(name):
+    """The arrival dict of a constructed start: the beat folder's own state, patched."""
+    p = CONSTRUCTED[name]
+    folder = refs.FORK / p['state']
+    ee, spad, snap = folder / 'eeMemory.bin', folder / 'scratchpad.bin', folder / 'snapshot.json'
+    for f in (ee, spad, snap):
+        if not f.is_file():
+            raise Refused(f'{name}: {f} is missing')
+    ram = bytearray(ee.read_bytes())
+    want = json.loads(snap.read_text()).get('ee_sha256')
+    if sha256(bytes(ram)) != want:
+        raise Refused(f'{name}: {ee} does not match its snapshot.json ee_sha256')
+    if p.get('check_area00_sub', True) and ram[0x810730] != 0x82:
+        raise Refused(f'{name}: D_00810730[0] is {ram[0x810730]:#x}, not 0x82 (AREA00 sub 2 kept)')
+    for addr, data, _why in p['patches']:
+        ram[addr:addr + len(data)] = data
+    ram = bytes(ram)
+    block = ram[BLOCK:BLOCK + SIZE]
+    if block[0] != p['area']:
+        raise Refused(f'{name}: the patched block\'s area byte is {block[0]}, not {p["area"]}')
+    return {'name': name, 'folder': folder, 'beat': folder.name, 'ram': ram, 'spad': spad.read_bytes(),
+            'ee_sha256': want, 'block': bytes(block),
+            'constructed': [{'address': hex(a), 'bytes': d.hex(), 'why': w} for a, d, w in p['patches']]}
 
 
 class Refused(Exception):
@@ -457,7 +528,7 @@ def load(root, files, name):
 def setup(names, points=None):
     """Every requested arrival (refusing before anything runs), then the
     save harness over them. Returns the arrivals."""
-    arrivals = [at_terminal(arrival(n, points)) for n in names]
+    arrivals = [at_terminal(constructed(n) if n in CONSTRUCTED else arrival(n, points)) for n in names]
     MH.LIB = MH.build_lib()
     register(arrivals)
     S.setup()
@@ -505,6 +576,9 @@ def manifest(a, files):
                       'by': "00159B90's two copies 00102948 at the arrival frame (the save terminal's step)"},
         'card': {'port': PORT, 'slot': SLOT, 'folder': 'slot%d' % (PORT + 1)},
         'files': {k: sha256(v) for k, v in sorted(files.items())},
+        **({'constructed': a['constructed'],
+            'note': 'a constructed start: a real end state plus the listed delta, not a played route'}
+           if 'constructed' in a else {}),
     }
 
 
@@ -539,6 +613,10 @@ def main(argv):
             print('%-15s %s (%s*), block area %d' % (n, p['route'], p['first'], p['area']))
         return 0
     names = argv or list(START_POINTS)
+    unknown = [n for n in names if n not in START_POINTS and n not in CONSTRUCTED]
+    if unknown:
+        print(f'build_start_saves: unknown start point {unknown}', file=sys.stderr)
+        return 2
     if len(set(names)) != len(names):
         print('build_start_saves: a start point is named twice', file=sys.stderr)
         return 2

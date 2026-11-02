@@ -87,6 +87,9 @@ A04D_ROUTE = 'levels-recordings-20261031-1/s87/route_a04d'
 A07B_ROUTE = 'levels-recordings-20261031-1/s87/route_a07b'
 A04E_ROUTE = 'levels-recordings-20261102-1/s87/route_a04e'
 A02C_ROUTE = 'levels-recordings-20261102-1/s87/route_a02c'
+# Constructed starts (docs/EIGHTEENTH_LEVEL_ROUTE.md "Constructed starts"): the k01 beats run on
+# from the original's LOAD of the constructed card k01; the cards below are their source states.
+K01_ROUTE = 'levels-recordings-20261102-1/s87/route_k01'
 # beat: (start card, route recording, beat folder). A group's first beat
 # starts from the group's arrival card; a01u_s1 starts where a01u_00 does.
 BEATS = {
@@ -252,13 +255,15 @@ BEATS = {
     'a04e_01': ('a04e_01', A04E_ROUTE, 'a04e_01_door41'),
     'a02c_00': ('a02c_00', A02C_ROUTE, 'a02c_00_seal'),
     'a02c_01': ('a02c_01', A02C_ROUTE, 'a02c_01_door22'),
+    'k01_01': ('k01_01', K01_ROUTE, 'k01_01_slab'),
+    'k01_02': ('k01_02', K01_ROUTE, 'k01_02_item26'),
 }
 GROUPS = {'a22': ('a22_',), 'a01u': ('a01u_',), 'a06': ('a06_',), 'a06b': ('a06b_',), 'a01v': ('a01v_',),
           'a22b': ('a22b_',), 'a04b': ('a04b_0',), 'boss': ('a04b_s',), 'bossg': ('a04b_g',),
           'a15a': ('a15a_',), 'a15': ('a15_',), 'a15b': ('a15b_',), 'a03': ('a03_',),
           'a13': ('a13_',), 'a19': ('a19_',), 'a19b': ('a19b_',), 'a19c': ('a19c_',), 'a19d': ('a19d_',),
           'a03b': ('a03b_',), 'a08': ('a08_',), 'a03c': ('a03c_',), 'a04c': ('a04c_',), 'a07': ('a07_',),
-          'a03d': ('a03d_',), 'a04d': ('a04d_',), 'a07b': ('a07b_',), 'a04e': ('a04e_',), 'a02c': ('a02c_',)}
+          'a03d': ('a03d_',), 'a04d': ('a04d_',), 'a07b': ('a07b_',), 'a04e': ('a04e_',), 'a02c': ('a02c_',), 'k01': ('k01_0',)}
 FAULT = re.compile(r'FAULT|faulted|fault:|the game task is stopped|refused|Assertion|'
                    r'(?<!Mkdir, )fail-stop|reached without port code: (?!001D1EF0|00200830)')
 
@@ -616,6 +621,7 @@ CHAINS = {
     'a07b': ('a07b_00', ('a07b_00', 'a07b_01', 'a07b_02', 'a07b_03', 'a07b_04', 'a07b_05', 'a07b_06', 'a07b_07',)),
     'a04e': ('a04e_00', ('a04e_00', 'a04e_01',)),
     'a02c': ('a02c_00', ('a02c_00', 'a02c_01',)),
+    'k01': ('k01_01', ('k01_01', 'k01_02',)),
 }
 
 

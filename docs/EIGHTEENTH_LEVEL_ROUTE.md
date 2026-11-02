@@ -33,7 +33,9 @@ indices of the area and sub named (`tools/route_census.py graph`).
 - **Recorded:** the hall to the slider [41] (a04e_00, a04e_01), AREA02 sub 2 from entry 4 across
   the channel, the seal [21] broken from the AREA02 side and door [22] to AREA01 entry 3 (a02c_00,
   a02c_01). Side beat a04e_s0_console: the console [69] moved the platform [68].
-- **Not entered**: AREA00 sub 2, AREA14, AREA17, AREA18, AREA19 sub 1's tower.
+- **Constructed starts (section 7c)**: k00 / k01 (item 0x24, and k01 also the reader / g[3]
+  results) loaded by the original into AREA00 sub 2; from there [28] with item 0x26 was played
+  into AREA14 (k01_02). **Not entered**: AREA17, AREA18, AREA19 sub 1's tower.
 - Output: `../Extermination/build/fork_refs/levels-recordings-20261102-1/` (`s87/route_a04e/`,
   `route_a02c/`; the run log per beat, `progress.json`, `owner-bindings.json` at the top). Earlier
   sets were not touched; the chain starts from `levels-recordings-20261031-1`'s a07b_07.
@@ -255,10 +257,84 @@ the collision grid D_0028A598[0] of a beat's snapshot, a lead until walked).
    items 1, 3 and 5 (the bridge's raised half, the pillar and lift [36], the platform), each a lead
    to settle on foot with more health.
 
+## 7c. Round 3: the bridge, then constructed starts
+
+**AREA01's bridge (side beat `a01w_s0_bridge`, played, one try).** From entry 3 south along x 0
+over the bridge's north half: its end is at z -430, the south half stands raised (flag 0x08), and
+the walk off the end fell to y -280 (health 0). No way past it to door [9].
+
+**Constructed starts (orchestrator's decision, 2026-11-02).** The segment's code-gated steps that
+no route found reaches are entered from a *constructed* progress block: the latest real one (the
+end state of `a02c_01_door22`) plus exactly the bytes the missing steps' code writes, each listed
+below with the definition it comes from. The original's own save writer (00228A90, run by port
+`tools/build_start_saves.py` `CONSTRUCTED`, with its save and read-back checks) makes the save; decomp
+`tools/ps2_card.py <card.ps2> <save dir>` writes it into a card image (its file table read back
+equal by port `tools/compare_card_image.py`); `record_level_routes.py --card` puts the image in slot
+1 of the fork session (a copy per run under the set's `_cards/`, never the user's cards); the beat
+then LOADs it through the in-game options' load row (SELECT, row 6, Cross, the card, the save, as
+opt_07 does), so the original places the player. **Only the entry state is ours; everything after
+the load is the original running.** Beats from a constructed start are named `k00_`, `k01_`.
+
+The image path was proven first with a real block (side beat `k00_s0_loadtest`: the a02c_01 start
+card loaded from AREA01, the player placed at its load pose (-34.06, 0.05, -182.64) in AREA02 sub 2,
+health 60 and infection 85 as saved).
+
+| Card | Base | Changed bytes (address = value: why) |
+|---|---|---|
+| k00 | a02c_01's end (AREA01 sub 1 entry 3) | D_00810700..03 = 00 02 00 01: AREA00 sub 2 (D_00810730[0] = 0x82 from AREA15's 0x823C80), entry 0 (what AREA01 door [9], id 0x80, gives), previous area 1. D_00810C88 = 1: item 0x24 (AREA19 sub 1 [53] 0x827550 calls 001C47A0(0x24, 1) at its script's end). D_0081077E = 0xFF: flag 0x26 (that script 0x82D590: op06/0 sets 1, its op07/5 end 0xFF). The player record D_00810350 = (-40, -35, -1290), D_00810370 = (0, pi, 0): spawn entry 0, copied into the load pose by the terminal's step (00159B90's 00102948). |
+| k01 | the same | k00's bytes, plus D_00810841 = 0x14: the reader [19] (00158810 model 0x13) with item 0x24, 001576E0 (BM) script 0x246C20, op09 001580C0 (BM) ORs bit 4; D_00810C8A = 1: item 0x26 from g[3] (0015AFA0) behind the slider [20]; D_00810861 bit 0: g[3]'s taken bit (001B1190(8), BM; tested by 001B11E0 for deferred condition 1). The player again at entry 0. |
+| area14k | k01_02's end | none: AREA14 entry 0 after [28], a card for the next AREA14 beats. |
+
+Why k01 constructs the reader / slider / g[3] too: in AREA00 sub 2 the arrival corridor (x -45..-35,
+the floor y -35) is closed to the south by the player-only walls 1584..1586 (attribute 0x51, z -1346
+..-1319) and to the west by wall 70 (x -45); its east edge (x -35, past a rail at z > -1303) drops 25
+to the floor (y -60, -5); that floor is parted from the reader's floor (x -182..-130, z -1513..-1489)
+by a hive mound (attribute-8 walls and slopes at x -32..-18, z -1463..-1421, rising to y -15). Side
+beat `k00_s1_reader` never passed (stopped at (-16.8, -60, -1442.1) against it). The way the
+designers meant to the reader was not found.
+
+**Played after the constructed starts:**
+
+| Beat | Source | Frames | Counters | End |
+|---|---|---:|---|---|
+| `k00_00_load` (CONSTRUCTED k00) | a02c_01_door22 | 1,293 | 281155..281464 | AREA00 sub 2 entry 0 (-40.5, -35, -1290); item 0x24 held; health 60 |
+| `k01_00_load` (CONSTRUCTED k01) | a02c_01_door22 | 1,293 | 281155..281464 | the same, with lock bit 4 and item 0x26 |
+| `k01_01_slab` | k01_00 | 910 | 281464..282374 | off the corridor's east edge (f198, -5), the floor east of the mound south, the opening in the 0x50 walls at x 21.5 (z -1644..-1613): (26.1, -60, -1630); health 55 |
+| `k01_02_item26` | k01_01 | 3,382 | 282374..285756 | the ledge climb onto [23] (001C4820 at (34.6, -60, -1628.9), top y -52); [28]'s Use point (33.9, -47, -1630.4) facing 1.92; START, ITEM, EVENT, the second entry, Cross, Left, Cross: item 0x26 taken (f511), script 0x82D070, **AREA14 entry 0** (f1633 area bytes 0E 00 00 00); [5]'s arrival script: flag 0x2C = 0xFF (f3313); (600.9, 390.5, 1354.3), health 55, infection 100 (a bite at f49) |
+
+The EVENT page's list (00215870, BM, state 0): id 1 for item 0x24 (else 0 for item 0x23), then
+(i - 0x23) for every held item 0x25..0x3B: here 0x24, 0x26, 0x27, 0x29, 0x2A, so item 0x26 is the
+second entry (a first try on the third entry, item 0x27, ended in the page's refusal banner).
+
+Port side: chains `k01` (k01_01, k01_02) in `tools/mid_route_beats.py`; cards `k01_01`, `k01_02`
+and `area14k` built with `build_start_saves.build` (save and read-back checks passed; `k00` / `k01`
+are the constructed cards themselves). Per-row rand() tables: k01_02's replay matched (0.000);
+k01_01's did not (largest position difference 230.7 at the 50-row samples: the re-drive left the
+recording's path; not investigated), so its table is not to be used.
+
+**AREA14 (read and tried; not recorded).** Entry 0 lies in a valley (y 390). The wide "stair" north
+of it (x 499..609, z 1242..1300) is a slope of attribute 0x05 (normal y 0.66 above y 423.6): the
+walk stopped at (545.9, 422.6, 1272.7). The way up is a climbing face of attribute 0x33 (nodes 1465..
+1479 and 1618: x 371..457, z 1228..1274, y 432..679, normal (0.42, 0, 0.91)) from the base floor
+1617 (x 376..395, y 432, z 1268..1286) to the top 1482 (x 409..425, y 679). 0015D4C0 (NM) starts it
+(state 0x0D, actions 0x1B / 0x1C) only with item 0x19 held (D_00810C7D), and item 0x19 is AREA14's
+g[1] at (394.7, 448.5, 1375.5) on the bench west of the valley (y 430..450). The climb's base is
+inside [0]'s polygon (0x8238E0: y < 435, its script 0x826C10 and CC3 0x16 play on entry). The way
+from the valley (y 390) up to the bench (y 430) was not found (the grid shows walls at x 484 and
+x 522 and small pockets at y 410 / 425 between, leads for ledge climbs).
+
 ## 8. Where the recording stops, and what the next run needs
 
-a02c_01 ends in AREA01 sub 1 at entry 3 (-25, 0, -210.1), health 60, infection 95, 21 in the gun
-and 51 held, no healing item. It stops there because the derived segment needs item 0x24 first,
+**The kept line now stops at k01_02's end: AREA14 entry 0 (600.9, 390.5, 1354.3), health 55,
+infection 100, after the constructed start k01 (section 7c).** Next: item 0x19 (g[1]) on the bench,
+the 0x33 climb to y 679, the plateau east to 00190F20's quad (754..810, 795..841), AREA18 (item 0x28,
+g[1] at (521.3, 153.1, 184.4); back at x <= 285 to AREA14 entry 1, where [4] plays with item 0x28),
+[6] (0x825FD0, Use point (222.5, 680.1, 1185.1), r 7, yaw about -1.85) to AREA17, the boss
+(00133E30), [34], item 0x18 and the cable floor (attribute 0x20 under 0x3C), [38] to AREA11
+entry 3. Cards: `area14k` (AREA14 entry 0), `k01_01`, `k01_02`.
+
+The real line (no constructed state) still ends at a02c_01: AREA01 sub 1 at entry 3 (-25, 0,
+-210.1), health 60, infection 95, 21 in the gun and 51 held, no healing item. It stops there because the derived segment needs item 0x24 first,
 and no way to it from this state was found (section 7b).
 
 **The order the code now gives** (WORLD_GRAPH.md section 7 step 7, revised): item 0x24 from AREA19
