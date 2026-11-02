@@ -1101,6 +1101,16 @@ static int worker(void *ctx,EmArea01Call *c)
         if(worker(l,&sub)<0)return -1;
         c->v0=1;return 0;
     }
+    if(c->function==0x00158130u) {
+        /* 00158130 (byte-matched): the panel script's sound by its record's
+         * +3, 0x3F3 for 0x12 and 0x2F, else 0x3F4, the three 0x1000; 1. */
+        const uint8_t *kind=bytes(l,(uint32_t)c->a[0]+3u,1,0);
+        if(!kind)return fail(l,(uint32_t)c->a[0]+3u);
+        EmArea01Call sub={.function=0x001FB9F0u,.sp=c->sp,.na=4,
+            .a={*kind==0x12u || *kind==0x2Fu ? 0x3F3u : 0x3F4u,0x1000u,0x1000u,0x1000u}};
+        if(worker(l,&sub)<0)return -1;
+        c->v0=1;return 0;
+    }
     if(c->function==0x00182BF0u || c->function==0x001B11E0u ||
        c->function==0x001B1EA0u || c->function==0x001C4760u || c->function==0x00157F60u) {
         const EmArea01RuntimeHost host={l,bytes,nested};
