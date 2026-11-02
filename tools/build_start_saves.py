@@ -290,6 +290,10 @@ START_POINTS = {
     'a07b_05': {'route': 'levels-recordings-20261031-1/s87/route_a07b', 'first': 'a07b_05_', 'area': 7},
     'a07b_06': {'route': 'levels-recordings-20261031-1/s87/route_a07b', 'first': 'a07b_06_', 'area': 7},
     'a07b_07': {'route': 'levels-recordings-20261031-1/s87/route_a07b', 'first': 'a07b_07_', 'area': 7},
+    'a04e_00': {'route': 'levels-recordings-20261102-1/s87/route_a04e', 'first': 'a04e_00_', 'area': 4},
+    'a04e_01': {'route': 'levels-recordings-20261102-1/s87/route_a04e', 'first': 'a04e_01_', 'area': 4},
+    'a02c_00': {'route': 'levels-recordings-20261102-1/s87/route_a02c', 'first': 'a02c_00_', 'area': 2},
+    'a02c_01': {'route': 'levels-recordings-20261102-1/s87/route_a02c', 'first': 'a02c_01_', 'area': 2},
 }
 
 
