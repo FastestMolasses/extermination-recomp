@@ -117,6 +117,18 @@ static int dispatch_later(EmArea01Runtime *r, EmArea01Call *c, int *out)
         has = 1;
         break;
     }
+    case 0x001283D0u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 3u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area21_boot_001283D0(&h, (uint32_t)c->a[0], (int32_t)c->a[1], (uint32_t)c->a[2], &out_i, &f);
+        where = f.address;
+        code = f.code;
+        has = 1;
+        break;
+    }
     case 0x001284E0u: {
         EmLevel8PortHooks h;
         EmLevel8PortFault f = {0, 0};
@@ -495,6 +507,338 @@ static int dispatch_later(EmArea01Runtime *r, EmArea01Call *c, int *out)
         rc = em_level8_port_00133DB0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
         where = f.address;
         code = f.code;
+        break;
+    }
+    case 0x00133E30u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area17_creature_00133E30(&h, (uint32_t)c->a[0], c->sp, &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00133FD0u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area17_creature_00133FD0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00134090u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area17_creature_00134090(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], c->sp, &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00134300u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area17_creature_00134300(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], c->sp, &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00134500u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area17_creature_00134500(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001348E0u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area17_creature_001348E0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00134DC0u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area17_creature_00134DC0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00134FF0u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area17_creature_00134FF0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001352E0u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x50u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x50u - EIGHTH_NEST;
+        rc = em_area17_creature_001352E0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00135870u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area17_creature_00135870(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00135D00u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area17_creature_00135D00(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00136140u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area17_creature_00136140(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00136240u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area17_creature_00136240(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00136490u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area17_creature_00136490(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00136600u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area17_creature_00136600(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00136630u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area17_creature_00136630(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001366E0u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area17_creature_001366E0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001368D0u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area17_creature_001368D0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &out_i, &f);
+        where = f.address;
+        code = f.code;
+        has = 1;
+        break;
+    }
+    case 0x00136C40u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 3u || c->nf < 1u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area17_creature_00136C40(&h, (int32_t)c->a[0], (uint32_t)c->a[1], (uint32_t)c->a[2], em_ee_float(c->f[0]), &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00136CB0u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area17_creature_00136CB0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00136F20u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area17_creature_00136F20(&h, (uint32_t)c->a[0], (int32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001370C0u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x60u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x60u - EIGHTH_NEST;
+        rc = em_area17_creature_001370C0(&h, (int32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001373B0u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area17_creature_001373B0(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00137830u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area21_boot_00137830(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00137920u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area21_boot_00137920(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00137A50u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_boot_00137A50(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00137C80u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_boot_00137C80(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00137E80u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area21_boot_00137E80(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00137EB0u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area21_boot_00137EB0(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001381D0u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area21_boot_001381D0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &out_i, &f);
+        where = f.address;
+        code = f.code;
+        has = 1;
         break;
     }
     case 0x001383C0u: {
@@ -1608,6 +1952,525 @@ static int dispatch_later(EmArea01Runtime *r, EmArea01Call *c, int *out)
         m16b_hooks(r, &h);
         r->sp = c->sp - 0x40u - EIGHTH_NEST;
         rc = em_level16_beast_0014C130(&h, (uint32_t)c->a[0], &out_i, &f);
+        where = f.address;
+        code = f.code;
+        has = 1;
+        break;
+    }
+    case 0x0014C220u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area21_boot_0014C220(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014C2E0u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area21_boot_0014C2E0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014C3A0u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_boot_0014C3A0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014C490u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_boot_0014C490(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014C680u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_boot_0014C680(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014C9D0u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_boot_0014C9D0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014CCC0u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area21_boot_0014CCC0(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014CD00u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area21_boot_0014CD00(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014CD30u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_boot_0014CD30(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014CDD0u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_boot_0014CDD0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014D1E0u: {
+        EmArea21BootHooks h;
+        EmArea21BootFault f = {0, 0};
+        if (c->na < 3u || c->nf < 0u || c->sp < 0x50u + EIGHTH_NEST) goto refused;
+        a21x_hooks(r, &h);
+        r->sp = c->sp - 0x50u - EIGHTH_NEST;
+        rc = em_area21_boot_0014D1E0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], (int32_t)c->a[2], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014EC00u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_b_0014EC00(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014ED10u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area21_creature_b_0014ED10(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014EDD0u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_b_0014EDD0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014EEF0u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area21_creature_b_0014EEF0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014F390u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x50u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x50u - EIGHTH_NEST;
+        rc = em_area21_creature_b_0014F390(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0014FBC0u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_b_0014FBC0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00150190u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_b_00150190(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00150260u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_b_00150260(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001504D0u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area21_creature_b_001504D0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00150600u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_b_00150600(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00150820u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area21_creature_b_00150820(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00150850u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x0u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x0u - EIGHTH_NEST;
+        rc = em_area21_creature_b_00150850(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00150900u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_b_00150900(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001509A0u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area21_creature_b_001509A0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00150DA0u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_b_00150DA0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00150F40u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x50u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x50u - EIGHTH_NEST;
+        rc = em_area21_creature_b_00150F40(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00151200u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x60u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x60u - EIGHTH_NEST;
+        rc = em_area21_creature_b_00151200(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001513B0u: {
+        EmArea21CreatureBHooks h;
+        EmArea21CreatureBFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a21cb_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area21_creature_b_001513B0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &out_i, &f);
+        where = f.address;
+        code = f.code;
+        has = 1;
+        break;
+    }
+    case 0x00151590u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00151590(&h, (uint32_t)c->a[0], c->sp, &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001516B0u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area21_creature_c_001516B0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00151770u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00151770(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], c->sp, &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00151940u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00151940(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00151E50u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00151E50(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00152040u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00152040(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00152330u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00152330(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00152660u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00152660(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00152930u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00152930(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00152B60u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00152B60(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00152CC0u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00152CC0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00152E80u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00152E80(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00152EB0u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x0u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x0u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00152EB0(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00152F20u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x60u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x60u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00152F20(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], c->sp, &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00153180u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x0u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x0u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00153180(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00153290u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x50u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x50u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00153290(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00153540u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00153540(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x00153770u: {
+        EmArea21CreatureCHooks h;
+        EmArea21CreatureCFault f = {0, 0};
+        if (c->na < 2u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        a21cc_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_area21_creature_c_00153770(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], &out_i, &f);
         where = f.address;
         code = f.code;
         has = 1;
@@ -3183,6 +4046,40 @@ static int dispatch_later(EmArea01Runtime *r, EmArea01Call *c, int *out)
         m09_hooks(r, &h);
         r->sp = c->sp - 0x140u - EIGHTH_NEST;
         rc = em_level9_port_001DE920(&h, c->sp, &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001E00F0u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 3u || c->nf < 0u || c->sp < 0x50u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x50u - EIGHTH_NEST;
+        rc = em_area17_creature_001E00F0(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], (int32_t)c->a[2], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001E0240u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 4u || c->nf < 0u || c->sp < 0x50u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0x50u - EIGHTH_NEST;
+        rc = em_area17_creature_001E0240(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], (int32_t)c->a[2], (int32_t)c->a[3], c->sp, &out_i, &f);
+        where = f.address;
+        code = f.code;
+        has = 1;
+        break;
+    }
+    case 0x001E04E0u: {
+        EmArea17CreatureHooks h;
+        EmArea17CreatureFault f = {0, 0};
+        if (c->na < 2u || c->nf < 1u || c->sp < 0xA0u + EIGHTH_NEST) goto refused;
+        a17c_hooks(r, &h);
+        r->sp = c->sp - 0xA0u - EIGHTH_NEST;
+        rc = em_area17_creature_001E04E0(&h, (uint32_t)c->a[0], (int32_t)c->a[1], em_ee_float(c->f[0]), c->sp, &f);
         where = f.address;
         code = f.code;
         break;
