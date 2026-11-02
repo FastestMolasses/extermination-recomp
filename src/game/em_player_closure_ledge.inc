@@ -51,9 +51,9 @@ static uint8_t *ledge_bytes(void *ctx, uint32_t a, uint32_t n)
         EmModuleLoader *ml = em_module_loader_live();
         EmStatusSceneLoader *ld = ml ? em_module_loader_state(ml) : NULL;
         const uint32_t base = ld ? ld->d28A490[(0x0028A598u - 0x0028A490u) / 4u] : 0;
-        const uint8_t *h = base ? em_module_loader_memory(ml, base, 12) : NULL;
+        const uint8_t *h = base ? em_module_loader_memory(ml, base, 0x14) : NULL;
         if (!h) return NULL;
-        memcpy(&LG.grid_word, h + (a == 0x700031FCu ? 0u : 8u), 4);
+        memcpy(&LG.grid_word, h + (a == 0x700031FCu ? 0u : 0x10u), 4);
         LG.grid_word += base;
         return (uint8_t *)&LG.grid_word;
     }
