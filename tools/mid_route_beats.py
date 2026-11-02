@@ -348,18 +348,22 @@ RESTORE = {'a08_01', 'a08_02', 'a08_03', 'a08_04', 'a08_05', 'a08_06', 'a07_00',
 
 # The actions whose motion the stick or a script drives directly, where steering
 # only harms: hangs 32, 34, 40; the crawl 44, 45, 46 (a junction turns on the
-# stick); the slide 48; the scripted walks 62, 65.
-RAW_ACTIONS = (32, 34, 40, 44, 45, 46, 48, 62, 65)
+# stick); the slide 48. A beat may add its own: a13c_04's cure (62, 65), whose hit
+# the steering drags back. Not generally: elsewhere 62 is a bite's recoil, which
+# the steering keeps on the recording's path.
+RAW_ACTIONS = (32, 34, 40, 44, 45, 46, 48)
+RAW_BEAT = {'a13c_04': (62, 65)}
 
 
-def raw_rows(traces, lead):
+def raw_rows(beats, traces, lead):
     """The script frames of RAW_ACTIONS: the stick is the recorded one there."""
     out, base = [], traces[0]['first_counter']
-    for t in traces:
+    for beat, t in zip(beats, traces):
         off = t['first_counter'] - base + lead
         at = None
+        actions = RAW_ACTIONS + RAW_BEAT.get(beat, ())
         for r in t['rows']:
-            if r['m1F0'] in RAW_ACTIONS:
+            if r['m1F0'] in actions:
                 at = r['f'] if at is None else at
                 end = r['f']
             elif at is not None:
@@ -488,7 +492,7 @@ def run(name, card, beats, timeout):
         env['EM_START_AT_MARKS'] = ','.join(map(str, marks))
     if beats[0].startswith(('a13b_', 'a13c_', 'a13d_')) or beats[-1].startswith(('a13b_', 'a13c_', 'a13d_')):
         env['EM_START_AT_FINE'] = '2' if beats[0] in ('a13c_04', 'a13c_05') else '1'
-    raw = raw_rows(traces, LEAD.get(beats[0], 0))
+    raw = raw_rows(beats, traces, LEAD.get(beats[0], 0))
     if raw:
         env['EM_START_AT_RAW'] = raw
     # EM_MID_ROUTE_MODE: anchor (the source's bugs, the rand() table, the pad

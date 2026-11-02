@@ -30,7 +30,7 @@ beats keep the default, so their results do not move.
 | a13c_01 (roof ladder, walkway) | `a13c_01` | **passes** (with a path edit, below) | not compared |
 | a13c_02 ([44], the battery page) | `a13c_02` | **passes** | 6..1176: 1,170 of 1,171, 1,170 consecutive |
 | a13c_03 (the blast, [45]) | `a13c_03` | **passes** | scene 464..1283: 817 of 820, 817 consecutive; the player stands still for most of it |
-| a13c_04 (g[3], the cure) | `a13c_04` | **passes** since the scripted actions 62, 65 run on the recorded stick (the steering dragged the hit's slide back): block equal (health 100, infection 0) | not compared |
+| a13c_04 (g[3], the cure) | `a13c_04` | **passes** since its actions 62, 65 run on the recorded stick (RAW_BEAT; the steering dragged the hit's slide back): block equal (health 100, infection 0) | not compared |
 | a13c_05 (the boom, [7]'s scene) | `a13c_05` | **passes** (path edit, EM_START_AT_FINE=2) | 1140..1813: 0 identical, the player stands 0.3 from the recorded trigger spot; [7]'s script ran to its end |
 | a13c_06 (the south region) | `a13c_06` | **passes** | not compared |
 | a13d_00 .. a13d_05 | their cards | **pass** | not compared (steered) |
