@@ -631,6 +631,7 @@ static int dispatch_math02(EmArea01Runtime *r, EmArea01Call *c, int *rc)
 #include "game/em_area01_runtime_area08.inc"
 #include "game/em_area01_runtime_later.inc"
 #include "game/em_area01_runtime_area03x.inc"
+#include "game/em_area01_runtime_second_half.inc"
 
 int em_area01_runtime_later(EmArea01Runtime *r, EmArea01Call *c, int *rc)
 {
@@ -671,6 +672,8 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
         return rc;
     if (r->area == 0x13 && c->function >= 0x00823500u)
         return dispatch_area19(r, c);
+    if ((r->area == 0x0E || r->area == 0x15) && dispatch_second_half(r, c, &rc))
+        return rc;
     /* The creature family's boot entries and the script actors serve AREA13,
      * AREA15, AREA03, AREA19, AREA08 and AREA07 too (their overlay addresses went
      * to their own dispatch or reach the host's fail-stop below). */

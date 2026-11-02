@@ -157,6 +157,14 @@ static inline int l17b_c_001C6380(L17B *o, uint32_t a0)
     if (o->h->w_001C6380(o->h->ctx, a0) < 0) return l17b_latch(o, 0x001C6380u, EM_LEVEL17_BOOT_FAULT_WORKER_FAILED);
     return 0;
 }
+
+static inline int l17b_c_001F4E20(L17B *o, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    if (l17b_failed(o)) return -1;
+    if (!o->h->w_001F4E20) return l17b_latch(o, 0x001F4E20u, EM_LEVEL17_BOOT_FAULT_NULL_WORKER);
+    if (o->h->w_001F4E20(o->h->ctx, a0, a1, l17b_float(a2)) < 0) return l17b_latch(o, 0x001F4E20u, EM_LEVEL17_BOOT_FAULT_WORKER_FAILED);
+    return 0;
+}
 /* END GENERATED WRAPPERS */
 
 #endif

@@ -14731,6 +14731,17 @@ static int m17x_w_001C6380(void *ctx, uint32_t a0)
     return rc;
 }
 
+static int m17x_w_001F4E20(void *ctx, uint32_t a0, uint32_t a1, float a2)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001F4E20u, .sp = r->sp, .na = 2, .nf = 1};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)(int32_t)a1;
+    c.f[0] = em_ee_bits(a2);
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
 static int m17x_w_callback(void *ctx, uint32_t function, uint32_t self)
 {
     EmArea01Runtime *r = ctx;
@@ -14754,6 +14765,7 @@ static inline void m17x_hooks(EmArea01Runtime *r, EmLevel17BootHooks *h)
     h->w_001B0FD0 = m17x_w_001B0FD0;
     h->w_001B1B70 = m17x_w_001B1B70;
     h->w_001C6380 = m17x_w_001C6380;
+    h->w_001F4E20 = m17x_w_001F4E20;
     h->w_callback = m17x_w_callback;
 }
 

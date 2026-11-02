@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """The second half's small boot behaviours (src/game/em_level17_boot.c)
 against the ORIGINAL instructions: 001C2420 (AREA16, AREA17, AREA20 and
-AREA21 placements) and 001C4A00 (AREA20's six placements).
+AREA21 placements), 001C4A00 (AREA20's six placements) and AREA21's overlay
+twins 0x823A10 / 0x823AB0 of AREA01's 0x8239C0 (only the rate immediate
+differs). No AREA21 capture exists: the twins run on the same capture with
+AREA21.BIN's header and text loaded over its arena.
 
 The harness is tools/test_level14_port_reference.py (`O`), configured as
 test_level16_boot_reference.py configures it. Each entry runs as original
@@ -27,6 +30,7 @@ import ctypes as C
 import os
 import random
 import re
+import struct
 from pathlib import Path
 import gen_level17_boot as G
 import test_level14_port_reference as O
@@ -36,7 +40,11 @@ U, I, F, Q, S = O.U, O.I, O.F, O.Q, O.S
 FUNCS = {
     0x001C2420: ('em_level17_boot_001C2420', 8, [U], None),
     0x001C4A00: ('em_level17_boot_001C4A00', 232, [U], None),
+    0x00823A10: ('em_level17_boot_a21_00823A10', 144, [U], None),
+    0x00823AB0: ('em_level17_boot_a21_00823AB0', 144, [U], None),
 }
+AREA21 = ROOT.parent / 'Extermination/extract/OVERLAY/AREA21.BIN'
+DESIGNED = 'designed-a21/' + 'a03b_03_item2a'   # the capture with AREA21's header and text loaded
 BEAT = 'a03b_03_item2a'
 FREE = 0x1E61000
 A = FREE + 0x1000            # the designed node
@@ -65,8 +73,8 @@ HOOKS = [(f'w_{a:08X}', a, spec(args), result) for a, (args, result) in sorted(G
 def configure():
     O.FREE = FREE
     O.FUNCS, O.HOOKS = FUNCS, HOOKS
-    O.OVERLAY_OF = {}
-    O.OVERLAY_FILES = {4: ROOT.parent / 'Extermination/extract/OVERLAY/AREA03.BIN'}
+    O.OVERLAY_OF = {e: 0x12 for e in FUNCS if e >= O.ARENA}
+    O.OVERLAY_FILES = {4: ROOT.parent / 'Extermination/extract/OVERLAY/AREA03.BIN', 0x12: AREA21}
     O.OUT = ROOT / 'build/levels/level17_boot'
     O.SOURCES = ('em_level17_boot.c',)
     O.BEATS = [BEAT]
@@ -84,9 +92,18 @@ def configure():
     O.CONTRACT_UNREACHABLE = {}
     O.LOCAL_STORES = set()
     O.DEFAULT_ARGS = {e: [A] for e in FUNCS}
-    O.image_for = lambda entry: O.CAPTURES[BEAT][0]
+    O.image_for = lambda entry: O.CAPTURES[DESIGNED if entry >= O.ARENA else BEAT][0]
     O.CAPTURES.clear()
     O.CAPTURES.update(O.load_captures(O.read_elf()))
+    # AREA21's twins: no AREA21 capture exists, so the overlay file's header
+    # and text are loaded over the capture's arena (only those words run).
+    data = AREA21.read_bytes()
+    length = 0x40 + struct.unpack_from('<I', data, 12)[0]
+    assert data[4] == 0x12
+    ram, spad = O.CAPTURES[BEAT]
+    designed = bytearray(ram)
+    designed[O.ARENA:O.ARENA + length] = data[:length]
+    O.CAPTURES[DESIGNED] = (bytes(designed), spad)
     O.JUMP_TABLES = {}
     O.TABLE_BYTES = frozenset()
 
@@ -105,7 +122,7 @@ def cases():
         assert label not in labels, label
         labels.add(label)
         all_patches = base + list(patches)
-        out.append((label, BEAT, e, tuple(O.DEFAULT_ARGS[e]),
+        out.append((label, DESIGNED if e >= O.ARENA else BEAT, e, tuple(O.DEFAULT_ARGS[e]),
                     [(a, v) for a, v in all_patches if a < 0x70000000],
                     [(a, v) for a, v in all_patches if a >= 0x70000000], O.Script(queues), set()))
 
@@ -125,7 +142,13 @@ def cases():
     # states 2, 3 and the rest
     for state in (2, 3, 4, 5, 0x7F, 0x80, 0xFF):
         add(f'4a00/state/{state:x}', 0x1C4A00, [(A + 4, b(state))])
-    # a seeded random sample over both entries
+    # ---- AREA21's 0x823A10 / 0x823AB0: the state byte, the colour words
+    # already there, the position
+    for e in (0x823A10, 0x823AB0):
+        for state in (0, 1, 2, 3, 0x81, 0xFF):
+            add(f'a21/{e:x}/{state:x}', e, [(A + 4, b(state)), (A + 0x100, O.fw(1., 2., 3., 1.))])
+        add(f'a21/{e:x}/colour', e, [(A + 4, b(1)), (0x700038B0, w(0xFFFFFFFF)), (0x700038BC, w(7))])
+    # a seeded random sample over every entry
     rng = random.Random(0x17B007)
     for entry in FUNCS:
         for n in range(O.reference_mode.pick(200, 24)):

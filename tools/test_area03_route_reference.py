@@ -2,6 +2,9 @@
 """AREA03 route gaps: original code identity, ordered memory and worker replay.
 
 Standalone and UNWIRED. Uses the existing level-14 comparator unchanged.
+AREA14's 0x825AA0 (word-equal to 0x825290) runs every 0x825290 case again
+on AREA14's overlay header and text loaded over the same images (no AREA14
+capture exists): the translation em_area03_route_00825290 binds it.
 EM_TEST_FULL=1 sweeps every failure site; the default still covers every
 reachable word. EM_AREA03_ROUTE_ONLY is diagnostic, never certification.
 """
@@ -24,9 +27,13 @@ FUNCS = {
     0x00826860: ('em_area03_route_00826860',0x18,[],I),
     0x00826880: ('em_area03_route_00826880',0x2C,[U],I),
     0x008268B0: ('em_area03_route_008268B0',0x2C,[U],I),
+    # AREA14's 0x825AA0 is 0x825290 word for word (no overlay-relocated
+    # word in either); the same translation runs it, checked on AREA14's text
+    0x00825AA0: ('em_area03_route_00825290',0x198,[U],None),
 }
-OVERLAY_OF = {entry:4 for entry in FUNCS}
-OVERLAY_FILES = {4:ROOT.parent/'Extermination/extract/OVERLAY/AREA03.BIN'}
+OVERLAY_OF = {entry:(0x0B if entry==0x825AA0 else 4) for entry in FUNCS}
+OVERLAY_FILES = {4:ROOT.parent/'Extermination/extract/OVERLAY/AREA03.BIN',
+                 0x0B:ROOT.parent/'Extermination/extract/OVERLAY/AREA14.BIN'}
 HOOKS = [
     ('w_00102760',0x00102760,[('u', 4), ('u', 5)],None),
     ('w_001028D0',0x001028D0,[('u', 4), ('u', 5), ('u', 6)],None),
@@ -77,13 +84,16 @@ def configure():
         [('ctx',C.c_void_p),('bytes',O.BYTES_FN)] +
         [(name,O.hook_proto(args,res)) for name,_,args,res in HOOKS] +
         [('w_callback',O.CALLBACK_FN)]})
-    O.SELF_ENTRIES,O.HEAVY = {0x823930,0x825290},set()
+    O.SELF_ENTRIES,O.HEAVY = {0x823930,0x825290,0x825AA0},set()
     O.RETURN_SITES = O.RETURN_SITES_FULL = (0x826270,0x826330,0x826860,0x826880,0x8268B0)
     O.CONTRACT_UNREACHABLE = {}
     O.LOCAL_STORES = set()
     O.DEFAULT_ARGS = {e:[A]*len(kinds) for e,(_,_,kinds,_) in FUNCS.items()}
-    O.image_for = lambda _:O.CAPTURES[BEAT][0]
+    O.image_for = lambda e:O.CAPTURES[('a14/'+BEAT) if e==0x825AA0 else BEAT][0]
+    loaded = O.OVERLAY_FILES
+    O.OVERLAY_FILES = {4:OVERLAY_FILES[4]}   # the captures hold AREA03
     O.CAPTURES.clear();O.CAPTURES.update(O.load_captures(O.read_elf()))
+    O.OVERLAY_FILES = loaded
     O.JUMP_TABLES = {};O.TABLE_BYTES = frozenset()
     # Designed twin fixtures retain AREA01 actor data and load original
     # AREA03 text. They are not represented as original AREA03 captures.
@@ -94,6 +104,14 @@ def configure():
         designed=bytearray(ram);designed[O.ARENA:O.ARENA+length]=data[:length]
         assert designed[O.ARENA:O.ARENA+length]==data[:length]
         O.CAPTURES['designed/'+beat]=(bytes(designed),spad)
+    # AREA14 (no capture yet): its overlay header and text over every image
+    # above (the AREA03 captures and the designed AREA01 ones), so the same
+    # nodes run AREA14's words
+    data=OVERLAY_FILES[0x0B].read_bytes();length=0x40+struct.unpack_from('<I',data,12)[0]
+    assert data[4]==0x0B
+    for key,(ram,spad) in list(O.CAPTURES.items()):
+        designed=bytearray(ram);designed[O.ARENA:O.ARENA+length]=data[:length]
+        O.CAPTURES['a14/'+key]=(bytes(designed),spad)
 
 
 def cases():
@@ -120,6 +138,9 @@ def cases():
             for node in O.owners(ram,entry):
                 out.append((f'capture/{beat}/{entry:x}/{node:x}',beat,entry,(node,),
                             [(0x275B40,w(node+0x110))],[],O.Script(),set()))
+    # AREA14's twin: every case of 0x825290 again on AREA14's words
+    out+=[(f'a14/{label}','a14/'+beat,0x825AA0,args,patches,spad,script,run)
+          for label,beat,entry,args,patches,spad,script,run in list(out) if entry==0x825290]
     return out
 
 

@@ -495,8 +495,9 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
 ## 5. Open
 
 - Every overlay owner of the six areas (66 behaviours, their op09 callbacks
-  and helpers) is untranslated; the area lanes translate them against
-  captures, the twins first.
+  and helpers) but the three twins of section 6 is untranslated; the area
+  lanes translate them against captures. The twins are bound only in the
+  shared composition's dispatch; none of these areas runs there yet.
 - Every boot behaviour of the six areas is now in a census ledger or
   defined (section 6 for the six BOOT2 added); those marked only "defined"
   by an earlier lane still need their oracle named before they count. The
@@ -530,11 +531,24 @@ with hook adapters in `em_mid_route_bridge.inc` (tools/gen_mid_route_bridge.py).
 
 | Module | Functions | Oracle (quick / EM_TEST_FULL=1) |
 |---|---|---|
-| `em_level17_boot` | 001C2420 (returns at once), 001C4A00 (001C48C0's states; state 1 gated by the scratchpad flag 0x70003B92 and D_008107D8[+3] against +0x56) | `make test-level17-boot-reference`: 245 cases, 40/40 words |
+| `em_level17_boot` | 001C2420 (returns at once), 001C4A00 (001C48C0's states; state 1 gated by the scratchpad flag 0x70003B92 and D_008107D8[+3] against +0x56); AREA21's twins below | `make test-level17-boot-reference`: 307 cases, 94/94 words |
 | `em_area17_creature` | 00133E30 and 25 functions it reaches: 00133FD0 .. 001373B0, 001E00F0, 001E0240, 001E04E0 (NEARMISS C: 00134300, 001348E0, 00135D00, 001370C0, 001373B0, 001E00F0) | `make test-area17-creature-reference`: 889 / 1740 cases, every word but one dead delay slot (0x136F60: 00136F20's out-of-range selector, which its one caller never passes; the native faults there) |
 | `em_area21_boot` | 001283D0, 0014C220 .. 0014D1E0 (12 shared helpers), 00137830 with 00137920 .. 001381D0 (00137EB0 NEARMISS) | `make test-area21-boot-reference`: 648 / 1351 cases, every word |
 | `em_area21_creature_b` | 0014EC00 and 17 functions it reaches, 0014ED10 .. 001513B0 (00150F40 NEARMISS) | `make test-area21-creature-b-reference`: 1030 / 1696 cases, every word |
 | `em_area21_creature_c` | 00151590 and 17 functions it reaches, 001516B0 .. 00153770 | `make test-area21-creature-c-reference`: 621 / 1287 cases, every word |
+
+**Twins** (section 4's "twin of" rows), each compared word for word with the
+relocated fields unmasked, then bound in the shared composition
+(`em_area01_runtime_second_half.inc`, `dispatch_second_half`, areas 0x0E
+and 0x15 only):
+
+| Owner | Twin of | Words | Translation and oracle |
+|---|---|---|---|
+| AREA14 0x825AA0 (sub 0 group 0x826180 [14], [16], [18], [20]) | AREA03 0x825290, AREA11 0x827490, AREA19 0x8298D0 | all 104 equal, no overlay-relocated word | `em_area03_route_00825290`; `make test-area03-route-reference` runs every 0x825290 case again on AREA14's header and text loaded over the same images (72/72 words) |
+| AREA21 0x823A10 (group 0x82B500 [2]), 0x823AB0 (group 0x82BA70 [23]) | AREA01 0x8239C0, AREA19 0x825030 | 35 of 36 equal; the one that differs is the rate's float immediate: 40.0 and 8.0 (AREA01's and AREA19's 5.0), so AREA01's translation (which fixes 5.0) is not reused | `em_level17_boot_a21_00823A10` / `_00823AB0`; `make test-level17-boot-reference` runs them on AREA21's header and text over the capture (27/27 words each; a 5.0 mutation fails) |
+
+Section 4's tables still show these rows as missing: the generator counts an
+overlay owner only through a port file of its own area.
 
 Notes for the area lanes:
 - The creature modules call 001283D0 and 0014D1E0 (em_area21_boot) and

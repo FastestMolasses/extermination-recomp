@@ -37,6 +37,38 @@ static uint32_t e001C4A00(L17B *o, uint32_t self)
     return 0;
 }
 
+/* AREA21's 0x823A10 (group 0x82B500 [2]) and 0x823AB0 (group 0x82BA70 [23]):
+ * AREA01's 0x8239C0 word for word but for the rate's float immediate (AREA01
+ * and AREA19's 0x825030: 5.0; here 40.0 and 8.0). In state 1 (+4) the
+ * scratchpad colour 0x700038B0..BC = 0x30, 0x80, 0x30, 0x80, then
+ * 001F4E20(node + 0x100, 0x700038B0, rate); other states: nothing. */
+static uint32_t a21_glow(L17B *o, uint32_t self, uint32_t rate)
+{
+    if (B(self + 4) != 1) return 0;
+    l17b_w32(o, 0x700038B0u, 0x30);
+    l17b_w32(o, 0x700038B4u, 0x80);
+    l17b_w32(o, 0x700038B8u, 0x30);
+    l17b_w32(o, 0x700038BCu, 0x80);
+    C(001F4E20, self + 0x100, 0x700038B0u, rate);
+    return 0;
+}
+
+int em_level17_boot_a21_00823A10(const EmLevel17BootHooks *h, uint32_t a0, EmLevel17BootFault *fault)
+{
+    L17B o;
+    if (l17b_begin(&o, h, fault)) return -1;
+    (void)a21_glow(&o, a0, 0x42200000u);   /* 40.0 */
+    return l17b_end(&o);
+}
+
+int em_level17_boot_a21_00823AB0(const EmLevel17BootHooks *h, uint32_t a0, EmLevel17BootFault *fault)
+{
+    L17B o;
+    if (l17b_begin(&o, h, fault)) return -1;
+    (void)a21_glow(&o, a0, 0x41000000u);   /* 8.0 */
+    return l17b_end(&o);
+}
+
 /* 001C2420(node): returns at once (an empty behaviour; the placements that
  * name it keep a node that never acts). */
 int em_level17_boot_001C2420(const EmLevel17BootHooks *h, uint32_t a0, EmLevel17BootFault *fault)
