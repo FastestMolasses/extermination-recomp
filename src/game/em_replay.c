@@ -29,7 +29,10 @@
  * The port's loads have their own length and a voice line can end a tick early
  * (a face's draws then come a tick sooner), and one such slip would change every
  * later random outcome, the creatures' included. So a difference in a take's
- * playback comes from the logic, not from the stream. */
+ * playback comes from the logic, not from the stream. A column "clock" after it
+ * (tools/take_clock.py) does the same for the world clock 0x70003B68 and its twin
+ * D_00810750, which count the world frames: the bugs' timers read it (a cutscene that
+ * ended a tick early left it one behind for good, and every bug turned a tick late). */
 #include "game/em_replay.h"
 #include "game/em_random.h"
 
@@ -55,6 +58,7 @@ typedef struct {
     uint16_t btn;
     uint8_t axis[4]; /* lx ly rx ry, raw bytes (0x80 = centre) */
     uint32_t rand;   /* rand()'s state at the tick's start, with s.rands */
+    uint32_t clock;  /* the world clock 0x70003B68 at the tick's start, with s.clocks */
 } RecPad;
 
 typedef struct {
@@ -77,7 +81,7 @@ static struct {
     long max_overrun;
     int done;
     int area0_world;
-    int rands;
+    int rands, clocks;
     /* live segment tracking (record and playback) */
     char prev_phase;
     uint32_t cur_seg;  /* playback: recorded segment; record: live count - 1 */
@@ -115,7 +119,7 @@ static float axis_float(uint8_t b) { return ((float)b - 128.0f) / 128.0f; }
 
 static RecPad pad_of(const EmPadState *p)
 {
-    RecPad r = {p->buttons, {axis_byte(p->lx), axis_byte(p->ly), axis_byte(p->rx), axis_byte(p->ry)}};
+    RecPad r = {p->buttons, {axis_byte(p->lx), axis_byte(p->ly), axis_byte(p->rx), axis_byte(p->ry)}, 0, 0};
     return r;
 }
 
@@ -156,6 +160,7 @@ static int load_recording(const char *path)
             if (!strncmp(line, "#cols ", 6)) {
                 cols = !strncmp(line + 6, REC_COLS, strlen(REC_COLS));
                 s.rands = !strncmp(line + 6 + strlen(REC_COLS), " rand", 5);
+                s.clocks = !strncmp(line + 6 + strlen(REC_COLS), " rand clock", 11);
             }
             if (!strncmp(line, "# area0 world", 13)) s.area0_world = 1;
             continue;
@@ -169,9 +174,15 @@ static int load_recording(const char *path)
             fclose(f);
             return -1;
         }
-        const char *last = strrchr(line, ' ');
+        char *last = strrchr(line, ' ');
+        uint32_t clock = 0;
+        if (s.clocks && last) {
+            clock = (uint32_t)strtoul(last + 1, NULL, 10);
+            *last = 0;
+            last = strrchr(line, ' ');
+        }
         RecPad pad = {(uint16_t)btn, {(uint8_t)lx, (uint8_t)ly, (uint8_t)rx, (uint8_t)ry},
-                      s.rands && last ? (uint32_t)strtoul(last + 1, NULL, 16) : 0};
+                      s.rands && last ? (uint32_t)strtoul(last + 1, NULL, 16) : 0, clock};
         if (mv) {
             if (!movie_open) {
                 if (!(s.movie_skip = grow(s.movie_skip, &s.cap_movies, s.nmovies + 1, 1))) goto oom;
@@ -329,7 +340,7 @@ static void filter(EmPadState *pad, void *user)
         s.in_movie = 1;
         if (s.playing) {
             int skip = s.movie_index > s.nmovies || s.movie_skip[s.movie_index - 1];
-            RecPad r = {skip ? (uint16_t)EM_PAD_START : 0, {0x80, 0x80, 0x80, 0x80}};
+            RecPad r = {skip ? (uint16_t)EM_PAD_START : 0, {0x80, 0x80, 0x80, 0x80}, 0, 0};
             pad_set(pad, &r);
         }
     } else {
@@ -356,6 +367,11 @@ static void filter(EmPadState *pad, void *user)
             const uint32_t i = s.off < g0->len ? s.off : g0->len - 1;
             pad_set(pad, &s.ticks[g0->start + i]);
             if (s.rands && s.cur_seg && s.off < g0->len) em_random_seed(s.ticks[g0->start + i].rand);
+            if (s.clocks && s.cur_seg && s.off < g0->len) {
+                const int32_t behind = (int32_t)(s.ticks[g0->start + i].clock - (uint32_t)st->spad3B68);
+                st->spad3B68 = (int32_t)((uint32_t)st->spad3B68 + (uint32_t)behind);
+                st->d810750 = (int32_t)((uint32_t)st->d810750 + (uint32_t)behind);
+            }
             if ((long)s.off - (long)g0->len > s.max_overrun) stop("desync: segment overran the recording");
             if (s.cur_seg + 1 == s.nsegs && s.off + 1 >= g0->len) stop("recording used up");
             if (s.capture && phase != 'T' && s.off % s.capture_every == 0) {

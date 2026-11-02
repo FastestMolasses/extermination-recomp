@@ -4,6 +4,8 @@
 #include "game/em_aim_fire_world_live.h"
 /* Borrow the existing collision serialization/last-writer owner. */
 EmAimFireWorldLive *em_aim_fire_runtime_world_state(void);
+/* The pool record at an original address (a record boundary), or NULL. */
+EmActor *em_aim_fire_pool_actor(uint32_t address);
 /* Alias the sight/beam scratch 70003600..363F to the shared native owner.
  * Bind after attach; no bytes initialized/copied. NULL restores legacy
  * backing while preserving the last shared bytes. */

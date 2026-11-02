@@ -303,7 +303,6 @@ const uint8_t *em_effects_live_elf(uint32_t address, uint32_t size)
 typedef struct { uint32_t address, size; } Run;
 
 static struct {
-    int active;
     uint8_t *blob;
     const Run *runs;
     const uint8_t **bytes;
@@ -358,13 +357,13 @@ static int load(void)
 
 int em_boot_constants_select(unsigned area)
 {
-    BC.active = area == 0x13 || area == 0x0F || area == 3 || area == 4 || area == 8 || area == 7 || area == 0x0D;
-    return BC.active ? load() : 0;
+    (void)area;
+    return load();
 }
 
 const uint8_t *em_boot_constants(uint32_t address, uint32_t size)
 {
-    if (!BC.active || !size) return NULL;
+    if (!size || load() < 0) return NULL;
     uint32_t lo = 0, hi = BC.count;
     while (lo < hi) {
         const uint32_t mid = lo + (hi - lo) / 2;

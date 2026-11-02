@@ -25,7 +25,8 @@ Usage (native arm64 macOS; build/extermination first, native):
   python3 tools/watch_takes.py test1           # another chain
   python3 tools/watch_takes.py --check test1   # no window, full speed, comparison only
 
-rand()'s state follows the recording tick by tick (em_replay.c says why), so a
+rand()'s state follows the recording tick by tick (em_replay.c says why), and the
+world clock too once tools/take_clock.py has read it from a replay of the take, so a
 difference comes from the logic and not from a load's length.
 
 Output: build/takes/<first take>/ (derived from the disc: never committed).
@@ -69,8 +70,23 @@ def lead_in(counter):
     return rows + ['0 0 1 M 0x0008 128 128 128 128 0 0 0 0 0 0 0 0 0 0 0 -1 -1 -1 -1']
 
 
+def clocks(names):
+    """The takes' world clocks by counter (tools/take_clock.py), or None."""
+    out = {}
+    for name in names:
+        path = OUT / name / 'clock.txt'
+        if not path.exists():
+            print(f'{name} has no clock.txt (tools/take_clock.py): the world clock runs free', flush=True)
+            return None
+        for line in path.read_text().splitlines():
+            counter, clock = line.split()
+            out[int(counter)] = clock
+    return out
+
+
 def stitch(names, path):
     rows, last = [], -1
+    clock = clocks(names)
     for name in names:
         take = TAKES / name / 'take.rec'
         if not take.exists():
@@ -88,7 +104,20 @@ def stitch(names, path):
                 last = int(parts[1])
             rows.append(line)
     rows = [' '.join([str(i), *line.split()[1:]]) for i, line in enumerate(rows)]
-    path.write_text('\n'.join(HEADER + rows) + '\n')
+    header = HEADER
+    if clock:
+        # The lead-in and the movie rows have neither column; the port reads only past
+        # the first segment, and a row with no clock takes the one before it.
+        kept, now = [], '0'
+        for line in rows:
+            parts = line.split()
+            if len(parts) == len(COLS):
+                parts.append('00000000')
+            now = clock.get(int(parts[1]), now) if parts[2] == '0' else now
+            kept.append(' '.join([*parts, now]))
+        rows = kept
+        header = HEADER[:-1] + [HEADER[-1] + ' clock']
+    path.write_text('\n'.join(header + rows) + '\n')
     return sum(line.split()[2] == '0' for line in rows)
 
 
@@ -177,9 +206,11 @@ def main():
         result = subprocess.run([str(BIN)], cwd=ROOT, env=env, stdout=text, stderr=subprocess.STDOUT)
     faulted = False
     for line in (out / 'run.log').read_text(errors='replace').splitlines():
-        if line.startswith('replay:') or 'FAULT' in line or 'fail-stop' in line:
+        stopped = 'FAULT' in line or 'player stage worker' in line or ' fault code ' in line or \
+            line.startswith('chain page:')
+        if line.startswith('replay:') or stopped or 'fail-stop' in line:
             print(line[:200], flush=True)
-            faulted = faulted or 'FAULT' in line
+            faulted = faulted or stopped
     print(f'port exit {result.returncode}', flush=True)
     compare(rec, log)
     if faulted:

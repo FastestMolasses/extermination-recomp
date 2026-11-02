@@ -1304,6 +1304,12 @@ static int later_handler(uint32_t fn, EmCameraFollowRecord *cam, EmPlayerLiveAct
         h.w_00102948 = later_00102948;
         h.w_0011E2A8 = later_0011E2A8;
         h.w_0011DE90 = later_0011DE90;
+        h.w_0011DF78 = a22_fabs;
+        h.w_001028B8 = a22_001028B8;
+        h.w_0018C0C0 = later_0018C0C0;
+        h.w_0018C4B0 = a06c_0018C4B0;
+        h.w_0018C6A0 = a06c_0018C6A0;
+        h.w_0018D7B0 = later_0018D7B0;
         EmArea22PortFault f = {0, 0};
         rc = em_area22_port_001963A0(&h, CAM_BASE, 0x008102B0u, &f);
         where = f.address;

@@ -162,7 +162,7 @@ typedef struct {
     uint8_t *bytes;
 } Region;
 
-#define MAX_REGIONS 16
+#define MAX_REGIONS 128
 #define MAX_READ_SECTORS 0x4000u /* 32 MiB: no EE buffer is larger */
 
 /* The measured drive (docs/STATUS_LOAD_WAIT_PROBE.md, decomp CAPTURES_C7.md

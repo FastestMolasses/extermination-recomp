@@ -2334,6 +2334,10 @@ states, timings and positions, and their draws come from the original data.
   its own pool record. Placement, model binds, collision publication and
   the per-frame draw unit all follow the original. The legacy meshes and
   legacy object code for these objects are retired.
+- A shot drum's blast too: the fire and the ring, and the chain it sets off
+  through the other drum and the crate beside it, in the same ticks. A scripted run
+  of the original and the same pad here agree on every record's lifetime and the
+  blast nodes' fields tick by tick (`CRATES_DRUMS_ORIGINAL.md` "The blast in AREA11").
 - Evidence: `CRATES_DRUMS_ORIGINAL.md`: all four crates and both drums
   equal route 04 in every modelled span, and crates r4/r3 equal route 05
   row for row. `TRUCK_ORIGINAL.md`: `test_truck_original_reference` runs 204
