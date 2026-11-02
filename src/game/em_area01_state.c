@@ -57,6 +57,12 @@ static const MidOverlay k_mid[] = {
     {0x03u, 0x04u, 0x33C0u, EM_AREA01_STATE_A03_DATA_SIZE, EM_AREA01_STATE_A03_BSS, EM_AREA01_STATE_A03_BSS_SIZE},
     {0x08u, 0x08u, 0x1BC0u, EM_AREA01_STATE_A08_DATA_SIZE, EM_AREA01_STATE_A08_BSS, EM_AREA01_STATE_A08_BSS_SIZE},
     {0x07u, 0x07u, 0x2640u, EM_AREA01_STATE_A07_DATA_SIZE, EM_AREA01_STATE_A07_BSS, EM_AREA01_STATE_A07_BSS_SIZE},
+    {0x0Eu, 0x0Bu, 0x2C40u, EM_AREA01_STATE_A14_DATA_SIZE, EM_AREA01_STATE_A14_BSS, EM_AREA01_STATE_A14_BSS_SIZE},
+    {0x10u, 0x0Du, 0x4F40u, EM_AREA01_STATE_A16_DATA_SIZE, EM_AREA01_STATE_A16_BSS, EM_AREA01_STATE_A16_BSS_SIZE},
+    {0x11u, 0x0Eu, 0x2D40u, EM_AREA01_STATE_A17_DATA_SIZE, EM_AREA01_STATE_A17_BSS, EM_AREA01_STATE_A17_BSS_SIZE},
+    {0x12u, 0x0Fu, 0x00C0u, EM_AREA01_STATE_A18_DATA_SIZE, EM_AREA01_STATE_A18_BSS, EM_AREA01_STATE_A18_BSS_SIZE},
+    {0x14u, 0x11u, 0x2BC0u, EM_AREA01_STATE_A20_DATA_SIZE, EM_AREA01_STATE_A20_BSS, EM_AREA01_STATE_A20_BSS_SIZE},
+    {0x15u, 0x12u, 0x6E40u, EM_AREA01_STATE_A21_DATA_SIZE, EM_AREA01_STATE_A21_BSS, EM_AREA01_STATE_A21_BSS_SIZE},
 };
 
 static const MidOverlay *mid_overlay(unsigned area)
@@ -300,6 +306,19 @@ int em_area01_state_001E7780(EmArea01State *s, uint8_t area, uint8_t sub)
         /* AREA08's init 0x8241F0 (keys 0x800..0x806), AREA07's 0x823970 (keys
          * 0x700..0x704): the same four stores (func_overlay_AREA08_008241B0.c,
          * func_overlay_AREA07_00823930.c). */
+        if (mid_init(s, mid_overlay(area)) < 0) return -1;
+    } else if (((area == 0x0E || area == 0x11 || area == 0x12 || area == 0x14 || area == 0x15) && sub == 0) ||
+               (area == 0x10 && sub <= 1)) {
+        /* The second half's inits, the same four stores with C1C = the
+         * overlay's BSS (byte-identical C): AREA14 0x823740 (key 0xE00,
+         * func_overlay_AREA14_00823700.c), AREA16 0x824420 (0x1000 / 0x1001,
+         * func_overlay_AREA16_008243E0.c), AREA17 0x823B80 (0x1100,
+         * func_overlay_AREA17_00823B40.c), AREA18 0x823580 (0x1200,
+         * overlay_AREA18_func_00823540.c), AREA20 0x823990 (0x1400,
+         * func_overlay_AREA20_00823950.c), AREA21 0x826180 (0x1500,
+         * func_overlay_AREA21_00826140.c). Any other sub of these areas
+         * matches no key: 001E7780 calls nothing. The original runs against
+         * this in test_second_half_state_reference. */
         if (mid_init(s, mid_overlay(area)) < 0) return -1;
     }
     /* Original 001E7780 walks the initializer's canonical pointer/count,
