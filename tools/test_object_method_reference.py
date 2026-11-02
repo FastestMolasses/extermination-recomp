@@ -52,6 +52,10 @@ ELF_SHA = T.ELF_SHA
 
 # The end snapshots whose RAM holds units of a method program (searched over
 # every eeMemory.bin under the decomp's build/fork_refs).
+# AREA15 sub 1's [3] (class 6) on the original, 700 frames past a15b_00_event's
+# state: a fork snapshot made for this test (docs/CHAIN_PAGE.md section 6.6),
+# walked when present.
+EXTRA = DECOMP / 'build/fix_draws/orig_a15/h3'
 CAPTURED = (
     'levels-recordings-20261030-1/s87/route_a07/a07_00_switch',
     'levels-recordings-20261030-1/s87/route_a03b/a03b_00_door13',
@@ -350,13 +354,13 @@ def captured_units(ram):
     keeps the units of the frames before), from the colour CNT to the RET."""
     units = []
     for program in PROGRAMS:
-        pat = struct.pack('<II', 0x50000000, program)
+        pat = b'\x50' + struct.pack('<I', program)
         at = M.ARENA
         while True:
             at = ram.find(pat, at, 0x7635C0)
             if at < 0:
                 break
-            call, at = at, at + 8
+            call, at = at - 3, at + 5
             if call & 15:
                 continue
             start = None
@@ -369,7 +373,7 @@ def captured_units(ram):
             if start is None:
                 continue
             cur = call + 16
-            for _ in range(16):
+            for _ in range(40):
                 lo = M.u32(ram, cur)
                 tid, qwc = lo >> 28 & 7, lo & 0xFFFF
                 if tid == 6:
@@ -377,6 +381,20 @@ def captured_units(ram):
                     break
                 cur += 16 + (16 * qwc if tid == 1 else 0)
     return sorted(set(units))
+
+
+def unit_env(ram, unit, bank):
+    """The slot of the draw environment a unit's 001D1F20 REFs, or None."""
+    cur = unit
+    for _ in range(40):
+        lo = M.u32(ram, cur)
+        tid, qwc, addr = lo >> 28 & 7, lo & 0xFFFF, M.u32(ram, cur + 4) & 0x0FFFFFFF
+        if tid == 6:
+            return None
+        if tid == 3 and qwc == 0x19 and addr in (bank, bank + 0x190):
+            return (addr - bank) // 0x190
+        cur += 16 + (16 * qwc if tid == 1 else 0)
+    return None
 
 
 def check_lists(lib, ram, units, stats, where):
@@ -392,6 +410,8 @@ def check_lists(lib, ram, units, stats, where):
         if M.u32(ram, a + 16 + 4) not in PROGRAMS:
             fail(f'{where}: unit {u:#x} does not CALL a method program after its node CNTs')
         program = M.u32(ram, a + 16 + 4)
+        if program != M.PROGRAM_METHOD10:
+            continue                                     # part E: the executed originals
         # the skin record's slot and the fog-off REF: from the unit itself
         tags = []
         b = a
@@ -424,12 +444,21 @@ def check_lists(lib, ram, units, stats, where):
 
 def part_a(lib, stats):
     branches = collections.Counter()
-    pages = select(CAPTURED, 1, 0xB1F, keep=lambda i, b: i == 0)
+    pages = [refs.capture(rel) for rel in select(CAPTURED, 1, 0xB1F, keep=lambda i, b: i == 0)]
+    if EXTRA.exists():
+        pages.append(EXTRA)
     for rel in pages:
-        ram = bytearray((refs.capture(rel) / 'eeMemory.bin').read_bytes())
+        ram = bytearray((rel / 'eeMemory.bin').read_bytes())
         units = captured_units(bytes(ram))
         if not units:
             continue                     # the hit is a unit partly overwritten
+        ctx = M.u32(ram, 0x275670)
+        bank, slot = M.u32(ram, 0x275674) + 0x20, M.u32(ram, ctx + 0x9C)
+        envs_of = {u: unit_env(ram, u, bank) for u in units}
+        if any(e is not None for e in envs_of.values()):
+            # a unit with a copy REFs the draw environment of its own frame
+            slot = next(e for e in envs_of.values() if e is not None)
+            units = [u for u in units if envs_of[u] in (None, slot)]
         objects = units if FULL else units[:pick(0, 4)]
         # A page of those CALLs, in unused RAM above the arena's chain table
         # (D_007635C0's slots are not walked here): each unit where 001CAAC0
@@ -444,8 +473,6 @@ def part_a(lib, stats):
         struct.pack_into('<4I', ram, at, 0x20000000, start + 0x20, 0, 0)     # NEXT to the end link
         ram = bytes(ram)
         read = M.ram_reader(ram)
-        ctx = M.u32(ram, 0x275670)
-        bank, slot = M.u32(ram, 0x275674) + 0x20, M.u32(ram, ctx + 0x9C)
         where = Path(rel).name
         pg = ComparedPage(read, lib, stats, where, [], objects, bank, slot)
         pg.run(start)

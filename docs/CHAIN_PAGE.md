@@ -724,11 +724,18 @@ oracle over a captured RAM, with the fog-off REF and without: their lists
 byte-equal to the port's; a unit of each (a captured unit's CNTs and model) walked
 by the original microcode and the native page: primitives, environments and marks
 equal; 400 synthetic batches of D_0023D0C0 and of D_0023CC50. The colour row and 001C7420 are test_actor_light_001d89d0_reference's
-and test_owner_services_reference's. It ran live with the raster on over a07_00
-(4 units, 216 triangles, no refusal: the texture is resident) and a15b_01 (class
-6 of [3]: the copy, the strip, 39 batches). **Pixels were not compared with an
-original frame**: no capture holds a frame with one of these units' page and its
-GS memory before the draw.
+and test_owner_services_reference's. One class-6 unit is the original's own: a fork snapshot 700 frames past
+a15b_00_event's state (the decomp's build/fix_draws/orig_a15/h3, EXTRA in the
+test, walked when present): 39 batches equal to the microcode on both lanes. At
+that camera the object is so near that every one of its 1,248 vertices has ADC, so
+the unit draws the copy and the strip and no triangle, in the original and in the
+port; the dark red band in that frame comes from something else, and is no
+evidence for this draw. It ran live with the raster on over a07_00 (4 units, 216
+triangles, no refusal: the texture is resident; a purple shape on the floor, seen
+in one port frame) and a15b_01. No beat run here reached a worm or kind 8 (of
+a19_01, a19b_01, a19c_00..03: kind 10 in a19c_03 only). **Pixels were not compared
+with an original frame**: no capture holds a frame with one of these units' page
+and its GS memory before the draw.
 
 ## 7. Binding (live)
 
