@@ -14,6 +14,11 @@ from which gate each step opens): AREA00 sub 2 -> AREA14 (item 0x26) -> AREA18
 ... -> AREA15's room -> AREA06 sub 1 door [3] -> AREA16 (flag 0x31) -> AREA06
 sub 1 -> AREA04 sub 1 [48] -> AREA20 -> AREA21 -> the ending.
 
+Each overlay's decompilation (functions, split slots, what each owner does as
+far as its C was read) is in the decomp's docs/AREA14_OVERLAY.md,
+AREA16_OVERLAY.md, AREA17_OVERLAY.md, AREA18_OVERLAY.md, AREA20_OVERLAY.md and
+AREA21_OVERLAY.md; read an owner's C there before translating it.
+
 ## 1. What is done, and its evidence
 
 - **Overlay state** (`em_area01_state.c`, `k_mid` and 001E7780's keys). Each
