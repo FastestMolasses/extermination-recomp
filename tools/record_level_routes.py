@@ -373,6 +373,8 @@ def main():
                     help='collect AREA15\'s treatment pickup before the bed if the earlier recovery consumed it')
     ap.add_argument('--medical-route', type=Path,
                     help='private JSON with collision-planned approach points for the treatment pickup')
+    ap.add_argument('--card', type=Path,
+                    help='a PS2 card image (constructed starts) put in slot 1 of every session of the run')
     ap.add_argument('--append', action='store_true',
                     help='add beats to an existing --out-root: a later beat resumes from an earlier beat of the same root')
     ap.add_argument('--owner-binding', action='append', default=[], metavar='SAMPLER=ANCHOR_BEAT[:INHERIT_SAMPLER]',
@@ -420,6 +422,14 @@ def main():
         raise FileNotFoundError('No recorded fork source for ' + name)
 
     rc.beat_source = source
+    if args.card is not None:
+        # A copy per run under the output root: the emulator may write its card; the input stays as made.
+        card = private_root(decomp, args.card)
+        folder = out / '_cards' / time.strftime('%Y%m%d-%H%M%S')
+        folder.mkdir(parents=True)
+        shutil.copyfile(card, folder / 'Mcd001.ps2')
+        rc.SESSION_KW = {'ini_overrides': {'Folders': {'MemoryCards': str(folder.resolve())},
+                                           'MemoryCards': {'Slot2_Enable': 'false'}}}
     signal.signal(signal.SIGTERM, rc._term_to_interrupt)
     extra = args.beats.split(',')
     extra += [v.partition('=')[2] for v in args.source_beat]
