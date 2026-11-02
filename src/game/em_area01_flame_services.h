@@ -9,6 +9,8 @@ int em_area01_flame_services_handles(uint32_t function);
  * host.worker; CD520 borrows existing aim/RCL owners (runtime must be attached). No
  * mutable game state is retained here. 0 handled, 1 other, -1 refusal. */
 int em_area01_flame_services_call(const EmArea01RuntimeHost *, EmArea01Call *, uint32_t *fault);
+/* 001E8B90(point, f12) with the point's words handed in. */
+int em_area01_flame_services_ripple(const EmArea01RuntimeHost *, const uint32_t point[3], uint32_t f12, uint32_t *fault);
 
 typedef struct {
     int32_t key, kind, copy;

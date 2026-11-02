@@ -467,6 +467,15 @@ static int external_call(void *context,EmAimFireLive *live,EmAimFireTargetCall *
     }
     switch (f->function) {
     case 0x1FC580:return target_sound(live,f);
+    case 0x1E8B90: {
+        /* 001860A0 on surface 0x5B (a round in the water): the ripple at the
+         * hit point 0x70003620, in the area's water grid. */
+        const void *point=em_aim_fire_live_map(live,(uint32_t)f->a[0],12,0);
+        uint32_t words[3];
+        if (!point) return -1;
+        memcpy(words,point,sizeof words);
+        return em_scene_bindings_water_ripple(words,f->f[0]);
+    }
     case 0x1CA7B0: {
         /* 001F3E30's cull of its matrix row 3 (em_owner_draw_live's). */
         const void *p=em_aim_fire_live_map(live,(uint32_t)f->a[0]&~15u,16,0);

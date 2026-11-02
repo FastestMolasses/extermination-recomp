@@ -121,6 +121,11 @@ Callers:
 
 Callers:
 - The player and actor floor code calls 001E8B90 (12 callers, e.g. 00187350).
+- 001860A0, a round on surface 0x5B, calls it at the hit point, a scratch vector
+  the area view does not hold: `em_aim_fire_runtime` hands the three words to
+  `em_scene_bindings_water_ripple` (`em_area01_flame_services_ripple`). With no
+  area host (AREA11, where D_00275C20 is 0 and the original would read four records
+  from low memory) the call stays a fault.
 - 0015A2C0 calls 001E9E60.
 - The handlers are D_00255434 entries that 001EA240 calls.
 

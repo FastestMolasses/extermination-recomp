@@ -196,6 +196,8 @@ int em_scene_bindings_node_alloc(uint8_t cls);
 int em_scene_bindings_node_commit(const uint8_t *image);
 /* The grid node records' bytes (read only) as the loader delivered them:
  * `size` bytes at `address` inside the node array, or NULL. */
+/* 001E8B90 at the point, in the area's water grid; -1 with no area host. */
+int em_scene_bindings_water_ripple(const uint32_t point[3], uint32_t f12);
 const uint8_t *em_scene_bindings_grid_node_bytes(uint32_t address, uint32_t size);
 /* AREA01 target anchors: read-only held slot words and the shared slot arena. */
 const uint8_t *em_scene_bindings_target_model_bytes(uint32_t address, uint32_t size);

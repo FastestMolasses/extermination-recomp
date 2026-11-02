@@ -86,6 +86,28 @@ static int beam_call(void *ctx,EmAimFireTargetCall *t)
     if(h->worker(h->ctx,&c)<0)return -1;
     t->v0=c.v0;t->f0=c.f0;return 0;
 }
+/* 001E8B90 at a point that is not in the host's memory (the shot's scratch
+ * vector 0x70003620, 001860A0 on surface 0x5B): its three words at a private
+ * address, the grid and the area byte through the host. */
+#define RIPPLE_POINT 0xFFFFFF00u
+typedef struct { const EmArea01RuntimeHost *host; uint32_t point[3]; } Ripple;
+static uint8_t *ripple_bytes(void *ctx,uint32_t address,uint32_t size,int write)
+{
+    Ripple *r=ctx;
+    if(address>=RIPPLE_POINT && size<=sizeof r->point && address-RIPPLE_POINT<=sizeof r->point-size)
+        return (uint8_t *)r->point+(address-RIPPLE_POINT);
+    return r->host->bytes(r->host->ctx,address,size,write);
+}
+int em_area01_flame_services_ripple(const EmArea01RuntimeHost *h,const uint32_t point[3],uint32_t f12,uint32_t *fault)
+{
+    if(!h || !h->bytes || !point)return fail(fault,0x001E8B90u);
+    Ripple r={.host=h};memcpy(r.point,point,sizeof r.point);
+    EmArea01RenderHud s={0};s.core.world.view=ripple_bytes;s.core.world.view_ctx=&r;
+    s.workers.w_001281C0=convert;
+    if(em_area01_render_001E8B90(&s,RIPPLE_POINT,f12)<0)
+        return fail(fault,s.core.fault.detail?s.core.fault.detail:s.core.fault.address);
+    return 0;
+}
 int em_area01_flame_services_handles(uint32_t fn)
 { return fn==0x001CD070u || fn==0x001CD2B0u || fn==0x001CFAE0u || fn==0x001F4A10u || fn==0x001E8B90u || fn==0x001E9E60u || fn==0x001F4CC0u || fn==0x001F4BF0u || fn==0x001F4A00u || fn==0x001CD520u ||
          fn==0x001E2BA0u; }

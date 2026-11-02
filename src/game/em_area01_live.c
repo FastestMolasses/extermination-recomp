@@ -1864,6 +1864,12 @@ int em_area01_live_call(EmArea01Live *l,EmArea01Call *c)
     if(rc<0)return fail(l,l->runtime.fault_address);
     return 0;
 }
+int em_area01_live_ripple(EmArea01Live *l,const uint32_t point[3],uint32_t f12)
+{
+    if(!l || !l->bound || l->fault)return -1;
+    const EmArea01RuntimeHost host={l,bytes,nested};uint32_t fault=0;
+    return em_area01_flame_services_ripple(&host,point,f12,&fault)<0 ? fail(l,fault) : 0;
+}
 int em_area01_live_player_call(EmArea01Live *l,EmPlayerLiveActor *p,EmArea01Call *c)
 {
     if(!l || !l->bound || l->active || l->player_stage || p!=l->player.actor || !c)return -1;

@@ -120,4 +120,6 @@ int em_area01_live_scan(EmArea01Live *,EmPlayerLiveActor *,int *result);
 int em_area01_live_find_device(EmArea01Live *l,EmPlayerLiveActor *p,int32_t item,uint32_t *owner);
 /* Read-only player borrow for an in-stage worker such as water contact. */
 int em_area01_live_player_call(EmArea01Live *,EmPlayerLiveActor *,EmArea01Call *);
+/* 001E8B90 at a point the area's memory does not hold (a shot's scratch vector). */
+int em_area01_live_ripple(EmArea01Live *,const uint32_t point[3],uint32_t f12);
 #endif
