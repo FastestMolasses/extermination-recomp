@@ -3829,6 +3829,18 @@ static int dispatch_later(EmArea01Runtime *r, EmArea01Call *c, int *out)
         code = f.code;
         break;
     }
+    case 0x001C6190u: {
+        EmLevel17BootHooks h;
+        EmLevel17BootFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        m17x_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_level17_boot_001C6190(&h, (uint32_t)c->a[0], &out_i, &f);
+        where = f.address;
+        code = f.code;
+        has = 1;
+        break;
+    }
     case 0x001C6910u: {
         EmLevel12PortHooks h;
         EmLevel12PortFault f = {0, 0};

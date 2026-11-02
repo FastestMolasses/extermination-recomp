@@ -37,6 +37,26 @@ static uint32_t e001C4A00(L17B *o, uint32_t self)
     return 0;
 }
 
+/* 001C6190(node) (AREA21's 0x823580 and 0x8237B0 call it): 001C6160(node)
+ * less 001281C0 (the float-to-int conversion) of the float at +0x3C. */
+static int32_t e001C6190(L17B *o, uint32_t self)
+{
+    int32_t r = 0, t = 0;
+    if (l17b_c_001C6160(o, self, &r)) return 0;
+    if (l17b_c_001281C0(o, l17b_u32(o, self + 0x3C), &t)) return 0;
+    return (int32_t)((uint32_t)r - (uint32_t)t);
+}
+
+int em_level17_boot_001C6190(const EmLevel17BootHooks *h, uint32_t a0, int32_t *result, EmLevel17BootFault *fault)
+{
+    L17B o;
+    if (!result || l17b_begin(&o, h, fault)) return -1;
+    const int32_t r = e001C6190(&o, a0);
+    if (l17b_end(&o)) return -1;
+    *result = r;
+    return 0;
+}
+
 /* AREA21's 0x823A10 (group 0x82B500 [2]) and 0x823AB0 (group 0x82BA70 [23]):
  * AREA01's 0x8239C0 word for word but for the rate's float immediate (AREA01
  * and AREA19's 0x825030: 5.0; here 40.0 and 8.0). In state 1 (+4) the

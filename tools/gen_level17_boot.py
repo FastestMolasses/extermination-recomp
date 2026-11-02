@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 HOOKS = {
     0x001AFC10: ('u', None), 0x001B0FD0: ('u', 'i'), 0x001B1B70: ('u', None), 0x001C6380: ('u', None),
     0x001F4E20: ('uuf', None),
+    0x001C6160: ('u', 'i'), 0x001281C0: ('f', 'i'),
 }
 TYPES = {'u': 'uint32_t', 'i': 'int32_t', 'f': 'float', 'q': 'uint64_t'}
 

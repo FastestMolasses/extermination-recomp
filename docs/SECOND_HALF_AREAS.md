@@ -350,7 +350,7 @@ Overlay functions: 30 (AI 1, C 25, NM 4; decomp status at the census commit); no
 |---|---|---|---:|---|
 | — | — | — | — | no door placement |
 
-Boot functions reachable from this area's owners and not in the first-level census: 111 (44,932 bytes); the port defines or ledgers 102 of them; 5 more are named in the sources only (a comment, a table or another name: read each): 001B1CE0, 001CAE30, 001CAF70, 001CB070, 001CB130; 4 appear nowhere: 001CACC0, 001D39A0, 001D3DA0, 001F6B60.
+Boot functions reachable from this area's owners and not in the first-level census: 111 (44,932 bytes); the port defines or ledgers 102 of them; 6 more are named in the sources only (a comment, a table or another name: read each): 001B1CE0, 001CAE30, 001CAF70, 001CB070, 001CB130, 001F6B60; 3 appear nowhere: 001CACC0, 001D39A0, 001D3DA0.
 
 Overlay functions: 24 (AI 1, C 22, NM 1; decomp status at the census commit); none has a port translation.
 <!-- second_half:area17 end -->
@@ -419,7 +419,7 @@ Overlay functions: 1 (AI 1; decomp status at the census commit); none has a port
 |---|---|---|---:|---|
 | 0 | [2] | 0x1bc350 | 0 | area change: area 0x04 entry 5 sub kept |
 
-Boot functions reachable from this area's owners and not in the first-level census: 262 (139,032 bytes); the port defines or ledgers 249 of them; 9 more are named in the sources only (a comment, a table or another name: read each): 001399F0, 0013B350, 001B1CE0, 001C1500, 001C1570, 001CAE30, 001CAF70, 001CB070, 001CB130; 4 appear nowhere: 001C6190, 001CACC0, 001D39A0, 001D3DA0.
+Boot functions reachable from this area's owners and not in the first-level census: 262 (139,032 bytes); the port defines or ledgers 250 of them; 9 more are named in the sources only (a comment, a table or another name: read each): 001399F0, 0013B350, 001B1CE0, 001C1500, 001C1570, 001CAE30, 001CAF70, 001CB070, 001CB130; 3 appear nowhere: 001CACC0, 001D39A0, 001D3DA0.
 
 Overlay functions: 15 (AI 1, C 14; decomp status at the census commit); none has a port translation.
 <!-- second_half:area20 end -->
@@ -487,7 +487,7 @@ Overlay functions: 15 (AI 1, C 14; decomp status at the census commit); none has
 | 0 | [30] | 0x826bb0 | 1 | room move: entries 3 / 4 |
 | 0 | [33] | 0x826e60 | 2 | room move: entries 5 / 6 |
 
-Boot functions reachable from this area's owners and not in the first-level census: 276 (122,056 bytes); the port defines or ledgers 202 of them; 5 more are named in the sources only (a comment, a table or another name: read each): 001B1CE0, 001CAE30, 001CAF70, 001CB070, 001CB130; 69 appear nowhere: 0010BBF0, 0010BDB0, 0010BE50, 0010BE60, 0010C858, 0010C888, 0010C8B0, 0010C8E8, 0010C9C8, 0010C9F0, 0010CA30, 0010CA70, 0010CC08, 0010CD58, 0010D008, 0010D160, 0010D2C8, 0010D890, 00119AA0, 00119D38, 0011DB10, 0011DB58, 0011E878, 0011E938, 0011E990, 0011EBA8, 00120038, 001200E8, 00120408, 001209B0, 00120B38, 00121AF8, 00121BA0, 00121BD0, 00121E30, 00121EB8, 00121F78, 00121FB0, 001221E0, 001222E0, 00122458, 001224C0, 00122868, 00122BE8, 00122D80, 00122E68, 00122ED0, 00123620, 00124C68, 00124E18, 00125068, 00125758, 00125848, 001258E0, 00125FA8, 00126578, 00126C88, 00126EC8, 00126F20, 00126F88, 00127230, 00127500, 001275B8, 00127650, 001C6190, 001CACC0, 001CEEE0, 001D39A0, 001D3DA0.
+Boot functions reachable from this area's owners and not in the first-level census: 276 (122,056 bytes); the port defines or ledgers 203 of them; 5 more are named in the sources only (a comment, a table or another name: read each): 001B1CE0, 001CAE30, 001CAF70, 001CB070, 001CB130; 68 appear nowhere: 0010BBF0, 0010BDB0, 0010BE50, 0010BE60, 0010C858, 0010C888, 0010C8B0, 0010C8E8, 0010C9C8, 0010C9F0, 0010CA30, 0010CA70, 0010CC08, 0010CD58, 0010D008, 0010D160, 0010D2C8, 0010D890, 00119AA0, 00119D38, 0011DB10, 0011DB58, 0011E878, 0011E938, 0011E990, 0011EBA8, 00120038, 001200E8, 00120408, 001209B0, 00120B38, 00121AF8, 00121BA0, 00121BD0, 00121E30, 00121EB8, 00121F78, 00121FB0, 001221E0, 001222E0, 00122458, 001224C0, 00122868, 00122BE8, 00122D80, 00122E68, 00122ED0, 00123620, 00124C68, 00124E18, 00125068, 00125758, 00125848, 001258E0, 00125FA8, 00126578, 00126C88, 00126EC8, 00126F20, 00126F88, 00127230, 00127500, 001275B8, 00127650, 001CACC0, 001CEEE0, 001D39A0, 001D3DA0.
 
 Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commit); none has a port translation.
 <!-- second_half:area21 end -->
@@ -531,7 +531,7 @@ with hook adapters in `em_mid_route_bridge.inc` (tools/gen_mid_route_bridge.py).
 
 | Module | Functions | Oracle (quick / EM_TEST_FULL=1) |
 |---|---|---|
-| `em_level17_boot` | 001C2420 (returns at once), 001C4A00 (001C48C0's states; state 1 gated by the scratchpad flag 0x70003B92 and D_008107D8[+3] against +0x56); AREA21's twins below | `make test-level17-boot-reference`: 307 cases, 94/94 words |
+| `em_level17_boot` | 001C2420 (returns at once), 001C4A00 (001C48C0's states; state 1 gated by the scratchpad flag 0x70003B92 and D_008107D8[+3] against +0x56); AREA21's twins below; 001C6190 (001C6160(node) less 001281C0 of the float at +0x3C; AREA21's 0x823580 and 0x8237B0, and AREA20) | `make test-level17-boot-reference`: 384 cases, 104/104 words |
 | `em_area17_creature` | 00133E30 and 25 functions it reaches: 00133FD0 .. 001373B0, 001E00F0, 001E0240, 001E04E0 (NEARMISS C: 00134300, 001348E0, 00135D00, 001370C0, 001373B0, 001E00F0) | `make test-area17-creature-reference`: 889 / 1740 cases, every word but one dead delay slot (0x136F60: 00136F20's out-of-range selector, which its one caller never passes; the native faults there) |
 | `em_area21_boot` | 001283D0, 0014C220 .. 0014D1E0 (12 shared helpers), 00137830 with 00137920 .. 001381D0 (00137EB0 NEARMISS) | `make test-area21-boot-reference`: 648 / 1351 cases, every word |
 | `em_area21_creature_b` | 0014EC00 and 17 functions it reaches, 0014ED10 .. 001513B0 (00150F40 NEARMISS) | `make test-area21-creature-b-reference`: 1030 / 1696 cases, every word |
@@ -549,6 +549,22 @@ and 0x15 only):
 
 Section 4's tables still show these rows as missing: the generator counts an
 overlay owner only through a port file of its own area.
+
+**The rest of the reachable boot functions** (section 4's lines for AREA17
+and AREA21), by the owners that reach them:
+- 001F6B60 (AREA17's [30] 0x823BA0) is 001F6B30 word for word (the test
+  checks the ELF): the host binds it to em_effects_live_001F6B30.
+- 001CACC0, 001D39A0, 001D3DA0 are reached from every area's owners,
+  the first level's included, only through pointers (no direct call path
+  in the census): stopped here, as speculative.
+- AREA21's 0010BBF0 .. 00127650 (lowmem, SDK): 001FBC50 (0x827040, the
+  ending request) reaches 00119AA0, the sound library, and 0x828700 /
+  0x8297C0 call 0010BBF0 (sceSifSetDma); the others 0x827250 reaches, only through
+  pointers. The port's sound layer is native, not a translation of the SDK;
+  whether any of them must be translated is the AREA21 lane's question with
+  a capture of the ending.
+- 001CEEE0 (gs upload) is reached only from 0x825C70, which nothing names
+  statically: not translated.
 
 Notes for the area lanes:
 - The creature modules call 001283D0 and 0014D1E0 (em_area21_boot) and

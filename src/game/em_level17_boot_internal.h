@@ -126,6 +126,14 @@ static inline int l17b_method(L17B *o, uint32_t self)
 }
 
 /* BEGIN GENERATED WRAPPERS */
+static inline int l17b_c_001281C0(L17B *o, uint32_t a0, int32_t *out)
+{
+    if (l17b_failed(o)) return -1;
+    if (!o->h->w_001281C0) return l17b_latch(o, 0x001281C0u, EM_LEVEL17_BOOT_FAULT_NULL_WORKER);
+    if (o->h->w_001281C0(o->h->ctx, l17b_float(a0), out) < 0) return l17b_latch(o, 0x001281C0u, EM_LEVEL17_BOOT_FAULT_WORKER_FAILED);
+    return 0;
+}
+
 static inline int l17b_c_001AFC10(L17B *o, uint32_t a0)
 {
     if (l17b_failed(o)) return -1;
@@ -147,6 +155,14 @@ static inline int l17b_c_001B1B70(L17B *o, uint32_t a0)
     if (l17b_failed(o)) return -1;
     if (!o->h->w_001B1B70) return l17b_latch(o, 0x001B1B70u, EM_LEVEL17_BOOT_FAULT_NULL_WORKER);
     if (o->h->w_001B1B70(o->h->ctx, a0) < 0) return l17b_latch(o, 0x001B1B70u, EM_LEVEL17_BOOT_FAULT_WORKER_FAILED);
+    return 0;
+}
+
+static inline int l17b_c_001C6160(L17B *o, uint32_t a0, int32_t *out)
+{
+    if (l17b_failed(o)) return -1;
+    if (!o->h->w_001C6160) return l17b_latch(o, 0x001C6160u, EM_LEVEL17_BOOT_FAULT_NULL_WORKER);
+    if (o->h->w_001C6160(o->h->ctx, a0, out) < 0) return l17b_latch(o, 0x001C6160u, EM_LEVEL17_BOOT_FAULT_WORKER_FAILED);
     return 0;
 }
 

@@ -40,6 +40,7 @@ U, I, F, Q, S = O.U, O.I, O.F, O.Q, O.S
 FUNCS = {
     0x001C2420: ('em_level17_boot_001C2420', 8, [U], None),
     0x001C4A00: ('em_level17_boot_001C4A00', 232, [U], None),
+    0x001C6190: ('em_level17_boot_001C6190', 52, [U], I),
     0x00823A10: ('em_level17_boot_a21_00823A10', 144, [U], None),
     0x00823AB0: ('em_level17_boot_a21_00823AB0', 144, [U], None),
 }
@@ -94,7 +95,13 @@ def configure():
     O.DEFAULT_ARGS = {e: [A] for e in FUNCS}
     O.image_for = lambda entry: O.CAPTURES[DESIGNED if entry >= O.ARENA else BEAT][0]
     O.CAPTURES.clear()
-    O.CAPTURES.update(O.load_captures(O.read_elf()))
+    elf = O.read_elf()
+    O.CAPTURES.update(O.load_captures(elf))
+    # 001F6B60 (AREA17's 0x823BA0 calls it) is 001F6B30 word for word (both
+    # 001F6640(001F6760()), absolute calls): the runtime binds it to the
+    # translation of 001F6B30 (em_effects_live; test_area02_misc_reference)
+    words = lambda a, n: elf[a - 0x100000 + 0x300:a - 0x100000 + 0x300 + 4 * n]
+    assert words(0x1F6B60, 9) == words(0x1F6B30, 9), '001F6B60 is not 001F6B30 word for word'
     # AREA21's twins: no AREA21 capture exists, so the overlay file's header
     # and text are loaded over the capture's arena (only those words run).
     data = AREA21.read_bytes()
@@ -118,13 +125,13 @@ def cases():
     b, h, w = O.b8, O.h16, O.w32
     base = [(A + 0x4C, w(CALLBACK))]
 
-    def add(label, e, patches=(), queues=None):
+    def add(label, e, patches=(), queues=None, run=()):
         assert label not in labels, label
         labels.add(label)
         all_patches = base + list(patches)
         out.append((label, DESIGNED if e >= O.ARENA else BEAT, e, tuple(O.DEFAULT_ARGS[e]),
                     [(a, v) for a, v in all_patches if a < 0x70000000],
-                    [(a, v) for a, v in all_patches if a >= 0x70000000], O.Script(queues), set()))
+                    [(a, v) for a, v in all_patches if a >= 0x70000000], O.Script(queues), set(run)))
 
     # ---- 001C2420: any node, any state
     for state in (0, 1, 2, 3, 0xFF):
@@ -142,6 +149,14 @@ def cases():
     # states 2, 3 and the rest
     for state in (2, 3, 4, 5, 0x7F, 0x80, 0xFF):
         add(f'4a00/state/{state:x}', 0x1C4A00, [(A + 4, b(state))])
+    # ---- 001C6190: 001C6160's result less the conversion of +0x3C (run as
+    # original code, then stubbed)
+    for r in (0, 1, -1, 0x7FFFFFFF, -0x80000000, 100):
+        for v in (0., 1.5, -1.5, 99.9, -2147483648., 3e9, -3e9):
+            add(f'6190/{r}/{v}', 0x1C6190, [(A + 0x3C, O.f32b(v))], {0x1C6160: [r]}, run={0x1281C0})
+        add(f'6190/stub/{r}', 0x1C6190, [(A + 0x3C, O.f32b(2.))], {0x1C6160: [r], 0x1281C0: [r // 3]})
+    for raw in (0x7FC00000, 0x7F800000, 0xFF800000, 1, 0x80000000):
+        add(f'6190/raw/{raw:x}', 0x1C6190, [(A + 0x3C, w(raw))], {0x1C6160: [5]}, run={0x1281C0})
     # ---- AREA21's 0x823A10 / 0x823AB0: the state byte, the colour words
     # already there, the position
     for e in (0x823A10, 0x823AB0):
@@ -192,13 +207,19 @@ def entry_guards():
         keep.append(fields_[name])
     hooks = O.Hooks(**fields_)
     for entry, (symbol, _, _, kind) in FUNCS.items():
-        for table, fault in ((C.byref(hooks), O.Fault(0x1234, 7)), (None, O.Fault()), (C.byref(hooks), None)):
+        for table, fault, with_result in ((C.byref(hooks), O.Fault(0x1234, 7), True), (None, O.Fault(), True),
+                                          (C.byref(hooks), None, True), (C.byref(hooks), O.Fault(), False)):
+            if not with_result and kind is None:
+                continue
+            out = C.c_int32(0x5A5A5A5A)
             touched.clear()
             args = [table] + O.native_args(entry, O.DEFAULT_ARGS[entry])
+            if kind is not None:
+                args.append(C.byref(out) if with_result else None)
             rc = getattr(O.NATIVE, symbol)(*args, C.byref(fault) if fault is not None else None)
-            assert rc == -1 and not touched, (symbol, rc)
+            assert rc == -1 and not touched and out.value == 0x5A5A5A5A, (symbol, rc)
             if fault is not None:
-                assert (fault.address, fault.code) == ((0x1234, 7) if table is not None else (0, 0))
+                assert (fault.address, fault.code) == ((0x1234, 7) if table is not None and with_result else (0, 0))
 
 
 def trace(prefix, selected):

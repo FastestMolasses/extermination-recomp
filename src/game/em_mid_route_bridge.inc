@@ -14694,6 +14694,16 @@ static inline void m16x_hooks(EmArea01Runtime *r, EmLevel16BootHooks *h)
     h->w_callback = m16x_w_callback;
 }
 
+static int m17x_w_001281C0(void *ctx, float a0, int32_t *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001281C0u, .sp = r->sp, .na = 0, .nf = 1};
+    c.f[0] = em_ee_bits(a0);
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = (int32_t)c.v0;
+    return rc;
+}
+
 static int m17x_w_001AFC10(void *ctx, uint32_t a0)
 {
     EmArea01Runtime *r = ctx;
@@ -14719,6 +14729,16 @@ static int m17x_w_001B1B70(void *ctx, uint32_t a0)
     EmArea01Call c = {.function = 0x001B1B70u, .sp = r->sp, .na = 1, .nf = 0};
     c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
     int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int m17x_w_001C6160(void *ctx, uint32_t a0, int32_t *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001C6160u, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = (int32_t)c.v0;
     return rc;
 }
 
@@ -14761,9 +14781,11 @@ static inline void m17x_hooks(EmArea01Runtime *r, EmLevel17BootHooks *h)
     memset(h, 0, sizeof *h);
     h->ctx = r;
     h->bytes = m17x_view;
+    h->w_001281C0 = m17x_w_001281C0;
     h->w_001AFC10 = m17x_w_001AFC10;
     h->w_001B0FD0 = m17x_w_001B0FD0;
     h->w_001B1B70 = m17x_w_001B1B70;
+    h->w_001C6160 = m17x_w_001C6160;
     h->w_001C6380 = m17x_w_001C6380;
     h->w_001F4E20 = m17x_w_001F4E20;
     h->w_callback = m17x_w_callback;
