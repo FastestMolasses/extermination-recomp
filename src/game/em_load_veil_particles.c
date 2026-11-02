@@ -488,6 +488,107 @@ int em_load_veil_particles_001D6B60(S *s, int32_t chan, int32_t a1, int32_t a2, 
 /* ------------------------------------------------------------------ */
 
 /* f = fabsf(2 * (k / 15) - 1); returns k / 15 in *unit and f * f. */
+/* ------------------------------------------------------------------ */
+/* The draw methods' lists.                                           */
+/* ------------------------------------------------------------------ */
+int em_load_veil_particles_001D6580(S *s, int32_t chan, const uint8_t a1[64], const uint8_t a2[64], int32_t a3,
+                                    u32 *result)
+{
+    u32 at = 0;
+    if (latched(s)) return -1;
+    if (!a1 || !a2) return fault(s, 0x001D6580u, EM_LVP_FAULT_NULL_WORKER);
+    uint8_t *p = open_packet(s, chan, 0xB0u, 0x10u, 0xAu, 0x001D6580u, &at);
+    if (!p) return -1;
+    memset(p + 0x10, 0, 16);
+    put32(p + 0x1C, 0x50000009u);
+    put64(p + 0x20, (sx(a3 | 4) << 47) | (UINT64_C(0x80004000) << 32) | UINT64_C(0x8001));
+    put64(p + 0x28, UINT64_C(0x41414141));
+    for (unsigned k = 0; k < 4u; ++k) {
+        memcpy(p + 0x30u + 0x20u * k, a2 + 16u * k, 16);
+        memcpy(p + 0x40u + 0x20u * k, a1 + 16u * k, 16);
+    }
+    if (result) *result = at + 0x10u;
+    return 0;
+}
+
+/* vif_append_ref_tag (001D2090)(chan, target): REF 1 to *D_00275674, context
+ * +0x50 + 4 chan = target, CALL to it. */
+static int program_call(S *s, int32_t chan, u32 target, u32 fn)
+{
+    u32 at = 0, arena = 0;
+    if (!s->world.ctx_50) return fault(s, fn, EM_LVP_FAULT_NULL_WORKER);
+    if (view_d00275674(s, &arena) < 0) return -1;
+    uint8_t *p = open_packet(s, chan, 0x10u, 0x30u, 1u, fn, &at);
+    if (!p) return -1;
+    put32(p + 4, arena);
+    s->world.ctx_50[chan] = target;
+    p = open_packet(s, chan, 0x10u, 0x50u, 0u, fn, &at);
+    if (!p) return -1;
+    put32(p + 4, target);
+    return 0;
+}
+
+/* A REF: byte +3, the address word, the quadword count (the store order the
+ * lists use); its bytes +2 and +8..+0xF stay as they are. */
+static int ref_at(S *s, int32_t chan, u32 address, u32 qwc, u32 fn)
+{
+    u32 at = 0;
+    uint8_t *p = open_packet(s, chan, 0x10u, 0x30u, qwc, fn, &at);
+    if (!p) return -1;
+    put32(p + 4, address);
+    return 0;
+}
+
+/* The tail each list shares: the skin record, the fog-off REF while
+ * 001D2910(0) is 0, the model's blocks, 001D1F20. */
+static int object_tail(S *s, int32_t chan, u32 skin, u32 model, u32 w04, u32 fn)
+{
+    if (!s->world.ctx_0C || !s->world.ctx_9C) return fault(s, fn, EM_LVP_FAULT_NULL_WORKER);
+    if (ref_at(s, chan, skin + (*s->world.ctx_9C << 7), 8u, fn) < 0) return -1;
+    if (!(*s->world.ctx_0C & 1u) && ref_at(s, chan, 0x002514B0u, 2u, fn) < 0) return -1;
+    if (ref_at(s, chan, model + 0x40u, w04 & 0xFFFFu, fn) < 0) return -1;
+    return em_load_veil_particles_001D1F20(s, chan);
+}
+
+int em_load_veil_particles_001D40E0(S *s, int32_t chan, int six, u32 model, u32 w04, const uint32_t rgb[3],
+                                    const uint8_t copy[16], const uint8_t xy[64], const uint8_t colours[64])
+{
+    const u32 fn = six ? 0x001D4440u : 0x001D40E0u;
+    if (latched(s)) return -1;
+    if (!rgb || !copy || !xy || !colours || !s->world.d00275678) return fault(s, fn, EM_LVP_FAULT_NULL_WORKER);
+    const int32_t buffer = (int32_t)s->world.d00275678[six ? 2 : 1];
+    if (program_call(s, chan, 0x0023D0C0u, fn) < 0) return -1;
+    if (em_load_veil_particles_001D6930(s, chan, buffer, 8, 8, copy, NULL) < 0) return -1;
+    if (em_load_veil_particles_001D1F80(s, chan, 0, 2) < 0) return -1;
+    uint8_t rows[64];
+    memcpy(rows, colours, sizeof rows);
+    for (unsigned k = 0; k < 3u; ++k) {
+        int32_t v = 0;
+        if (to_int(s, em_ee_mul_bits(0x43000000u, rgb[k]), &v) < 0) return -1;
+        put32(rows + 16u + 4u * k, (u32)v);
+    }
+    if (em_load_veil_particles_001D6580(s, chan, xy, rows, 0x48, NULL) < 0) return -1;
+    if (em_load_veil_particles_001D1F20(s, chan) < 0) return -1;
+    if (em_load_veil_particles_001D1F80(s, chan, 1, six ? 7 : 1) < 0) return -1;
+    if (em_load_veil_particles_001D6BA0(s, chan, buffer, 8, 8, 0, 0, NULL) < 0) return -1;
+    if (em_load_veil_particles_001D1FF0(s, chan, 3) < 0) return -1;
+    return object_tail(s, chan, 0x00817040u, model, w04, fn);
+}
+
+int em_load_veil_particles_001D3F60(S *s, int32_t chan, u32 model, u32 w04, const uint8_t copy[16])
+{
+    const u32 fn = 0x001D3F60u;
+    if (latched(s)) return -1;
+    if (!copy || !s->world.d00275678) return fault(s, fn, EM_LVP_FAULT_NULL_WORKER);
+    const int32_t buffer = (int32_t)s->world.d00275678[0];
+    if (program_call(s, chan, 0x0023CC50u, fn) < 0) return -1;
+    if (em_load_veil_particles_001D1F80(s, chan, 1, 0) < 0) return -1;
+    if (em_load_veil_particles_001D6B60(s, chan, buffer, 8, 8, copy, NULL) < 0) return -1;
+    if (em_load_veil_particles_001D6BA0(s, chan, buffer, 8, 8, 2, 0, NULL) < 0) return -1;
+    if (em_load_veil_particles_001D1FF0(s, chan, 3) < 0) return -1;
+    return object_tail(s, chan, 0x00816F40u, model, w04, fn);
+}
+
 static int lens_axis(S *s, int32_t k, u32 *unit, u32 *squared)
 {
     u32 f;

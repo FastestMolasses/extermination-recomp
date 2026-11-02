@@ -67,14 +67,16 @@ CAPTURED = (
 
 # Native id of each program (em_vu1_page_programs.h), and the producers of
 # the non-interlocked reads (micro of the reader -> of the producer).
-PROGRAMS = {M.PROGRAM_METHOD10: 10}
-NAMES = {M.PROGRAM_METHOD10: 'kind10'}
-PRODUCERS = {M.PROGRAM_METHOD10: {('Q', 0x03F): 0x038, ('CF', 0x036): 0x032}}
-BRANCHES = {M.PROGRAM_METHOD10: (0x062,)}
+PROGRAMS = {M.PROGRAM_METHOD10: 10, M.PROGRAM_METHOD9: 11}
+NAMES = {M.PROGRAM_METHOD10: 'kind10', M.PROGRAM_METHOD9: 'kind9'}
+PRODUCERS = {M.PROGRAM_METHOD10: {('Q', 0x03F): 0x038, ('CF', 0x036): 0x032},
+             M.PROGRAM_METHOD9: {('Q', 0x035): 0x02E, ('CF', 0x02C): 0x028}}
+BRANCHES = {M.PROGRAM_METHOD10: (0x062,), M.PROGRAM_METHOD9: (0x058,)}
 OFFSETS = (0x1B0, 0x2BE)                          # BASE, BASE + OFFSET
 
 SHIM = r'''
 #include "game/em_chain_page.h"
+#include "game/em_load_veil_particles.h"
 #include "game/em_owner_draw_original.h"
 #include <stdlib.h>
 
@@ -149,6 +151,40 @@ int shim_list(int program, uint32_t model, uint32_t w04, uint32_t ctx_0c, uint32
     int rc = -1;
     if (program == 10) rc = em_owner_draw_001D42E0(&d, 3, model, w04);
     return rc < 0 ? -1 : (int)(ch[3].cursor - out);
+}
+/* The draw methods' lists over a buffer at `address` (zeroed by the caller). */
+static int to_int_cb(void *ctx, uint32_t x, int32_t *out)
+{
+    (void)ctx;
+    float f;
+    memcpy(&f, &x, 4);
+    *out = (int32_t)f;
+    return 0;
+}
+int shim_method_list(int which, uint32_t model, uint32_t w04, uint32_t ctx_0c, uint32_t ctx_9c, uint32_t arena,
+                     uint32_t buffer, const uint32_t *rgb, const uint8_t *copy, const uint8_t *xy,
+                     const uint8_t *colours, const uint8_t *d241010, uint32_t address, uint8_t *out, uint32_t room)
+{
+    static EmLoadVeilParticles v;
+    uint32_t cursor[4] = {0, 0, 0, address}, ctx50[4] = {0, 0, 0, 0}, words[3] = {buffer, buffer, buffer};
+    memset(&v, 0, sizeof v);
+    v.world.cursor = cursor;
+    v.world.cursor_count = 4;
+    v.world.ctx_9C = &ctx_9c;
+    v.world.ctx_0C = &ctx_0c;
+    v.world.ctx_50 = ctx50;
+    v.world.d00275674 = &arena;
+    v.world.d00275678 = words;
+    v.world.d00241010 = d241010;
+    v.world.packet = out;
+    v.world.packet_address = address;
+    v.world.packet_size = room;
+    v.workers.w_001281C0 = to_int_cb;
+    int rc = which == 8 ? em_load_veil_particles_001D3F60(&v, 3, model, w04, copy)
+                        : em_load_veil_particles_001D40E0(&v, 3, which == 12, model, w04, rgb, copy, xy, colours);
+    if (rc == 0 && which == 8) rc = em_load_veil_particles_001D1F20(&v, 3);
+    if (rc == 0 && which == 8) rc = em_load_veil_particles_001D1FF0(&v, 3, 1);
+    return rc < 0 ? -1 : (int)(cursor[3] - address);
 }
 int shim_page(Region *regions, unsigned count, uint32_t start, const uint32_t *skip, uint32_t nskip,
               const uint32_t *objects, uint32_t nobjects, uint32_t bank, uint32_t slot,
@@ -438,6 +474,99 @@ def part_a(lib, stats):
     return branches
 
 
+METHODS = (
+    # (the draw method's list, its original, the program it CALLs, the data rows)
+    (9, 0x1D40E0, M.PROGRAM_METHOD9, 0x26E470, 0x251BD0),
+    (12, 0x1D4440, M.PROGRAM_METHOD9, 0x26E4C0, 0x251C10),
+)
+
+
+def part_e(lib, stats):
+    """The lists of kinds 9 and 12 (class 6): the ORIGINAL routines executed
+    over a captured RAM against the port's bytes, then a unit of each walked
+    by the original microcode and the native page (no capture holds one).
+    Their node CNTs are a captured kind-10 unit's, the model its."""
+    import test_effect_manager_reference as E
+
+    class Ee(E.Oracle):
+        def execute(self, w, pc):
+            if w >> 26 == 0 and w & 63 == 0xF:            # sync
+                return
+            super().execute(w, pc)
+
+    rel = CAPTURED[0]
+    cap = refs.capture(rel)
+    base = bytearray((cap / 'eeMemory.bin').read_bytes())
+    spad = bytearray((cap / 'scratchpad.bin').read_bytes())
+    elf = (DECOMP / 'config/SCUS_971.12').read_bytes()
+    unit = captured_units(bytes(base))[0]
+    a = unit
+    while M.u32(base, a) >> 28 & 7 == 1:
+        a += 16 + 16 * (M.u32(base, a) & 0xFFFF)
+    head = bytes(base[unit:a])                            # the colour and node CNTs
+    tags = []
+    b = a
+    while M.u32(base, b) >> 28 & 7 != 6:
+        lo = M.u32(base, b)
+        tid, qwc = lo >> 28 & 7, lo & 0xFFFF
+        tags.append((tid, qwc, M.u32(base, b + 4) & 0x0FFFFFFF))
+        b += 16 + (16 * qwc if tid == 1 else 0)
+    model, w04 = tags[-1][2] - 0x40, tags[-1][1]
+    ctx = M.u32(base, 0x275670)
+    arena = M.u32(base, 0x275674)
+    room, at = 0x4000, 0x7000000 - 0x4000 if len(base) >= 0x7000000 else 0x1E00000
+    for which, fn, program, data, rows in METHODS:
+        for fog_off in (0, 1):
+            ram = bytearray(base)
+            tint = 0x1EF0000
+            rgb = (1.0, 1.0, 1.0) if which == 9 else (0.5, 0.25, 1.0)
+            ram[tint:tint + 16] = struct.pack('<4f', *rgb, 1.0)
+            ram[at:at + room] = bytes(room)
+            cursor = ctx + 0x1C
+            struct.pack_into('<I', ram, cursor, at)
+            word = M.u32(ram, ctx + 0xC)
+            struct.pack_into('<I', ram, ctx + 0xC, (word & ~1) | (0 if fog_off else 1))
+            oracle = Ee(elf, ram, bytearray(spad))
+            oracle.run(fn, (3, model, tint))
+            end = M.u32(oracle.ram, cursor)
+            want = bytes(oracle.ram[at:end])
+            rgbw = (C.c_uint32 * 3)(*[f32(x) for x in rgb])
+            out = C.create_string_buffer(room)
+            n = lib.shim_method_list(which, model, w04, 0 if fog_off else 1, M.u32(ram, ctx + 0x9C), arena,
+                                     M.u32(ram, 0x275678), rgbw, bytes(base[data:data + 16]),
+                                     bytes(base[data + 16:data + 80]), bytes(base[rows:rows + 64]),
+                                     bytes(base[0x241010:0x241018]), at, out, room)
+            if n != len(want) or out.raw[:n] != want:
+                diff = next((i for i in range(min(n, len(want))) if out.raw[i] != want[i]), None)
+                fail(f'list {which}: {n:#x} bytes, the original {len(want):#x}; first difference {diff}')
+            stats['original_lists'] += 1
+            # a unit of it, walked
+            page = bytearray(oracle.ram)
+            u = at + 0x8000
+            body = head + want
+            page[u:u + len(body)] = body
+            struct.pack_into('<4I', page, u + len(body), 0x60000000, 0, 0, 0)  # RET
+            start = 0x1F00000
+            struct.pack_into('<4I', page, start, 0x20000000, start + 0x40, 0, 0)
+            struct.pack_into('<4I', page, start + 0x40, 0x50000000, u, 0, 0)
+            struct.pack_into('<4I', page, start + 0x50, 0x20000000, start + 0x20, 0, 0)
+            page = bytes(page)
+            bank, slot = arena + 0x20, M.u32(page, ctx + 0x9C)
+            pg = ComparedPage(M.ram_reader(page), lib, stats, f'list {which}', [], [u], bank, slot)
+            pg.run(start)
+            rc, prims, q, envs, counts, res, firsts, marks, _k = native_page(lib, page, start, [], [u], bank, slot)
+            if rc or res[0]:
+                fail(f'list {which}: the native page faulted ({res[0]} at {res[1]:#x})')
+            T.compare_prims(pg.gs.prims, prims, q, res[2], f'list {which}')
+            if marks != pg.again or firsts != pg.pass_firsts:
+                fail(f'list {which}: marks {marks}, original {pg.again}')
+            for i in range(res[2]):
+                if T.native_env(envs[i]) != M.env_tuple(pg.gs.envs[i]):
+                    fail(f'list {which}: primitive {i}\'s environment differs')
+            stats['walked_' + str(which)] += 1
+            stats['walked_prims'] += res[2]
+
+
 def f32(x):
     return struct.unpack('<I', struct.pack('<f', x))[0]
 
@@ -529,13 +658,16 @@ def main():
     branches = part_a(lib, stats)
     part_b(lib, elf, stats, branches)
     part_d(lib, elf, stats)
+    part_e(lib, stats)
     banner(part(stats['captured_units'], stats['captured_units_on_pages'], 'captured units walked'),
            f"{stats['captured_pages']} captured pages ({stats['captured_prims']} primitives), "
            f"{stats['captured_lists']} channel lists byte-equal to the port's",
            ', '.join(f"{stats['batches_' + NAMES[p]]} {NAMES[p]} batches compared ({stats['synthetic_' + NAMES[p]]} "
                      'synthetic)' for p in PROGRAMS),
            f"{stats['kicked_packet_bytes']:,} packet bytes (each translation on both lanes)",
-           f"{stats['operand_faults']} operand faults")
+           f"{stats['operand_faults']} operand faults",
+           f"{stats['original_lists']} channel lists byte-equal to the executed originals, walked: "
+           f"{stats['walked_prims']} primitives")
     print('object method reference: PASS')
     return 0
 

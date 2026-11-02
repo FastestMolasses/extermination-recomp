@@ -59,6 +59,7 @@ PROGRAM_BOX_CLIP = 0x239C90       # D_00239C90: the box clip kernel (the cone sh
 PROGRAM_DYNAMIC = 0x237450        # D_00237450: AREA01's dynamic three-vertex program (001D4FC0)
 PROGRAM_DYNAMIC_CLIP = 0x237720   # D_00237720: its partial-clip program (001D5170)
 PROGRAM_METHOD10 = 0x23D4D0       # D_0023D4D0: the draw method of kind 10 (001D42E0)
+PROGRAM_METHOD9 = 0x23D0C0        # D_0023D0C0: the draw method of kind 9 and class 6 (001D40E0, 001D4440)
 # Their MPG uploads: (source address of the code, instructions, micro address).
 LANE_MPG = (0x2332B8, 138, 0)
 SPRITE_MPG = ((0x231798, 256, 0), (0x231FA0, 79, 0x100))
@@ -72,24 +73,24 @@ KIND6_MPG = ((0x23D958, 256, 0), (0x23E160, 130, 0x100))
 LEVEL_MPG = (0x2371B0, 79, 0)
 BOX_CLIP_MPG = tuple((0x239CC0 + 0x808 * k, 159 if k == 4 else 256, 0x100 * k) for k in range(5))
 DYNAMIC_MPG = (0x237480, 79, 0)
-METHOD_MPGS = {(0x23D500, 129, 0): PROGRAM_METHOD10}
+METHOD_MPGS = {(0x23D500, 129, 0): PROGRAM_METHOD10, (0x23D0F0, 119, 0): PROGRAM_METHOD9}
 DYNAMIC_CLIP_MPG = tuple((0x237750 + 0x808 * k, 159 if k == 4 else 256, 0x100 * k) for k in range(5))
 CLIP_KERNELS = {BOX_CLIP_MPG[0][0]: (BOX_CLIP_MPG, PROGRAM_BOX_CLIP),
                 DYNAMIC_CLIP_MPG[0][0]: (DYNAMIC_CLIP_MPG, PROGRAM_DYNAMIC_CLIP)}
 PROGRAMS = (PROGRAM_LANE, PROGRAM_SPRITE, PROGRAM_SNOW, PROGRAM_STREAK, PROGRAM_KIND2, PROGRAM_FLOOR,
             PROGRAM_RIPPLE, PROGRAM_KIND6, PROGRAM_SURFACE, PROGRAM_LEVEL, PROGRAM_BOX_CLIP, PROGRAM_DYNAMIC,
-            PROGRAM_DYNAMIC_CLIP, PROGRAM_METHOD10)
+            PROGRAM_DYNAMIC_CLIP, PROGRAM_METHOD10, PROGRAM_METHOD9)
 # TOPS-relative batches, MSCAL then MSCNT (the level and box clip kernels'
 # blocks: an object's first ends in MSCAL 0, the others in MSCNT, which
 # re-runs the program from micro 0: its last branch returns there).
 BATCHED = (PROGRAM_FLOOR, PROGRAM_RIPPLE, PROGRAM_SURFACE, PROGRAM_LEVEL, PROGRAM_BOX_CLIP, PROGRAM_DYNAMIC,
-           PROGRAM_DYNAMIC_CLIP, PROGRAM_METHOD10)
+           PROGRAM_DYNAMIC_CLIP, PROGRAM_METHOD10, PROGRAM_METHOD9)
 # Each packet's bytes: its CNT tag and data, then its RET tag.
 PROGRAM_PACKET_SIZE = {PROGRAM_LANE: 0x570, PROGRAM_SPRITE: 0xDD0, PROGRAM_SNOW: 0xDE0, PROGRAM_STREAK: 0xF70,
                        PROGRAM_KIND2: 0xD50, PROGRAM_FLOOR: 0x510, PROGRAM_RIPPLE: 0x4D0,
                        PROGRAM_KIND6: 0xF70, PROGRAM_SURFACE: 0x4B0, PROGRAM_LEVEL: 0x2C0,
                        PROGRAM_BOX_CLIP: 0x2560, PROGRAM_DYNAMIC: 0x2C0, PROGRAM_DYNAMIC_CLIP: 0x2560,
-                       PROGRAM_METHOD10: 0x450}
+                       PROGRAM_METHOD10: 0x450, PROGRAM_METHOD9: 0x400}
 
 # The EFU (the streak program's ERCPR / ERLENG, read back by MFP). No
 # capture holds an EFU result, so its arithmetic is a model, the one the

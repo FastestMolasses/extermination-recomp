@@ -647,6 +647,7 @@ static int dynamic_run(Walk *w, uint32_t top, uint32_t at)
 #define RIPPLE_CODE  0x00234B30u   /* D_00234B00's MPG (001E7D20's ripple surface) */
 #define SURFACE_CODE 0x00235010u   /* D_00234FE0's MPG (001E9280's AREA00 surface) */
 #define METHOD10_CODE 0x0023D500u  /* D_0023D4D0's MPG (the draw method of kind 10) */
+#define METHOD9_CODE 0x0023D0F0u   /* D_0023D0C0's MPG (kind 9, class 6) */
 
 /* A class-2 object unit at its CALL (see the header): its primitives (the
  * caller's run of it), then the state it leaves. */
@@ -692,7 +693,7 @@ static int unit(Walk *w, int index, uint32_t at)
  * batch, MSCAL then MSCNT. */
 static int method_program(uint32_t program)
 {
-    return program == EM_CHAIN_PAGE_METHOD10;
+    return program == EM_CHAIN_PAGE_METHOD10 || program == EM_CHAIN_PAGE_METHOD9;
 }
 
 /* Pass mode: a pass starts (its CALL): its environment is its own. The
@@ -819,6 +820,8 @@ static int vif(Walk *w)
                 w->program = EM_CHAIN_PAGE_SURFACE; w->mpg_parts = 1; w->floor_ran = 0;
             } else if (first == METHOD10_CODE && cnt == 129u && imm == 0u) {
                 w->program = EM_CHAIN_PAGE_METHOD10; w->mpg_parts = 1; w->floor_ran = 0;
+            } else if (first == METHOD9_CODE && cnt == 119u && imm == 0u) {
+                w->program = EM_CHAIN_PAGE_METHOD9; w->mpg_parts = 1; w->floor_ran = 0;
             } else if (first == LANE_CODE && cnt == 138u && imm == 0u) {
                 w->program = EM_CHAIN_PAGE_LANE; w->mpg_parts = 1;
             } else if (w->call && first == GRID_CODE && cnt == 79u && imm == 0u) {
@@ -882,9 +885,11 @@ static int vif(Walk *w)
                 w->floor_ran = 1;
                 rc = em_vu1_surface_program_mscal(&p->regs, p->dmem, kick, w, top);
             } else if (method_program(w->program)) {
-                p->counts.mscal_method10++;
                 w->floor_ran = 1;
-                rc = em_vu1_method_program_mscal(EM_VU1P_METHOD10, &p->regs, p->dmem, kick, w, top);
+                if (w->program == EM_CHAIN_PAGE_METHOD10) p->counts.mscal_method10++;
+                else p->counts.mscal_method9++;
+                rc = em_vu1_method_program_mscal(w->program == EM_CHAIN_PAGE_METHOD10 ? EM_VU1P_METHOD10 : EM_VU1P_METHOD9,
+                                                 &p->regs, p->dmem, kick, w, top);
             } else if (w->program == EM_CHAIN_PAGE_LANE) {
                 const uint32_t before = p->counts.prim_type[4];
                 p->counts.mscal_lane++;

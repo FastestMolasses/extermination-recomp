@@ -144,6 +144,7 @@ extern "C" {
 #define EM_CHAIN_PAGE_KIND6     0x0023D930u   /* D_0023D930: 001CFBE0 kind 6 (AREA01 near fire) */
 #define EM_CHAIN_PAGE_SURFACE   0x00234FE0u   /* AREA00 surface (001E9280, 0015AB00's) */
 #define EM_CHAIN_PAGE_METHOD10  0x0023D4D0u   /* the draw method of kind 10 (001D42E0) */
+#define EM_CHAIN_PAGE_METHOD9   0x0023D0C0u   /* the draw method of kind 9, class 6 (001D40E0, 001D4440) */
 
 enum {
     EM_CHAIN_PAGE_OK = 0,
@@ -214,6 +215,7 @@ typedef struct {
     uint32_t again;           /* the passes' REFs of the frame's draw environment */
     uint32_t mscal_surface;   /* AREA00 surface batches (D_00234FE0; MSCAL + MSCNT) */
     uint32_t mscal_method10;  /* draw method kind 10 batches (D_0023D4D0)    */
+    uint32_t mscal_method9;   /* draw method kind 9 batches (D_0023D0C0)     */
     uint32_t object_passes;   /* of `passes`, the object units'              */
 } EmChainPageCounts;
 

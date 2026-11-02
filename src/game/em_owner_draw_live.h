@@ -121,15 +121,19 @@ int em_owner_draw_live_001CAAC0_sprite(const uint32_t position[4], uint32_t star
 int em_owner_draw_live_001CAAC0_packet(const uint32_t position[4], uint32_t start,
                                       EmObjectUnitResolve resolver, void *ctx);
 
-/* The draw method of kind 10: 001CB140(owner, model) (001CB1F0's, with the
- * owner's +0x44): 001D8C20(5), 001C7420(owner, 0x3F5, 3), 001D4430(model) =
- * 001D42E0(3, model), the RET tag, 001CAAC0(D_00275B44 + 0xB0, the unit's
- * start), 001D8C20(0). No culling. `position_address` / `position` are the
+/* A draw method of 0x26E310 that builds its own object unit on channel 3:
+ * `method` 001CB1F0 (kind 10: 001CB140, light mode 5, 001D42E0), 001CB130 (kind
+ * 9: 001CB070, mode 4, 001D40E0; the caller has stored the record's +0x80..
+ * +0x88 = 1.0 and hands them in rgb), 001CB2B0 (class 6: 001CB200, mode 6,
+ * 001D4440), 001CB060 (kind 8: 001CAFA0, mode 3, 001D3F60, 001D1F20, 001D1FF0).
+ * Each: 001D8C20(mode), 001C7420(owner, 0x3F5, 3), the list, a RET tag, then
+ * 001CAAC0(D_00275B44 + 0xB0, the unit's start) (001CB060: 001CB760 at slot
+ * 0xFFD), 001D8C20(0). No culling. `position_address` / `position` are the
  * quadword D_00275B44 + 0xB0 (the owner being ticked, usually this one). The
  * unit stays in the arena; the chain page walks it where its CALL stands
  * (em_chain_page's object passes). 0, or -1 (reported). */
-int em_owner_draw_live_001CB140(const EmWorldModels *bank, EmOwnerServicesOwner *owner, const uint32_t rgb[4],
-                                uint32_t record, uint32_t position_address, const uint32_t position[4]);
+int em_owner_draw_live_method(uint32_t method, const EmWorldModels *bank, EmOwnerServicesOwner *owner,
+                              const uint32_t rgb[4], uint32_t position_address, const uint32_t position[4]);
 /* 1 when `address` is a method unit of this frame; their count; the bytes of
  * the model blocks their REFs name (read by the page's walk), or NULL. */
 int em_owner_draw_live_page_method(uint32_t address);

@@ -284,7 +284,8 @@ class Counts(C.Structure):
                 ('mscal_floor', C.c_uint32), ('mscal_ripple', C.c_uint32),
                 ('mscal_kind6', C.c_uint32), ('kind6_prims', C.c_uint32), ('passes', C.c_uint32),
                 ('pass_prims', C.c_uint32), ('pass_direct', C.c_uint32), ('again', C.c_uint32),
-                ('mscal_surface', C.c_uint32), ('mscal_method10', C.c_uint32), ('object_passes', C.c_uint32)]
+                ('mscal_surface', C.c_uint32), ('mscal_method10', C.c_uint32), ('mscal_method9', C.c_uint32),
+                ('object_passes', C.c_uint32)]
 
 
 DMEM = C.c_uint8 * 16384

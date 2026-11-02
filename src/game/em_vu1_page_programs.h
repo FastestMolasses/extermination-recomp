@@ -1726,8 +1726,13 @@ static inline int emvup_floor_batch(EmVu1PCtx *c, uint32_t top, int variant)
  * The Q of 0x03F is the DIV of 0x038, the FCAND of 0x036 sees the CLIP of
  * 0x032 with the two judgements before it (the same distances as the object
  * kernel's; tools/test_object_method_reference.py asserts each read's
- * producer on the original microcode). */
-static inline int emvup_method_batch(EmVu1PCtx *c, uint32_t top)
+ * producer on the original microcode).
+ *
+ * Kind 9 (D_0023D0C0, 001CB070's 001D40E0 and class 6's 001D4440; `variant` 1)
+ * is the same program without the colour block (RGBA = dmem 1013's words as
+ * they stand): its micro addresses are 12 lower from 0x01C on; ST reads a
+ * copy of the frame (CHAIN_PAGE.md section 6.6). */
+static inline int emvup_method_batch(EmVu1PCtx *c, uint32_t top, int variant)
 {
     EmVu1PRegs *r = c->r;
     uint32_t (*vf)[4] = r->vf;
@@ -1753,14 +1758,16 @@ static inline int emvup_method_batch(EmVu1PCtx *c, uint32_t top)
         emvup_lq(c, 15, v);                                             /* 0x013 */
         for (k = 0; k < 4u; ++k) emvup_lq(c, 28u + k, r->vi[10] + k);   /* 0x014..0x017 */
         for (k = 0; k < 4u; ++k) emvup_lq(c, 24u + k, r->vi[10] + 4u + k);  /* 0x018..0x01B */
-        /* 0x01C..0x023: A; the colour row's R, G, B unchanged */
-        vf[14][3] = emvup_mul(c, vf[20][3], vf[3][1]);
-        r->i = 0x41A00000u;                                             /* 20 */
-        vf[14][3] = emvup_add(c, vf[14][3], r->i);
-        memcpy(vf[14], vf[20], 12);
-        r->i = 0x43000000u;                                             /* 128 */
-        vf[14][3] = em_vu_min_bits(vf[14][3], r->i);
-        vf[14][3] = em_vu_ftoi0_bits(vf[14][3]);
+        if (variant == 0) {
+            /* 0x01C..0x023: A; the colour row's R, G, B unchanged */
+            vf[14][3] = emvup_mul(c, vf[20][3], vf[3][1]);
+            r->i = 0x41A00000u;                                             /* 20 */
+            vf[14][3] = emvup_add(c, vf[14][3], r->i);
+            memcpy(vf[14], vf[20], 12);
+            r->i = 0x43000000u;                                             /* 128 */
+            vf[14][3] = em_vu_min_bits(vf[14][3], r->i);
+            vf[14][3] = em_vu_ftoi0_bits(vf[14][3]);
+        }
         uint32_t p[4];
         memcpy(p, vf[3], sizeof p);
         emvup_xform(c, 4, 28, p);                                       /* 0x024..0x027 */
@@ -1787,7 +1794,7 @@ static inline int emvup_method_batch(EmVu1PCtx *c, uint32_t top)
         if (r->vi[2] != 0)                                              /* 0x062 */
             vf[6][3] = emvup_add(c, vf[6][3], vf[19][1]);               /* 0x064 */
         for (k = 0; k < 4u; ++k) vf[7][k] = em_vu_ftoi4_bits(vf[6][k]); /* 0x068 */
-        emvup_sq(c, 14, v + 131u);                                      /* 0x06C..0x06F */
+        emvup_sq(c, variant == 0 ? 14 : 20, v + 131u);                  /* 0x06C..0x06F */
         emvup_sq(c, 7, v + 132u);
         emvup_sq(c, 2, v + 130u);
         emvup_sq(c, 15, v + 129u);
@@ -1818,7 +1825,8 @@ enum {
     EM_VU1P_FLOOR = 7,    /* D_002345E0 (MSCAL 0 or MSCNT at `top`)        */
     EM_VU1P_RIPPLE = 8,   /* D_00234B00 (MSCAL 0 or MSCNT at `top`)        */
     EM_VU1P_SURFACE = 9,  /* D_00234FE0 (MSCAL 0 or MSCNT at `top`)        */
-    EM_VU1P_METHOD10 = 10 /* D_0023D4D0, kind 10 (MSCAL 0 or MSCNT at `top`) */
+    EM_VU1P_METHOD10 = 10,/* D_0023D4D0, kind 10 (MSCAL 0 or MSCNT at `top`) */
+    EM_VU1P_METHOD9 = 11  /* D_0023D0C0, kind 9 and class 6 (the same)     */
 };
 
 static inline int emvup_program(EmVu1PCtx *c, unsigned program, uint32_t top)
@@ -1834,7 +1842,8 @@ static inline int emvup_program(EmVu1PCtx *c, unsigned program, uint32_t top)
     case EM_VU1P_FLOOR: return emvup_floor_batch(c, top, 0);
     case EM_VU1P_RIPPLE: return emvup_floor_batch(c, top, 1);
     case EM_VU1P_SURFACE: return emvup_floor_batch(c, top, 2);
-    case EM_VU1P_METHOD10: return emvup_method_batch(c, top);
+    case EM_VU1P_METHOD10: return emvup_method_batch(c, top, 0);
+    case EM_VU1P_METHOD9: return emvup_method_batch(c, top, 1);
     default: return EM_VU1P_FAULT_ARGS;
     }
 }

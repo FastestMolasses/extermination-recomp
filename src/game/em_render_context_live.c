@@ -1366,6 +1366,9 @@ static void wire(void)
     v->ctx_9C = s_ctx_words + 0x9C / 4;
     v->d00275674 = s_d275670_words + 1;
     v->d0027568C = s_d275670_words + 7;
+    v->d00275678 = s_d275670_words + 2;
+    v->ctx_0C = s_ctx_words + 0x0C / 4;
+    v->ctx_50 = s_ctx_words + 0x50 / 4;
     v->d00241010 = s_d241010;
     v->d0026E880 = s_d26E880;
     v->table = s_veil_table;
@@ -1847,6 +1850,18 @@ int em_rcl_001D6B60(int32_t chan, int32_t a1, int32_t a2, int32_t a3, const uint
 {
     READY(1);
     return done(em_load_veil_particles_001D6B60(&R.veil, chan, a1, a2, a3, src, NULL), 0x001D6B60u);
+}
+int em_rcl_001D40E0(int32_t chan, int six, uint32_t model, uint32_t model_w04, const uint32_t rgb[3],
+                    const uint8_t copy[16], const uint8_t xy[64], const uint8_t colours[64])
+{
+    READY(1);
+    return done(em_load_veil_particles_001D40E0(&R.veil, chan, six, model, model_w04, rgb, copy, xy, colours),
+                six ? 0x001D4440u : 0x001D40E0u);
+}
+int em_rcl_001D3F60(int32_t chan, uint32_t model, uint32_t model_w04, const uint8_t copy[16])
+{
+    READY(1);
+    return done(em_load_veil_particles_001D3F60(&R.veil, chan, model, model_w04, copy), 0x001D3F60u);
 }
 int em_rcl_001D6BA0(int32_t chan, int32_t a1, int32_t a2, int32_t a3, int32_t t0, int32_t t1)
 {

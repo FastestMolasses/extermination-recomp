@@ -222,6 +222,11 @@ int em_rcl_001DFE10(void);
  * quadword its t0 names), 001D6BA0, 001D1FF0, 001D1F20, 001D7080 and the
  * chain's 001CB760. 0, or -1. */
 int em_rcl_001D6B60(int32_t chan, int32_t a1, int32_t a2, int32_t a3, const uint8_t src[16]);
+/* The draw methods' channel lists (em_load_veil_particles.h): 001D40E0 (`six`
+ * 0) / 001D4440 (`six` 1) and 001D3F60. 0, or -1. */
+int em_rcl_001D40E0(int32_t chan, int six, uint32_t model, uint32_t model_w04, const uint32_t rgb[3],
+                    const uint8_t copy[16], const uint8_t xy[64], const uint8_t colours[64]);
+int em_rcl_001D3F60(int32_t chan, uint32_t model, uint32_t model_w04, const uint8_t copy[16]);
 int em_rcl_001D6BA0(int32_t chan, int32_t a1, int32_t a2, int32_t a3, int32_t t0, int32_t t1);
 int em_rcl_001D1FF0(int32_t chan, int32_t a1);
 int em_rcl_001D1F20(int32_t chan);

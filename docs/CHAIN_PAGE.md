@@ -224,7 +224,8 @@ program's flow with a variant switch, emvup_kind6_particle); its own test is
 near-fire program").
 
 **The object-method programs** (kind 10: D_0023D4D0, 129 instructions from
-ELF 0x0023D500; section 6.6): each reads the object kernel's vertex blocks and
+ELF 0x0023D500; kind 9 and class 6: D_0023D0C0, 119 from 0x0023D0F0, the same
+without the colour block: RGBA = dmem 1013's words; section 6.6): each reads the object kernel's vertex blocks and
 kicks 32 vertices per batch at TOP + 0x80, one vertex at a time (not
 software-pipelined); no MSCNT entry: every batch loads dmem 1013..1016 and
 1020..1023 again. Position, CLIP window, ADC, Q and fog are the object
@@ -668,6 +669,23 @@ blended, strip, no fog) with REGS NOP, ST, RGBAQ, XYZF2: the vertex TEX0 row
 is not sent. TEX0 is a PSMT4 64 x 64 texture at TBP 0x2020 through the CT32
 CLUT 0x240C, resident from the boot library.
 
+**Kind 9 and class 6** (001CB130 -> 001CB070, 001CB2B0 -> 001CB200 -> 001D4640):
+001D8C20(4; class 6: 6); kind 9 stores 1.0 in the owner's +0x80..+0x88 first;
+001C7420; 001D40E0 (class 6: 001D4440, its twin): the program D_0023D0C0, then
+001D6930: the field copied (bilinear 2:1, as the depth-of-field pass's copy) to
+the 256 x 256 buffer D_0027567C (class 6: D_00275680; both 0x258000, the shadow
+target's and the pass's memory); 001D1F80(0, 2) (TEST 0x33001, ZBUF ZMSK 1,
+ALPHA 0x68: Cs + Cd); 001D6580's Gouraud strip PRIM 0x04C added over the buffer:
+kind 9 over columns 192..255 with one bright corner (128 * rgb at D_00251BE0 ..),
+class 6 over the whole buffer (rows D_00251C10); 001D1F20 (the frame's
+environment again); the GS state (1, 1) (class 6: (1, 7): TEST 0x50003, ALPHA
+0xA8); 001D6BA0's TEX0 of the buffer (MODULATE, TCC 0); region 3; the skin record
+D_00817040 (template PRIM 0x05C); the model; 001D1F20. So the object is
+sphere-mapped with a copy of the frame so far, plus a highlight: **not a texture
+upload**, which this file's predecessors and AREA19_PORT.md said. Each unit's
+copy reads the field as the page has drawn it up to its CALL: the walk's pass
+order is the GS's.
+
 **The walk.** Such a unit is walked as a pass (em_chain_page's `object_pass`;
 `em_owner_draw_live_page_method` says which CALLs): the DMA follows its CALL,
 VIF1 runs its bytes, the program runs as a batched program (MSCAL 0, then
@@ -687,11 +705,17 @@ RAM), 306 batches, and 400 synthetic ones; data memory, every register and the
 kicked packet equal on both lanes, the primitives, environments and counts of
 the walk equal, each Q and clip-flag read's producer asserted; the port's list
 after 001C7420 byte-equal to all 102 units (but the bytes of a tag no one
-writes). The colour row and 001C7420 are test_actor_light_001d89d0_reference's
+writes). Kinds 9 and 12: no end snapshot holds one (all 374 searched), so the
+ORIGINAL 001D40E0 / 001D4440 run on the EE oracle over a captured RAM, with the
+fog-off REF and without: their lists byte-equal to the port's; a unit of each
+(a captured unit's CNTs and model) walked by the original microcode and the
+native page: primitives, environments and marks equal; 400 synthetic batches of
+D_0023D0C0. The colour row and 001C7420 are test_actor_light_001d89d0_reference's
 and test_owner_services_reference's. It ran live with the raster on over a07_00
-(4 units, 216 triangles, no refusal: the texture is resident). **Pixels were
-not compared with an original frame**: no capture holds a frame with one of
-these units' page and its GS memory before the draw.
+(4 units, 216 triangles, no refusal: the texture is resident) and a15b_01 (class
+6 of [3]: the copy, the strip, 39 batches). **Pixels were not compared with an
+original frame**: no capture holds a frame with one of these units' page and its
+GS memory before the draw.
 
 ## 7. Binding (live)
 

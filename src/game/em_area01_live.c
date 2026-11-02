@@ -1285,6 +1285,7 @@ static int worker(void *ctx,EmArea01Call *c)
         c->v0=(uint64_t)(int64_t)(int32_t)result;return rc;
     }
     if(c->function==0x001CAA00u || c->function==0x001CACB0u || c->function==0x001CB1F0u ||
+       c->function==0x001CB130u || c->function==0x001CB2B0u ||
        c->function==0x001CB360u || c->function==0x001DA6A0u || c->function==0x001CAF60u) {
         if(c->na<1 || em_area01_collision_view_commit(&l->collision)<0 || em_area01_player_view_commit(&l->player)<0)return -1;
         l->draw.current=*l->host.current_actor;l->draw.sp=c->sp;
