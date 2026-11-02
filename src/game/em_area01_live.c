@@ -222,6 +222,11 @@ uint8_t *em_area01_live_bytes(EmArea01Live *l,uint32_t a,uint32_t n,int write)
         return !write && contains(a,n,0x700030F0u,64) ? (uint8_t *)s_column.height+(a-0x700030F0u) : NULL;
     if(overlaps(a,n,0x00282250u,64))
         return !write && contains(a,n,0x00282250u,64) ? (uint8_t *)s_column.aux+(a-0x00282250u) : NULL;
+    /* 0x700031F0, the frame's carry word (AREA02's turntable 0x825520 sets it
+     * under the player, 0015BCF0 clears it, the camera reads it): its one
+     * storage. */
+    if(overlaps(a,n,0x700031F0u,4))
+        return contains(a,n,0x700031F0u,4) ? (uint8_t *)em_area11_boxes_carry31F0()+(a-0x700031F0u) : NULL;
     if(overlaps(a,n,0x70003B64u,4))
         return !write && contains(a,n,0x70003B64u,4)
             ? (uint8_t *)(void *)em_frame_counter_storage()+((size_t)a-0x70003B64u) : NULL;

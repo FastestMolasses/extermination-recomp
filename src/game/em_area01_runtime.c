@@ -756,7 +756,7 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
         return r->host.worker(r->host.ctx, c);
     if (dispatch_revisit(r, c, &rc))
         return rc;
-    if ((r->area == 2 || creatures) && c->function == 0x001F4E40u) {
+    if (c->function == 0x001F4E40u) {
         /* 001F4E40(pos, colour, rate; f12): em_area02_misc's translation
          * over this runtime's bytes (0x70003B68 and the scratch blocks). */
         if (c->na < 3 || c->nf < 1) return fail(r, c->function);
