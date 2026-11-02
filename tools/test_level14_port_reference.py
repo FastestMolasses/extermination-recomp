@@ -164,6 +164,12 @@ FUNCS = {
     0x153A90: ('em_level14_port_00153A90', 0xBC, [U, U], None),
     # boot: the others
     0x16AC50: ('em_level14_port_0016AC50', 0x184, [U], None),
+    0x167C80: ('em_level14_port_00167C80', 0x3C4, [U], None),
+    0x16BB80: ('em_level14_port_0016BB80', 0xB8, [U], I),
+    0x16BC40: ('em_level14_port_0016BC40', 0x1F8, [U], None),
+    0x16BE40: ('em_level14_port_0016BE40', 0x134, [U, S], None),
+    0x16BF80: ('em_level14_port_0016BF80', 0x5A0, [U, S], None),
+    0x224600: ('em_level14_port_00224600', 0x574, [U], I),
     0x1782A0: ('em_level14_port_001782A0', 0xF0, [U, S], I),
     0x1AA2A0: ('em_level14_port_001AA2A0', 0x164, [U, U, F], I),
     0x1AA410: ('em_level14_port_001AA410', 0xC8, [U], F),
@@ -280,6 +286,27 @@ HOOKS = [
     ('w_00824B40', 0x824B40, [(U, 4)], None),
     ('w_00824C90', 0x824C90, [(U, 4)], None),
     ('w_0011A070', 0x11A070, [(I, 4)], None),
+    ('w_00102918', 0x102918, [(U, 4), (U, 5), (U, 6)], None),
+    ('w_001031E0', 0x1031E0, [(U, 4), (U, 5)], None),
+    ('w_0016BAE0', 0x16BAE0, [(U, 4), (I, 5)], None),
+    ('w_00174A50', 0x174A50, [(U, 4), (F, 12)], None),
+    ('w_001751A0', 0x1751A0, [(U, 4)], None),
+    ('w_00175900', 0x175900, [(U, 4), (I, 5)], I),
+    ('w_00178B90', 0x178B90, [(U, 4), (I, 5)], None),
+    ('w_00179880', 0x179880, [(U, 4), (U, 5)], None),
+    ('w_0017FF80', 0x17FF80, [(U, 4), (F, 12)], None),
+    ('w_00182430', 0x182430, [(U, 4), (I, 5)], None),
+    ('w_00182870', 0x182870, [(U, 4), (I, 5)], None),
+    ('w_00182AB0', 0x182AB0, [(U, 4)], None),
+    ('w_0019A570', 0x19A570, [(U, 4), (U, 5), (I, 6), (I, 7)], I),
+    ('w_001B12B0', 0x1B12B0, [(F, 12), (F, 13), (F, 14)], F),
+    ('w_001B61C0', 0x1B61C0, [(I, 4), (I, 5), (I, 6), (I, 7)], None),
+    ('w_0021C120', 0x21C120, [(U, 4)], None),
+    ('w_0021C190', 0x21C190, [(U, 4)], I),
+    ('w_0021C200', 0x21C200, [(U, 4)], None),
+    ('w_0021C270', 0x21C270, [(U, 4)], None),
+    ('w_0021C350', 0x21C350, [(U, 4)], None),
+    ('w_0021D2E0', 0x21D2E0, [(U, 4), (I, 5), (I, 6)], None),
 # END GENERATED HOOKS
 ]
 BY_ADDRESS = {address: (name, args, result) for name, address, args, result in HOOKS}
@@ -370,7 +397,7 @@ def fbits(value):
 # build + inputs
 # ----------------------------------------------------------------------------
 SOURCES = ('em_level14_port_area15.c', 'em_level14_port_area19.c', 'em_level14_port_creature.c',
-           'em_level14_port_boot.c')
+           'em_level14_port_boot.c', 'em_level14_port_grip.c')
 def header_checks(source_dir=None):
     """The ctypes Hooks structure above is built from HOOKS; the C side's
     EmLevel14PortHooks (em_level14_port.h) and its wrappers
@@ -1703,6 +1730,7 @@ def case_list(elf):
     area19_cases(add, rng)
     creature_cases(add, rng)
     boot_cases(add, rng)
+    grip_cases(add)
     bound_cases(add)
     survivor_cases(add)
     return cases, captured, len(cases) - captured
@@ -2147,6 +2175,142 @@ def creature_cases(add, rng):
             base + [(n + 0x36, h16(s36)), (0x81077B, b8(b7b)), (0x8107FB, b8(bfb))], queues={0x1C64F0: [0x1234]})
 
 
+def grip_cases(add):
+    """0015B130's slots 0x0D, 0x16, 0x17 and their pieces on the player record:
+    every state and sub-state at its thresholds, both sides of each."""
+    B, P = B01, PLAYER
+    run = RUN | {0x1031E0}
+    rec, nodes, root = FREE + 0x100, FREE + 0x200, FREE + 0x300
+    bone = [(0x275B40, w32(nodes)), (nodes, w32(root)), (nodes + 4, w32(root)), (root + 4, f32b(30.25)),
+            (root + 8, f32b(11.5)), (root + 0xC0, fw(1.5, 2.5, 3.5, 1.0))]
+
+    def hit(attr, y=44.5):
+        return (Scribble(1, [(0x700031D0, w32(rec)), (0x700031B0, fw(10.5, y, 12.5, 1.0))]),
+                [(rec + 0x1A, b8(attr)), (rec + 0x34, f32b(0.125)), (rec + 0x38, f32b(-0.5)), (rec + 0x3C, f32b(0.25))])
+
+    def state(entry, name, patches, queues=None, run_set=run):
+        add('gr %06X %s' % (entry, name), B, entry, [P], patches, queues=queues, run_set=run_set)
+
+    # 00167C80
+    for kind in (0x1B, 0x1C):
+        state(0x167C80, 's0 %X' % kind, [(P + 6, b8(0)), (P + 0x1F0, b8(kind))])
+    for f200 in (0x8000, 0x7FFF):
+        state(0x167C80, 's1 %X' % f200, [(P + 6, b8(1)), (P + 0x200, w32(f200))])
+    for kind, limits in ((0x1B, (24.0, 5.0)), (0x1C, (99.0, 69.0, 48.0, 23.0, 2.0))):
+        for sub, limit in enumerate(limits):
+            for t in (limit, limit + 0.5):
+                state(0x167C80, 's2 %X %d %g' % (kind, sub, t),
+                      [(P + 6, b8(2)), (P + 7, b8(sub)), (P + 0x1F0, b8(kind)), (P + 0x3C, f32b(t))])
+        state(0x167C80, 's2 %X past' % kind,
+              [(P + 6, b8(2)), (P + 7, b8(len(limits))), (P + 0x1F0, b8(kind)), (P + 0x3C, f32b(0.0))])
+    for kind in (0x1B, 0x1C):
+        for f200 in (0x1000, 0x0FFF):
+            state(0x167C80, 's3 %X %X' % (kind, f200),
+                  [(P + 6, b8(3)), (P + 0x200, w32(f200)), (P + 0x1F0, b8(kind)), (P + 0xC4, f32b(1.25)),
+                   (P + 0xB0, fw(5.0, 6.0, 7.0, 0.5)), (P + 0xC0, fw(0.0, 1.25, 0.0, 1.0))] + bone,
+                  queues={0x17FF80: [0]})
+    state(0x167C80, 's4', [(P + 6, b8(4))])
+    # 0016BB80
+    state(0x16BB80, 'miss', [(P + 0xB0, fw(5.0, 6.0, 7.0, 1.0))], queues={0x19A570: [0]})
+    for attr in (0x3C, 0x3B):
+        scribble, patches = hit(attr)
+        state(0x16BB80, 'hit %X' % attr, [(P + 0xB0, fw(5.0, 6.0, 7.0, 1.0))] + patches, queues={0x19A570: [scribble]})
+    # 0016BC40
+    for turn in (1.5, 1.25):
+        for area, found in ((0x11, 0), (6, 1), (6, 0)):
+            scribble, patches = hit(0x3C)
+            state(0x16BC40, 's0 %g %X %d' % (turn, area, found),
+                  [(P + 6, b8(0)), (P + 0x218, f32b(1.25)), (P + 0xC4, f32b(1.0)), (0x810700, b8(area)),
+                   (P + 0xB4, f32b(6.5))] + patches,
+                  queues={0x1B12B0: [fbits(turn)], 0x19A570: [scribble if found else 0]})
+    for f200 in (0x8000, 0x7FFF):
+        state(0x16BC40, 's1 %X' % f200, [(P + 6, b8(1)), (P + 0x200, w32(f200)), (P + 0xB4, f32b(6.5)),
+                                         (P + 0x254, f32b(9.5)), (P + 0x258, f32b(4.0))])
+    for t in (46.0, 46.5):
+        state(0x16BC40, 's2 %g' % t, [(P + 6, b8(2)), (P + 0x3C, f32b(t))])
+    for f200 in (0x1000, 0x0FFF):
+        state(0x16BC40, 's3 %X' % f200, [(P + 6, b8(3)), (P + 0x200, w32(f200))])
+    state(0x16BC40, 's63', [(P + 6, b8(0x63))])
+    state(0x16BC40, 's4', [(P + 6, b8(4))])
+    # 0016BE40
+    for mode, row, cur in ((0, 0, 0.0), (0, 1, 0.5), (0, 1, 1.75), (0, 1, 1.9375), (0, 2, 100.0), (1, 0, 100.0), (1, 3, 0.0), (1, 1, 2.0),
+                           (1, 1, 0.5625), (2, 0, 1.0), (-1, 0, 1.0)):
+        for scale in (1.0, 16.0):
+            state(0x16BE40, 'm%d r%d %g %g' % (mode, row, cur, scale),
+                  [(P + 0x24C, w32(mode & MASK)), (P + 0x23F, b8(row)), (P + 0x38, f32b(cur * scale)),
+                   (0x248650, fw(1.0, 2.0, 3.0, 4.0)), (0x248660, fw(0.25, 0.5, 0.75, 1.0))])
+    # 00224600: +7 0
+    for f224, f22C, flag, f220, f228, b6f1 in ((0, 0, 0, 1, 0, 0), (0, 0, 2, 1, 0, 0), (1, 0, 0, 1, 0, 0), (0, 1, 0, 1, 0, 0),
+                                               (1, 1, 0, 0, 0, 0), (1, 0, 0x63, -1, 0, 0), (1, 0, 0, 0, 0, 0),
+                                               (1, 0, 0, 1, 100, 1), (1, 0, 0, 1, 100, 0), (1, 0, 0, 1, 99, 1),
+                                               (0, 1, 2, 0, 0, 0)):
+        for b234 in (0, 1):
+            state(0x224600, 's0 %g %g %X %g %g %d %d' % (f224, f22C, flag, f220, f228, b6f1, b234),
+                  [(P + 7, b8(0)), (P + 0x224, f32b(f224)), (P + 0x22C, f32b(f22C)), (P + 0xF, b8(flag)),
+                   (P + 0x220, f32b(f220)), (P + 0x228, f32b(f228)), (0x8106F1, b8(b6f1)), (P + 0x234, b8(b234))])
+    for flag, r in ((2, 0), (0, 0), (0, 1)):
+        state(0x224600, 's1 %X %d' % (flag, r), [(P + 7, b8(1)), (P + 0xF, b8(flag))], queues={0x122BB8: [r]})
+    for sub in (2, 0x17, 0xB, 0x1F, 0x20):
+        for f200 in (0x1000, 0x8000, 0):
+            state(0x224600, 's%X %X' % (sub, f200),
+                  [(P + 7, b8(sub)), (P + 0x200, w32(f200)), (P + 0x21C, f32b(0.5)), (P + 0x2E4, f32b(40.25)),
+                   (P + 0xB4, f32b(6.5))] + bone)
+    for sub in (0xA, 0x14, 0x1E, 5):
+        state(0x224600, 's%X' % sub, [(P + 7, b8(sub))])
+    state(0x224600, 's20 clamp', [(P + 7, b8(0x20)), (P + 0x200, w32(0)), (P + 0x2E4, f32b(1.0))] + bone)
+    for t in (30.0, 30.5):
+        state(0x224600, 's15 %g' % t, [(P + 7, b8(0x15)), (P + 0x3C, f32b(t))])
+    for r in (0, 1):
+        state(0x224600, 's16 %d' % r, [(P + 7, b8(0x16))], queues={0x21C190: [r]})
+        state(0x224600, 's21 %d' % r, [(P + 7, b8(0x21))], queues={0x175900: [r]})
+    # 0016BF80
+    idle = [(P + 7, b8(0)), (P + 0x224, f32b(0)), (P + 0x22C, f32b(0)), (P + 0xF, b8(0))]
+    busy = [(P + 7, b8(0x18))]
+    dead = [(P + 7, b8(0xB)), (P + 0x200, w32(0x1000))]
+    move = [(P + 0xB0, f32b(5.0)), (P + 0xB8, f32b(6.0)), (P + 0x38, f32b(2.5)), (P + 0x2E0, f32b(0.5)), (P + 0x2E8, f32b(0.25)),
+            (P + 0x2E4, f32b(0.5)), (0x700031B4, f32b(44.5))]
+    tables = [(0x248650, fw(1.0, 2.0, 3.0, 4.0)), (0x248660, fw(0.25, 0.5, 0.75, 1.0)), (P + 0x24C, w32(0)), (P + 0x23F, b8(1))]
+    state(0x16BF80, 's0', [(P + 6, b8(0))])
+    for area, flag, press in ((0x15, 1, 0), (0x15, 0, 0), (6, 1, 0), (6, 0, 0x20), (6, 0, 0)):
+        for speed in (0.0, 1.0):
+            state(0x16BF80, 's1 %X %d %X %g' % (area, flag, press, speed),
+                  [(P + 6, b8(1)), (0x810700, b8(area)), (0x70003B8D, b8(flag)), (0x810E74, h16(press)), (0x70003B76, h16(0x20)),
+                   (P + 0x38, f32b(speed)), (P + 0x24C, w32(MASK)), (P + 0x23F, b8(0))] + idle + tables[:2])
+    state(0x16BF80, 's1 busy', [(P + 6, b8(1))] + busy)
+    for st in (2, 3, 4):
+        for slope in (0.0, 0.0099, 0.01, 0.5):
+            for found in (0, 1):
+                for speed in (2.5, 0.1):
+                    scribble, patches = hit(0x3C)
+                    state(0x16BF80, 's%d %g %d %g' % (st, slope, found, speed),
+                          [(P + 6, b8(st)), (P + 0x25F, b8(0)), (P + 0x31B, b8(0xFF)), (P + 0x31A, b8(0))] + idle + move + tables
+                          + patches + [(P + 0x2E4, f32b(slope)), (P + 0x38, f32b(speed))],
+                          queues={0x19A570: [scribble if found else 0]})
+        state(0x16BF80, 's%d busy' % st, [(P + 6, b8(st)), (P + 0x25F, b8(0)), (P + 0x31B, b8(0x12))] + busy + move + tables,
+              queues={0x19A570: [0]})
+        state(0x16BF80, 's%d dead' % st, [(P + 6, b8(st)), (P + 0x25F, b8(0)), (P + 0x31B, b8(0x12))] + dead)
+        state(0x16BF80, 's%d 25F' % st, [(P + 6, b8(st)), (P + 0x25F, b8(2)), (P + 0x31B, b8(0xFF))] + idle)
+    for snd, on, id_ in ((0xFF, 1, 0x5DD), (0xFF, 0, 0x5DD), (0xFF, 1, 0x135), (0x12, 1, 0x5DD)):
+        state(0x16BF80, 's3 sound %X %d %X' % (snd, on, id_),
+              [(P + 6, b8(3)), (P + 0x25F, b8(0)), (P + 0x31B, b8(snd)), (P + 0x31A, b8(on)), (P + 0x31C, h16(id_))]
+              + idle + move + tables, queues={0x19A570: [0], 0x1FBD50: [0x21]})
+    state(0x16BF80, 's3 stop', [(P + 6, b8(3)), (P + 0x25F, b8(0)), (P + 0x31B, b8(0x12)), (P + 0x31A, b8(1))]
+          + idle + move + tables + [(P + 0x2E4, f32b(0.0))], queues={0x19A570: [0]})
+    state(0x16BF80, 's2 sound', [(P + 6, b8(2)), (P + 0x25F, b8(0))] + idle + move + tables,
+          queues={0x19A570: [0], 0x1FBD50: [0x21]})
+    state(0x16BF80, 's5', [(P + 6, b8(5))])
+    for f200 in (0x8000, 0x7FFF):
+        state(0x16BF80, 's6 %X' % f200, [(P + 6, b8(6)), (P + 0x200, w32(f200))])
+    for t in (23.0, 23.5):
+        state(0x16BF80, 's7 %g' % t, [(P + 6, b8(7)), (P + 0x3C, f32b(t))])
+    for f200 in (0x1000, 0x0FFF):
+        state(0x16BF80, 's8 %X' % f200, [(P + 6, b8(8)), (P + 0x200, w32(f200))])
+    for r in (0, 1):
+        state(0x16BF80, 's9 %d' % r, [(P + 6, b8(9))], queues={0x175900: [r]})
+    state(0x16BF80, 's14', [(P + 6, b8(20))])
+    state(0x16BF80, 's10 none', [(P + 6, b8(10))])
+
+
 def boot_cases(add, rng):
     """0016AC50 / 001782A0 on the player record (a19d_01 / 08 / 12), the
     probe-height scan 001B2D00 with designed column tables, 001EDE40 with
@@ -2414,6 +2578,10 @@ DEFAULT_ARGS = {entry: [STACK_TOP if k == S else (fb(1.0) if k == F else FREE) f
 # Words the static walk reaches that no input can reach, and why (each
 # word's instruction class was checked, never its text reproduced).
 DEAD_WORDS = {
+    # 0x16BE40: the clamp of cur - (cur - hi) / 8 to hi, with cur above hi: the
+    # value lies in [hi, cur] and the EE rounds toward zero, so with the table's
+    # positive hi the store never runs.
+    0x16BF60: 'hi clamp after the eased fall',
     # 0x825430 / 0x825D10: the clamps of the target after its product with
     # (9.5 - z): in the positive branch the target was clamped to >= +0 and
     # 9.5 - z > 0 inside the box, so the product is never below 0; in the
@@ -3020,7 +3188,7 @@ def select_cases(elf):
     total = len(cases)
     if not reference_mode.FULL and not os.environ.get('EM_LEVEL14_PORT_ALL'):
         kept = cases[:captured] + [c for c in cases[captured:]
-                                   if c[0] in DEFAULT_KEEP or c[0].startswith(SURVIVORS + BOSS_CASES)]
+                                   if c[0] in DEFAULT_KEEP or c[0].startswith(SURVIVORS + BOSS_CASES + ('gr ',))]
         # every entry keeps at least one case of its own (the hook
         # contract's `bytes` target): the first designed one
         have = {c[2] for c in kept}

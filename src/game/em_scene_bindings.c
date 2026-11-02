@@ -2716,6 +2716,10 @@ int em_scene_bindings_owner_model(uint32_t owner, uint32_t handle)
     return s_area01_live.active ? em_area01_live_call_active(&s_area01_live, &c)
                                 : em_area01_live_call(&s_area01_live, &c);
 }
+int em_scene_bindings_water_ripple(const uint32_t point[3], uint32_t f12)
+{
+    return em_area01_live_ripple(&s_area01_live, point, f12);
+}
 const uint8_t *em_scene_bindings_grid_node_bytes(uint32_t address, uint32_t size)
 {
     const EmCollSegment *seg = em_collision_world_segment();

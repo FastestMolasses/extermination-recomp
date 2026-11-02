@@ -1101,6 +1101,16 @@ static int worker(void *ctx,EmArea01Call *c)
         if(worker(l,&sub)<0)return -1;
         c->v0=1;return 0;
     }
+    if(c->function==0x00158130u) {
+        /* 00158130 (byte-matched): the panel script's sound by its record's
+         * +3, 0x3F3 for 0x12 and 0x2F, else 0x3F4, the three 0x1000; 1. */
+        const uint8_t *kind=bytes(l,(uint32_t)c->a[0]+3u,1,0);
+        if(!kind)return fail(l,(uint32_t)c->a[0]+3u);
+        EmArea01Call sub={.function=0x001FB9F0u,.sp=c->sp,.na=4,
+            .a={*kind==0x12u || *kind==0x2Fu ? 0x3F3u : 0x3F4u,0x1000u,0x1000u,0x1000u}};
+        if(worker(l,&sub)<0)return -1;
+        c->v0=1;return 0;
+    }
     if(c->function==0x00182BF0u || c->function==0x001B11E0u ||
        c->function==0x001B1EA0u || c->function==0x001C4760u || c->function==0x00157F60u) {
         const EmArea01RuntimeHost host={l,bytes,nested};
@@ -1863,6 +1873,12 @@ int em_area01_live_call(EmArea01Live *l,EmArea01Call *c)
     if(em_area01_live_suspend(l)<0)return -1;
     if(rc<0)return fail(l,l->runtime.fault_address);
     return 0;
+}
+int em_area01_live_ripple(EmArea01Live *l,const uint32_t point[3],uint32_t f12)
+{
+    if(!l || !l->bound || l->fault)return -1;
+    const EmArea01RuntimeHost host={l,bytes,nested};uint32_t fault=0;
+    return em_area01_flame_services_ripple(&host,point,f12,&fault)<0 ? fail(l,fault) : 0;
 }
 int em_area01_live_player_call(EmArea01Live *l,EmPlayerLiveActor *p,EmArea01Call *c)
 {
