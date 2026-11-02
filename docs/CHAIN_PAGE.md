@@ -225,7 +225,9 @@ near-fire program").
 
 **The object-method programs** (kind 10: D_0023D4D0, 129 instructions from
 ELF 0x0023D500; kind 9 and class 6: D_0023D0C0, 119 from 0x0023D0F0, the same
-without the colour block: RGBA = dmem 1013's words; section 6.6): each reads the object kernel's vertex blocks and
+without the colour block: RGBA = dmem 1013's words; kind 8: D_0023CC50, 131 from
+0x0023CC80, that colour, ST ((x - 1792) / 512, (y - 1936) / 224, 1) of the position
+pushed 0.03 along the normal; section 6.6): each reads the object kernel's vertex blocks and
 kicks 32 vertices per batch at TOP + 0x80, one vertex at a time (not
 software-pipelined); no MSCNT entry: every batch loads dmem 1013..1016 and
 1020..1023 again. Position, CLIP window, ADC, Q and fog are the object
@@ -686,6 +688,17 @@ upload**, which this file's predecessors and AREA19_PORT.md said. Each unit's
 copy reads the field as the page has drawn it up to its CALL: the walk's pass
 order is the GS's.
 
+**Kind 8** (001CB060 -> 001CAFA0): 001D8C20(3), 001C7420, 001D40D0 -> 001D3F60:
+the program D_0023CC50; 001D1F80(1, 0); 001D6B10 (the same copy, to D_00275678,
+then 001D1F20); 001D6BA0's TEX0 of it (TFX 2 HIGHLIGHT, TCC 0); region 3; the skin
+record D_00816F40 (template PRIM 0x01C: no blend); the model; 001D1F20; then
+001CAFA0's own 001D1F20 and region 1, the RET tag and 001CB760 at slot 0xFFD, not
+at the object's depth, so it reads everything the page drew in the slots before
+it. Its ST is the vertex's screen position pushed 0.03 along the raw normal, as a
+coordinate into the copy: the object shows the frame behind it, displaced. The
+one user the port reaches is the 0x141D20 creature's behaviour 5 (001437E0), which
+switches between kinds 0 and 8 while it cloaks.
+
 **The walk.** Such a unit is walked as a pass (em_chain_page's `object_pass`;
 `em_owner_draw_live_page_method` says which CALLs): the DMA follows its CALL,
 VIF1 runs its bytes, the program runs as a batched program (MSCAL 0, then
@@ -705,12 +718,12 @@ RAM), 306 batches, and 400 synthetic ones; data memory, every register and the
 kicked packet equal on both lanes, the primitives, environments and counts of
 the walk equal, each Q and clip-flag read's producer asserted; the port's list
 after 001C7420 byte-equal to all 102 units (but the bytes of a tag no one
-writes). Kinds 9 and 12: no end snapshot holds one (all 374 searched), so the
-ORIGINAL 001D40E0 / 001D4440 run on the EE oracle over a captured RAM, with the
-fog-off REF and without: their lists byte-equal to the port's; a unit of each
-(a captured unit's CNTs and model) walked by the original microcode and the
-native page: primitives, environments and marks equal; 400 synthetic batches of
-D_0023D0C0. The colour row and 001C7420 are test_actor_light_001d89d0_reference's
+writes). Kinds 9, 12 and 8: no end snapshot holds one (all 374 searched), so the
+ORIGINAL 001D40E0 / 001D4440 / 001D3F60 (with 001D1F20, 001D1FF0) run on the EE
+oracle over a captured RAM, with the fog-off REF and without: their lists
+byte-equal to the port's; a unit of each (a captured unit's CNTs and model) walked
+by the original microcode and the native page: primitives, environments and marks
+equal; 400 synthetic batches of D_0023D0C0 and of D_0023CC50. The colour row and 001C7420 are test_actor_light_001d89d0_reference's
 and test_owner_services_reference's. It ran live with the raster on over a07_00
 (4 units, 216 triangles, no refusal: the texture is resident) and a15b_01 (class
 6 of [3]: the copy, the strip, 39 batches). **Pixels were not compared with an

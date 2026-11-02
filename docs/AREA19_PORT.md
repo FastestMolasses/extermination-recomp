@@ -138,20 +138,12 @@ behaviour defects until a row comparison says so.
    P = 0 at each zero and compares the kicked packets with that primitive's rows taken
    out (every head on the plane, one head at the start and in the middle of a batch,
    a zero screen length).
-2. **Not drawn**: 001CB060 (kind 8); reported once. Kinds 10, 9 and 12 draw since
-   2026-11-01: the tendril pieces 001546C0 -> 00154F00 (also AREA03, AREA04 sub 1, and
-   AREA08's and AREA07's "boxes", 001CB1F0), the worms (001CB130) and AREA15 sub 1's [3]
-   (001CB2B0): their units are walked on the page (CHAIN_PAGE.md section 6.6;
-   `make test-object-method-reference`; pixels not compared with an original frame).
-   What the last one needs, read from the original (2026-11-01):
-   the VU1 programs read the object kernel's vertex blocks (32 vertices, 4 qwords each,
-   as em_vu1_object_kernel.h) and kick one 32-vertex packet per batch from the tag at
-   dmem 1020, with no MSCNT entry. Position, CLIP window, ADC bit, Q and fog are the
-   kernel's. Only ST and colour differ:
-   - kind 8, D_0023CC50 (001D3F60): ST from the position pushed 0.03 along the normal,
-     projected, as ((x - 1792) / 512, (y - 1936) / 224): it samples D_00275678, a copy
-     of the screen, so it needs the frame copy (001D6B10, 001D6BA0) in the page order.
-   Each needs: the channel-3 calls on this path, the unit parsed as em_owner_draw_live's
-   class-2 unit is, the program's translation with chain_page_model's oracle, and a
-   renderer path for the texture. Kind 8 is the hardest (a copy of the frame so far).
+2. **The draw methods draw** (2026-11-01): kinds 10, 9, 12 and 8: the tendril pieces
+   001546C0 -> 00154F00 (also AREA03, AREA04 sub 1, and AREA08's and AREA07's "boxes",
+   001CB1F0), the worms (001CB130), AREA15 sub 1's [3] (001CB2B0) and the cloaking
+   creature (001CB060). Their units are walked on the page (CHAIN_PAGE.md section 6.6;
+   `make test-object-method-reference`). Evidence: the VU1 programs and the page walk
+   equal the original microcode; kind 10's units are captured ones, kinds 9, 12 and 8's
+   the executed original builders'. Pixels are not compared with an original frame, and
+   no beat of this file was seen to draw a worm or kind 8.
 3. **a19b_00**, the arrival by the hatch [63], is the AREA13 side's.

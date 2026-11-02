@@ -116,6 +116,8 @@ Blocks (original address, bytes, what reads them):
   0x0023D0C0  0x400   the draw method kind 9's DMA packet D_0023D0C0 (001D40E0 and
                       001D4440: one MPG of 119 instructions from ELF 0x0023D0F0)
                       and its RET tag
+  0x0023CC50  0x460   the draw method kind 8's packet D_0023CC50 (001D3F60: one MPG
+                      of 131 instructions from ELF 0x0023CC80) and its RET tag
   0x0026E470  0x50    001D40E0's copy colour and strip positions
   0x0026E4C0  0x50    001D4440's
   0x00251BD0  0x10    001D40E0's strip colours, without the three words D_00251BE0..
@@ -215,7 +217,7 @@ BLOCKS = ((0x00257C90, 0x2460), (0x00255430, 0x158), (0x0025A350, 0x34B0), (0x00
           # strip's positions D_0026E480 / D_0026E4D0 and colours D_00251BD0 /
           # D_00251C10 (the colour words a draw rewrites stay out of the
           # comparison with the captures: its packet copies them at once).
-          (0x0023D0C0, 0x400), (0x0026E470, 0x50), (0x0026E4C0, 0x50), (0x00251BD0, 0x10), (0x00251BEC, 0x24),
+          (0x0023CC50, 0x460), (0x0023D0C0, 0x400), (0x0026E470, 0x50), (0x0026E4C0, 0x50), (0x00251BD0, 0x10), (0x00251BEC, 0x24),
           (0x00251C10, 0x10), (0x00251C2C, 0x24),
           # D_002531D0: the drop shadow's alpha-clear strip, read by the
           # Original profile's GS frame.

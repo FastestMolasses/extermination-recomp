@@ -67,11 +67,12 @@ CAPTURED = (
 
 # Native id of each program (em_vu1_page_programs.h), and the producers of
 # the non-interlocked reads (micro of the reader -> of the producer).
-PROGRAMS = {M.PROGRAM_METHOD10: 10, M.PROGRAM_METHOD9: 11}
-NAMES = {M.PROGRAM_METHOD10: 'kind10', M.PROGRAM_METHOD9: 'kind9'}
+PROGRAMS = {M.PROGRAM_METHOD10: 10, M.PROGRAM_METHOD9: 11, M.PROGRAM_METHOD8: 12}
+NAMES = {M.PROGRAM_METHOD10: 'kind10', M.PROGRAM_METHOD9: 'kind9', M.PROGRAM_METHOD8: 'kind8'}
 PRODUCERS = {M.PROGRAM_METHOD10: {('Q', 0x03F): 0x038, ('CF', 0x036): 0x032},
-             M.PROGRAM_METHOD9: {('Q', 0x035): 0x02E, ('CF', 0x02C): 0x028}}
-BRANCHES = {M.PROGRAM_METHOD10: (0x062,), M.PROGRAM_METHOD9: (0x058,)}
+             M.PROGRAM_METHOD9: {('Q', 0x035): 0x02E, ('CF', 0x02C): 0x028},
+             M.PROGRAM_METHOD8: {('Q', 0x034): 0x02D, ('Q', 0x052): 0x02D, ('CF', 0x02B): 0x027}}
+BRANCHES = {M.PROGRAM_METHOD10: (0x062,), M.PROGRAM_METHOD9: (0x058,), M.PROGRAM_METHOD8: (0x064,)}
 OFFSETS = (0x1B0, 0x2BE)                          # BASE, BASE + OFFSET
 
 SHIM = r'''
@@ -478,11 +479,12 @@ METHODS = (
     # (the draw method's list, its original, the program it CALLs, the data rows)
     (9, 0x1D40E0, M.PROGRAM_METHOD9, 0x26E470, 0x251BD0),
     (12, 0x1D4440, M.PROGRAM_METHOD9, 0x26E4C0, 0x251C10),
+    (8, 0x1D3F60, M.PROGRAM_METHOD8, 0x26E510, 0),
 )
 
 
 def part_e(lib, stats):
-    """The lists of kinds 9 and 12 (class 6): the ORIGINAL routines executed
+    """The lists of kinds 9, 12 (class 6) and 8: the ORIGINAL routines executed
     over a captured RAM against the port's bytes, then a unit of each walked
     by the original microcode and the native page (no capture holds one).
     Their node CNTs are a captured kind-10 unit's, the model its."""
@@ -527,7 +529,10 @@ def part_e(lib, stats):
             word = M.u32(ram, ctx + 0xC)
             struct.pack_into('<I', ram, ctx + 0xC, (word & ~1) | (0 if fog_off else 1))
             oracle = Ee(elf, ram, bytearray(spad))
-            oracle.run(fn, (3, model, tint))
+            oracle.run(fn, (3, model, tint) if which != 8 else (3, model))
+            if which == 8:                                # 001CAFA0's two after it
+                oracle.run(0x1D1F20, (3,))
+                oracle.run(0x1D1FF0, (3, 1))
             end = M.u32(oracle.ram, cursor)
             want = bytes(oracle.ram[at:end])
             rgbw = (C.c_uint32 * 3)(*[f32(x) for x in rgb])

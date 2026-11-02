@@ -1731,7 +1731,13 @@ static inline int emvup_floor_batch(EmVu1PCtx *c, uint32_t top, int variant)
  * Kind 9 (D_0023D0C0, 001CB070's 001D40E0 and class 6's 001D4440; `variant` 1)
  * is the same program without the colour block (RGBA = dmem 1013's words as
  * they stand): its micro addresses are 12 lower from 0x01C on; ST reads a
- * copy of the frame (CHAIN_PAGE.md section 6.6). */
+ * copy of the frame (CHAIN_PAGE.md section 6.6).
+ *
+ * Kind 8 (D_0023CC50, 001CB060's 001D3F60; `variant` 2) has that colour and
+ * reads no row 7. Its ST is the screen position of the vertex pushed 0.03
+ * along its raw normal, divided by the vertex's own Q, as a coordinate into
+ * the frame's copy: ((x - 1792) / 512, (y - 1936) / 224, 1). Its second Q read
+ * is the same DIV's. */
 static inline int emvup_method_batch(EmVu1PCtx *c, uint32_t top, int variant)
 {
     EmVu1PRegs *r = c->r;
@@ -1757,7 +1763,7 @@ static inline int emvup_method_batch(EmVu1PCtx *c, uint32_t top, int variant)
         emvup_lq(c, 10, v + 2u);                                        /* 0x012 */
         emvup_lq(c, 15, v);                                             /* 0x013 */
         for (k = 0; k < 4u; ++k) emvup_lq(c, 28u + k, r->vi[10] + k);   /* 0x014..0x017 */
-        for (k = 0; k < 4u; ++k) emvup_lq(c, 24u + k, r->vi[10] + 4u + k);  /* 0x018..0x01B */
+        for (k = 0; k < (variant == 2 ? 3u : 4u); ++k) emvup_lq(c, 24u + k, r->vi[10] + 4u + k);  /* 0x018..0x01B */
         if (variant == 0) {
             /* 0x01C..0x023: A; the colour row's R, G, B unchanged */
             vf[14][3] = emvup_mul(c, vf[20][3], vf[3][1]);
@@ -1783,18 +1789,35 @@ static inline int emvup_method_batch(EmVu1PCtx *c, uint32_t top, int variant)
         vf[8][3] = emvup_madd(c, r->acc[3], vf[19][3], vf[4][3]);       /* 0x044 */
         vf[8][3] = em_vu_min_bits(vf[8][3], vf[19][0]);                 /* 0x048 */
         vf[6][3] = em_vu_max_bits(vf[8][3], vf[0][0]);                  /* 0x04C */
-        /* 0x050..0x052: the normal through the lighting rows, all lanes */
-        for (k = 0; k < 4u; ++k) r->acc[k] = emvup_mul(c, vf[24][k], vf[10][0]);
-        for (k = 0; k < 4u; ++k) r->acc[k] = emvup_madd(c, r->acc[k], vf[25][k], vf[10][1]);
-        for (k = 0; k < 4u; ++k) vf[2][k] = emvup_madd(c, r->acc[k], vf[26][k], vf[10][2]);
-        for (k = 0; k < 2u; ++k) vf[2][k] = emvup_add(c, vf[2][k], vf[0][3]);    /* 0x056 */
-        r->i = 0x3F000000u;                                             /* 0.5 */
-        for (k = 0; k < 2u; ++k) vf[2][k] = emvup_mul(c, vf[2][k], r->i);        /* 0x05A */
+        if (variant == 2) {
+            r->i = 0x3CF5C28Fu;                                         /* 0.03 */
+            for (k = 0; k < 3u; ++k) r->acc[k] = emvup_mul(c, vf[10][k], r->i);
+            for (k = 0; k < 3u; ++k) vf[2][k] = emvup_madd(c, r->acc[k], vf[3][k], vf[0][3]);
+            memcpy(p, vf[2], sizeof p);
+            emvup_xform(c, 2, 28, p);
+            for (k = 0; k < 3u; ++k) vf[2][k] = emvup_mul(c, vf[2][k], r->q);
+            r->i = 0x44E00000u;                                         /* 1792 */
+            vf[2][0] = emvup_sub(c, vf[2][0], r->i);
+            r->i = 0x44F20000u;                                         /* 1936 */
+            vf[2][1] = emvup_sub(c, vf[2][1], r->i);
+            r->i = 0x3B000000u;                                         /* 1 / 512 */
+            vf[2][0] = emvup_mul(c, vf[2][0], r->i);
+            r->i = 0x3B924925u;                                         /* 1 / 224 */
+            vf[2][1] = emvup_mul(c, vf[2][1], r->i);
+        } else {
+            /* 0x050..0x052: the normal through the lighting rows, all lanes */
+            for (k = 0; k < 4u; ++k) r->acc[k] = emvup_mul(c, vf[24][k], vf[10][0]);
+            for (k = 0; k < 4u; ++k) r->acc[k] = emvup_madd(c, r->acc[k], vf[25][k], vf[10][1]);
+            for (k = 0; k < 4u; ++k) vf[2][k] = emvup_madd(c, r->acc[k], vf[26][k], vf[10][2]);
+            for (k = 0; k < 2u; ++k) vf[2][k] = emvup_add(c, vf[2][k], vf[0][3]);    /* 0x056 */
+            r->i = 0x3F000000u;                                             /* 0.5 */
+            for (k = 0; k < 2u; ++k) vf[2][k] = emvup_mul(c, vf[2][k], r->i);        /* 0x05A */
+        }
         vf[2][2] = emvup_add(c, vf[0][2], vf[0][3]);                    /* 0x05E */
         if (r->vi[2] != 0)                                              /* 0x062 */
             vf[6][3] = emvup_add(c, vf[6][3], vf[19][1]);               /* 0x064 */
         for (k = 0; k < 4u; ++k) vf[7][k] = em_vu_ftoi4_bits(vf[6][k]); /* 0x068 */
-        emvup_sq(c, variant == 0 ? 14 : 20, v + 131u);                  /* 0x06C..0x06F */
+        emvup_sq(c, variant == 0 ? 14u : 20u, v + 131u);                  /* 0x06C..0x06F */
         emvup_sq(c, 7, v + 132u);
         emvup_sq(c, 2, v + 130u);
         emvup_sq(c, 15, v + 129u);
@@ -1826,7 +1849,8 @@ enum {
     EM_VU1P_RIPPLE = 8,   /* D_00234B00 (MSCAL 0 or MSCNT at `top`)        */
     EM_VU1P_SURFACE = 9,  /* D_00234FE0 (MSCAL 0 or MSCNT at `top`)        */
     EM_VU1P_METHOD10 = 10,/* D_0023D4D0, kind 10 (MSCAL 0 or MSCNT at `top`) */
-    EM_VU1P_METHOD9 = 11  /* D_0023D0C0, kind 9 and class 6 (the same)     */
+    EM_VU1P_METHOD9 = 11, /* D_0023D0C0, kind 9 and class 6 (the same)     */
+    EM_VU1P_METHOD8 = 12  /* D_0023CC50, kind 8 (the same)                 */
 };
 
 static inline int emvup_program(EmVu1PCtx *c, unsigned program, uint32_t top)
@@ -1844,6 +1868,7 @@ static inline int emvup_program(EmVu1PCtx *c, unsigned program, uint32_t top)
     case EM_VU1P_SURFACE: return emvup_floor_batch(c, top, 2);
     case EM_VU1P_METHOD10: return emvup_method_batch(c, top, 0);
     case EM_VU1P_METHOD9: return emvup_method_batch(c, top, 1);
+    case EM_VU1P_METHOD8: return emvup_method_batch(c, top, 2);
     default: return EM_VU1P_FAULT_ARGS;
     }
 }
