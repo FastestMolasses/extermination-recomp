@@ -2950,9 +2950,10 @@ shooting and knifing anywhere also run without a fault.
   oracles they extend); `mid_route_beats.py --single`: the table in
   docs/AREA08_PORT.md.
 - Status: **PARTIAL**. From cards, nothing row-exact from New Game; a card reloads
-  the bugs, so bites, health and infection differ. The infected menu player's glow
-  is not drawn. The boxes draw (001CB1F0: packets equal to the original microcode's,
-  pixels not compared with an original frame).
+  the bugs, so bites, health and infection differ. The boxes draw (001CB1F0: packets
+  equal to the original microcode's, pixels not compared with an original frame). The
+  infected menu player's glow is on the page as the original's (one capture) and
+  hidden by the chest as there.
 
 ### AREA13's later story from its start cards
 

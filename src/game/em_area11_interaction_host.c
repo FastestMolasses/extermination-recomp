@@ -1,3 +1,4 @@
+#include "game/em_effects_live.h"
 #include "game/em_area11_interaction_host.h"
 #include "game/em_module_loader.h"
 #include "game/em_battery_page_live.h"
@@ -759,6 +760,15 @@ static int pages_models_draw(void *context, EmGfx *gfx, const float clip[4])
  * 001CB480's 001D8C20(2) and 001CB4F0's 001D8C20(1) with 001D89D0 over the
  * render context's canonical storage (em_owner_draw_live), and 001CB4F0's
  * 001D8C20(0) alone (owner NULL). */
+/* 001F4BF0's 001CD520: the effect handlers' translation, onto the page the
+ * status frame's 001D1EA0(0) kicks. */
+static int models_sprite(void *context, int32_t a0, int32_t a1, const uint32_t point[4], uint64_t tex0, uint32_t rgb,
+                         uint32_t w, uint32_t h, uint32_t zbias)
+{
+    (void)context;
+    return em_effects_live_001CD520(a0, a1, point, tex0, rgb, w, h, zbias);
+}
+
 static int models_light(void *context, int32_t mode, const EmOwnerServicesOwner *owner,
                         const uint32_t rgb[4], float a[16], float b[16])
 {
@@ -1474,6 +1484,7 @@ static int load_status(const char *directory,const EmItemMath *math,
      * without it a node that binds a map model faults (reported). */
     (void)em_status_models_load_map(world.models, "assets/status_map");
     em_status_models_set_light(world.models, models_light, NULL);
+    em_status_models_set_sprite(world.models, models_sprite, NULL);
     /* The original hub's 00209DF0 records (tools/export_status_hub.py). */
     snprintf(path, sizeof path, "%s/panel/status_hub.emhs", directory);
     snprintf(item_path, sizeof item_path, "%s/panel/status_hub_atlas.emha", directory);

@@ -1840,6 +1840,13 @@ static int w_kinds_001CD520(void *ctx, int32_t a0, int32_t a1, const float point
     return em_player_equipment_001CD520(&S.sprite, a0, a1, at, tex0, f12, f13, f14, colour, &z) < 0 ? -1 : 0;
 }
 
+int em_effects_live_001CD520(int32_t a0, int32_t a1, const uint32_t point[4], uint64_t tex0, uint64_t colour,
+                             uint32_t f12, uint32_t f13, uint32_t f14)
+{
+    int32_t z = 0;
+    return em_player_equipment_001CD520(&S.sprite, a0, a1, point, tex0, f12, f13, f14, colour, &z) < 0 ? -1 : 0;
+}
+
 static int w_0011E2A8(void *ctx, u32 x, u32 *result)
 {
     (void)ctx;

@@ -57,6 +57,9 @@ typedef struct {
 struct EmStatusModels {
     EmStatusScenePool pool;
     EmStatusSceneScratch spr;         /* 0020EC80's scratchpad */
+    EmStatusModelsSpriteFn sprite;    /* the glow's 001CD520 */
+    void *sprite_ctx;
+    unsigned glows;
     uint32_t pose_rest[16], pose_quat[4], pose_products[11]; /* 3480, 3600, 3760 */
     EmOwnerServicesScratch owner_spr; /* 001C9610's staging */
     EmOwnerServices services;
@@ -649,19 +652,24 @@ static int w_00122BB8(void *ctx, int32_t *value)
     return 0;
 }
 
-/* STAND-IN (docs/AREA08_PORT.md): 001F4BF0's glow sprite on the infected menu
- * player is not drawn. Its random draw (the worker before this one) and every
- * byte of state stay; 001F4BF0 does not read the result. Only the picture
- * depends on it. */
+/* 001F4BF0's glow sprite on the infected menu player: 001CD520 over the
+ * scratchpad point (the status binding's em_effects_live translation; the
+ * chain page draws it at the frame close). Without a binding (the unit test)
+ * the sprite is counted and not drawn. */
 static int w_001CD520(void *ctx, int32_t a0, int32_t a1, uint32_t position, uint64_t tex0,
                       uint32_t rgb, float f12, float f13, float f14)
 {
-    static int logged;
-    (void)ctx; (void)a0; (void)a1; (void)position; (void)tex0; (void)rgb; (void)f12; (void)f13;
-    (void)f14;
-    if (!logged++)
-        fprintf(stderr, "status models: 001CD520: the infected menu player's glow sprite is not drawn\n");
-    return 0;
+    EmStatusModels *m = ctx;
+    if (position != EM_STATUS_SCENE_SPR_38A0)
+        return fault(m, 0x001CD520u, "a glow point outside the modelled scratchpad");
+    m->glows++;
+    if (!m->sprite)
+        return 0;
+    uint32_t w[3];
+    memcpy(&w[0], &f12, 4);
+    memcpy(&w[1], &f13, 4);
+    memcpy(&w[2], &f14, 4);
+    return m->sprite(m->sprite_ctx, a0, a1, m->spr.s38A0, tex0, rgb, w[0], w[1], w[2]);
 }
 
 /* The node matrices +0x90 of a record's bones as the draw's palette, then
@@ -1127,6 +1135,16 @@ void em_status_models_set_node(EmStatusModels *m, uint32_t fn, EmStatusModelsNod
     m->node = node;
     m->node_ctx = ctx;
 }
+
+void em_status_models_set_sprite(EmStatusModels *m, EmStatusModelsSpriteFn sprite, void *ctx)
+{
+    if (m) {
+        m->sprite = sprite;
+        m->sprite_ctx = ctx;
+    }
+}
+
+unsigned em_status_models_glows(const EmStatusModels *m) { return m ? m->glows : 0u; }
 
 void em_status_models_set_light(EmStatusModels *m, EmStatusModelsLightFn light, void *ctx)
 {

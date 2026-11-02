@@ -716,7 +716,11 @@ void frame_close_out(void)
     if (s_request_status_frame && !em_hud_visible()) {
         if (em_area11_interaction_host_status_render(gfx) != 1)
             em_frame_request_quit(); /* the host latched and reported the fault */
-        /* The status frame's 001D1EA0(0) kicks the page too (em_chain_page_live). */
+        /* The status frame's 001D1EA0(0) kicks the page too (em_chain_page_live).
+         * Its FOGCOL is the frame's (the infected player's glow is the one
+         * fogged primitive it holds): the models' render turned the fog off. */
+        float fog_coef[2], fog_rgb[3];
+        if (em_rcl_frame_fog(fog_coef, fog_rgb) == 0) em_gfx_fog_coefficients(gfx, fog_coef, fog_rgb);
         if (em_chain_page_live_draw(gfx) < 0)   /* reported; fail-stop */
             em_scene_fault(em_scene_state(), em_chain_page_live_fault(), EM_SCENE_FAULT_WORKER_FAILED);
     } else if (ui_scene) {
