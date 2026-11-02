@@ -2304,6 +2304,10 @@ test-area07-probe-reference:
 test-area15-area03-state-reference:
 	python3 tools/test_area15_area03_state_reference.py
 
+.PHONY: test-second-half-state-reference
+test-second-half-state-reference:
+	python3 tools/test_second_half_state_reference.py
+
 .PHONY: test-level16-creature-reference test-level16-beast-reference test-level16-boot-reference
 test-level16-creature-reference:
 	python3 tools/test_level16_creature_reference.py
