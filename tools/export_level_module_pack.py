@@ -16,9 +16,11 @@ from level_asset_audit import private_assets
 ROOT = Path(__file__).resolve().parents[1]
 # Union of the route recordings in LEVEL_READINESS, plus the AREA11 start.
 # A reload of the same area/sub uses the same complete disc delivery.
+# The second half's areas follow (docs/SECOND_HALF_AREAS.md): no recording yet.
 AREAS = ((0, 0), (0, 1), (1, 0), (2, 0), (2, 1), (3, 0), (4, 0),
          (6, 0), (11, 0), (13, 0), (15, 0), (15, 1), (19, 0),
-         (19, 1), (22, 0), (8, 0), (8, 2), (8, 3), (7, 0), (7, 2), (7, 3))
+         (19, 1), (22, 0), (8, 0), (8, 2), (8, 3), (7, 0), (7, 2), (7, 3),
+         (14, 0), (16, 0), (16, 1), (17, 0), (18, 0), (20, 0), (21, 0))
 DEFAULT = ROOT / 'assets/levels/modules.emml'
 
 
