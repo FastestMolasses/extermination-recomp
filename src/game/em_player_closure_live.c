@@ -3531,6 +3531,7 @@ int em_player_closure_live_bind(EmPlayerStatesBinding *b, EmPlayerStageHost *sta
     set1(b, 0x07, em_player_fall_state7, &L.fall, NULL, NULL, NULL, "001639E0");
     set1(b, 0x08, em_player_fall_state8, &L.fall, NULL, NULL, NULL, "00163B40");
     set1(b, 0x09, em_player_hang_state, &L.hang, NULL, NULL, NULL, "001647D0");
+    set1(b, 0x0A, hang_up_state, NULL, NULL, NULL, NULL, "001645D0");
     set1(b, 0x0C, em_player_ladder_climb_state, &L.lc, &L.lc_scene.spad3A20[0], lc_pre, lc_post, "001662D0");
     set1(b, 0x0E, em_player_closure_state0E, &L.c0e, &L.c0e_scratch.s3A20, NULL, closure_post, "00168050");
     set1(b, 0x13, em_player_closure_state13, &L.c0e, &L.c0e_scratch.s3A20, NULL, closure_post, "0016B790");
