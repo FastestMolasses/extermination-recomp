@@ -2992,6 +2992,17 @@ shooting and knifing anywhere also run without a fault.
   microcode's, pixels not compared with an original frame); E46S4's feed_end is derived,
   not probed.
 
+### A person's own play, from the title (VERIFIED for position, heading and area)
+
+The user's own 49-minute take on the original (`run1`, recorded with the decomp's
+`tools/record_original_play.py`: AREA11, AREA01, AREA00, AREA02, AREA04, AREA22, AREA06
+and back through AREA01, AREA22 and AREA04) plays in the port from its pad input with
+no restart or save load, and `python3 tools/watch_takes.py --check run1` puts every
+compared tick on the recording: 170,833 of 170,833, all 529 segments exact, to
+"recording used up" (2026-11-01, fix-run2). The comparison covers the player's
+position, heading, area and sub-area per tick; loads, cutscenes and menus keep each
+side's own length, so their ticks are not compared. `test1` likewise: 17,212 of 17,212.
+
 ## What we deliberately do not emulate
 
 The port reproduces the game, not the console. The rule (user, 2026-09-27):
