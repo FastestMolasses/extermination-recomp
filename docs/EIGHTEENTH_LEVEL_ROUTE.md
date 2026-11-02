@@ -398,6 +398,13 @@ k01_01's), so its table is not to be used until that is understood.
   player its attacks cost 20 and then 5..10 each (k01_s4_fight: 48 -> 4 in about 800 frames); the
   first probe died at (716.8, 918.2) on the way from (700, 975) to (720, 930). Shooting them down
   is not possible with the ammunition held (600 hit points, 72 rounds).
+- **k01_05's end is next to a creature**: one 00141D20 stands about 42 units south (657.9, 686.5,
+  972.9) at the last frame. A probe that walked east along z 1000 toward the block 2086 (a ledge
+  climb onto its top at about 710 from its west face x 754..765, then the ridge from the north) was
+  caught at (677.8, 1008.2): health 58 -> 16 by f580 and 0 by f980, so the block and the ridge from
+  the north were not tried. A probe that went south-west first ((690, 960), then round the plane's
+  west and north sides) was not attacked until the east corridor. The next run should leave the
+  creature's side first.
 - The four turrets (overlay 0x823FC0, the AREA19 0x827DD0 family; at (509.1, 725.2, 1050.5),
   (482.2, 725.2, 1111), (514.8, 725.2, 1005.4) and (421, 494.2, 1362.8)) did not hit the player on
   any walk past them (read: not further).
