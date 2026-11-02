@@ -60,6 +60,7 @@ indices of the area and sub named (`tools/route_census.py graph`).
   (the replays matched the traces: largest position difference at the 50-row samples 0.102 in
   a04e_00, 0.000 in the others). `tools/record_rand_replay.py` has no entry for these area
   changes (its BEATS table names the earlier entries only); not run.
+- Side beat `a04e_s1_hoist` (section 7b item 3) never passed; its tries are in `_failed/`.
 - `mid_route_beats.py --single` was not run: this worktree has no port build, and no port lane has
   shown AREA02 sub 2 or AREA01 sub 1 loading yet.
 - Scratch readers (not committed): the grid read of a snapshot's `eeMemory.bin` through
@@ -198,11 +199,67 @@ trace is in `_failed/`, overwritten by the next try). Leads, not ground truth.
    60) showed no stair or ladder from the lower level in the grid (one ladder, attribute 0x32 at
    (-70, -719), climbs to y 25 only).
 
+## 7b. Round 2: the way to item 0x24 (read, then tried)
+
+The coordinator's order of attack, item by item. Marks as in WORLD_GRAPH.md (BM, NM, C; "grid" =
+the collision grid D_0028A598[0] of a beat's snapshot, a lead until walked).
+
+1. **The platform [68] cannot carry the player up from the hall (C, grid, measured).** 0x825510:
+   subtype 0x11 is the platform, at y 14.9 when flag 0x65 (D_008107BD) is 0 and 55 when not; it
+   moves only when counter 0x65 (D_0081083D) is 1, by script 0x82C060 (up) or 0x82C120 (down), each
+   ending with counter 0x65 = 2; its collision is an actor-attached hull (001A2370, NM), not an
+   entry of the movable-object table D_00275B8C. The console [69] (subtype 0, descriptor 0x82C1E0:
+   radius 10, height 20, facing +x at (320, 29.9, 342.5)) starts script 0x82BD60, which places the
+   player at the console, waits, sets counter 0x65 = 1 (measured at f630, 164 frames after the
+   press) and ends with flag 0x0D = 0xFF (f674). The platform rose f630..f844. Its rest is a pit at
+   x 317..350, z 245..275 in the hall floor, 82 units from the console's Use point: the player cannot
+   be on it when it starts, and by the time a run reaches it (about f765) it is about 25 above the
+   floor. Even up, it joins only the balcony's north part (x 320..350, z 140..245, and the strip z
+   140..170 to x 405): the south ledge with door [44] (x 320..350, z 335..380) is 60 units further
+   south at the same height, and the north strip ends at x 405 over the north room's corridor (x 410
+   ..470), 65 units short of the east part (x 470..560).
+2. **The sub-1 conveyor's walls are static.** Nodes 741..745 (attribute 0x51, a box x 424..458, z
+   245..275, y 12.9..97.7) are in sub 1's own grid (the port's `assets/levels/04/sub1/area04.emcl`
+   has them; sub 0's `assets/area04/sub0/area04.emcl` has other 0x51 posts, not these). No AREA04
+   overlay function calls the cell-directory toggle 0019C6F0. The mound's actors are deferred g[19],
+   g[20] (001BF6B0) and g[21] (001C06E0), condition 1. Nothing found that removes the walls.
+   **AREA07's lift arrival** (entry 10) is the north room; its only ways out are the slider [51] and
+   the lift. **AREA01's upper floor**: the grid of a02c_01's snapshot has no floor between y 26 and
+   59 anywhere (x -400..400, z -1400..200); the one ladder (attribute 0x32 at (-70, -719)) ends at
+   y 25, and the walkway at y 60 (z -680..-665) passes over the lower floor. Not walked.
+3. **The rest of the hall** (grid; one try, a04e_s1_hoist, `_failed/`): the north strip's two
+   machine blocks (x 368..383.7 and 389.4..405, z 139..169.6, top 47, under the balcony's 49.9),
+   the pillar x 390..404, z 169.5..183.5 (top 53.9, at the balcony's unfenced edge x 390..404), the
+   console [37] (0x825880, C: script 0x82C1F0, then after 120 frames the lift [36] 0x825B00 moves
+   +10, to y 24.9). The walk to [37] was stopped by the pillar and by the hall's creatures (55 -> 30
+   in one try, 55 -> 0 in another). Whether [36] leads onto the pillar was not seen.
+4. **Item 0x24 before AREA07 (code).** [53] (0x827550, C) needs flag 0x25 == 0xFF (001BA1C0, BM)
+   and flag 0x26 clear. Flag 0x25 has two writers and both need the other lab first: AREA07's [17]
+   (0x823990, C) runs 0x823C20 (script 0x826930: flags 0x15 and 0x25) only when flag 0x18 is 0xFF,
+   else 0x823B40 (flag 0x15 only); AREA08's sub-3 [2] (0x8245E0, C) runs 0x824870 (script 0x8268E0:
+   flags 0x18 and 0x25, items 0x13 and 0x14) only when flag 0x15 is 0xFF, else 0x824790 (flag 0x18
+   only). So flag 0x25 is set by whichever lab comes second. AREA07 is reached only from AREA04
+   sub 1's north room (the socket [61] needs item 0x29, which only sub 1's [1] 0x825040 gives, in
+   the hall), and the hall is entered only from AREA03's door [24] onto the south ledge (one way down)
+   or from AREA02 sub 2. From the hall no way back to AREA03 (and so to AREA08 or AREA19) was found.
+   **No branch takes item 0x24 before AREA00 on the ways found**: with AREA07 first, AREA08 is
+   behind the hall; with AREA08 first, flag 0x25 is set inside the hall's cluster.
+5. **The cluster after AREA07** (grid and code): the hall and north room, AREA07, AREA02 sub 2 (doors
+   [22], [25]), AREA01 sub 1's room at entry 3 (doors [11] and [12] to AREA02, the bridge south), and
+   AREA02 sub 1. AREA01's bridge (0x8261A0 -> 0x826200, C): the half's tilt is 10 degrees when flag
+   0x06 is set, 60 when flag 0x08 is set (the fourth level's crossing set it, a01r_02), and 0 when
+   flag 0x2C is set (AREA00 [28]'s script, AREA14 [5]): the way south from entry 3 to AREA01's door
+   [9] (AREA00) is the raised half until then (read, not walked). If that holds, AREA00 itself is
+   out of reach from this cluster, and the second half's first step could not be made by any player
+   who did AREA07, which a shipped game would not allow. The likeliest gap is one of the reads in
+   items 1, 3 and 5 (the bridge's raised half, the pillar and lift [36], the platform), each a lead
+   to settle on foot with more health.
+
 ## 8. Where the recording stops, and what the next run needs
 
 a02c_01 ends in AREA01 sub 1 at entry 3 (-25, 0, -210.1), health 60, infection 95, 21 in the gun
 and 51 held, no healing item. It stops there because the derived segment needs item 0x24 first,
-and the next steps toward it are open (section 7 items 1 and 2).
+and no way to it from this state was found (section 7b).
 
 **The order the code now gives** (WORLD_GRAPH.md section 7 step 7, revised): item 0x24 from AREA19
 sub 1 [53] (the tower's y-450 landing, flag 0x25 set) -> AREA00 sub 2: the reader [19] at (-185,
