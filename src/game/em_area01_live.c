@@ -1210,7 +1210,9 @@ static int worker(void *ctx,EmArea01Call *c)
         if(em_area01_live_resume(l)<0)return -1;
         return worker_result(l,rc,c->function);
     }
-    if(c->function==0x001F6B30u) {
+    /* 001F6B60 (AREA17's 0x823BA0) is 001F6B30 word for word
+     * (test_level17_boot_reference checks the ELF). */
+    if(c->function==0x001F6B30u || c->function==0x001F6B60u) {
         if(em_area01_live_suspend(l)<0)return -1;
         int rc=em_effects_live_001F6B30(em_scene_state());
         if(em_area01_live_resume(l)<0)return -1;

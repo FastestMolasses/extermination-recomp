@@ -131,6 +131,11 @@ static int spawn02(EmArea01Runtime *r, uint32_t sp, uint32_t fn, uint32_t a0, ui
 #include "game/em_level16_creature.h"
 #include "game/em_level16_beast.h"
 #include "game/em_level16_boot.h"
+#include "game/em_level17_boot.h"
+#include "game/em_area17_creature.h"
+#include "game/em_area21_boot.h"
+#include "game/em_area21_creature_b.h"
+#include "game/em_area21_creature_c.h"
 #include "game/em_owner_services_original.h"
 #include "game/em_sdk_math_original.h"
 #include "game/em_pose_host_workers.h"
@@ -626,6 +631,7 @@ static int dispatch_math02(EmArea01Runtime *r, EmArea01Call *c, int *rc)
 #include "game/em_area01_runtime_area08.inc"
 #include "game/em_area01_runtime_later.inc"
 #include "game/em_area01_runtime_area03x.inc"
+#include "game/em_area01_runtime_second_half.inc"
 
 int em_area01_runtime_later(EmArea01Runtime *r, EmArea01Call *c, int *rc)
 {
@@ -666,6 +672,8 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
         return rc;
     if (r->area == 0x13 && c->function >= 0x00823500u)
         return dispatch_area19(r, c);
+    if ((r->area == 0x0E || r->area == 0x15) && dispatch_second_half(r, c, &rc))
+        return rc;
     /* The creature family's boot entries and the script actors serve AREA13,
      * AREA15, AREA03, AREA19, AREA08 and AREA07 too (their overlay addresses went
      * to their own dispatch or reach the host's fail-stop below). */

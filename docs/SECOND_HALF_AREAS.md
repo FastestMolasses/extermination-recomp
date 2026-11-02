@@ -75,6 +75,14 @@ AREA21_OVERLAY.md; read an owner's C there before translating it.
   | AREA20 | 0x826830 .. 0x8273B0 | 2 |
   | AREA21 | 0x82B240 .. 0x82D110 | 7 |
 
+- **Boot behaviours** (lane BOOT2, 2026-11-02, branch `boot2`; section 6):
+  all six that appeared nowhere are translated from the decomp C, each
+  proven by an original-instruction oracle and bound through the later
+  dispatch: 001C2420 and 001C4A00 (`em_level17_boot`), AREA17's creature
+  00133E30 (`em_area17_creature`), AREA21's creatures 00137830
+  (`em_area21_boot`, with the helpers 001283D0 and 0014C220 .. 0014D1E0 the
+  other two share), 0014EC00 (`em_area21_creature_b`) and 00151590
+  (`em_area21_creature_c`). Nothing of them has run live in an area.
 - **Owner translations: none.** No overlay owner of these areas was
   translated: an original-instruction oracle for an owner needs either a
   capture of the area or a designed machine state that this lane could not
@@ -157,11 +165,11 @@ sources. Read it as a work list, not as evidence:
 | Area | Subs | Placements | Behaviours (boot / overlay) | Boot behaviours in a ledger or defined | Chains | Doors used |
 |---|---|---|---|---|---:|---:|
 | AREA14 | 0 | 37 | 8 / 8 | 8 of 8 | 7 | 0 |
-| AREA16 | 0, 1 | 18 + 73 | 24 / 14 | 23 of 24 | 10 | 7 |
-| AREA17 | 0 | 43 | 9 / 15 | 7 of 9 | 7 | 0 |
+| AREA16 | 0, 1 | 18 + 73 | 24 / 14 | 24 of 24 | 10 | 7 |
+| AREA17 | 0 | 43 | 9 / 15 | 9 of 9 | 7 | 0 |
 | AREA18 | 0 | 32 | 11 / 0 | 11 of 11 | 0 | 1 |
-| AREA20 | 0 | 66 | 17 / 4 | 15 of 17 | 2 | 1 |
-| AREA21 | 0 | 63 | 16 / 25 | 12 of 16 | 7 | 3 |
+| AREA20 | 0 | 66 | 17 / 4 | 17 of 17 | 2 | 1 |
+| AREA21 | 0 | 63 | 16 / 25 | 16 of 16 | 7 | 3 |
 <!-- second_half:summary end -->
 
 Notes the tables do not carry (decomp WORLD_GRAPH.md section 6):
@@ -250,7 +258,7 @@ Overlay functions: 14 (AI 1, C 12, NM 1; decomp status at the census commit); no
 | 001C06E0 | boot | sub1 g 0x8287d0 [15], sub1 g 0x8287d0 [16] | `em_level9_port_anim.c` |
 | 001C1030 | boot | sub0 g 0x828480 [15], sub0 g 0x828480 [16], sub0 g 0x828480 [17] | `em_level9_port_anim.c` |
 | 001C1A80 | boot | s0[15], s0[16], s1[71], s1[72] | `em_area04_port.c` |
-| 001C2420 | boot | s0[0], s0[12], s1[12] | **missing** |
+| 001C2420 | boot | s0[0], s0[12], s1[12] | `em_level17_boot.c` |
 | 001C4820 | boot | s0[6], s1[35], s1[36], s1[37], s1[38], s1[40] (+15) | census: live (level 1); `em_area11_bindings.c`, `em_status_ui_leftovers.c` |
 | 001C4AF0 | boot | s1[8] | `em_area02_math.c` |
 | 00219550 | boot | sub0 g 0x828480 [0], sub0 g 0x828480 [1], sub1 g 0x8287d0 [0], sub1 g 0x8287d0 [1], sub1 g 0x8287d0 [2], sub1 g 0x8287d0 [3] (+6) | census: live (level 1) |
@@ -293,7 +301,7 @@ Overlay functions: 14 (AI 1, C 12, NM 1; decomp status at the census commit); no
 | 1 | [2] | 0x1bb860 | 5 | room move: entries 4 / 3 |
 | 1 | [3] | 0x1bc350 | 6 | room move: entries 6 / 5 |
 
-Boot functions reachable from this area's owners and not in the first-level census: 273 (145,244 bytes); the port defines or ledgers 255 of them; 7 more are named in the sources only (a comment, a table or another name: read each): 001B1CE0, 001C1500, 001C1570, 001CAE30, 001CAF70, 001CB070, 001CB130; 11 appear nowhere: 001C2420, 001CACC0, 001D39A0, 001D3DA0, 001DAC90, 001DAE10, 001DAFA0, 001DB040, 001DB240, 001DB250, 001DB480.
+Boot functions reachable from this area's owners and not in the first-level census: 273 (145,244 bytes); the port defines or ledgers 256 of them; 7 more are named in the sources only (a comment, a table or another name: read each): 001B1CE0, 001C1500, 001C1570, 001CAE30, 001CAF70, 001CB070, 001CB130; 10 appear nowhere: 001CACC0, 001D39A0, 001D3DA0, 001DAC90, 001DAE10, 001DAFA0, 001DB040, 001DB240, 001DB250, 001DB480.
 
 Overlay functions: 30 (AI 1, C 25, NM 4; decomp status at the census commit); none has a port translation.
 <!-- second_half:area16 end -->
@@ -303,11 +311,11 @@ Overlay functions: 30 (AI 1, C 25, NM 4; decomp status at the census commit); no
 <!-- second_half:area17 begin -->
 | Behaviour | Kind | Used by | Port |
 |---|---|---|---|
-| 00133E30 | boot | group 0x8263c0 [0] | **missing** |
+| 00133E30 | boot | group 0x8263c0 [0] | `em_area17_creature.c` |
 | 001551B0 | boot | s0[4] | census: live (level 1) |
 | 00156620 | boot | s0[9], s0[10], s0[11], s0[12], s0[13], s0[14] (+15) | census: live (level 1); `em_level9_port_exit.c` |
 | 0015AFA0 | boot | sub0 g 0x826280 [1], sub0 g 0x826280 [2], sub0 g 0x826280 [3], sub0 g 0x826280 [5], group 0x826500 [0], group 0x826560 [0] | census: live (level 1) |
-| 001C2420 | boot | s0[0], s0[1], s0[2], s0[3] | **missing** |
+| 001C2420 | boot | s0[0], s0[1], s0[2], s0[3] | `em_level17_boot.c` |
 | 001C4820 | boot | s0[32] | census: live (level 1); `em_area11_bindings.c`, `em_status_ui_leftovers.c` |
 | 001C5C90 | boot | s0[35] | census: live (level 1); `em_area11_roger.c`, `em_roger_actor_original.c` |
 | 001E3D90 | boot | group 0x826420 [0], group 0x826420 [1], group 0x826420 [2], group 0x826420 [3] | census: live (level 2); `em_area01_sys.c` |
@@ -342,7 +350,7 @@ Overlay functions: 30 (AI 1, C 25, NM 4; decomp status at the census commit); no
 |---|---|---|---:|---|
 | — | — | — | — | no door placement |
 
-Boot functions reachable from this area's owners and not in the first-level census: 111 (44,932 bytes); the port defines or ledgers 75 of them; 6 more are named in the sources only (a comment, a table or another name: read each): 00136630, 001B1CE0, 001CAE30, 001CAF70, 001CB070, 001CB130; 30 appear nowhere: 00133E30, 00133FD0, 00134090, 00134300, 00134500, 001348E0, 00134DC0, 00134FF0, 001352E0, 00135870, 00135D00, 00136140, 00136240, 00136490, 00136600, 001366E0, 001368D0, 00136C40, 00136CB0, 00136F20, 001370C0, 001373B0, 001C2420, 001CACC0, 001D39A0, 001D3DA0, 001E00F0, 001E0240, 001E04E0, 001F6B60.
+Boot functions reachable from this area's owners and not in the first-level census: 111 (44,932 bytes); the port defines or ledgers 102 of them; 6 more are named in the sources only (a comment, a table or another name: read each): 001B1CE0, 001CAE30, 001CAF70, 001CB070, 001CB130, 001F6B60; 3 appear nowhere: 001CACC0, 001D39A0, 001D3DA0.
 
 Overlay functions: 24 (AI 1, C 22, NM 1; decomp status at the census commit); none has a port translation.
 <!-- second_half:area17 end -->
@@ -390,9 +398,9 @@ Overlay functions: 1 (AI 1; decomp status at the census commit); none has a port
 | 001BC350 | boot | s0[2] | census: live (level 1) |
 | 001BECC0 | boot | sub0 g 0x826100 [26], sub0 g 0x826100 [27], sub0 g 0x826100 [28], sub0 g 0x826100 [29], sub0 g 0x826100 [30] | `em_level15_fountain.c` |
 | 001C1A80 | boot | s0[58], s0[59], s0[60], s0[61], s0[62], s0[63] (+2) | `em_area04_port.c` |
-| 001C2420 | boot | s0[0], s0[1] | **missing** |
+| 001C2420 | boot | s0[0], s0[1] | `em_level17_boot.c` |
 | 001C48C0 | boot | s0[40], s0[41], s0[42], s0[43], s0[44] | `em_area02_math.c` |
-| 001C4A00 | boot | s0[45], s0[46], s0[47], s0[48], s0[49], s0[50] | **missing** |
+| 001C4A00 | boot | s0[45], s0[46], s0[47], s0[48], s0[49], s0[50] | `em_level17_boot.c` |
 | 001C5C90 | boot | s0[33] | census: live (level 1); `em_area11_roger.c`, `em_roger_actor_original.c` |
 | 001E3D90 | boot | s0[34], s0[35], s0[36], s0[37], s0[38], s0[39] | census: live (level 2); `em_area01_sys.c` |
 | 00219550 | boot | sub0 g 0x826100 [0], sub0 g 0x826100 [1], sub0 g 0x826100 [2], sub0 g 0x826100 [3], sub0 g 0x826100 [4] | census: live (level 1) |
@@ -411,7 +419,7 @@ Overlay functions: 1 (AI 1; decomp status at the census commit); none has a port
 |---|---|---|---:|---|
 | 0 | [2] | 0x1bc350 | 0 | area change: area 0x04 entry 5 sub kept |
 
-Boot functions reachable from this area's owners and not in the first-level census: 262 (139,032 bytes); the port defines or ledgers 247 of them; 9 more are named in the sources only (a comment, a table or another name: read each): 001399F0, 0013B350, 001B1CE0, 001C1500, 001C1570, 001CAE30, 001CAF70, 001CB070, 001CB130; 6 appear nowhere: 001C2420, 001C4A00, 001C6190, 001CACC0, 001D39A0, 001D3DA0.
+Boot functions reachable from this area's owners and not in the first-level census: 262 (139,032 bytes); the port defines or ledgers 250 of them; 9 more are named in the sources only (a comment, a table or another name: read each): 001399F0, 0013B350, 001B1CE0, 001C1500, 001C1570, 001CAE30, 001CAF70, 001CB070, 001CB130; 3 appear nowhere: 001CACC0, 001D39A0, 001D3DA0.
 
 Overlay functions: 15 (AI 1, C 14; decomp status at the census commit); none has a port translation.
 <!-- second_half:area20 end -->
@@ -421,9 +429,9 @@ Overlay functions: 15 (AI 1, C 14; decomp status at the census commit); none has
 <!-- second_half:area21 begin -->
 | Behaviour | Kind | Used by | Port |
 |---|---|---|---|
-| 00137830 | boot | group 0x82a600 [0] | **missing** |
-| 0014EC00 | boot | group 0x82a540 [0] | **missing** |
-| 00151590 | boot | group 0x82a5a0 [0] | **missing** |
+| 00137830 | boot | group 0x82a600 [0] | `em_area21_boot.c` |
+| 0014EC00 | boot | group 0x82a540 [0] | `em_area21_creature_b.c` |
+| 00151590 | boot | group 0x82a5a0 [0] | `em_area21_creature_c.c` |
 | 001551B0 | boot | s0[10], s0[11], s0[12], s0[13], s0[14] | census: live (level 1) |
 | 00156620 | boot | s0[15], s0[16], s0[17], s0[18], s0[19], s0[20] (+6) | census: live (level 1); `em_level9_port_exit.c` |
 | 00158BD0 | boot | s0[28], s0[29], s0[31], s0[32], s0[34], s0[35] | census: verified-unbound (level 2), verified-unbound (level 3); `em_area01_exitb.c` |
@@ -432,7 +440,7 @@ Overlay functions: 15 (AI 1, C 14; decomp status at the census commit); none has
 | 00159970 | boot | s0[36], s0[39] | `em_area02_math.c` |
 | 00159B90 | boot | s0[37] | census: live (level 2); `em_area01_sys.c` |
 | 0015AFA0 | boot | sub0 g 0x82a380 [4], sub0 g 0x82a380 [5], sub0 g 0x82a380 [6], sub0 g 0x82a380 [8] | census: live (level 1) |
-| 001C2420 | boot | s0[0], s0[1], s0[2], s0[3], s0[4], s0[5] (+4) | **missing** |
+| 001C2420 | boot | s0[0], s0[1], s0[2], s0[3], s0[4], s0[5] (+4) | `em_level17_boot.c` |
 | 001C4820 | boot | s0[46] | census: live (level 1); `em_area11_bindings.c`, `em_status_ui_leftovers.c` |
 | 001C48C0 | boot | s0[48] | `em_area02_math.c` |
 | 001C4AF0 | boot | s0[41] | `em_area02_math.c` |
@@ -479,7 +487,7 @@ Overlay functions: 15 (AI 1, C 14; decomp status at the census commit); none has
 | 0 | [30] | 0x826bb0 | 1 | room move: entries 3 / 4 |
 | 0 | [33] | 0x826e60 | 2 | room move: entries 5 / 6 |
 
-Boot functions reachable from this area's owners and not in the first-level census: 276 (122,056 bytes); the port defines or ledgers 146 of them; 5 more are named in the sources only (a comment, a table or another name: read each): 001B1CE0, 001CAE30, 001CAF70, 001CB070, 001CB130; 125 appear nowhere: 0010BBF0, 0010BDB0, 0010BE50, 0010BE60, 0010C858, 0010C888, 0010C8B0, 0010C8E8, 0010C9C8, 0010C9F0, 0010CA30, 0010CA70, 0010CC08, 0010CD58, 0010D008, 0010D160, 0010D2C8, 0010D890, 00119AA0, 00119D38, 0011DB10, 0011DB58, 0011E878, 0011E938, 0011E990, 0011EBA8, 00120038, 001200E8, 00120408, 001209B0, 00120B38, 00121AF8, 00121BA0, 00121BD0, 00121E30, 00121EB8, 00121F78, 00121FB0, 001221E0, 001222E0, 00122458, 001224C0, 00122868, 00122BE8, 00122D80, 00122E68, 00122ED0, 00123620, 00124C68, 00124E18, 00125068, 00125758, 00125848, 001258E0, 00125FA8, 00126578, 00126C88, 00126EC8, 00126F20, 00126F88, 00127230, 00127500, 001275B8, 00127650, 001283D0, 00137830, 00137920, 00137A50, 00137C80, 00137E80, 00137EB0, 001381D0, 0014C220, 0014C2E0, 0014C3A0, 0014C490, 0014C680, 0014C9D0, 0014CCC0, 0014CD00, 0014CD30, 0014CDD0, 0014D1E0, 0014EC00, 0014ED10, 0014EDD0, 0014EEF0, 0014F390, 0014FBC0, 00150190, 00150260, 001504D0, 00150600, 00150820, 00150850, 00150900, 001509A0, 00150DA0, 00150F40, 00151200, 001513B0, 00151590, 001516B0, 00151770, 00151940, 00151E50, 00152040, 00152330, 00152660, 00152930, 00152B60, 00152CC0, 00152E80, 00152EB0, 00152F20, 00153180, 00153290, 00153540, 00153770, 001C2420, 001C6190, 001CACC0, 001CEEE0, 001D39A0, 001D3DA0.
+Boot functions reachable from this area's owners and not in the first-level census: 276 (122,056 bytes); the port defines or ledgers 203 of them; 5 more are named in the sources only (a comment, a table or another name: read each): 001B1CE0, 001CAE30, 001CAF70, 001CB070, 001CB130; 68 appear nowhere: 0010BBF0, 0010BDB0, 0010BE50, 0010BE60, 0010C858, 0010C888, 0010C8B0, 0010C8E8, 0010C9C8, 0010C9F0, 0010CA30, 0010CA70, 0010CC08, 0010CD58, 0010D008, 0010D160, 0010D2C8, 0010D890, 00119AA0, 00119D38, 0011DB10, 0011DB58, 0011E878, 0011E938, 0011E990, 0011EBA8, 00120038, 001200E8, 00120408, 001209B0, 00120B38, 00121AF8, 00121BA0, 00121BD0, 00121E30, 00121EB8, 00121F78, 00121FB0, 001221E0, 001222E0, 00122458, 001224C0, 00122868, 00122BE8, 00122D80, 00122E68, 00122ED0, 00123620, 00124C68, 00124E18, 00125068, 00125758, 00125848, 001258E0, 00125FA8, 00126578, 00126C88, 00126EC8, 00126F20, 00126F88, 00127230, 00127500, 001275B8, 00127650, 001CACC0, 001CEEE0, 001D39A0, 001D3DA0.
 
 Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commit); none has a port translation.
 <!-- second_half:area21 end -->
@@ -487,14 +495,15 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
 ## 5. Open
 
 - Every overlay owner of the six areas (66 behaviours, their op09 callbacks
-  and helpers) is untranslated; the area lanes translate them against
-  captures, the twins first.
-- Six boot behaviours appear nowhere in the port's sources (not even in a
-  comment): 001C2420 (AREA16, AREA17, AREA20, AREA21; the most used: 3 + 4 + 2
-  + 10 placements), 001C4A00 (AREA20, six placements), 00133E30 (AREA17's code
-  group 0x8263C0), 00137830, 0014EC00 and 00151590 (AREA21's code groups).
-  The other boot behaviours are in a census ledger or defined; those marked
-  only "defined" still need their oracle named before they count.
+  and helpers) but the three twins of section 6 is untranslated; the area
+  lanes translate them against captures. The twins are bound only in the
+  shared composition's dispatch; none of these areas runs there yet.
+- Every boot behaviour of the six areas is now in a census ledger or
+  defined (section 6 for the six BOOT2 added); those marked only "defined"
+  by an earlier lane still need their oracle named before they count. The
+  boot functions still listed as appearing nowhere (section 4's per-area
+  lines) are reached by overlay owners or shared draw/effect paths, not by
+  the boot behaviours.
 - The flagged op/sub pairs (0x0A sub 8, 0x0B sub 5, 0x12 sub 0, 0x13 subs 0
   and 1, 0x17 sub 0, 0x1A subs 0 and 1) are not checked against the
   handlers here.
@@ -503,3 +512,69 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   and AREA21 have no recording planned yet.
 - No live run has loaded any of these areas: the module pack, the state and
   the script windows are checked only by the oracle and the static export.
+
+## 6. Boot translations (lane BOOT2)
+
+Each module translates byte-matched decomp C (NEARMISS C where noted; the
+oracle runs the original instructions, so it decides) and has its own
+oracle on the shared harness (tools/test_level14_port_reference.py):
+the original code runs from the user's ELF over capture a03b_03_item2a
+(its AREA03 text and boot text checked against the user's files) with
+designed actor records in zero RAM; every callee outside the module is a
+hook with a scripted result (the vector and float helpers run as original
+code, their writes replayed). Compared per case: calls and arguments,
+memory at every call, the memory accesses between calls one for one in
+order, memory after the last store, a poisoned re-run, every reachable
+original word executed, the callee inventory and the fail-stop contract.
+All are bound through `em_area01_runtime_later.inc` (tools/gen_later_dispatch.py)
+with hook adapters in `em_mid_route_bridge.inc` (tools/gen_mid_route_bridge.py).
+
+| Module | Functions | Oracle (quick / EM_TEST_FULL=1) |
+|---|---|---|
+| `em_level17_boot` | 001C2420 (returns at once), 001C4A00 (001C48C0's states; state 1 gated by the scratchpad flag 0x70003B92 and D_008107D8[+3] against +0x56); AREA21's twins below; 001C6190 (001C6160(node) less 001281C0 of the float at +0x3C; AREA21's 0x823580 and 0x8237B0, and AREA20) | `make test-level17-boot-reference`: 384 cases, 104/104 words |
+| `em_area17_creature` | 00133E30 and 25 functions it reaches: 00133FD0 .. 001373B0, 001E00F0, 001E0240, 001E04E0 (NEARMISS C: 00134300, 001348E0, 00135D00, 001370C0, 001373B0, 001E00F0) | `make test-area17-creature-reference`: 889 / 1740 cases, every word but one dead delay slot (0x136F60: 00136F20's out-of-range selector, which its one caller never passes; the native faults there) |
+| `em_area21_boot` | 001283D0, 0014C220 .. 0014D1E0 (12 shared helpers), 00137830 with 00137920 .. 001381D0 (00137EB0 NEARMISS) | `make test-area21-boot-reference`: 648 / 1351 cases, every word |
+| `em_area21_creature_b` | 0014EC00 and 17 functions it reaches, 0014ED10 .. 001513B0 (00150F40 NEARMISS) | `make test-area21-creature-b-reference`: 1030 / 1696 cases, every word |
+| `em_area21_creature_c` | 00151590 and 17 functions it reaches, 001516B0 .. 00153770 | `make test-area21-creature-c-reference`: 621 / 1287 cases, every word |
+
+**Twins** (section 4's "twin of" rows), each compared word for word with the
+relocated fields unmasked, then bound in the shared composition
+(`em_area01_runtime_second_half.inc`, `dispatch_second_half`, areas 0x0E
+and 0x15 only):
+
+| Owner | Twin of | Words | Translation and oracle |
+|---|---|---|---|
+| AREA14 0x825AA0 (sub 0 group 0x826180 [14], [16], [18], [20]) | AREA03 0x825290, AREA11 0x827490, AREA19 0x8298D0 | all 104 equal, no overlay-relocated word | `em_area03_route_00825290`; `make test-area03-route-reference` runs every 0x825290 case again on AREA14's header and text loaded over the same images (72/72 words) |
+| AREA21 0x823A10 (group 0x82B500 [2]), 0x823AB0 (group 0x82BA70 [23]) | AREA01 0x8239C0, AREA19 0x825030 | 35 of 36 equal; the one that differs is the rate's float immediate: 40.0 and 8.0 (AREA01's and AREA19's 5.0), so AREA01's translation (which fixes 5.0) is not reused | `em_level17_boot_a21_00823A10` / `_00823AB0`; `make test-level17-boot-reference` runs them on AREA21's header and text over the capture (27/27 words each; a 5.0 mutation fails) |
+
+Section 4's tables still show these rows as missing: the generator counts an
+overlay owner only through a port file of its own area.
+
+**The rest of the reachable boot functions** (section 4's lines for AREA17
+and AREA21), by the owners that reach them:
+- 001F6B60 (AREA17's [30] 0x823BA0) is 001F6B30 word for word (the test
+  checks the ELF): the host binds it to em_effects_live_001F6B30.
+- 001CACC0, 001D39A0, 001D3DA0 are reached from every area's owners,
+  the first level's included, only through pointers (no direct call path
+  in the census): stopped here, as speculative.
+- AREA21's 0010BBF0 .. 00127650 (lowmem, SDK): 001FBC50 (0x827040, the
+  ending request) reaches 00119AA0, the sound library, and 0x828700 /
+  0x8297C0 call 0010BBF0 (sceSifSetDma); the others 0x827250 reaches, only through
+  pointers. The port's sound layer is native, not a translation of the SDK;
+  whether any of them must be translated is the AREA21 lane's question with
+  a capture of the ending.
+- 001CEEE0 (gs upload) is reached only from 0x825C70, which nothing names
+  statically: not translated.
+
+Notes for the area lanes:
+- The creature modules call 001283D0 and 0014D1E0 (em_area21_boot) and
+  each other's boot callees through the runtime, by address.
+- Hooks whose port signatures differ between headers were taken as the
+  oracle checked them at the original's call sites: 0011E620 (two floats
+  in, a float out), 001DA6A0 (a plain word: 00134090 passes the word at
+  0x275B44), 0011E0A8 (a0 the integral part's address, f12 the value, a
+  float result).
+- The names in the modules' comments ("spit", "haze", "lunge") describe
+  what the code does; they are not verified game semantics.
+- No capture of these areas exists yet: the oracles prove the translations
+  against the original instructions, not the creatures' behaviour in a run.
