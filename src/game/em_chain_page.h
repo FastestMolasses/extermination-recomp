@@ -85,6 +85,13 @@
  * every slot-0xFFF pass so, each in its place in the page
  * (em_chain_page_live).
  *
+ * Object units (`object_pass`; docs/CHAIN_PAGE.md section 6.6): the draw
+ * methods of kinds 8, 9 and 10 send their own GS state and environment, and
+ * two of them read a copy of the frame so far, so such a unit is a pass too:
+ * walked with list mode's registers, its CALL anywhere on the page, its
+ * primitives handed to the GS model with their environment. Unlike a
+ * slot-0xFFF CALL it is not in pass_calls: the caller recognises it.
+ *
  * The VU1 registers, data memory, the VIF cycle and the GS drawing state
  * start unset at every page: the page programs read only what the page
  * uploads, and every drawing state a captured primitive uses is set earlier
@@ -136,6 +143,7 @@ extern "C" {
 #define EM_CHAIN_PAGE_RIPPLE    0x00234B00u   /* AREA01 ripple surface (001E7D20) */
 #define EM_CHAIN_PAGE_KIND6     0x0023D930u   /* D_0023D930: 001CFBE0 kind 6 (AREA01 near fire) */
 #define EM_CHAIN_PAGE_SURFACE   0x00234FE0u   /* AREA00 surface (001E9280, 0015AB00's) */
+#define EM_CHAIN_PAGE_METHOD10  0x0023D4D0u   /* the draw method of kind 10 (001D42E0) */
 
 enum {
     EM_CHAIN_PAGE_OK = 0,
@@ -151,8 +159,10 @@ enum {
 
 #define EM_CHAIN_PAGE_SKIP_MAX 64u
 #define EM_CHAIN_PAGE_UNITS_MAX 512u
-#define EM_CHAIN_PAGE_AGAIN_MAX 16u      /* environment-again marks of a pass */
+#define EM_CHAIN_PAGE_AGAIN_MAX 16u      /* the tick log's marks               */
+#define EM_CHAIN_PAGE_MARKS_MAX 2048u    /* environment-again marks of a page  */
 #define EM_CHAIN_PAGE_PASSES_MAX 4u      /* slot-0xFFF CALLs of one page       */
+#define EM_CHAIN_PAGE_WALKED_MAX 1024u   /* passes walked: those + object units */
 #define EM_CHAIN_PAGE_DRAW_ENV 0x190u    /* one draw environment of bank A    */
 #define EM_CHAIN_PAGE_DRAW_ENV_QWC 0x19u /* 001D1F20's REF of it              */
 
@@ -164,6 +174,10 @@ typedef const uint8_t *(*EmChainPageRead)(void *ctx, uint32_t address, uint32_t 
  * out[0 .. capacity) (*count of them). 1: a unit; 0: not one (the CALL is
  * walked); -1: a fault. */
 typedef int (*EmChainPageUnit)(void *ctx, uint32_t address, EmGfxGsPrim *out, uint32_t capacity, uint32_t *count);
+/* A top-level CALL's target that is an object unit of a draw method kind 8,
+ * 9 or 10 (001CAFA0, 001CB070, 001CB140, 001CB200's on channel 3): the walk
+ * follows it as a pass (below). 1: one; 0: not. */
+typedef int (*EmChainPageObjectPass)(void *ctx, uint32_t address);
 
 typedef struct {
     uint32_t transfers;       /* DMA tags walked                          */
@@ -199,6 +213,8 @@ typedef struct {
     uint32_t pass_direct;     /* of the DIRECT packets, the passes'          */
     uint32_t again;           /* the passes' REFs of the frame's draw environment */
     uint32_t mscal_surface;   /* AREA00 surface batches (D_00234FE0; MSCAL + MSCNT) */
+    uint32_t mscal_method10;  /* draw method kind 10 batches (D_0023D4D0)    */
+    uint32_t object_passes;   /* of `passes`, the object units'              */
 } EmChainPageCounts;
 
 /* One vertex's Q provenance, parallel to EmGfxGsPrim.v (1: the Q of its
@@ -225,6 +241,9 @@ typedef struct {
     const uint32_t *pass_calls;
     uint32_t pass_count;
     uint32_t draw_envs, draw_env_slot;
+    /* the object units walked as passes (NULL: none; needs draw_envs) */
+    EmChainPageObjectPass object_pass;
+    void *object_pass_ctx;
     /* output (caller-owned arrays of prim_capacity) */
     EmGfxGsPrim *prims;
     EmChainPageQ *prim_q;     /* may be NULL */
@@ -245,9 +264,9 @@ typedef struct {
      * pass_first[k] + pass_prims[k]); the environment-again marks: again[m]
      * is the index of the primitive the m-th precedes (its pass's end when
      * none follows it there), again_pass[m] the pass it is in */
-    uint32_t pass_target[EM_CHAIN_PAGE_PASSES_MAX];
-    uint32_t pass_first[EM_CHAIN_PAGE_PASSES_MAX], pass_prims[EM_CHAIN_PAGE_PASSES_MAX];
-    uint32_t again[EM_CHAIN_PAGE_AGAIN_MAX], again_pass[EM_CHAIN_PAGE_AGAIN_MAX];
+    uint32_t pass_target[EM_CHAIN_PAGE_WALKED_MAX];
+    uint32_t pass_first[EM_CHAIN_PAGE_WALKED_MAX], pass_prims[EM_CHAIN_PAGE_WALKED_MAX];
+    uint32_t again[EM_CHAIN_PAGE_MARKS_MAX], again_pass[EM_CHAIN_PAGE_MARKS_MAX];
     uint32_t again_count;
     uint32_t fault;           /* EM_CHAIN_PAGE_FAULT_*                    */
     uint32_t fault_address;   /* the tag, VIF code or GIF tag address     */

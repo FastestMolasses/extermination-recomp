@@ -94,7 +94,7 @@ static int pass_target(const EmChainPage *p, uint32_t addr)
 {
     for (uint32_t k = 0; k < p->pass_count && k < EM_CHAIN_PAGE_PASSES_MAX; ++k)
         if (p->pass_calls[k] == addr) return 1;
-    return 0;
+    return p->object_pass ? 2 * (p->object_pass(p->object_pass_ctx, addr) != 0) : 0;
 }
 
 static int skipped(const EmChainPage *p, uint32_t addr)
@@ -168,14 +168,16 @@ static int dma(Walk *w, uint32_t start)
                 next = cur + 16u + 16u * qwc;
                 break;
             }
-            if (depth == 0 && pass_target(p, addr)) {
+            const int passed = depth == 0 ? pass_target(p, addr) : 0;
+            if (passed) {
                 /* a pass: followed, its data in pass mode; each target
                  * once */
                 for (uint32_t k = 0; k < p->counts.passes; ++k)
                     if (p->pass_target[k] == addr) return fault(w, EM_CHAIN_PAGE_FAULT_DMA, cur, addr);
-                if (p->counts.passes >= EM_CHAIN_PAGE_PASSES_MAX)
-                    return fault(w, EM_CHAIN_PAGE_FAULT_CAPACITY, cur, EM_CHAIN_PAGE_PASSES_MAX);
+                if (p->counts.passes >= EM_CHAIN_PAGE_WALKED_MAX)
+                    return fault(w, EM_CHAIN_PAGE_FAULT_CAPACITY, cur, EM_CHAIN_PAGE_WALKED_MAX);
                 if (mark_seg(w, cur, addr, MARK_PASS) < 0) return -1;
+                if (passed == 2) p->counts.object_passes++;
                 p->pass_target[p->counts.passes++] = addr;
                 in_pass = 1;
                 seg_pass = 1;
@@ -644,6 +646,7 @@ static int dynamic_run(Walk *w, uint32_t top, uint32_t at)
 #define FLOOR_CODE   0x00234610u   /* D_002345E0's MPG (001E9E60's floor fields) */
 #define RIPPLE_CODE  0x00234B30u   /* D_00234B00's MPG (001E7D20's ripple surface) */
 #define SURFACE_CODE 0x00235010u   /* D_00234FE0's MPG (001E9280's AREA00 surface) */
+#define METHOD10_CODE 0x0023D500u  /* D_0023D4D0's MPG (the draw method of kind 10) */
 
 /* A class-2 object unit at its CALL (see the header): its primitives (the
  * caller's run of it), then the state it leaves. */
@@ -685,6 +688,13 @@ static int unit(Walk *w, int index, uint32_t at)
     return 0;
 }
 
+/* The object-method programs (em_vu1_page_programs.h): a TOPS-relative
+ * batch, MSCAL then MSCNT. */
+static int method_program(uint32_t program)
+{
+    return program == EM_CHAIN_PAGE_METHOD10;
+}
+
 /* Pass mode: a pass starts (its CALL): its environment is its own. The
  * marks come in the DMA walk's order, so the n-th is pass_target[n]'s. */
 static void pass_start(Walk *w, uint32_t n)
@@ -701,8 +711,8 @@ static void pass_start(Walk *w, uint32_t n)
 static int pass_again(Walk *w, uint32_t at)
 {
     EmChainPage *p = w->p;
-    if (p->again_count >= EM_CHAIN_PAGE_AGAIN_MAX)
-        return fault(w, EM_CHAIN_PAGE_FAULT_CAPACITY, at, EM_CHAIN_PAGE_AGAIN_MAX);
+    if (p->again_count >= EM_CHAIN_PAGE_MARKS_MAX)
+        return fault(w, EM_CHAIN_PAGE_FAULT_CAPACITY, at, EM_CHAIN_PAGE_MARKS_MAX);
     p->again_pass[p->again_count] = w->pass_index;
     p->again[p->again_count++] = p->prim_count;
     p->counts.again++;
@@ -743,7 +753,8 @@ static int vif(Walk *w)
                 ((imm & 0x8000u) && w->program != EM_CHAIN_PAGE_DYNAMIC &&
                  w->program != EM_CHAIN_PAGE_DYNAMIC_CLIP && w->program != EM_CHAIN_PAGE_LEVEL &&
                  w->program != EM_CHAIN_PAGE_BOX_CLIP && w->program != EM_CHAIN_PAGE_FLOOR &&
-                 w->program != EM_CHAIN_PAGE_RIPPLE && w->program != EM_CHAIN_PAGE_SURFACE) ||
+                 w->program != EM_CHAIN_PAGE_RIPPLE && w->program != EM_CHAIN_PAGE_SURFACE &&
+                 !method_program(w->program)) ||
                 (w->cycle_set && (w->wl == 0u || w->wl > w->cl)))
                 return fault(w, EM_CHAIN_PAGE_FAULT_VIF, at, v);
             /* Before the page's first STCYCL the cycle is the frame's (the
@@ -806,6 +817,8 @@ static int vif(Walk *w)
                 w->program = EM_CHAIN_PAGE_RIPPLE; w->mpg_parts = 1; w->floor_ran = 0;
             } else if (first == SURFACE_CODE && cnt == 142u && imm == 0u) {
                 w->program = EM_CHAIN_PAGE_SURFACE; w->mpg_parts = 1; w->floor_ran = 0;
+            } else if (first == METHOD10_CODE && cnt == 129u && imm == 0u) {
+                w->program = EM_CHAIN_PAGE_METHOD10; w->mpg_parts = 1; w->floor_ran = 0;
             } else if (first == LANE_CODE && cnt == 138u && imm == 0u) {
                 w->program = EM_CHAIN_PAGE_LANE; w->mpg_parts = 1;
             } else if (w->call && first == GRID_CODE && cnt == 79u && imm == 0u) {
@@ -843,7 +856,7 @@ static int vif(Walk *w)
              * its end bit, whose branch returns to micro 0: only after a
              * batch of its own. */
             const int floor_cnt = (w->program == EM_CHAIN_PAGE_FLOOR || w->program == EM_CHAIN_PAGE_RIPPLE ||
-                                   w->program == EM_CHAIN_PAGE_SURFACE) &&
+                                   w->program == EM_CHAIN_PAGE_SURFACE || method_program(w->program)) &&
                                   w->floor_ran;
             if ((cmd == 0x14u && imm != 0u) || !w->program || (cmd == 0x17u && !dynamic && !floor_cnt))
                 return fault(w, EM_CHAIN_PAGE_FAULT_PROGRAM, at, v);
@@ -868,6 +881,10 @@ static int vif(Walk *w)
                 p->counts.mscal_surface++;
                 w->floor_ran = 1;
                 rc = em_vu1_surface_program_mscal(&p->regs, p->dmem, kick, w, top);
+            } else if (method_program(w->program)) {
+                p->counts.mscal_method10++;
+                w->floor_ran = 1;
+                rc = em_vu1_method_program_mscal(EM_VU1P_METHOD10, &p->regs, p->dmem, kick, w, top);
             } else if (w->program == EM_CHAIN_PAGE_LANE) {
                 const uint32_t before = p->counts.prim_type[4];
                 p->counts.mscal_lane++;
@@ -941,7 +958,7 @@ static int run(EmChainPage *p, uint32_t start, int list, int call)
     if (!p) return -1;
     if (!p->read || !p->prims || (p->skip_count && !p->skip_calls) || p->skip_count > EM_CHAIN_PAGE_SKIP_MAX ||
         p->pass_count > EM_CHAIN_PAGE_PASSES_MAX || (p->pass_count && !p->pass_calls) ||
-        (p->pass_count && (list || !p->draw_envs || p->draw_env_slot > 1u))) {
+        ((p->pass_count || p->object_pass) && (list || !p->draw_envs || p->draw_env_slot > 1u))) {
         p->fault = EM_CHAIN_PAGE_FAULT_ARGS;
         return -1;
     }

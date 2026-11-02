@@ -29,6 +29,7 @@ static struct {
     EmChainPageQ q[EM_CHAIN_PAGE_LIVE_PRIMS];
     EmGfxGsEnv env[EM_CHAIN_PAGE_LIVE_PRIMS];
     uint32_t skip[EM_CHAIN_PAGE_PASSES_MAX];
+    uint32_t again[EM_CHAIN_PAGE_MARKS_MAX];
     uint32_t fault;
     EmChainPageLiveLog log;
     struct { uint32_t address, size; } reads[READS_MAX];
@@ -63,6 +64,8 @@ const uint8_t *em_chain_page_live_read(uint32_t address, uint32_t size)
         p = em_aim_fire_tables_bytes(address, size);
         if (!p && em_aim_fire_tables_load() == 0) p = em_aim_fire_tables_bytes(address, size);
     }
+    /* The blocks this frame's draw-method units REF (the owners' models). */
+    if (!p) p = em_owner_draw_live_page_method_bytes(address, size);
     /* The library models' blocks (the Roger export's D_0028A56C spans,
      * read only): the gun lamp's cone shells (001D9530's 001D4F30 /
      * 001D4A90 REF the blocks of models 0x10 / 0x11 / 0x16 into channel 3). */
@@ -172,6 +175,9 @@ static int page_unit(void *ctx, uint32_t address, EmGfxGsPrim *out, uint32_t cap
     (void)ctx;
     static EmObjectUnitResult r;
     *count = 0;
+    /* A draw-method unit outside a recorded GS world frame (the GPU
+     * renderer): its picture needs the GS model, walked over like a pass. */
+    if (em_owner_draw_live_page_method(address)) return 1;
     const EmObjectUnitPieces *q = em_owner_draw_live_page_unit(address);
     if (!q) return 0;
     if ((q->unit.gs_class != 1u && q->unit.gs_class != 2u) || em_object_unit_run(&q->unit, &r) < 0 ||
@@ -292,6 +298,14 @@ static void lamp_dump(const EmChainPage *p, uint32_t start, int pass, const uint
     fclose(f);
 }
 
+/* The frame's draw-method units: passes of the GS model's recorded frame
+ * (em_owner_draw_live_page_method). */
+static int object_pass(void *ctx, uint32_t address)
+{
+    (void)ctx;
+    return em_owner_draw_live_page_method(address);
+}
+
 int em_chain_page_live_draw(EmGfx *gfx)
 {
     if (S.fault) return -1;
@@ -305,12 +319,14 @@ int em_chain_page_live_draw(EmGfx *gfx)
      * mode); the GPU renderer walks over them. With the GS frame on, a pass
      * outside a recorded world frame cannot be drawn: a fault. */
     const uint32_t four = npass ? targets[npass - 1u] : 0u;
-    const int pass = npass && em_gfx_gs_world_recording(gfx);
+    const int recording = em_gfx_gs_world_recording(gfx);
+    const int pass = npass && recording;
     if (npass && !pass && em_gfx_gs_world_enabled(gfx))
         return fail(four, "a slot-0xFFF pass outside a recorded GS world frame");
+    const int objects = recording && em_owner_draw_live_page_method_count() != 0u;
     uint32_t bank = 0, slot = 0;
     uint64_t field_frame = 0, field_scissor = 0;
-    if (pass && em_rcl_draw_env(&bank, &slot, &field_frame, &field_scissor) < 0)
+    if ((pass || objects) && em_rcl_draw_env(&bank, &slot, &field_frame, &field_scissor) < 0)
         return fail(0x001D1F20u, "no draw environment for the pass (bank A, context +0x9C)");
     EmChainPage *p = &S.page;
     memset(p, 0, offsetof(EmChainPage, regs));
@@ -326,6 +342,7 @@ int em_chain_page_live_draw(EmGfx *gfx)
     p->pass_count = pass ? npass : 0u;
     p->draw_envs = bank;
     p->draw_env_slot = slot;
+    p->object_pass = objects ? object_pass : NULL;
     p->unit = page_unit;
     S.nreads = 0;
     S.overlay_reads = 0;
@@ -334,11 +351,12 @@ int em_chain_page_live_draw(EmGfx *gfx)
                 (unsigned)p->fault_address, (unsigned)p->fault_detail);
         return fail(0x001CB800u, "the page cannot be walked as the original's");
     }
-    if (npass && (pass ? p->counts.passes != npass || p->counts.skipped : p->counts.skipped != npass))
+    if (npass && (pass ? p->counts.passes - p->counts.object_passes != npass || p->counts.skipped
+                       : p->counts.skipped != npass))
         return fail(four, "a slot-0xFFF CALL of the frame is not in the page");
     /* Each pass's primitives and marks (their own: relative to the pass). */
-    const uint32_t passes = pass ? p->counts.passes : 0u;
-    uint32_t again[EM_CHAIN_PAGE_AGAIN_MAX], from = 0;
+    const uint32_t passes = pass || objects ? p->counts.passes : 0u;
+    uint32_t *again = S.again, from = 0;
     for (uint32_t k = 0; k < passes; ++k) {
         if (p->pass_first[k] < from || p->pass_first[k] + p->pass_prims[k] > p->prim_count)
             return fail(p->pass_target[k], "a pass's primitives are not in the page");
@@ -371,7 +389,8 @@ int em_chain_page_live_draw(EmGfx *gfx)
     S.log.pass_prims = pass_prims;
     S.log.again_count = p->again_count;
     /* the marks relative to the first pass (one pass: to the pass) */
-    for (uint32_t m = 0; m < p->again_count; ++m) S.log.again[m] = p->again[m] - pass_first;
+    for (uint32_t m = 0; m < p->again_count && m < EM_CHAIN_PAGE_AGAIN_MAX; ++m)
+        S.log.again[m] = p->again[m] - pass_first;
     S.log.draw_envs = bank;
     S.log.draw_env_slot = slot;
     /* The digests are the tick log's only (em_diag.h): 0 without it. */

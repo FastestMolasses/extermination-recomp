@@ -102,9 +102,9 @@ in (3, 1) and (4, 1).
 
 ## Not drawn, stand-ins, open items
 
-- **Stand-in:** the tendrils 001546C0 in AREA03 and AREA04 are not drawn (001CB1F0 /
-  001CB130 / 001CB060 have no VU1 translation, as AREA19's: the log says so once). Their
-  logic runs.
+- **The tendrils 001546C0 in AREA03 and AREA04 draw since 2026-11-01** (001CB1F0, kind
+  10: CHAIN_PAGE.md section 6.6, `make test-object-method-reference`, which holds
+  a03b_00's units). Their pixels are not compared with an original frame.
 - **001C81C0 has no oracle** of its own; its parts are em_pose_host's (001C8480,
   001C8F10, 001C90D0, 001C92C0, 001CA0A0, 001CA1C0, proven there), the loop is new.
 - **The held face** (a04c_00): in AREA04 sub 1's event with the player at infection 100

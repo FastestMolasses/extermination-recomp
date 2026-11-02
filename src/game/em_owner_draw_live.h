@@ -121,6 +121,21 @@ int em_owner_draw_live_001CAAC0_sprite(const uint32_t position[4], uint32_t star
 int em_owner_draw_live_001CAAC0_packet(const uint32_t position[4], uint32_t start,
                                       EmObjectUnitResolve resolver, void *ctx);
 
+/* The draw method of kind 10: 001CB140(owner, model) (001CB1F0's, with the
+ * owner's +0x44): 001D8C20(5), 001C7420(owner, 0x3F5, 3), 001D4430(model) =
+ * 001D42E0(3, model), the RET tag, 001CAAC0(D_00275B44 + 0xB0, the unit's
+ * start), 001D8C20(0). No culling. `position_address` / `position` are the
+ * quadword D_00275B44 + 0xB0 (the owner being ticked, usually this one). The
+ * unit stays in the arena; the chain page walks it where its CALL stands
+ * (em_chain_page's object passes). 0, or -1 (reported). */
+int em_owner_draw_live_001CB140(const EmWorldModels *bank, EmOwnerServicesOwner *owner, const uint32_t rgb[4],
+                                uint32_t record, uint32_t position_address, const uint32_t position[4]);
+/* 1 when `address` is a method unit of this frame; their count; the bytes of
+ * the model blocks their REFs name (read by the page's walk), or NULL. */
+int em_owner_draw_live_page_method(uint32_t address);
+uint32_t em_owner_draw_live_page_method_count(void);
+const uint8_t *em_owner_draw_live_page_method_bytes(uint32_t address, uint32_t size);
+
 /* This frame's class-2 unit 001CABA0 built at `address`, or NULL. */
 const EmObjectUnitPieces *em_owner_draw_live_page_unit(uint32_t address);
 

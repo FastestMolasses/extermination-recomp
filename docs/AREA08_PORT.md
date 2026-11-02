@@ -67,9 +67,11 @@ row-exact from New Game.
 
 ## Stand-ins and open items
 
-- **Method 001CB1F0 (kind 10) is not drawn** in AREA08 and AREA07: the boxes
-  (001546C0 -> 00154F00) take the method J1 left undrawn in AREA19, as its VU1
-  program has no translation. Logged once; only the picture depends on it.
+- **Method 001CB1F0 (kind 10) draws since 2026-11-01**: the boxes (001546C0 ->
+  00154F00) are object units the chain page walks (CHAIN_PAGE.md section 6.6;
+  `make test-object-method-reference`: the 102 captured units, most of them
+  AREA07's, equal the original microcode). Their pixels are not compared with an
+  original frame.
 - **The infected menu player's glow is not drawn** (`w_001CD520` in
   `em_status_models`): 001F4BF0's random draw stays, nothing reads the result, and
   the line is logged once. Only the picture depends on it.

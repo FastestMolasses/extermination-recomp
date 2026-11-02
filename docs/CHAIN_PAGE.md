@@ -223,6 +223,15 @@ program's flow with a variant switch, emvup_kind6_particle); its own test is
 `tools/test_level2_kind6_vu_reference.py` (LEVEL2_RENDER.md "Kind-6
 near-fire program").
 
+**The object-method programs** (kind 10: D_0023D4D0, 129 instructions from
+ELF 0x0023D500; section 6.6): each reads the object kernel's vertex blocks and
+kicks 32 vertices per batch at TOP + 0x80, one vertex at a time (not
+software-pipelined); no MSCNT entry: every batch loads dmem 1013..1016 and
+1020..1023 again. Position, CLIP window, ADC, Q and fog are the object
+kernel's. ST = ((n' + 1) / 2, 1), n' the normal through the lighting rows, not
+divided by w; RGB = dmem 1013's words; A = FTOI0(min(20 + 1013.w * the vertex's
+own y, 128)). Translation: `emvup_method_batch`.
+
 **The EFU** (streak and kind 2). No capture holds an EFU result, so its
 arithmetic is the model the background renderer already uses for ERLENG
 (em_background_gs.h): ERLENG = 1 / sqrt(x^2 + y^2 + z^2) and ERCPR = 1 / x
@@ -637,6 +646,52 @@ carried as for AREA01's dynamic pair; A+D RGBAQ sets the whole register
 export, the models' blocks from the Roger export's library spans.
 tools/chain_page_model.py runs the same pages with the ORIGINAL microcode
 (test-aim-fire-lamp-cone).
+
+### 6.6 The draw methods' object units (2026-11-01)
+
+The draw methods of 0x26E310's kinds 8, 9, 10 and 12 build their object unit
+on channel 3 and put it on the page as 001CABA0 does, but the unit is not a
+class-2 unit: after 001C7420's colour and node CNTs it CALLs a program of its
+own, sends its own GS state, TEX0 and region, and REFs the model's blocks.
+
+**Kind 10** (001CB1F0 -> 001CB140): 001D8C20(5) (001D8C30's colour row: RGB
+128 * the owner's +0x80.. + 2^23, A 0.2 * 128 * +0x8C), 001C7420(owner, 0x3F5,
+3), 001D4430 -> 001D42E0(3, model): REF of the arena's first qword and CALL
+D_0023D4D0, GS state (1, 1) (D_008153F0: TEX1 0x60, TEST 0x53001, ALPHA 0x44,
+CLAMP 0, COLCLAMP 1, ZBUF with ZMSK 0), 001D6F60's packet (TEXFLUSH, TEX0
+0x2004818599422020, TEXA 0x80), region 1 (PRIM 0, CLAMP 0), the skin record
+D_00817140 + (context +0x9C << 7), the fog-off REF while 001D2910(0) is 0, the
+model's blocks; a RET tag; 001CAAC0(D_00275B44 + 0xB0, the unit's start);
+001D8C20(0). No culling: a vertex past the guard band has ADC, as the object
+kernel's. The skin record's template is PRIM 0x05C (Gouraud, textured,
+blended, strip, no fog) with REGS NOP, ST, RGBAQ, XYZF2: the vertex TEX0 row
+is not sent. TEX0 is a PSMT4 64 x 64 texture at TBP 0x2020 through the CT32
+CLUT 0x240C, resident from the boot library.
+
+**The walk.** Such a unit is walked as a pass (em_chain_page's `object_pass`;
+`em_owner_draw_live_page_method` says which CALLs): the DMA follows its CALL,
+VIF1 runs its bytes, the program runs as a batched program (MSCAL 0, then
+MSCNT, which re-runs it from micro 0), and its primitives reach the GS model
+with their environment through em_gfx_gs_page_pass, so ZBUF_1 and TEXA are the
+GS's too. The walk reads the program packet from effect_tables.emet
+(`tools/export_area00_runtime_tables.py`, which holds export_effect_tables.py's
+blocks) and the model's blocks through the table em_owner_draw_live keeps for
+the frame. With the GPU renderer (no recorded GS frame) the unit is walked
+over and draws nothing.
+
+**Evidence.** `make test-object-method-reference`
+(tools/test_object_method_reference.py) runs the original microcode from the
+ELF: the 102 kind-10 units nine end snapshots hold in their packet arena (no
+capture's latest page CALLs one, so a page of their CALLs is built in unused
+RAM), 306 batches, and 400 synthetic ones; data memory, every register and the
+kicked packet equal on both lanes, the primitives, environments and counts of
+the walk equal, each Q and clip-flag read's producer asserted; the port's list
+after 001C7420 byte-equal to all 102 units (but the bytes of a tag no one
+writes). The colour row and 001C7420 are test_actor_light_001d89d0_reference's
+and test_owner_services_reference's. It ran live with the raster on over a07_00
+(4 units, 216 triangles, no refusal: the texture is resident). **Pixels were
+not compared with an original frame**: no capture holds a frame with one of
+these units' page and its GS memory before the draw.
 
 ## 7. Binding (live)
 

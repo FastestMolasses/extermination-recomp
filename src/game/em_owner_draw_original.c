@@ -270,6 +270,64 @@ int em_owner_draw_001D3CF0(S *s, int32_t chan, u32 model, u32 w04, EmOwnerDrawGs
     return 0;
 }
 
+/* 001D1F80(chan, a, b), 001D1FF0(chan, idx) as their tags: REF 9 / 4 into the
+ * GS blocks at *D_00275674. The caller has checked the room. */
+static void ref_1F80(S *s, int32_t chan, u32 a, u32 b)
+{
+    em_owner_draw_tag(&s->world.channel[chan], 0x30, 9, *s->world.d00275674 + a * 1440u + b * 144u + 0xBA0u);
+}
+
+static void ref_1FF0(S *s, int32_t chan, u32 idx)
+{
+    em_owner_draw_tag(&s->world.channel[chan], 0x30, 4, *s->world.d00275674 + idx * 64u + 0x4A0u);
+}
+
+static void put64(uint8_t *p, uint64_t v)
+{
+    for (unsigned k = 0; k < 8u; ++k) p[k] = (uint8_t)(v >> (8u * k));
+}
+
+/* 001D6F60(chan, tex0, texa): a CNT of 5 qwords: VIF NOP + DIRECT 4, the A+D
+ * tag (NLOOP 3, EOP), TEXFLUSH = 0, TEX0_1 = tex0, TEXA = texa. */
+static void tex0_packet(S *s, int32_t chan, uint64_t tex0, u32 texa)
+{
+    EmOwnerServicesChannel *c = &s->world.channel[chan];
+    uint8_t *p = c->cursor;
+    em_owner_draw_tag(c, 0x10, 5, 0);
+    memset(p + 0x10, 0, 12);
+    p[0x1C] = 4; p[0x1D] = 0; p[0x1E] = 0; p[0x1F] = 0x50;
+    put64(p + 0x20, UINT64_C(0x1000000000008003));
+    put64(p + 0x28, 0xE);
+    put64(p + 0x30, 0);
+    put64(p + 0x38, 0x3F);
+    put64(p + 0x40, tex0);
+    put64(p + 0x48, 6);
+    put64(p + 0x50, texa);
+    put64(p + 0x58, 0x3B);
+    c->cursor = p + 0x60;
+}
+
+/* 001D42E0(chan, model) (decomp func_001D42E0.c): the program's CALL, the GS
+ * state (1, 1), the texture, the region (1), the skin record D_00817140, the
+ * fog-off REF while 001D2910(0) is 0, the model's blocks. */
+int em_owner_draw_001D42E0(S *s, int32_t chan, u32 model, u32 w04)
+{
+    if (!s) return -1;
+    if (latched(s)) return -1;
+    int ref2 = s->world.ctx_0C ? (*s->world.ctx_0C & 1u) == 0 : 0;
+    if (prepare(s, chan, 0x20u + 0x10u + 0x60u + 0x10u + 0x10u + (ref2 ? 0x10u : 0u) + 0x10u, 0x001D42E0u) < 0) return -1;
+    if (!s->world.ctx_9C) return fault(s, 0x001D42E0u, EM_OWNER_DRAW_FAULT_NULL_WORKER);
+    em_owner_draw_vif_append_ref_tag(&s->world, chan, EM_OWNER_DRAW_METHOD10);
+    ref_1F80(s, chan, 1, 1);
+    tex0_packet(s, chan, EM_OWNER_DRAW_METHOD10_TEX0, 0x80u);
+    ref_1FF0(s, chan, 1);
+    EmOwnerServicesChannel *c = &s->world.channel[chan];
+    em_owner_draw_tag(c, 0x30, 8, EM_OWNER_DRAW_SKIN_METHOD10 + (*s->world.ctx_9C << 7));
+    if (ref2) em_owner_draw_tag(c, 0x30, 2, 0x002514B0u);
+    em_owner_draw_tag(c, 0x30, w04 & 0xFFFFu, model + 0x40u);
+    return 0;
+}
+
 int em_owner_draw_001CA940_at(S *s, int32_t flags, u32 model, u32 w04)
 {
     /* flags != 0 and bit 0 set: 001D3C30 -> 001D3BA0(0, model); otherwise

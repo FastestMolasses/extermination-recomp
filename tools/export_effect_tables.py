@@ -110,6 +110,9 @@ Blocks (original address, bytes, what reads them):
                       130 instructions from ELF 0x0023D958 / 0x0023E160,
                       the lookup and 17 constant rows) and its RET tag,
                       read by the chain page (em_chain_page.c)
+  0x0023D4D0  0x450   the draw method kind 10's DMA packet D_0023D4D0 (001D42E0's
+                      CALL: one MPG of 129 instructions from ELF 0x0023D500) and
+                      its RET tag, read by the chain page's walk of the unit
   0x00234FE0  0x4B0   the AREA00 surface program's DMA packet D_00234FE0
                       (001E9280's CALL through 001CB760: the floor
                       program's set-up and one MPG of 142 instructions from
@@ -197,6 +200,7 @@ BLOCKS = ((0x00257C90, 0x2460), (0x00255430, 0x158), (0x0025A350, 0x34B0), (0x00
           # 001CFBE0 kind 6's program packet D_0023D930 (001E3D90's
           # near-fire layer) and its RET tag.
           (0x0023D930, 0xF70),
+          (0x0023D4D0, 0x450),
           # D_002531D0: the drop shadow's alpha-clear strip, read by the
           # Original profile's GS frame.
           (0x002531D0, 0x40),

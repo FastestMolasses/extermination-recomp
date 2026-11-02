@@ -138,17 +138,16 @@ behaviour defects until a row comparison says so.
    P = 0 at each zero and compares the kicked packets with that primitive's rows taken
    out (every head on the plane, one head at the start and in the middle of a batch,
    a zero screen length).
-2. **Not drawn**: 001CB1F0, 001CB130, 001CB060, the draw methods of the tendril pieces
-   (001546C0 -> 00154F00, also AREA03, AREA04 sub 1, and AREA08's and AREA07's "boxes")
-   and the worms; reported once; class 6's 001CB2B0 (AREA15 sub 1's [3]) is their
-   sibling. Letting them run stops at once at 001C7420 on channel 3 from this path. What
-   a lane needs, read from the original (2026-11-01): the three VU1 programs read the
-   object kernel's vertex blocks (32 vertices, 4 qwords each, as em_vu1_object_kernel.h)
-   and kick one 32-vertex packet per batch from the tag at dmem 1020, with no MSCNT
-   entry. Position, CLIP window, ADC bit, Q and fog are the kernel's. Only ST and colour
-   differ:
-   - kind 10, D_0023D4D0 (001D42E0, TEX0 0x2004818599422020): ST = (rotated normal + 1)
-     / 2, a sphere map; RGB = dmem 1013's, A = 20 + 1013.w * position y, capped at 128.
+2. **Not drawn**: 001CB130, 001CB060, the draw methods of the worms and of kinds 9 and
+   8; reported once; class 6's 001CB2B0 (AREA15 sub 1's [3]) is their sibling. Kind 10,
+   the tendril pieces 001546C0 -> 00154F00 (also AREA03, AREA04 sub 1, and AREA08's and
+   AREA07's "boxes"), draws since 2026-11-01: 001CB1F0's unit is walked on the page
+   (CHAIN_PAGE.md section 6.6; `make test-object-method-reference`; pixels not compared
+   with an original frame). What the others need, read from the original (2026-11-01):
+   the VU1 programs read the object kernel's vertex blocks (32 vertices, 4 qwords each,
+   as em_vu1_object_kernel.h) and kick one 32-vertex packet per batch from the tag at
+   dmem 1020, with no MSCNT entry. Position, CLIP window, ADC bit, Q and fog are the
+   kernel's. Only ST and colour differ:
    - kind 9, D_0023D0C0 (001CB070 -> 001D40E0; class 6 uses it through 001D4440): the
      same ST; colour = dmem 1013 as it stands; a texture and palette upload first.
    - kind 8, D_0023CC50 (001D3F60): ST from the position pushed 0.03 along the normal,

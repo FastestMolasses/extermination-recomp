@@ -108,6 +108,14 @@ int em_area01_model_draw_call(EmArea01ModelDraw *d,uint32_t function,uint32_t no
         rc=em_owner_draw_live_001CAF60(&d->bank,&d->owner,d->rgb,node,d->current,d->sp,d->regions,d->region_count);
     } else if(r && function==0x001CACB0u && prepare(d,node,r,0,0)==0) {
         rc=em_owner_draw_live_001CABA0(&d->bank,&d->owner,d->rgb,node);
+    } else if(r && function==0x001CB1F0u && prepare(d,node,r,0,0)==0) {
+        /* 001CB140's 001CAAC0 reads D_00275B44 + 0xB0 */
+        const uint8_t *position=em_area01_actor_view_bytes(v,d->current+0xB0u,16,0);
+        uint32_t words[4];
+        if(position) {
+            memcpy(words,position,sizeof words);
+            rc=em_owner_draw_live_001CB140(&d->bank,&d->owner,d->rgb,node,d->current+0xB0u,words);
+        }
     }
     if(em_area01_actor_view_commit(v)<0)rc=-1;
     if(rc<0)return call_fail(d,function,resumed);
