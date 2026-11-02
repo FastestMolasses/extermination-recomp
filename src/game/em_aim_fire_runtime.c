@@ -601,6 +601,13 @@ static int external_call(void *context,EmAimFireLive *live,EmAimFireTargetCall *
         if (drawn<0) return -1;
         f->v0=(uint32_t)a->drawn;return 0;
     }
+    case 0x1B1B70: {
+        /* 001B1B70(node), a burst of variant 5 or 14 (001E4CE0's state 1): the
+         * class lists' publish (byte-matched C, em_actor_class_publish). */
+        EmActor *a=pool_actor((uint32_t)f->a[0]);
+        if (!a || !a->allocated) return -1;
+        return em_collision_world_publish_001B1B70(a)<0 ? -1 : 0;
+    }
     case 0x1EFD20: {
         float position[4];
         const void *p=em_aim_fire_live_map(live,(uint32_t)f->a[1],16,0);
