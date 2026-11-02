@@ -196,6 +196,10 @@ def main():
     parser.add_argument('--check', action='store_true', help='no window, full speed, silent')
     args = parser.parse_args()
     names = chain(args.take)
+    beat = json.loads((TAKES / names[0] / 'start.json').read_text()).get('beat')
+    if beat:
+        sys.exit(f'{names[0]} starts where route beat {beat} ended (record_original_play.py --beat), not at the '
+                 f'title: the port cannot play it from New Game')
     out = OUT / args.take
     if (out / 'card').exists():
         shutil.rmtree(out / 'card')     # every run starts from an empty card, as the take did
