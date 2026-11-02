@@ -2378,6 +2378,7 @@ int em_player_closure_live_water_contact(EmPlayerLiveActor *actor)
 }
 
 #include "game/em_player_closure_ledge.inc"
+#include "game/em_player_closure_grip.inc"
 
 /* ---- The bind ----------------------------------------------------------------- */
 
@@ -3533,9 +3534,12 @@ int em_player_closure_live_bind(EmPlayerStatesBinding *b, EmPlayerStageHost *sta
     set1(b, 0x09, em_player_hang_state, &L.hang, NULL, NULL, NULL, "001647D0");
     set1(b, 0x0A, hang_up_state, NULL, NULL, NULL, NULL, "001645D0");
     set1(b, 0x0C, em_player_ladder_climb_state, &L.lc, &L.lc_scene.spad3A20[0], lc_pre, lc_post, "001662D0");
+    set1(b, 0x0D, drop_ledge_state, NULL, NULL, NULL, NULL, "00167C80");
     set1(b, 0x0E, em_player_closure_state0E, &L.c0e, &L.c0e_scratch.s3A20, NULL, closure_post, "00168050");
     set1(b, 0x13, em_player_closure_state13, &L.c0e, &L.c0e_scratch.s3A20, NULL, closure_post, "0016B790");
     set1(b, 0x14, em_player_closure_state14, &L.c0e, &L.c0e_scratch.s3A20, NULL, closure_post, "0016B8A0");
+    set1(b, 0x16, grip_rise_state, NULL, NULL, NULL, NULL, "0016BC40");
+    set1(b, 0x17, grip_hang_state, NULL, NULL, NULL, NULL, "0016BF80");
     set1(b, 0x18, em_player_closure_state18, &L.c0e, &L.c0e_scratch.s3A20, NULL, closure_post, "0016D130");
     set1(b, 0x10, em_player_closure1019_00169730, &L.c10, &L.c10_scratch.s3A20, c10_pre, c10_post, "00169730");
     set1(b, 0x12, em_player_closure1019_0016AE40, &L.c10, &L.c10_scratch.s3A20, c10_pre, c10_post, "0016AE40");

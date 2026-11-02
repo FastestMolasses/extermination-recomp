@@ -772,6 +772,155 @@ static inline int l14_c_0011A070(L14 *o, int32_t n0)
     return o->h->w_0011A070(o->h->ctx, n0) < 0 ? l14_latch(o, 0x0011A070u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED) : 0;
 }
 
+static inline int l14_c_00102918(L14 *o, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_00102918) return l14_latch(o, 0x00102918u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_00102918(o->h->ctx, a0, a1, a2) < 0) return l14_latch(o, 0x00102918u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_001031E0(L14 *o, uint32_t a0, uint32_t a1)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_001031E0) return l14_latch(o, 0x001031E0u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_001031E0(o->h->ctx, a0, a1) < 0) return l14_latch(o, 0x001031E0u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_0016BAE0(L14 *o, uint32_t a0, int32_t n1)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_0016BAE0) return l14_latch(o, 0x0016BAE0u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_0016BAE0(o->h->ctx, a0, n1) < 0) return l14_latch(o, 0x0016BAE0u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_00174A50(L14 *o, uint32_t a0, uint32_t f1)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_00174A50) return l14_latch(o, 0x00174A50u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_00174A50(o->h->ctx, a0, l14_float(f1)) < 0) return l14_latch(o, 0x00174A50u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_001751A0(L14 *o, uint32_t a0)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_001751A0) return l14_latch(o, 0x001751A0u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_001751A0(o->h->ctx, a0) < 0) return l14_latch(o, 0x001751A0u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_00175900(L14 *o, uint32_t a0, int32_t n1, int32_t *result)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_00175900) return l14_latch(o, 0x00175900u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_00175900(o->h->ctx, a0, n1, result) < 0) return l14_latch(o, 0x00175900u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_00178B90(L14 *o, uint32_t a0, int32_t n1)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_00178B90) return l14_latch(o, 0x00178B90u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_00178B90(o->h->ctx, a0, n1) < 0) return l14_latch(o, 0x00178B90u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_00179880(L14 *o, uint32_t a0, uint32_t a1)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_00179880) return l14_latch(o, 0x00179880u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_00179880(o->h->ctx, a0, a1) < 0) return l14_latch(o, 0x00179880u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_0017FF80(L14 *o, uint32_t a0, uint32_t f1)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_0017FF80) return l14_latch(o, 0x0017FF80u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_0017FF80(o->h->ctx, a0, l14_float(f1)) < 0) return l14_latch(o, 0x0017FF80u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_00182430(L14 *o, uint32_t a0, int32_t n1)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_00182430) return l14_latch(o, 0x00182430u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_00182430(o->h->ctx, a0, n1) < 0) return l14_latch(o, 0x00182430u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_00182870(L14 *o, uint32_t a0, int32_t n1)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_00182870) return l14_latch(o, 0x00182870u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_00182870(o->h->ctx, a0, n1) < 0) return l14_latch(o, 0x00182870u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_00182AB0(L14 *o, uint32_t a0)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_00182AB0) return l14_latch(o, 0x00182AB0u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_00182AB0(o->h->ctx, a0) < 0) return l14_latch(o, 0x00182AB0u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_0019A570(L14 *o, uint32_t a0, uint32_t a1, int32_t n2, int32_t n3, int32_t *result)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_0019A570) return l14_latch(o, 0x0019A570u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_0019A570(o->h->ctx, a0, a1, n2, n3, result) < 0) return l14_latch(o, 0x0019A570u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_001B12B0(L14 *o, uint32_t f0, uint32_t f1, uint32_t f2, uint32_t *result)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_001B12B0) return l14_latch(o, 0x001B12B0u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    float out = 0;
+    if (o->h->w_001B12B0(o->h->ctx, l14_float(f0), l14_float(f1), l14_float(f2), &out) < 0) return l14_latch(o, 0x001B12B0u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    *result = l14_bits(out);
+    return 0;
+}
+static inline int l14_c_001B61C0(L14 *o, int32_t n0, int32_t n1, int32_t n2, int32_t n3)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_001B61C0) return l14_latch(o, 0x001B61C0u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_001B61C0(o->h->ctx, n0, n1, n2, n3) < 0) return l14_latch(o, 0x001B61C0u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_0021C120(L14 *o, uint32_t a0)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_0021C120) return l14_latch(o, 0x0021C120u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_0021C120(o->h->ctx, a0) < 0) return l14_latch(o, 0x0021C120u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_0021C190(L14 *o, uint32_t a0, int32_t *result)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_0021C190) return l14_latch(o, 0x0021C190u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_0021C190(o->h->ctx, a0, result) < 0) return l14_latch(o, 0x0021C190u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_0021C200(L14 *o, uint32_t a0)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_0021C200) return l14_latch(o, 0x0021C200u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_0021C200(o->h->ctx, a0) < 0) return l14_latch(o, 0x0021C200u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_0021C270(L14 *o, uint32_t a0)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_0021C270) return l14_latch(o, 0x0021C270u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_0021C270(o->h->ctx, a0) < 0) return l14_latch(o, 0x0021C270u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_0021C350(L14 *o, uint32_t a0)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_0021C350) return l14_latch(o, 0x0021C350u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_0021C350(o->h->ctx, a0) < 0) return l14_latch(o, 0x0021C350u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
+static inline int l14_c_0021D2E0(L14 *o, uint32_t a0, int32_t n1, int32_t n2)
+{
+    if (l14_failed(o)) return -1;
+    if (!o->h->w_0021D2E0) return l14_latch(o, 0x0021D2E0u, EM_LEVEL14_PORT_FAULT_NULL_WORKER);
+    if (o->h->w_0021D2E0(o->h->ctx, a0, n1, n2) < 0) return l14_latch(o, 0x0021D2E0u, EM_LEVEL14_PORT_FAULT_WORKER_FAILED);
+    return 0;
+}
 /* END GENERATED WRAPPERS */
 
 /* Translations called by other translations (direct calls, no hook). */

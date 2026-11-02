@@ -158,6 +158,27 @@ typedef struct {
     int (*w_00824B40)(void *ctx, uint32_t a0);
     int (*w_00824C90)(void *ctx, uint32_t a0);
     int (*w_0011A070)(void *ctx, int32_t n0);
+    int (*w_00102918)(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2);
+    int (*w_001031E0)(void *ctx, uint32_t a0, uint32_t a1);
+    int (*w_0016BAE0)(void *ctx, uint32_t a0, int32_t n1);
+    int (*w_00174A50)(void *ctx, uint32_t a0, float f1);
+    int (*w_001751A0)(void *ctx, uint32_t a0);
+    int (*w_00175900)(void *ctx, uint32_t a0, int32_t n1, int32_t *result);
+    int (*w_00178B90)(void *ctx, uint32_t a0, int32_t n1);
+    int (*w_00179880)(void *ctx, uint32_t a0, uint32_t a1);
+    int (*w_0017FF80)(void *ctx, uint32_t a0, float f1);
+    int (*w_00182430)(void *ctx, uint32_t a0, int32_t n1);
+    int (*w_00182870)(void *ctx, uint32_t a0, int32_t n1);
+    int (*w_00182AB0)(void *ctx, uint32_t a0);
+    int (*w_0019A570)(void *ctx, uint32_t a0, uint32_t a1, int32_t n2, int32_t n3, int32_t *result);
+    int (*w_001B12B0)(void *ctx, float f0, float f1, float f2, float *result);
+    int (*w_001B61C0)(void *ctx, int32_t n0, int32_t n1, int32_t n2, int32_t n3);
+    int (*w_0021C120)(void *ctx, uint32_t a0);
+    int (*w_0021C190)(void *ctx, uint32_t a0, int32_t *result);
+    int (*w_0021C200)(void *ctx, uint32_t a0);
+    int (*w_0021C270)(void *ctx, uint32_t a0);
+    int (*w_0021C350)(void *ctx, uint32_t a0);
+    int (*w_0021D2E0)(void *ctx, uint32_t a0, int32_t n1, int32_t n2);
 /* END GENERATED HOOKS */
 
     /* the indirect call through a function word (the actor's +0x4C method) */
@@ -224,6 +245,13 @@ int em_level14_port_00153A10(const H14 *h, uint32_t self, uint32_t ent, F14 *fau
 int em_level14_port_00153A90(const H14 *h, uint32_t self, uint32_t out, F14 *fault);
 
 /* ---- boot: the others ---- */
+/* +5 0x0D, 0x16 and 0x17 with their pieces (em_level14_port_grip.c). */
+int em_level14_port_00167C80(const H14 *h, uint32_t p, F14 *fault);
+int em_level14_port_0016BB80(const H14 *h, uint32_t p, int32_t *result, F14 *fault);
+int em_level14_port_0016BC40(const H14 *h, uint32_t p, F14 *fault);
+int em_level14_port_0016BE40(const H14 *h, uint32_t p, uint32_t sp, F14 *fault);
+int em_level14_port_0016BF80(const H14 *h, uint32_t p, uint32_t sp, F14 *fault);
+int em_level14_port_00224600(const H14 *h, uint32_t p, int32_t *result, F14 *fault);
 int em_level14_port_0016AC50(const H14 *h, uint32_t p, F14 *fault);
 int em_level14_port_001782A0(const H14 *h, uint32_t p, uint32_t sp, int32_t *result, F14 *fault);
 int em_level14_port_001AA2A0(const H14 *h, uint32_t p, uint32_t object, float radius, int32_t *result,

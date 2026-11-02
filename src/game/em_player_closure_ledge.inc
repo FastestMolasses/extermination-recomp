@@ -5,11 +5,13 @@
  * classifier (byte-matched C). */
 #define LEDGE_HIT 0x7F100000u           /* the record 0x700031D0 names */
 #define LEDGE_KIND 0x7F110000u          /* 0021BF90's hit record: only its +3 */
+#define LEDGE_GRIP_STACK 0x7F120000u    /* the frames of _grip.inc's states */
 static struct {
     const EmPlayerProbeHit *hit;
     uint8_t rec[0x40];
     uint8_t s38B0[16], s3A24[8], s31B0[16], hit_kind;
     uint32_t word_31D0, word_30C, root_word, grid_word;
+    uint8_t stack[0x100];
 } LG;
 
 static uint8_t *ledge_bytes(void *ctx, uint32_t a, uint32_t n)
@@ -40,7 +42,11 @@ static uint8_t *ledge_bytes(void *ctx, uint32_t a, uint32_t n)
     if (a == 0x00810E65u && n == 1) return &P.ly;
     if (a == 0x008106A0u && n == 4) return (uint8_t *)&P.d8106A0;
     if (a >= LEDGE_HIT && a + n <= LEDGE_HIT + sizeof LG.rec) return LG.rec + (a - LEDGE_HIT);
+    if (a >= LEDGE_GRIP_STACK && a + n <= LEDGE_GRIP_STACK + sizeof LG.stack) return LG.stack + (a - LEDGE_GRIP_STACK);
     if (a == 0x00275B40u && n == 4) return (uint8_t *)&L.d275B40;
+    if (a == 0x00275B08u && n == 4) return (uint8_t *)&L.d275B08;
+    if (a == 0x00810E74u && n == 2) return (uint8_t *)&P.pressed;
+    if (a == 0x70003B76u && n == 2) return (uint8_t *)&PAD_CONFIG[1];
     /* the area bytes and D_008106F2, the world's (00169250 / 00194240) */
     if (a == 0x00810700u && n == 1) return &scene()->d810700;
     if (a == 0x00810701u && n == 1) return &scene()->d810701;
@@ -62,8 +68,15 @@ static uint8_t *ledge_bytes(void *ctx, uint32_t a, uint32_t n)
     memcpy(&root, p->bytes + 0x110, 4);
     if (a >= root && a < root + 12u && n == 4 && !((a - root) & 3u) && w_root_node(NULL, a - root, &LG.root_word) >= 0)
         return (uint8_t *)&LG.root_word;
+    /* the skeleton's node array and nodes (*(D_00275B40 + 4) + 0xC0) */
+    for (unsigned i = 0; L.pose && i < L.pose->region_count; ++i) {
+        const EmPoseRegion *r = &L.pose->region[i];
+        if (a >= r->address && (uint64_t)a + n <= (uint64_t)r->address + r->size) return r->bytes + (a - r->address);
+    }
     const uint8_t *q = em_effects_live_window(a, n);
     if (!q && em_module_loader_live()) q = em_module_loader_memory(em_module_loader_live(), a, n);
+    if (!q) q = em_scene_bindings_grid_node_bytes(a, n);    /* 0016BB80's +0x1A, +0x34.. */
+    if (!q && a >= 0x00248650u && (uint64_t)a + n <= 0x00248670u) q = em_effects_live_elf(a, n);
     return (uint8_t *)(uintptr_t)q;
 }
 static void *ledge_map(void *ctx, uint32_t a, size_t n, int write)

@@ -209,6 +209,19 @@ sources gives the field-level behaviour; in short:
 | 001EDE40 (a0, a1) | the parameter slots of the effect records 0x257510 / 0x2575A0 / 0x257630; per record the generator *D_00275C34: phase = (float)(+4 >> 16) / 65535 + 1e-4, +4 = +4 * 37 + 11, 001CFB50(0x81F8F0, 0, a0, +0x54, phase, 1.0, 1e-6, 10.0), 001CFBE0(a1, 1, record, 0x81F8F0, 1); then +8 eases toward 0.02 by a tenth, floored at 0.02 |
 | 001F6BA0 | 001F66F0(0x25D270) |
 
+## 2b. 0015B130's slots 0x0D, 0x16 and 0x17 (fix-run2, 2026-11-01)
+
+`em_level14_port_grip.c`, in this module for its hook table and test, not for its
+level. 00167C80 (+5 0x0D) is the drop onto a ledge from surface 0x33; 0016BC40 and
+0016BF80 (+5 0x16, 0x17) are the overhead grip on surface 0x3C, with the feeler
+0016BB80, the speed's ease 0016BE40 and the reaction 00224600. Byte-matched C; the
+test's `gr ` cases run all six on the original (every reachable word but 0016BF60,
+which is dead: see DEAD_WORDS; every branch both ways). The closure binds them in
+`em_player_closure_grip.inc`. 00224600 takes the record although the decomp declares
+no argument: at all four calls a0 still holds 0016BF80's argument. In area 0x11,
+0016BC40 stores D_00810835, which `ledge_bytes` does not map: that path stops with
+the module's address fault. No live capture has entered these states.
+
 ## 3. Verification
 
 `python3 tools/test_level14_port_reference.py` (port root, macOS arm64 or
