@@ -648,30 +648,14 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
     if (r->area == 2 && c->function >= 0x00823500u)
         return dispatch_overlay02(r, c);
     int rc;
-    if (r->area == 0x0F && c->function == 0x001CB2B0u) {
-        /* 0x826850's +0xD 0xD method (kind 12): 001CB200's class-6 draw on
-         * channel 3 (the screen-copy pass 001D4440) has no live chain page
-         * yet. Nothing but the picture depends on it: its packet, its
-         * colour words D_00251C20..2B and its scratch matrices. Open item,
-         * docs/AREA15_PORT.md. */
-        static int reported;
-        if (!reported) fprintf(stderr, "em_area01: 001CB2B0: the class-6 draw of AREA15 sub 1's [3] is not drawn\n");
-        reported = 1;
-        return 0;
-    }
-    /* 001CB1F0 / 001CB130 / 001CB060: the draw methods of AREA19's tendril
-     * field and worms (0x26E310 kinds 10, 9, 8). Their VU1 programs (0x0023D4D0
-     * and 001D3F60's) have no translation yet: not drawn (an open item of
-     * docs/LEVEL3_BINDING.md, lane J1). AREA08's and AREA07's boxes (001546C0 ->
-     * 00154F00) take the same method: docs/AREA08_PORT.md; AREA03's and AREA04
-     * sub 1's tendrils 001546C0 too (docs/AREA03X_PORT.md). */
-    if ((r->area == 0x13 || r->area == 8 || r->area == 7 || r->area == 3 || r->area == 4) &&
-        (c->function == 0x001CB1F0u || c->function == 0x001CB130u || c->function == 0x001CB060u)) {
-        static int noted;
-        if (!noted++) fprintf(stderr, "em_area01: %08X: its VU1 program is not translated, the node is not drawn\n",
-                              (unsigned)c->function);
-        return 0;
-    }
+    /* 001CB1F0, 001CB130, 001CB2B0, 001CB060: the draw methods of kinds 10, 9,
+     * 12 and 8 (AREA19's tendril field and worms, AREA08's and AREA07's boxes,
+     * AREA03's and AREA04 sub 1's tendrils, AREA15 sub 1's [3]): the draw
+     * host's, as 001CACB0 (em_area01_model_draw -> em_owner_draw_live), not the
+     * level ports' hooks: their callees are the render context's. */
+    if (c->function == 0x001CB1F0u || c->function == 0x001CB130u || c->function == 0x001CB2B0u ||
+        c->function == 0x001CB060u)
+        return r->host.worker(r->host.ctx, c);
     if (r->area == 0x0F && dispatch_a15(r, c, &rc))
         return rc;
     if (r->area == 3 && dispatch_a03(r, c, &rc))

@@ -67,12 +67,22 @@ row-exact from New Game.
 
 ## Stand-ins and open items
 
-- **Method 001CB1F0 (kind 10) is not drawn** in AREA08 and AREA07: the boxes
-  (001546C0 -> 00154F00) take the method J1 left undrawn in AREA19, as its VU1
-  program has no translation. Logged once; only the picture depends on it.
-- **The infected menu player's glow is not drawn** (`w_001CD520` in
-  `em_status_models`): 001F4BF0's random draw stays, nothing reads the result, and
-  the line is logged once. Only the picture depends on it.
+- **Method 001CB1F0 (kind 10) draws since 2026-11-01**: the boxes (001546C0 ->
+  00154F00) are object units the chain page walks (CHAIN_PAGE.md section 6.6;
+  `make test-object-method-reference`: the 102 captured units, most of them
+  AREA07's, equal the original microcode). Their pixels are not compared with an
+  original frame.
+- **The infected menu player's glow** (`w_001CD520` in `em_status_models`) goes onto
+  the page since 2026-11-01: 001F4BF0's 001CD520 is em_effects_live's translation
+  (test_player_equipment_reference) and the status frame's page draws it. An original
+  capture (the state of a07_00, Start, 70 frames: fix_draws' snapshot, not kept) holds
+  one primitive on that page, PRIM 0x76, TEX0 0x20045B0599421EF0, (34169, 31777) ..
+  (33717, 31495), Z 42819; a port frame holds the same primitive at (34173, 31776) ..
+  (33721, 31494), Z 42809, with the player's pose a few frames apart. That point
+  lies inside the chest: with the depth test the sprite draws nothing in the port and
+  no glow shows in the original's frame (compared by eye); with the test turned off
+  it shows on the chest. The hub's models are the GPU path's, so this says nothing
+  of their pixels, and the sprite's other poses were not compared.
 - **Card runs are not the recording's machine state.** A card reloads the bugs and
   their spawners, so a beat's bites, health and infection differ. See the beat
   table.

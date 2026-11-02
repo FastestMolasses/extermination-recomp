@@ -18,6 +18,7 @@
 #include "game/em_area11_boxes.h"
 #include "game/em_area11_roger.h"
 #include "game/em_diag.h"
+#include "game/em_effects_live.h"
 #include "game/em_packet_chain_original.h"
 #include "game/em_render_context_live.h"
 
@@ -35,6 +36,8 @@
 #define ARENA_END 0x007635C0u    /* the packet arena ends where the chain table starts */
 #define POINT_LIGHT_WORDS (32u * 32u)
 #define EM_OWNER_DRAW_LIVE_PAGE_UNITS 128u
+#define METHOD_UNITS 1024u     /* EM_CHAIN_PAGE_WALKED_MAX */
+#define METHOD_MODELS 32u
 
 static struct {
     /* D_00817BC0, the rig record 001D8130 loads and 001D8340 / 001D8690
@@ -80,6 +83,11 @@ static struct {
     EmObjectUnitPieces page_units[EM_OWNER_DRAW_LIVE_PAGE_UNITS];
     uint32_t page_address[EM_OWNER_DRAW_LIVE_PAGE_UNITS];
     uint32_t page_count, page_frame;
+    /* The frame's draw-method units (001CB140's), which the chain page
+     * walks as passes, and the blocks their REFs name. */
+    uint32_t method_unit[METHOD_UNITS], method_count, method_frame;
+    struct { uint32_t address, size; const uint8_t *bytes; } method_model[METHOD_MODELS];
+    uint32_t method_models;
     const EmOwnerServicesOwner *page_owner;
     uint32_t page_record;
     EmOwnerDrawLivePageLog page_log[EM_OWNER_DRAW_LIVE_PAGE_LOG];
@@ -898,6 +906,165 @@ int em_owner_draw_live_001CABA0(const EmWorldModels *bank, EmOwnerServicesOwner 
         log->position = fnv(log->position, q->nodes + 32u * k, 16);
         log->light = fnv(log->light, q->nodes + 32u * k + 16u, 16);
     }
+    return 0;
+}
+
+/* ------------------------------------------------ the draw methods */
+
+/* The frame's method units start over; the model table stays (the blocks
+ * are the area's resident bytes). */
+static void method_frame(void)
+{
+    const uint32_t frame = em_frame_counter();
+    if (L.method_frame != frame) {
+        L.method_frame = frame;
+        L.method_count = 0;
+        L.method_models = 0;
+    }
+}
+
+static int method_model(const EmWorldModel *m)
+{
+    const uint32_t address = m->address + 0x40u, size = m->w04 * 16u;
+    for (uint32_t i = 0; i < L.method_models; ++i)
+        if (L.method_model[i].address == address) return 0;
+    if (L.method_models >= METHOD_MODELS) return report(address, "more method models in one frame than the table holds");
+    L.method_model[L.method_models].address = address;
+    L.method_model[L.method_models].size = size;
+    L.method_model[L.method_models].bytes = m->bytes + 0x40u;
+    L.method_models++;
+    return 0;
+}
+
+int em_owner_draw_live_page_method(uint32_t address)
+{
+    if (L.method_frame != em_frame_counter()) return 0;
+    for (uint32_t i = 0; i < L.method_count; ++i)
+        if (L.method_unit[i] == address) return 1;
+    return 0;
+}
+
+uint32_t em_owner_draw_live_page_method_count(void)
+{
+    return L.method_frame == em_frame_counter() ? L.method_count : 0u;
+}
+
+const uint8_t *em_owner_draw_live_page_method_bytes(uint32_t address, uint32_t size)
+{
+    if (L.method_frame != em_frame_counter()) return NULL;
+    for (uint32_t i = 0; i < L.method_models; ++i) {
+        const uint32_t a = L.method_model[i].address, n = L.method_model[i].size;
+        if (address >= a && size <= n && address - a <= n - size) return L.method_model[i].bytes + (address - a);
+    }
+    return NULL;
+}
+
+static int ch3_load(void);
+
+/* The list a method puts after 001C7420 (the channel-3 cursor in the context
+ * word). */
+static int method_list(uint32_t method, const EmWorldModel *m, const uint32_t rgb[4])
+{
+    if (method == 0x001CB1F0u) return em_owner_draw_001D42E0(&L.draw, 3, m->address, m->w04) < 0 ? -1 : ch3_store();
+    if (ch3_store() < 0) return -1;
+    int rc;
+    if (method == 0x001CB060u) {
+        const uint8_t *copy = em_rcl_bytes(0x0026E510u, 16);     /* 001D6B10's t0 */
+        rc = copy ? em_rcl_001D3F60(3, m->address, m->w04, copy) : -1;
+        /* 001CAFA0: the draw environment again, the region */
+        if (rc == 0) rc = em_rcl_001D1F20(3);
+        if (rc == 0) rc = em_rcl_001D1FF0(3, 1);
+    } else {
+        const int six = method == 0x001CB2B0u;
+        const uint8_t *data = em_effects_live_window(six ? 0x0026E4C0u : 0x0026E470u, 0x50u);
+        const uint8_t *row0 = em_effects_live_window(six ? 0x00251C10u : 0x00251BD0u, 16u);
+        const uint8_t *rest = em_effects_live_window(six ? 0x00251C2Cu : 0x00251BECu, 0x24u);
+        if (!data || !row0 || !rest) return report(0x0026E470u, "the method's rows are not mapped (re-export effect_tables.emet)");
+        uint8_t colours[64] = {0};
+        memcpy(colours, row0, 16);
+        memcpy(colours + 0x1Cu, rest, 0x24u);
+        rc = em_rcl_001D40E0(3, six, m->address, m->w04, rgb, data, data + 16, colours);
+    }
+    return rc < 0 ? -1 : ch3_load();
+}
+
+int em_owner_draw_live_method(uint32_t method, const EmWorldModels *bank, EmOwnerServicesOwner *owner,
+                              const uint32_t rgb[4], uint32_t position_address, const uint32_t position[4])
+{
+    if (!bank || !owner || !rgb || !position) return report(0x001CB140u, "NULL argument");
+    if (em_rcl_fault()) return report(em_rcl_fault(), "the render context has faulted");
+    if (bind_views(bank) < 0) return -1;
+    if (ch3_open() < 0) return report(CTX + 0x1Cu, "the channel-3 cursor is outside the packet arena");
+    method_frame();
+    if (L.method_count >= METHOD_UNITS) return report(0x001CB140u, "more method units in one frame than METHOD_UNITS");
+    const EmWorldModel *m = em_world_models_of(bank, owner->model);
+    if (!m) return report(0x001D42E0u, "001CB140 of a model outside the owner's bank");
+    if (method_model(m) < 0) return -1;
+    L.bank = bank;
+    EmOwnerDrawWorld *d = &L.draw.world;
+    d->channel = L.channels;
+    d->channel_count = 4;
+    static EmActorLightBinding binding;
+    binding.light = &L.light;
+    binding.ctx = NULL;
+    binding.w_owner_rgb = w_owner_rgb;
+    L.owner_rgb = rgb;
+    memset(&L.light.fault, 0, sizeof L.light.fault);
+    memset(&L.draw.fault, 0, sizeof L.draw.fault);
+    EmOwnerServices *s = &L.services;
+    memset(s, 0, sizeof *s);
+    s->world.d00275B40 = owner->bone;
+    s->world.d00275B40_count = owner->bone_count;
+    s->world.scratch = &L.spr;
+    s->world.channel = L.channels;
+    s->world.channel_count = 4;
+    s->workers.ctx = &binding;
+    s->workers.w_001D89D0 = em_actor_light_w_001D89D0;
+    const uint32_t start = L.ch3_address;
+    EmOwnerServicesChannel *c = &L.channels[3];
+    const int32_t mode = method == 0x001CB1F0u ? 5 : method == 0x001CB130u ? 4 : method == 0x001CB2B0u ? 6 : 3;
+    int rc = w_001D8C20(NULL, mode);
+    if (rc == 0) rc = em_owner_services_001C7420(s, owner, EM_OWNER_SERVICES_COLOR_VU_ADDRESS, 3, NULL);
+    if (rc == 0) rc = method_list(method, m, rgb);
+    L.owner_rgb = NULL;
+    d->channel = &L.channel;                                      /* 001CAA00's single channel 0 */
+    d->channel_count = 1;
+    if (rc < 0 || s->fault.code) {
+        fprintf(stderr, "em_owner_draw_live: %08X faulted: services %08X/%d, draw %08X/%d, light %08X/%d\n",
+                (unsigned)method, (unsigned)s->fault.address, (int)s->fault.code, (unsigned)L.draw.fault.address,
+                (int)L.draw.fault.code, (unsigned)L.light.fault.address, (int)L.light.fault.code);
+        return -1;
+    }
+    if (!c->cursor || !c->end || c->cursor > c->end || c->end - c->cursor < 0x10)
+        return report(0x001CB140u, "no room for the RET tag");
+    uint8_t *t = c->cursor;
+    t[3] = 0x60;                                                  /* the RET tag */
+    t[4] = t[5] = t[6] = t[7] = 0;
+    t[0] = t[1] = 0;
+    c->cursor = t + 0x10;
+    if (ch3_store() < 0) return report(CTX + 0x1Cu, "the channel-3 cursor could not be stored");
+    if (method == 0x001CB060u) {
+        /* 001CAFA0: slot 0xFFD on the page, the frame copy's turn */
+        if (em_rcl_001CB760(0x007635C0u, 0xFFD000, start) < 0) return report(0x001CB760u, "001CB760 faulted");
+        if (w_001D8C20(NULL, 0) < 0) return report(0x001D8C20u, "the context +0x246C view is missing");
+        L.method_unit[L.method_count++] = start;
+        return 0;
+    }
+    /* 001CAAC0(D_00275B44 + 0xB0, p): the depth of the owner being ticked */
+    EmPacketChain *pc = em_rcl_packet_chain();
+    if (!pc) return report(0x001CAAC0u, "no packet chain");
+    EmAnimRest *r = &L.rest;
+    memset(r, 0, sizeof *r);
+    r->world.region[0] = (EmPoseRegion){position_address, 16, (uint8_t *)(uintptr_t)position, 0};
+    r->world.region_count = 1;
+    r->world.scratch = &L.spr;
+    r->workers.ctx = pc;
+    r->workers.w_001CB760 = em_packet_chain_w_001CB760;
+    int32_t key = 0;
+    if (em_anim_rest_001CAAC0(r, position_address, start, &key) < 0)
+        return report(r->fault.address, "001CAAC0 faulted");
+    if (w_001D8C20(NULL, 0) < 0) return report(0x001D8C20u, "the context +0x246C view is missing");
+    L.method_unit[L.method_count++] = start;
     return 0;
 }
 

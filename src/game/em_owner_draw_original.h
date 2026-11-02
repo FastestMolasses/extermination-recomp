@@ -65,6 +65,9 @@ extern "C" {
 #define EM_OWNER_DRAW_CLIP_KERNEL   UINT32_C(0x002354A0) /* 001D3AD0 CALL */
 #define EM_OWNER_DRAW_D_002514B0    UINT32_C(0x002514B0) /* the optional REF 2 */
 #define EM_OWNER_DRAW_SKIN_RECORD_3      UINT32_C(0x00816B40) /* 001D3900 */
+#define EM_OWNER_DRAW_SKIN_METHOD10      UINT32_C(0x00817140) /* 001D42E0 */
+#define EM_OWNER_DRAW_METHOD10           UINT32_C(0x0023D4D0) /* 001D42E0's program */
+#define EM_OWNER_DRAW_METHOD10_TEX0      UINT64_C(0x2004818599422020) /* 001D42E0's 001D6F60 */
 #define EM_OWNER_DRAW_SKIN_RECORD_3_CLIP UINT32_C(0x00816E40) /* 001D3CF0 */
 
 /* Fault codes (numerically the EM_SCENE_FAULT_* / EM_OWNER_FAULT_* codes). */
@@ -208,6 +211,12 @@ int em_owner_draw_001D3900(EmOwnerDraw *s, int32_t chan, uint32_t model_address,
                            EmOwnerDrawGsState gs, void *ctx);
 int em_owner_draw_001D3CF0(EmOwnerDraw *s, int32_t chan, uint32_t model_address, uint32_t model_w04,
                            EmOwnerDrawGsState gs, void *ctx);
+
+/* 001D42E0(chan, model): the draw method kind 10's channel list after
+ * 001C7420 (its CALL D_0023D4D0, the GS state (1, 1), 001D6F60's texture
+ * packet, the region (1), the skin record D_00817140 + (context +0x9C << 7),
+ * the fog-off REF while 001D2910(0) is 0, the model's blocks). 0, or -1. */
+int em_owner_draw_001D42E0(EmOwnerDraw *s, int32_t chan, uint32_t model_address, uint32_t model_w04);
 
 /* The DMA tag writer every submit of this chain uses, in the original's
  * store order: byte +3 = id, word +4 = address, halfword +0 = qwc (bytes +2

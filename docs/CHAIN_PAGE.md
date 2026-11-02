@@ -223,6 +223,18 @@ program's flow with a variant switch, emvup_kind6_particle); its own test is
 `tools/test_level2_kind6_vu_reference.py` (LEVEL2_RENDER.md "Kind-6
 near-fire program").
 
+**The object-method programs** (kind 10: D_0023D4D0, 129 instructions from
+ELF 0x0023D500; kind 9 and class 6: D_0023D0C0, 119 from 0x0023D0F0, the same
+without the colour block: RGBA = dmem 1013's words; kind 8: D_0023CC50, 131 from
+0x0023CC80, that colour, ST ((x - 1792) / 512, (y - 1936) / 224, 1) of the position
+pushed 0.03 along the normal; section 6.6): each reads the object kernel's vertex blocks and
+kicks 32 vertices per batch at TOP + 0x80, one vertex at a time (not
+software-pipelined); no MSCNT entry: every batch loads dmem 1013..1016 and
+1020..1023 again. Position, CLIP window, ADC, Q and fog are the object
+kernel's. ST = ((n' + 1) / 2, 1), n' the normal through the lighting rows, not
+divided by w; RGB = dmem 1013's words; A = FTOI0(min(20 + 1013.w * the vertex's
+own y, 128)). Translation: `emvup_method_batch`.
+
 **The EFU** (streak and kind 2). No capture holds an EFU result, so its
 arithmetic is the model the background renderer already uses for ERLENG
 (em_background_gs.h): ERLENG = 1 / sqrt(x^2 + y^2 + z^2) and ERCPR = 1 / x
@@ -637,6 +649,93 @@ carried as for AREA01's dynamic pair; A+D RGBAQ sets the whole register
 export, the models' blocks from the Roger export's library spans.
 tools/chain_page_model.py runs the same pages with the ORIGINAL microcode
 (test-aim-fire-lamp-cone).
+
+### 6.6 The draw methods' object units (2026-11-01)
+
+The draw methods of 0x26E310's kinds 8, 9, 10 and 12 build their object unit
+on channel 3 and put it on the page as 001CABA0 does, but the unit is not a
+class-2 unit: after 001C7420's colour and node CNTs it CALLs a program of its
+own, sends its own GS state, TEX0 and region, and REFs the model's blocks.
+
+**Kind 10** (001CB1F0 -> 001CB140): 001D8C20(5) (001D8C30's colour row: RGB
+128 * the owner's +0x80.. + 2^23, A 0.2 * 128 * +0x8C), 001C7420(owner, 0x3F5,
+3), 001D4430 -> 001D42E0(3, model): REF of the arena's first qword and CALL
+D_0023D4D0, GS state (1, 1) (D_008153F0: TEX1 0x60, TEST 0x53001, ALPHA 0x44,
+CLAMP 0, COLCLAMP 1, ZBUF with ZMSK 0), 001D6F60's packet (TEXFLUSH, TEX0
+0x2004818599422020, TEXA 0x80), region 1 (PRIM 0, CLAMP 0), the skin record
+D_00817140 + (context +0x9C << 7), the fog-off REF while 001D2910(0) is 0, the
+model's blocks; a RET tag; 001CAAC0(D_00275B44 + 0xB0, the unit's start);
+001D8C20(0). No culling: a vertex past the guard band has ADC, as the object
+kernel's. The skin record's template is PRIM 0x05C (Gouraud, textured,
+blended, strip, no fog) with REGS NOP, ST, RGBAQ, XYZF2: the vertex TEX0 row
+is not sent. TEX0 is a PSMT4 64 x 64 texture at TBP 0x2020 through the CT32
+CLUT 0x240C, resident from the boot library.
+
+**Kind 9 and class 6** (001CB130 -> 001CB070, 001CB2B0 -> 001CB200 -> 001D4640):
+001D8C20(4; class 6: 6); kind 9 stores 1.0 in the owner's +0x80..+0x88 first;
+001C7420; 001D40E0 (class 6: 001D4440, its twin): the program D_0023D0C0, then
+001D6930: the field copied (bilinear 2:1, as the depth-of-field pass's copy) to
+the 256 x 256 buffer D_0027567C (class 6: D_00275680; both 0x258000, the shadow
+target's and the pass's memory); 001D1F80(0, 2) (TEST 0x33001, ZBUF ZMSK 1,
+ALPHA 0x68: Cs + Cd); 001D6580's Gouraud strip PRIM 0x04C added over the buffer:
+kind 9 over columns 192..255 with one bright corner (128 * rgb at D_00251BE0 ..),
+class 6 over the whole buffer (rows D_00251C10); 001D1F20 (the frame's
+environment again); the GS state (1, 1) (class 6: (1, 7): TEST 0x50003, ALPHA
+0xA8); 001D6BA0's TEX0 of the buffer (MODULATE, TCC 0); region 3; the skin record
+D_00817040 (template PRIM 0x05C); the model; 001D1F20. So the object is
+sphere-mapped with a copy of the frame so far, plus a highlight: **not a texture
+upload**, which this file's predecessors and AREA19_PORT.md said. Each unit's
+copy reads the field as the page has drawn it up to its CALL: the walk's pass
+order is the GS's.
+
+**Kind 8** (001CB060 -> 001CAFA0): 001D8C20(3), 001C7420, 001D40D0 -> 001D3F60:
+the program D_0023CC50; 001D1F80(1, 0); 001D6B10 (the same copy, to D_00275678,
+then 001D1F20); 001D6BA0's TEX0 of it (TFX 2 HIGHLIGHT, TCC 0); region 3; the skin
+record D_00816F40 (template PRIM 0x01C: no blend); the model; 001D1F20; then
+001CAFA0's own 001D1F20 and region 1, the RET tag and 001CB760 at slot 0xFFD, not
+at the object's depth, so it reads everything the page drew in the slots before
+it. Its ST is the vertex's screen position pushed 0.03 along the raw normal, as a
+coordinate into the copy: the object shows the frame behind it, displaced. The
+one user the port reaches is the 0x141D20 creature's behaviour 5 (001437E0), which
+switches between kinds 0 and 8 while it cloaks.
+
+**The walk.** Such a unit is walked as a pass (em_chain_page's `object_pass`;
+`em_owner_draw_live_page_method` says which CALLs): the DMA follows its CALL,
+VIF1 runs its bytes, the program runs as a batched program (MSCAL 0, then
+MSCNT, which re-runs it from micro 0), and its primitives reach the GS model
+with their environment through em_gfx_gs_page_pass, so ZBUF_1 and TEXA are the
+GS's too. The walk reads the program packet from effect_tables.emet
+(`tools/export_area00_runtime_tables.py`, which holds export_effect_tables.py's
+blocks) and the model's blocks through the table em_owner_draw_live keeps for
+the frame. With the GPU renderer (no recorded GS frame) the unit is walked
+over and draws nothing.
+
+**Evidence.** `make test-object-method-reference`
+(tools/test_object_method_reference.py) runs the original microcode from the
+ELF: the 102 kind-10 units nine end snapshots hold in their packet arena (no
+capture's latest page CALLs one, so a page of their CALLs is built in unused
+RAM), 306 batches, and 400 synthetic ones; data memory, every register and the
+kicked packet equal on both lanes, the primitives, environments and counts of
+the walk equal, each Q and clip-flag read's producer asserted; the port's list
+after 001C7420 byte-equal to all 102 units (but the bytes of a tag no one
+writes). Kinds 9, 12 and 8: no end snapshot holds one (all 374 searched), so the
+ORIGINAL 001D40E0 / 001D4440 / 001D3F60 (with 001D1F20, 001D1FF0) run on the EE
+oracle over a captured RAM, with the fog-off REF and without: their lists
+byte-equal to the port's; a unit of each (a captured unit's CNTs and model) walked
+by the original microcode and the native page: primitives, environments and marks
+equal; 400 synthetic batches of D_0023D0C0 and of D_0023CC50. The colour row and 001C7420 are test_actor_light_001d89d0_reference's
+and test_owner_services_reference's. One class-6 unit is the original's own: a fork snapshot 700 frames past
+a15b_00_event's state (the decomp's build/fix_draws/orig_a15/h3, EXTRA in the
+test, walked when present): 39 batches equal to the microcode on both lanes. At
+that camera the object is so near that every one of its 1,248 vertices has ADC, so
+the unit draws the copy and the strip and no triangle, in the original and in the
+port; the dark red band in that frame comes from something else, and is no
+evidence for this draw. It ran live with the raster on over a07_00 (4 units, 216
+triangles, no refusal: the texture is resident; a purple shape on the floor, seen
+in one port frame) and a15b_01. No beat run here reached a worm or kind 8 (of
+a19_01, a19b_01, a19c_00..03: kind 10 in a19c_03 only). **Pixels were not compared
+with an original frame**: no capture holds a frame with one of these units' page
+and its GS memory before the draw.
 
 ## 7. Binding (live)
 

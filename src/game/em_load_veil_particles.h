@@ -105,6 +105,9 @@ typedef struct {
     const uint32_t *ctx_9C;      /* *(D_00275670 + 0x9C): 001D1F20 block index, 001D6930 test */
     const uint32_t *d00275674;   /* static GS block base the REF tags point into */
     const uint32_t *d0027568C;   /* the capture texture's GS memory address word */
+    const uint32_t *d00275678;   /* the three words D_00275678, D_0027567C, D_00275680 */
+    const uint32_t *ctx_0C;      /* *(D_00275670 + 0x0C): 001D2910(0) reads bit 0 */
+    uint32_t *ctx_50;            /* D_00275670 + 0x50 + 4 * chan: 001D2090's targets */
     const uint8_t *d0026E880;    /* 16 bytes: the 001D6930 source quadword */
     const uint8_t *d00241010;    /* first 8 bytes of the SDK GS parameter block (00100610) */
     uint8_t *packet;             /* the packet memory window */
@@ -171,6 +174,24 @@ int em_load_veil_particles_001D6930(EmLoadVeilParticles *s, int32_t chan, int32_
                                     int32_t a3, const uint8_t src[16], uint32_t *result);
 int em_load_veil_particles_001D6B60(EmLoadVeilParticles *s, int32_t chan, int32_t a1, int32_t a2,
                                     int32_t a3, const uint8_t src[16], uint32_t *result);
+/* 001D6580(chan, a1, a2, a3): the strip of four vertices, PRE, PRIM a3 | 4,
+ * RGBAQ a2[k], XYZF2 a1[k]. */
+int em_load_veil_particles_001D6580(EmLoadVeilParticles *s, int32_t chan, const uint8_t a1[64], const uint8_t a2[64],
+                                    int32_t a3, uint32_t *result);
+/* The draw methods' channel lists (docs/CHAIN_PAGE.md section 6.6), each after
+ * 001C7420. 001D40E0(chan, model, rgb) / 001D4440 (`six` 1): the frame's copy
+ * into the 256 x 256 buffer, the strip added over it, the object drawn from
+ * it. `copy` is the quadword of D_0026E470 / D_0026E4C0, `xy` the 64 bytes at
+ * D_0026E480 / D_0026E4D0, `colours` the 64 bytes at D_00251BD0 / D_00251C10
+ * (their row 1's first three words are this call's), `rgb` the owner's
+ * +0x80..: three binary32 words, multiplied by 128 and put through
+ * float_to_int. 001D3F60(chan, model, 0): the same copy, the object drawn from
+ * it at its screen position. `model_w04` is the model's +0x04 word. */
+int em_load_veil_particles_001D40E0(EmLoadVeilParticles *s, int32_t chan, int six, uint32_t model, uint32_t model_w04,
+                                    const uint32_t rgb[3], const uint8_t copy[16], const uint8_t xy[64],
+                                    const uint8_t colours[64]);
+int em_load_veil_particles_001D3F60(EmLoadVeilParticles *s, int32_t chan, uint32_t model, uint32_t model_w04,
+                                    const uint8_t copy[16]);
 /* 001DFA40(chan, a1, a2, f12): only the low words of a1/a2 reach the packets. */
 int em_load_veil_particles_001DFA40(EmLoadVeilParticles *s, int32_t chan, uint32_t a1, uint32_t a2,
                                     uint32_t f12, uint32_t *result);

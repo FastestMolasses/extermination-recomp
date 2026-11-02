@@ -108,6 +108,20 @@ int em_area01_model_draw_call(EmArea01ModelDraw *d,uint32_t function,uint32_t no
         rc=em_owner_draw_live_001CAF60(&d->bank,&d->owner,d->rgb,node,d->current,d->sp,d->regions,d->region_count);
     } else if(r && function==0x001CACB0u && prepare(d,node,r,0,0)==0) {
         rc=em_owner_draw_live_001CABA0(&d->bank,&d->owner,d->rgb,node);
+    } else if(r && (function==0x001CB1F0u || function==0x001CB130u || function==0x001CB2B0u ||
+                    function==0x001CB060u) && prepare(d,node,r,0,0)==0) {
+        /* 001CB070 stores +0x88, +0x84, +0x80 = 1.0 before its 001C7420 */
+        uint8_t *rgb=function==0x001CB130u ? em_area01_actor_view_bytes(v,node+0x80u,12,1) : d->model ? (uint8_t *)d->rgb : NULL;
+        const uint8_t *position=em_area01_actor_view_bytes(v,d->current+0xB0u,16,0);
+        uint32_t words[4];
+        if(rgb && position) {
+            if(function==0x001CB130u) {
+                static const uint32_t one[3]={0x3F800000u,0x3F800000u,0x3F800000u};
+                memcpy(rgb,one,sizeof one);memcpy(d->rgb,one,sizeof one);
+            }
+            memcpy(words,position,sizeof words);
+            rc=em_owner_draw_live_method(function,&d->bank,&d->owner,d->rgb,d->current+0xB0u,words);
+        }
     }
     if(em_area01_actor_view_commit(v)<0)rc=-1;
     if(rc<0)return call_fail(d,function,resumed);

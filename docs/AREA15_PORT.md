@@ -80,10 +80,10 @@ says what stopped the exploration (six 0013D2D0 creatures, two rounds held).
 ## Open items
 
 - **The class-6 draw of AREA15 sub 1's [3]** (0x826850's +0xD 0xD method,
-  001CB2B0 -> 001CB200 -> 001D4640 -> 001D4440, a screen-copy pass on channel 3)
-  has no live chain page: the node is not drawn while D_008107FB >= 3 and the
-  log says so once. em_level15_support translates it with its oracle; it needs
-  001D2090, 001D6930, 001D6BA0, 001D6580 on the live channel.
+  001CB2B0 -> 001CB200 -> 001D4640 -> 001D4440) draws since 2026-11-01: its unit
+  is walked on the page, the copy of the frame included (CHAIN_PAGE.md section
+  6.6, `make test-object-method-reference`). It ran live over a15b_01; its pixels
+  are not compared with an original frame.
 - **The snow of AREA15 sub 1** is drawn since 2026-11-01: 001E67C0 is AREA11's emission
   with D_002551F0 = 0xA (its case 0xF01), flags 0x30390010 taking the same branch, on
   the camera D_008105D0 (em_snow_runtime). The tiles ran live through a15b_00; its

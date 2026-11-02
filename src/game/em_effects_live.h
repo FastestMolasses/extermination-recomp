@@ -95,6 +95,10 @@ const uint8_t *em_effects_live_elf(uint32_t address, uint32_t size);
  * or before the load): the chain page's reads of ELF data (the program
  * packets 0x231770 / D_00233290 / D_00233800, 001CFBE0's source blocks),
  * and the overlay source blocks 001D04B0 was handed since the attach. */
+/* 001CD520 over `point` for the status frames' menu player glow (001F4BF0,
+ * em_status_models): the same translation as the effect handlers'. 0, or -1. */
+int em_effects_live_001CD520(int32_t a0, int32_t a1, const uint32_t point[4], uint64_t tex0, uint64_t colour,
+                             uint32_t f12, uint32_t f13, uint32_t f14);
 const uint8_t *em_effects_live_window(uint32_t address, uint32_t size);
 
 /* 001D7BB0's tail at the area load (001D19E0): 001F68B0() and 001F6E40(),

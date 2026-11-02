@@ -2925,8 +2925,9 @@ shooting and knifing anywhere also run without a fault.
   states have none yet); `mid_route_beats.py --single`: 20 of 34 beats end on their
   recordings' progress blocks and positions; the SFX lockstep with the original
   driver over 0x44F past its loop.
-- Status: **PARTIAL**. From cards, nothing row-exact; the tendril field and the worms
-  are not drawn.
+- Status: **PARTIAL**. From cards, nothing row-exact. The tendril field and the
+  worms draw (kinds 10 and 9, CHAIN_PAGE.md section 6.6: packets equal to the
+  original microcode's, pixels not compared with an original frame).
 - **The port's one choice here (made under the user's "fix everything", 2026-11-01; the user may veto it):** a streak or kind-2 line whose EFU
   operand is exactly zero (a head on the camera plane) is dropped, that one primitive
   only, and the rest of its batch draws. The hardware's result is not established: the
@@ -2949,8 +2950,10 @@ shooting and knifing anywhere also run without a fault.
   oracles they extend); `mid_route_beats.py --single`: the table in
   docs/AREA08_PORT.md.
 - Status: **PARTIAL**. From cards, nothing row-exact from New Game; a card reloads
-  the bugs, so bites, health and infection differ. AREA08's boxes (001CB1F0) and
-  the infected menu player's glow are not drawn.
+  the bugs, so bites, health and infection differ. The boxes draw (001CB1F0: packets
+  equal to the original microcode's, pixels not compared with an original frame). The
+  infected menu player's glow is on the page as the original's (one capture) and
+  hidden by the chest as there.
 
 ### AREA13's later story from its start cards
 
@@ -2981,7 +2984,8 @@ shooting and knifing anywhere also run without a fault.
   [2]'s scripts 9,160 and 1,746 consecutive rows; the SFX lockstep with the
   original driver over 0x44E past its loop.
 - Status: **PARTIAL**. From cards; the doors into AREA19 wait for its lane; the
-  class-6 draw of sub 1's [3] (001CB200) is not drawn; E46S4's feed_end is derived,
+  class-6 draw of sub 1's [3] (001CB200) draws (packets equal to the original
+  microcode's, pixels not compared with an original frame); E46S4's feed_end is derived,
   not probed.
 
 ## What we deliberately do not emulate

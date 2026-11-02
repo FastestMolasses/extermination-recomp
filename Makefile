@@ -1213,9 +1213,14 @@ test-vu1-face-morph-defects:
 test-shadow-decal-reference:
 	python3 tools/test_shadow_decal_reference.py
 
-.PHONY: test-chain-page-reference test-chain-page-gpu
+.PHONY: test-chain-page-reference test-chain-page-gpu test-object-method-reference
 test-chain-page-reference:
 	python3 tools/test_chain_page_reference.py
+
+# The draw methods' VU1 programs and their object units against the original
+# microcode (docs/CHAIN_PAGE.md section 6.6).
+test-object-method-reference:
+	python3 tools/test_object_method_reference.py
 
 test-chain-page-gpu:
 	python3 tools/test_chain_page_gpu.py

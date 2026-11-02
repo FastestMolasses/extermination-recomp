@@ -108,3 +108,8 @@ hold no such action), so the live path rests on their oracles.
   not told apart). The game task stops there and mid_route_beats reports a timeout.
   a19b_01's VU1 fault was the streak's EFU zero, dropped since 2026-11-01
   (docs/AREA19_PORT.md open item 1); whether this one had the same cause is not known.
+  Tried again on 2026-11-01 (a13c_01 with its path edit removed, so the door is missed):
+  it ran to the pad's end, about 2,000 frames, with no fault. Not reproduced, not
+  explained; the rest of what is known stays as above. The grid, floor and ripple
+  programs' ERLENG keep the fail-stop, so such a fault still names the program's
+  page (the fault line's address) if it comes back.

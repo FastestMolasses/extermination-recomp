@@ -151,6 +151,13 @@ void em_status_models_set_node(EmStatusModels *models, uint32_t fn, EmStatusMode
 typedef int (*EmStatusModelsLightFn)(void *ctx, int32_t mode, const EmOwnerServicesOwner *owner,
                                      const uint32_t rgb[4], float a[16], float b[16]);
 void em_status_models_set_light(EmStatusModels *models, EmStatusModelsLightFn light, void *ctx);
+/* 001F4BF0's glow sprite on the infected menu player: 001CD520(a0, a1, point,
+ * TEX0, rgb, w, h, zbias), the floats as bits. Unbound, the call is only
+ * counted (em_status_models_glows). */
+typedef int (*EmStatusModelsSpriteFn)(void *ctx, int32_t a0, int32_t a1, const uint32_t point[4], uint64_t tex0,
+                                      uint32_t rgb, uint32_t w, uint32_t h, uint32_t zbias);
+void em_status_models_set_sprite(EmStatusModels *models, EmStatusModelsSpriteFn sprite, void *ctx);
+unsigned em_status_models_glows(const EmStatusModels *models);
 /* D_0028B020's 24 x 0x2F0 bytes, and D_00810610's 64 (the models' view). */
 uint8_t *em_status_models_pool_bytes(EmStatusModels *models);
 uint8_t *em_status_models_view_bytes(EmStatusModels *models);
