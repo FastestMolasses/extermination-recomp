@@ -19,15 +19,15 @@ SERVICES={0x21BAB0:(0,0),0x1AEDE0:(2,0),0x1AEE10:(2,0),0x1B1E20:(2,0),
           0x1B0250:(0,0),0x21B9A0:(1,2),0x1D2830:(2,0),0x1DD980:(2,0),0x1D25F0:(0,1),
           0x21BA80:(3,0),0x21BA70:(1,0),0x1C1DC0:(0,0)}
 # 0022EEF0's scene script (its leading switch): the time stamps of every scene
-# that has one, with the edges of its bar windows. Scene 27's stretch 3852..3960
-# reaches 0011E0A8, which the port refuses (the fail-stop check below).
+# that has one, with the edges of its bar windows; scene 27's ramp 3852..3960,
+# whose whole steps cue 001B1E20(6, 5).
 STAMPS={15:(1330,),22:(573,648),24:(105,263,264,384,655,656,910,1159,1160),25:(230,316),26:(2670,),
-        27:(2431,3491,3580,3851,3960,4260,4508,4609),29:(0,777),30:(31,75),31:(1,),
+        27:(2431,3491,3580,3851,3852,3852.5,3853,3861.5,3862,3872,3900,3959,3959.5,3960,4260,4508,4609),29:(0,777),30:(31,75),31:(1,),
         33:(199,200,300,301,360,560,561,635,636,700,701),34:(1,),35:(50,)}
 BLANK=0x1C00000   # a blank camera track of BLANK_LENGTH rows, in zero RAM
 BLANK_LENGTH=5000
 SPANS=((CAM,0x90),(0x8105D0,0x30),(0x8106F3,1),(0x8234C0,32),
-       (0x275BFC,4),(0x275C98,8),(0x70003400,64),(0x70003600,16))
+       (0x275BFC,4),(0x275C98,8),(0x70003400,64),(0x70003600,16),(0x70003A20,12))
 STAMP=0xFEDCBA9876543210
 
 def main():
@@ -141,7 +141,7 @@ def main():
                     q=o.load(CAM+cursor)
                     if q:times.update(max(0.,v+d) for v in struct.unpack('<24f',o.read(q,96)) if 0<=v<BLANK_LENGTH
                                       for d in (-.5,0.,.5))
-                times={float(t) for t in times if not 3852<=t<3960}
+                times={float(t) for t in times}
                 sequence+=[(0x22EEF0,t) for t in sorted(times)]
         print(cap.name,'scene',scene,len(sequence),'exact ticks',flush=True)
     assert visited==set(SERVICES),(visited,set(SERVICES)-visited)
@@ -171,10 +171,7 @@ def main():
     struct.pack_into('<I',ram,CAM+0x80,0)
     struct.pack_into('<I',ram,CAM+0x84,0x26AAC0);rejected(0x22EEF0,0x26AAC0)
     struct.pack_into('<I',ram,CAM+0x84,0)
-    struct.pack_into('<h',ram,CAM+0x6E,27)
-    struct.pack_into('<I',ram,CAM+0x74,bits(3900.));rejected(0x22EEF0,CAM+0x74)
-    struct.pack_into('<h',ram,CAM+0x6E,scene)
     struct.pack_into('<I',ram,CAM+0x74,bits(0.))
     struct.pack_into('<I',ram,CAM+0x78,bits(duration+1));rejected(0x22EEF0,track)
-    banner(f'{total} timeline ticks',f'{boundaries} exact service boundaries','7 fail-stop checks',f'{time.monotonic()-start:.1f}s')
+    banner(f'{total} timeline ticks',f'{boundaries} exact service boundaries','6 fail-stop checks',f'{time.monotonic()-start:.1f}s')
 if __name__=='__main__':main()

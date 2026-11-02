@@ -63,7 +63,7 @@ says what stopped the exploration (six 0013D2D0 creatures, two rounds held).
 - `em_sfx_bank`: controller B0 0A (00118418's pan slide, 00116598's second
   slide) and B0 60 (00118790's loop), SFX_SEQUENCER.md. EM_SFX_OP_MAX is 64.
 - `em_area01_timeline`: 0022EC30's whole table and 0022EEF0's audio track and
-  leading switch (scene 27's 3852..3960 ramp faults at +0x74: not translated).
+  leading switch, scene 27's 3852..3960 ramp included.
 - `em_area_script`: op0B sub 5 (001B8020's bone_init_default_2).
 - `em_area01_actor_view`: a read inside the 16 header bytes of a record freed in
   the window answers the zeros 001AFC10 left (0x824510 reads +0xD after
@@ -84,9 +84,10 @@ says what stopped the exploration (six 0013D2D0 creatures, two rounds held).
   has no live chain page: the node is not drawn while D_008107FB >= 3 and the
   log says so once. em_level15_support translates it with its oracle; it needs
   001D2090, 001D6930, 001D6BA0, 001D6580 on the live channel.
-- **The snow of AREA15 sub 1**: 001E55F0's state runs (em_snow_runtime_tick_outdoor,
-  since the merge with lane H1), its 001E67C0 branch does not draw: the snow config
-  is AREA11's scene file. The log says so once; only the picture depends on it.
+- **The snow of AREA15 sub 1** is drawn since 2026-11-01: 001E67C0 is AREA11's emission
+  with D_002551F0 = 0xA (its case 0xF01), flags 0x30390010 taking the same branch, on
+  the camera D_008105D0 (em_snow_runtime). The tiles ran live through a15b_00; its
+  pixels are not compared with an original frame.
 - **Doors into AREA19** (a15_00, a15b_04, and a19e into AREA03) wait for lane J1.
 - **a03_00's walk** and the a15b_03 / a15b_04 walks are steered: row-exact
   needs the New Game chain.

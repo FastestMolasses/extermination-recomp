@@ -114,7 +114,7 @@ def efu_ercpr(x):
     live(x)
     x = fm._daz(x)
     if fm._is_zero(x):
-        raise ModelError('ERCPR of zero (not established)')
+        raise EfuZero('ERCPR of zero (not established)')
     return fm._quotient(0x3F800000, x, False)
 
 
@@ -126,7 +126,7 @@ def efu_erleng(x, y, z):
     s = s + b * b
     s = s + c * c
     if s == 0.0:
-        raise ModelError('ERLENG of a zero vector (not established)')
+        raise EfuZero('ERLENG of a zero vector (not established)')
     return efu_trunc(1.0 / __import__('math').sqrt(s))
 
 VIF_NAMES = {0x00: 'NOP', 0x01: 'STCYCL', 0x02: 'OFFSET', 0x03: 'BASE', 0x05: 'STMOD',
@@ -136,6 +136,11 @@ VIF_NAMES = {0x00: 'NOP', 0x01: 'STCYCL', 0x02: 'OFFSET', 0x03: 'BASE', 0x05: 'S
 
 class ModelError(AssertionError):
     pass
+
+
+class EfuZero(ModelError):
+    """An EFU operand with no established result (the port drops that
+    primitive; VuOracle.efu_drop models the same)."""
 
 
 def fail(msg):
@@ -199,6 +204,19 @@ class VuOracle(sh.VU1):
         self.mac = 0
         self.p = 0
         self.p_ready = 0
+
+    def efu(self, op, *operands):
+        """An EFU result; with efu_drop set, a zero operand reads P = 0 as the
+        port's streak and kind-2 programs do, and efu_zeros collects (the
+        batch's kick number, the primitive) from VI13, the record pointer."""
+        try:
+            return op(*operands)
+        except EfuZero:
+            if not getattr(self, 'efu_drop', False):
+                raise
+            kick = sum(1 for e in self.events if e[0] == 'kick')
+            self.efu_zeros.add((kick, (self.vi[13] - 0x88) // 4))
+            return 0
 
     @staticmethod
     def lower_reads(lo):
@@ -344,13 +362,13 @@ class VuOracle(sh.VU1):
                         self.ready[it][c] = self.cycle + 4
                 return None
             if fn == 0x7BE:                                   # ERCPR P = 1 / fs.fsf
-                self.later(EFU_LATENCY[fn], 'p', efu_ercpr(self.v[iss][lo >> 21 & 3]))
+                self.later(EFU_LATENCY[fn], 'p', self.efu(efu_ercpr, self.v[iss][lo >> 21 & 3]))
                 self.p_ready = self.cycle + EFU_LATENCY[fn]
                 return None
             if fn == 0x73F:                                   # ERLENG P = 1 / |fs.xyz|
                 if mask != 0xE:
                     fail(f'ERLENG {lo:#010x} at {pc:#x}: not the xyz form')
-                self.later(EFU_LATENCY[fn], 'p', efu_erleng(*self.v[iss][:3]))
+                self.later(EFU_LATENCY[fn], 'p', self.efu(efu_erleng, *self.v[iss][:3]))
                 self.p_ready = self.cycle + EFU_LATENCY[fn]
                 return None
             if fn == 0x67C:                                   # MFP ft.dest = P

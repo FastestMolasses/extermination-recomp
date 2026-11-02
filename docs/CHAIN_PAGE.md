@@ -227,8 +227,8 @@ near-fire program").
 arithmetic is the model the background renderer already uses for ERLENG
 (em_background_gs.h): ERLENG = 1 / sqrt(x^2 + y^2 + z^2) and ERCPR = 1 / x
 (VDIV's quotient), each evaluated exactly enough (double) and truncated to
-binary32 with denormals flushed; a zero operand is not established and
-faults. P is written 12 (ERCPR) or 24 (ERLENG) cycles after issue; WAITP
+binary32 with denormals flushed; a zero operand is not established, and the
+port drops that one primitive (the user's decision, AREA19_PORT.md open item 1). P is written 12 (ERCPR) or 24 (ERLENG) cycles after issue; WAITP
 and a following EFU op stall for it, MFP does not (each program leaves
 exactly the latency before its MFP). Bit-for-bit equality with the
 hardware is unproven (AIM_FIRE.md section 10.7 names the capture).
@@ -721,8 +721,9 @@ tools/chain_page_model.py runs the same pages with the ORIGINAL microcode
   - since 2026-10-02 also 40 (600) streak and 40 (600) kind-2 batches from
     a captured sprite MSCAL's memory with each packet's own uploads and the
     kind's GIF tag row (D_00251260 entries 0 / 1 and 4 / 5): every branch
-    both ways, the timing table asserted, and an ERCPR of zero faulting on
-    both sides (no capture holds either program's page);
+    both ways, the timing table asserted, and an EFU zero dropping its
+    primitive from the original's packet (no capture holds either program's
+    page);
   - faults: an exponent-255 word on a live lane (every program); nine
     malformed pages (END, an unknown MPG, an MSCAL before any program, ITOP,
     REGLIST, an A+D FRAME write, an unmapped REF, no room) and one clean fan;

@@ -56,6 +56,7 @@ int au_call(uint32_t fn,uint32_t flat,uint32_t radius,uint32_t scale,uint32_t le
     EmArea01Call c={.function=fn,.sp=0x7F0FFF00};
     if(fn==0x1FC3C0){c.na=3;c.nf=2;c.a[0]=0x680000;c.a[1]=0x6F0000;c.a[2]=flat;c.f[0]=radius;c.f[1]=scale;}
     else if(fn==0x1FC520){c.na=1;c.a[0]=0x6F0000;}
+    else if(fn==0x1FBE80){c.na=2;c.nf=2;c.a[0]=0x680000;c.a[1]=(uint64_t)(int64_t)(int32_t)flat;c.f[0]=radius;c.f[1]=scale;}
     else if(fn==0x1FBF50) {c.na=4;c.nf=2;c.a[0]=0x680000;c.a[1]=left;c.a[2]=right;c.a[3]=flat;c.f[0]=radius;c.f[1]=scale;}
     else if(fn==0x1FBD50) {c.na=3;c.nf=1;c.a[0]=0x680000;c.a[1]=0x301;c.a[2]=flat;c.f[0]=radius;}
     else {c.na=2;c.nf=1;c.a[0]=0x6800B0;c.a[1]=0x8105D0;memcpy(c.f,yaw,4);}

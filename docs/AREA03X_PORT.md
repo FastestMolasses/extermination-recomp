@@ -15,7 +15,7 @@ steered, and no group here ran from New Game.
 | Beat | Status | Stops and why |
 |---|---|---|
 | a03b_00 | no fault, door [13] reached, end position good | end block: health 5 for 65, infection 50 for 30 (steered back into the steam, below) |
-| a03b_01 | fails | the crawl overshoots the junction (557, 735.5) and ends at (582.9, 55, 735.5); health 25 for 45. a03b_02 and a03c_01 cross the same ducts |
+| a03b_01 | end position good | the crawl's junction turns on the stick, so crawls run on the recorded stick (the steering overshot it); health 25 for 45, infection 70 for 30 (bites) |
 | a03b_02 .. a03b_05 | **pass** | [22]'s script 0x827170, flag 0x29, items, the ducts, the curtains, the slider |
 | a03b_06 | **passes** (the lift, AREA08's load, with lane P1's assets) | |
 | a03c_00 | **passes** (chain and card) | |
@@ -24,7 +24,7 @@ steered, and no group here ran from New Game.
 | a03c_03 | end position good, AREA04 sub 1 loads | end block: health 58 for 56 |
 | a03d_00 | **passes** (chain and card) | the seal [23] |
 | a03d_01 | **passes** from its card (door [24], AREA04 sub 1's load); the chain a03d, which runs on from a03d_00, fails it: the player is bitten at the door and door [24] is not opened | |
-| a04c_00 | fail-stop | see "the held face" |
+| a04c_00 | end position good | runs through the held face to the end; health 44 by a low byte (D_0081085A) |
 | a04c_01 | not passed | the creatures kill the player: superseded by a04d_01 |
 | a04c_02 | not re-run since AREA07's assets came in | it played to the load before |
 | a04d_00 | **passes** (chain and card) | 0x825040's polygon, script 0x829020 (8,155 frames), the items |
@@ -107,12 +107,20 @@ in (3, 1) and (4, 1).
   logic runs.
 - **001C81C0 has no oracle** of its own; its parts are em_pose_host's (001C8480,
   001C8F10, 001C90D0, 001C92C0, 001CA0A0, 001CA1C0, proven there), the loop is new.
-- **The held face** (a04c_00, fail-stop): in AREA04 sub 1's event with the player at
-  infection 100 (mode 1), 001CB3C0 of the player faults at 001D3F08: the face a script
-  holds is not in the regions. It stays a fail-stop; a04d_00 (infection 85) does not
-  reach it. A run at infection 100 stops there.
-- a03b_01's crawl, the chains a03b and a04c (they stop where the single beats stop).
+- **The held face** (a04c_00): in AREA04 sub 1's event with the player at infection 100
+  (+0x2FF 0x40), 001B81D0 holds D_0028A490 row 0x1B and 001CB3C0 reads it by address.
+  The retained resources held rows 0x18 and 0x19 only, so 001D3F08 faulted.
+  `tools/export_coat_face.py` now adds rows 0x1A and 0x1B too (extract/chunk03 f18_id1a,
+  f19_id1b, equal to RAM at the table's words in the a04c_00 fork capture); run it once
+  on assets/scene_snow/roger/resources.emrs. The texels of these faces are not compared
+  with an original frame.
+- The chains a03b and a04c (they stop where the single beats stop).
 - 0019DB50's no-span path (the original walks its caller's registers) returns -1, as
   0019D770 does.
-- AREA03 sub 2's registry has 49 ids `unbound bank` (group 4 bank 2's handle was freed
-  in a03b_05): a sound of that bank is silent.
+- AREA03 sub 2's registry has 49 ids `unbound bank`, and they do no harm. Their records
+  (0x2603A8..0x260417) are not sound records: sub 2's remap points past the real table
+  into other data, so `group` and `bank` are junk. 00119EA0's own checks, evaluated over
+  the a03b_05 and a08_06 captures, return -1 for 47 of them: silent is what the original
+  does. Only 0x483 and 0x4D3 (record 0, -1, 1, 2) reach a live bank, handle 0's script
+  1 / 2; no immediate or data word in the boot ELF or AREA03.BIN names either id, so
+  nothing is known to request them.

@@ -107,11 +107,10 @@ Where AREA06 stands (2026-10-30, after the second pass):
   not save data), so `tools/mid_route_beats.py a06b` chains from the arrival.
 - **The streak program's operand fault** (a06_01's card, table 0x230800)
   no longer shows on this build at either script timing. On the merged
-  checkpoint it reproduces; there the packet's rows are finite and the
+  checkpoint it reproduced; there the packet's rows are finite and the
   registers hold a segment whose projected direction is about zero (vf2 ~
-  1e-19, vf15 at +-MAX): not a wrong input found, but the EFU case the model
-  refuses as not established (em_vu1_page_programs.h). It stays a fail-stop,
-  with no clamp.
+  1e-19, vf15 at +-MAX): the EFU case with no established result. Since
+  2026-11-01 the port drops that one quad (docs/AREA19_PORT.md open item 1).
 
 ## Full-route audit extension (2026-10-18)
 

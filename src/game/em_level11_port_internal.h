@@ -174,6 +174,16 @@ static inline int l11_c_001026A0(L11 *o, uint32_t a0, uint32_t a1, uint32_t a2)
     return o->h->w_001026A0(o->h->ctx, a0, a1, a2) < 0 ? l11_latch(o, 0x001026A0u, EM_LEVEL11_PORT_FAULT_WORKER_FAILED) : 0;
 }
 
+static inline int l11_c_00102738(L11 *o, uint32_t a0, uint32_t a1, uint32_t *result)
+{
+    if (l11_failed(o)) return -1;
+    if (!o->h->w_00102738) return l11_latch(o, 0x00102738u, EM_LEVEL11_PORT_FAULT_NULL_WORKER);
+    float r = 0.0f;
+    if (o->h->w_00102738(o->h->ctx, a0, a1, &r) < 0) return l11_latch(o, 0x00102738u, EM_LEVEL11_PORT_FAULT_WORKER_FAILED);
+    *result = l11_bits(r);
+    return 0;
+}
+
 static inline int l11_c_00102760(L11 *o, uint32_t a0, uint32_t a1)
 {
     if (l11_failed(o)) return -1;
@@ -298,6 +308,16 @@ static inline int l11_c_0011E2A8(L11 *o, uint32_t f0, uint32_t *result)
     if (!o->h->w_0011E2A8) return l11_latch(o, 0x0011E2A8u, EM_LEVEL11_PORT_FAULT_NULL_WORKER);
     float r = 0.0f;
     if (o->h->w_0011E2A8(o->h->ctx, l11_float(f0), &r) < 0) return l11_latch(o, 0x0011E2A8u, EM_LEVEL11_PORT_FAULT_WORKER_FAILED);
+    *result = l11_bits(r);
+    return 0;
+}
+
+static inline int l11_c_0011E420(L11 *o, uint32_t f0, uint32_t *result)
+{
+    if (l11_failed(o)) return -1;
+    if (!o->h->w_0011E420) return l11_latch(o, 0x0011E420u, EM_LEVEL11_PORT_FAULT_NULL_WORKER);
+    float r = 0.0f;
+    if (o->h->w_0011E420(o->h->ctx, l11_float(f0), &r) < 0) return l11_latch(o, 0x0011E420u, EM_LEVEL11_PORT_FAULT_WORKER_FAILED);
     *result = l11_bits(r);
     return 0;
 }
@@ -429,6 +449,13 @@ static inline int l11_c_00182F90(L11 *o, uint32_t a0, uint32_t a1)
     if (l11_failed(o)) return -1;
     if (!o->h->w_00182F90) return l11_latch(o, 0x00182F90u, EM_LEVEL11_PORT_FAULT_NULL_WORKER);
     return o->h->w_00182F90(o->h->ctx, a0, a1) < 0 ? l11_latch(o, 0x00182F90u, EM_LEVEL11_PORT_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int l11_c_0019A310(L11 *o, uint32_t a0, int32_t *result)
+{
+    if (l11_failed(o)) return -1;
+    if (!o->h->w_0019A310) return l11_latch(o, 0x0019A310u, EM_LEVEL11_PORT_FAULT_NULL_WORKER);
+    return o->h->w_0019A310(o->h->ctx, a0, result) < 0 ? l11_latch(o, 0x0019A310u, EM_LEVEL11_PORT_FAULT_WORKER_FAILED) : 0;
 }
 
 static inline int l11_c_0019A570(L11 *o, uint32_t a0, uint32_t a1, int32_t n2, int32_t n3, int32_t *result)

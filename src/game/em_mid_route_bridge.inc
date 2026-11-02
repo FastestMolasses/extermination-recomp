@@ -6037,6 +6037,17 @@ static int m11_w_001026A0(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2)
     return rc;
 }
 
+static int m11_w_00102738(void *ctx, uint32_t a0, uint32_t a1, float *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x00102738u, .sp = r->sp, .na = 2, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)(int32_t)a1;
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = em_ee_float(c.f0);
+    return rc;
+}
+
 static int m11_w_00102760(void *ctx, uint32_t a0, uint32_t a1)
 {
     EmArea01Runtime *r = ctx;
@@ -6212,6 +6223,16 @@ static int m11_w_0011E2A8(void *ctx, float f0, float *result)
 {
     EmArea01Runtime *r = ctx;
     EmArea01Call c = {.function = 0x0011E2A8u, .sp = r->sp, .na = 0, .nf = 1};
+    c.f[0] = em_ee_bits(f0);
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = em_ee_float(c.f0);
+    return rc;
+}
+
+static int m11_w_0011E420(void *ctx, float f0, float *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x0011E420u, .sp = r->sp, .na = 0, .nf = 1};
     c.f[0] = em_ee_bits(f0);
     int rc = em_area01_runtime_call(r, &c);
     if (rc == 0 && result) *result = em_ee_float(c.f0);
@@ -6398,6 +6419,16 @@ static int m11_w_00182F90(void *ctx, uint32_t a0, uint32_t a1)
     c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
     c.a[1] = (uint64_t)(int64_t)(int32_t)a1;
     int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int m11_w_0019A310(void *ctx, uint32_t a0, int32_t *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x0019A310u, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = (int32_t)c.v0;
     return rc;
 }
 
@@ -7270,6 +7301,7 @@ static inline void m11_hooks(EmArea01Runtime *r, EmLevel11PortHooks *h)
     h->bytes = m11_view;
     h->w_001000E0 = m11_w_001000E0;
     h->w_001026A0 = m11_w_001026A0;
+    h->w_00102738 = m11_w_00102738;
     h->w_00102760 = m11_w_00102760;
     h->w_00102850 = m11_w_00102850;
     h->w_001028B8 = m11_w_001028B8;
@@ -7287,6 +7319,7 @@ static inline void m11_hooks(EmArea01Runtime *r, EmLevel11PortHooks *h)
     h->w_0011DE90 = m11_w_0011DE90;
     h->w_0011DF78 = m11_w_0011DF78;
     h->w_0011E2A8 = m11_w_0011E2A8;
+    h->w_0011E420 = m11_w_0011E420;
     h->w_0011E620 = m11_w_0011E620;
     h->w_00122BB8 = m11_w_00122BB8;
     h->w_001274B0 = m11_w_001274B0;
@@ -7305,6 +7338,7 @@ static inline void m11_hooks(EmArea01Runtime *r, EmLevel11PortHooks *h)
     h->w_00146AF0 = m11_w_00146AF0;
     h->w_00146F80 = m11_w_00146F80;
     h->w_00182F90 = m11_w_00182F90;
+    h->w_0019A310 = m11_w_0019A310;
     h->w_0019A570 = m11_w_0019A570;
     h->w_0019AB20 = m11_w_0019AB20;
     h->w_0019AD00 = m11_w_0019AD00;

@@ -136,6 +136,8 @@ typedef struct {
     EmVu1PQword *m;
     uint32_t bad;
     int host;             /* the lanes on the host FPU (em_vu1p_mscal)   */
+    int drops;            /* streak, kind 2: an EFU zero drops the primitive */
+    uint32_t drop;        /* the current primitive met an EFU zero       */
     EmVu1PKick kick;      /* the XGKICK consumer and its context         */
     void *kick_ctx;
     EmVuHostEnv env;      /* the caller's FP environment (host path)     */
@@ -936,14 +938,24 @@ static inline int emvup_particle_program(EmVu1PCtx *c, int variant)
  * an EFU result, so this is a model, shared with the background's grid
  * program (em_vu1_grid_program_mscal below, docs/BACKGROUND.md): ERLENG = 1 / sqrt(x*x + y*y + z*z) and ERCPR = 1 / x,
  * truncated to binary32 with denormals flushed; ERCPR's quotient is VDIV's.
- * A zero operand (ERCPR) or a zero length (ERLENG) is not established: the
- * MSCAL faults (EM_VU1P_FAULT_OPERAND), as the reference model raises.
- * ERLENG's double arithmetic runs in the caller's FP environment, never in
- * the host lanes' (emvup_erleng_outside). */
+ * A zero operand (ERCPR) or a zero length (ERLENG) has no established
+ * result. The port's one choice here (user, 2026-11-01; docs/AREA19_PORT.md,
+ * docs/FIDELITY_FEATURES.md): the streak and kind-2 programs drop that one
+ * primitive and draw the rest of the batch; the fork's measured values are
+ * the emulator's, not hardware's, so none is used. The primitive's remaining
+ * arithmetic runs on P = 0, which writes nothing a later primitive reads.
+ * Every other program keeps the fault (EM_VU1P_FAULT_OPERAND). ERLENG's
+ * double arithmetic runs in the caller's FP environment, never in the host
+ * lanes' (emvup_erleng_outside). */
+static inline uint32_t emvup_efu_zero(EmVu1PCtx *c)
+{
+    if (c->drops) c->drop = 1u; else c->bad = 1u;
+    return 0;
+}
 static inline uint32_t emvup_ercpr(EmVu1PCtx *c, uint32_t x)
 {
     x = em_eei_daz(emvup_chk(c, x));
-    if (em_eei_is_zero(x)) { c->bad = 1u; return 0; }
+    if (em_eei_is_zero(x)) return emvup_efu_zero(c);
     if (c->bad) return 0;
     return c->host ? emvuh_div(EM_EE_ONE, x) : em_eei_quotient(EM_EE_ONE, x, 0);   /* x finite, normal */
 }
@@ -964,7 +976,7 @@ EM_VU_HOST_STATIC_NOINLINE uint32_t emvup_erleng_double(EmVu1PCtx *c, const uint
     const double xx = x * x, yy = y * y, zz = z * z;
     double s = xx + yy;
     s = s + zz;
-    if (s == 0.0) { c->bad = 1u; return 0; }
+    if (s == 0.0) return emvup_efu_zero(c);
     const double root = sqrt(s);
     const double inv = 1.0 / root;
     float f = (float)inv;
@@ -1193,6 +1205,16 @@ static inline int emvup_streak_start(EmVu1PCtx *c)
     return EM_VU1P_OK;
 }
 
+/* The batch's kick after `dropped` of its `count` primitives met an EFU zero
+ * (emvup_efu_zero): the tag's NLOOP loses them, and a batch left with none
+ * kicks nothing. */
+static inline int emvup_drop_kick(EmVu1PCtx *c, uint32_t at, uint32_t count, uint32_t dropped)
+{
+    if (dropped == count) return 0;
+    c->m[at].w[0] -= dropped;
+    return emvup_kick(c, at);
+}
+
 /* MSCAL 0 of the streak program (table 0x230800: 001CFBE0's kinds 0 and 4;
  * the AREA11 user is the impact effect 0x80000060's handler 001EACF0). Its
  * micro 0x000..0x0C2 are the sprite program's instructions (the branch at
@@ -1210,6 +1232,7 @@ static inline int emvup_streak_program(EmVu1PCtx *c)
     const int rc0 = emvup_streak_start(c);
     if (rc0) return rc0;
     uint32_t batches = 0;
+    c->drops = 1;
     for (;;) {
         /* 0x0F7 -> 0x01D */
         r->vi[9] = 0xF9;
@@ -1242,12 +1265,16 @@ static inline int emvup_streak_program(EmVu1PCtx *c)
         emvup_lq(c, 1, r->vi[13] + 1u);
         emvup_lq(c, 2, 100);
         r->i = 0x3B800000u;                                            /* 0x118: 1/256 */
+        const uint32_t count = r->vi[11];
+        uint32_t dropped = 0;
         do {
+            c->drop = 0;
             emvup_streak_quad(c);                                      /* 0x119..0x173 */
             if (c->bad) return EM_VU1P_FAULT_OPERAND;
-            r->vi[12] = (uint16_t)(r->vi[12] + 13u);                   /* 0x175 (delay slot) */
+            if (c->drop) dropped++;                                    /* the next quad overwrites it */
+            else r->vi[12] = (uint16_t)(r->vi[12] + 13u);              /* 0x175 (delay slot) */
         } while ((int16_t)r->vi[11] > 0);                              /* 0x174 */
-        if (emvup_kick(c, r->vi[10] & 1023u))                          /* 0x176 */
+        if (emvup_drop_kick(c, r->vi[10] & 1023u, count, dropped))     /* 0x176 */
             return EM_VU1P_FAULT_KICK;
     }                                                                  /* 0x178 -> 0x0F7 */
     return c->bad ? EM_VU1P_FAULT_OPERAND : EM_VU1P_OK;
@@ -1324,6 +1351,7 @@ static inline int emvup_kind2_program(EmVu1PCtx *c)
     const int rc0 = emvup_streak_start(c);
     if (rc0) return rc0;
     uint32_t batches = 0;
+    c->drops = 1;
     for (;;) {
         /* 0x0F7 -> 0x01D */
         r->vi[9] = 0xF9;
@@ -1351,11 +1379,18 @@ static inline int emvup_kind2_program(EmVu1PCtx *c)
         emvup_lq(c, 18, r->vi[13]);
         emvup_lq(c, 19, r->vi[13] + 1u);
         r->i = 0x3B800000u;                                            /* 0x111: 1/256 */
+        const uint32_t count = r->vi[11];
+        uint32_t dropped = 0;
         do {
+            c->drop = 0;
             emvup_kind2_line(c);                                       /* 0x112..0x137 */
             if (c->bad) return EM_VU1P_FAULT_OPERAND;
+            if (c->drop) {                                             /* the next line overwrites it */
+                dropped++;
+                r->vi[12] = (uint16_t)(r->vi[12] - 4u);
+            }
         } while ((int16_t)r->vi[11] > 0);                              /* 0x138 */
-        if (emvup_kick(c, r->vi[5] & 1023u))                           /* 0x13A */
+        if (emvup_drop_kick(c, r->vi[5] & 1023u, count, dropped))      /* 0x13A */
             return EM_VU1P_FAULT_KICK;
     }                                                                  /* 0x13C -> 0x0F7 */
     return c->bad ? EM_VU1P_FAULT_OPERAND : EM_VU1P_OK;

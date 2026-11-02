@@ -30,7 +30,7 @@ beats keep the default, so their results do not move.
 | a13c_01 (roof ladder, walkway) | `a13c_01` | **passes** (with a path edit, below) | not compared |
 | a13c_02 ([44], the battery page) | `a13c_02` | **passes** | 6..1176: 1,170 of 1,171, 1,170 consecutive |
 | a13c_03 (the blast, [45]) | `a13c_03` | **passes** | scene 464..1283: 817 of 820, 817 consecutive; the player stands still for most of it |
-| a13c_04 (g[3], the cure) | `a13c_04` | block equal (health 100, infection 0), 5.21 from the recorded end: the hit's slide comes at another time. **Fails the 4-unit rule** | not compared |
+| a13c_04 (g[3], the cure) | `a13c_04` | **passes** since its actions 62, 65 run on the recorded stick (RAW_BEAT; the steering dragged the hit's slide back): block equal (health 100, infection 0) | not compared |
 | a13c_05 (the boom, [7]'s scene) | `a13c_05` | **passes** (path edit, EM_START_AT_FINE=2) | 1140..1813: 0 identical, the player stands 0.3 from the recorded trigger spot; [7]'s script ran to its end |
 | a13c_06 (the south region) | `a13c_06` | **passes** | not compared |
 | a13d_00 .. a13d_05 | their cards | **pass** | not compared (steered) |
@@ -54,7 +54,8 @@ heading and action are compared.
   battery page; a13c_00 ends with the recorded charge.
 - **The player's face in the coat**: 001B81D0 picks D_0028A490 row 0x19 while
   +0x2FF is 0x3E; `tools/export_coat_face.py` adds extract/chunk03/f17_id19.bin
-  to the retained resources (RAM equals the file in the fork capture).
+  (and rows 0x1A, 0x1B, docs/AREA03X_PORT.md) to the retained resources (RAM equals
+  the file in the fork capture).
 - **The menu player in the coat**: 0020E6F0 binds D_0028A588 with D_00810C60 = 1;
   `tools/export_status_coat.py`, em_status_models load_coat (optional: without the
   files such a page faults at 001CA6E0). **Card-only**: no fork capture shows the
@@ -89,23 +90,21 @@ a13c_05's corner on [44]'s platform); no pad byte changes.
 
 ## Fail-stops that remain
 
-These callees of the beasts have no live binding, so they fault at their address:
-00146F80 (00144040 state 4's ground probe), 0021BED0, 0021BF90, 0021C040 (the grab
-that holds the player, reaction 0x3C). No recorded AREA13 beat shows reaction 0x3C
-or 0x3D (the rows hold no such action), so the route does not need them, but free
-play near a beast can reach them.
+None of the beasts' callees: 00146F80 (00144040 state 4's ground probe), 00146AF0 (the
+stalk's aim test) and 0021BED0, 0021BF90, 0021C040 (the grab that holds the player,
+reaction 0x3C) are bound. No recorded AREA13 beat shows reaction 0x3C or 0x3D (the rows
+hold no such action), so the live path rests on their oracles.
 
 ## Open items
 
 - **a13b_05** and **a13b_s0**: steering misses (above). No fault.
-- **a13c_04**: the end position, 5.21.
 - **Row-exact**: nothing here runs from New Game. It waits for a chain lane; AREA19's
   host is on main, so the route can now cross a19_00 .. a19_02 into a13b_00.
 - **The menu player in the coat** has no original frame to compare.
-- **Fail-stops**: the four callees above.
 - A tick-logged run and a plain run of a13c_01 once went different ways; the plain
   run that missed door [17] later hit a chain page "VU1 translation fault" with
   detail 2 after thousands of frames in the east room, seen in several runs, not
   traced (detail 2 is an exponent-255 operand or an FTOI out of range; they were
   not told apart). The game task stops there and mid_route_beats reports a timeout.
-  Lane J1's a19b_01 stops on a VU1 fault too; whether they are one cause is not known.
+  a19b_01's VU1 fault was the streak's EFU zero, dropped since 2026-11-01
+  (docs/AREA19_PORT.md open item 1); whether this one had the same cause is not known.
