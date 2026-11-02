@@ -116,8 +116,9 @@ behaviour defects until a row comparison says so.
 
 ## Open items
 
-1. **ERCPR and ERLENG of zero: the port drops that one primitive** (user decision,
-   2026-11-01; `em_vu1_page_programs.h`, emvup_efu_zero). This is the port's one choice
+1. **ERCPR and ERLENG of zero: the port drops that one primitive** (chosen by the
+   orchestrator under the user's "fix everything", 2026-11-01; the user may veto it;
+   `em_vu1_page_programs.h`, emvup_efu_zero). This is the port's one choice
    here, not the original's behaviour. A streak quad whose head has w exactly 0 reaches
    the EFU with a zero operand: the head (1056.25, 160, 920) sits on the camera plane,
    the exact w is 2.2e-5, which the truncating sum takes to 0. It is not rare: a19b_01,

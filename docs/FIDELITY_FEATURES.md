@@ -2927,7 +2927,7 @@ shooting and knifing anywhere also run without a fault.
   driver over 0x44F past its loop.
 - Status: **PARTIAL**. From cards, nothing row-exact; the tendril field and the worms
   are not drawn.
-- **The port's one choice here (user, 2026-11-01):** a streak or kind-2 line whose EFU
+- **The port's one choice here (made under the user's "fix everything", 2026-11-01; the user may veto it):** a streak or kind-2 line whose EFU
   operand is exactly zero (a head on the camera plane) is dropped, that one primitive
   only, and the rest of its batch draws. The hardware's result is not established: the
   values the fork measured are the emulator's IEEE ones, so the port uses none of them.

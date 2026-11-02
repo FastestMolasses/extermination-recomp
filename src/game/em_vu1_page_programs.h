@@ -939,7 +939,7 @@ static inline int emvup_particle_program(EmVu1PCtx *c, int variant)
  * program (em_vu1_grid_program_mscal below, docs/BACKGROUND.md): ERLENG = 1 / sqrt(x*x + y*y + z*z) and ERCPR = 1 / x,
  * truncated to binary32 with denormals flushed; ERCPR's quotient is VDIV's.
  * A zero operand (ERCPR) or a zero length (ERLENG) has no established
- * result. The port's one choice here (user, 2026-11-01; docs/AREA19_PORT.md,
+ * result. The port's one choice here (2026-11-01; docs/AREA19_PORT.md,
  * docs/FIDELITY_FEATURES.md): the streak and kind-2 programs drop that one
  * primitive and draw the rest of the batch; the fork's measured values are
  * the emulator's, not hardware's, so none is used. The primitive's remaining
