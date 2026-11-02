@@ -198,8 +198,14 @@ static struct {
 /* The running module's by-value copy of 0x70003A20, or NULL. */
 static void *s_mod3A20;
 static int s_weapon_scene; /* 0 outside weapon views, 1 lane A, 2 lane B */
-#define IN3A20()  do { if (s_mod3A20) memcpy(&L.land.s3A20, s_mod3A20, 4); } while (0)
-#define OUT3A20() do { if (s_mod3A20) memcpy(s_mod3A20, &L.land.s3A20, 4); } while (0)
+/* One storage of 0x70003A20 while workers run: a worker that calls another (0017C580's
+ * 00174AC0) stays on L.land's word, or the inner entry would reload the module's
+ * stale copy over what the outer one just stored. */
+static int s_depth3A20;
+#define SYNC_IN3A20()  do { if (s_mod3A20) memcpy(&L.land.s3A20, s_mod3A20, 4); } while (0)
+#define SYNC_OUT3A20() do { if (s_mod3A20) memcpy(s_mod3A20, &L.land.s3A20, 4); } while (0)
+#define IN3A20()  do { if (s_depth3A20++ == 0) SYNC_IN3A20(); } while (0)
+#define OUT3A20() do { if (--s_depth3A20 == 0) SYNC_OUT3A20(); } while (0)
 
 static int unbound(const char *callee)
 {
@@ -269,19 +275,21 @@ static int slot_run(void *context, EmPlayerLiveActor *actor)
     EmPlayerStageGlobals *g = L.stage_host->globals;
     L.land.s3A20 = g->spad3A20;
     void *outer = s_mod3A20;
-    int outer_weapon = s_weapon_scene;
+    int outer_weapon = s_weapon_scene, outer_depth = s_depth3A20;
     s_weapon_scene = 0;
+    s_depth3A20 = 0;
     L.d275B40 = PLAYER_NODE_ARRAY;
     s_mod3A20 = slot->mod3A20;
-    OUT3A20();
+    SYNC_OUT3A20();
     L.sdk->fault = 0;
     L.le_scratch.fault = 0;
     int r = refresh_all();
     if (r >= 0 && slot->pre) r = slot->pre();
     if (r >= 0) r = slot->fn(slot->context, actor);
     if (r >= 0 && slot->post) r = slot->post();
-    IN3A20();
+    SYNC_IN3A20();
     s_mod3A20 = outer;
+    s_depth3A20 = outer_depth;
     s_weapon_scene = outer_weapon;
     g->spad3A20 = L.land.s3A20;
     if (r >= 0 && L.sdk->fault) {
@@ -3036,7 +3044,7 @@ static int lw_actions(void *c, EmPlayerLiveActor *a, int *result)
     L.land.s3A20=L.wa_scene.spad3A20;
     int sync=wa_post();
     s_weapon_scene=owner;
-    OUT3A20();
+    SYNC_OUT3A20();
     return r<0 || sync<0 ? -1 : 0;
 }
 /* 00160220(p): the Use dispatcher over the record (the scene words were
@@ -3446,6 +3454,7 @@ int em_player_closure_live_bind(EmPlayerStatesBinding *b, EmPlayerStageHost *sta
         return -1;
     memset(&L, 0, sizeof L);
     s_mod3A20 = NULL;
+    s_depth3A20 = 0;
     s_weapon_scene = 0;
     L.actor = player_states_actor_mut();
     L.pose = pose;
