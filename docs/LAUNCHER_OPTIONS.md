@@ -32,6 +32,7 @@ this file in the same commit.
 
 | Option | Choices | Notes | Status |
 |---|---|---|---|
+| **A streak or particle exactly on the camera plane (VU1 ERCPR / ERLENG of zero)** (opened 2026-11-02; the user asked to come back to it later) | (a) keep the port's current choice: drop that one primitive, draw the rest; (b) use the emulator's IEEE values (0x7F800000 and on), not measured on hardware; (c) measure a real PS2 first; (d) another rule | Built today as (a), the orchestrator's choice under the user's "fix everything", not the original's behaviour: AREA19_PORT.md "Open items" 1, `em_vu1_page_programs.h` (emvup_efu_zero). Hit in AREA19's streak rooms (a19b_01, a19c_01, a19d_15) and AREA06. Grid, floor and ripple keep the fail-stop. | OPEN (user to revisit) |
 | **The AREA01 seek spread under the PS2 disc-drive timing switch** (opened 2026-10-19) | (a) a comparison-only drive replay; (b) compare AREA01 by events; (c) another rule | Decided 2026-10-19 by the user, "Comparison-only replay" (a): built as the developer switch `EM_PS2_DRIVE_REPLAY` ("Not launcher options" below; IOP_STREAM.md "Drive replay"). The Original profile and default play are unchanged. | DECIDED, BUILT |
 
 ---
