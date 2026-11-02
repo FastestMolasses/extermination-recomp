@@ -48,7 +48,18 @@ static const AreaScripts k_areas[]={
     {0x07,0x07,0x008264B0u,0x00827520u,0x00825B80u,0x2500u,EM_AREA07_SCRIPT_DEST_PATH},
     /* AREA19 (export_area13_tables' AREA19 target: the scripts window
      * 0x82AD50..0x82F790, the overlay data 0x829E00 + 0x5A80). */
-    {0x13,0x10,0x0082AD50u,0x0082F790u,0x00829E00u,0x5A80u,EM_AREA19_SCRIPT_DEST_PATH}
+    {0x13,0x10,0x0082AD50u,0x0082F790u,0x00829E00u,0x5A80u,EM_AREA19_SCRIPT_DEST_PATH},
+    /* The second half (export_second_half_assets.py --kind static: each
+     * window is the lowest chain entry up to the end of the last record any
+     * chain reaches, the overlay data section after it; docs/
+     * SECOND_HALF_AREAS.md). AREA18 has no chain. No route capture has run
+     * these windows yet. */
+    {0x0E,0x0B,0x00826800u,0x008283A0u,0x00826180u,0x2300u,EM_AREA14_SCRIPT_DEST_PATH},
+    {0x10,0x0D,0x00829340u,0x0082C240u,0x00828480u,0x4080u,EM_AREA16_SCRIPT_DEST_PATH},
+    {0x11,0x0E,0x00826A20u,0x00828730u,0x00826280u,0x2C00u,EM_AREA17_SCRIPT_DEST_PATH},
+    {0x12,0x0F,0,0,0x00823600u,0x780u,EM_AREA18_SCRIPT_DEST_PATH},
+    {0x14,0x11,0x00826830u,0x008273B0u,0x00826100u,0x1E00u,EM_AREA20_SCRIPT_DEST_PATH},
+    {0x15,0x12,0x0082B240u,0x0082D110u,0x0082A380u,0x3900u,EM_AREA21_SCRIPT_DEST_PATH}
 };
 static const AreaScripts *area_scripts(unsigned area)
 {
