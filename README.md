@@ -217,10 +217,11 @@ then the run ends.
 **What the playback does for you.** Each side keeps its own load and cutscene lengths,
 and the next segment starts on the port's own first tick of that phase. rand()'s state
 follows the original's tick by tick, because a load's length would otherwise change
-every later random outcome. So does the world clock, once it has been read from a
-hidden replay of the take (`../Extermination/.venv/bin/python tools/take_clock.py run1`;
-without it the run says so and the clock runs free): a cutscene that ends a tick early
-would otherwise leave every bug's timer a tick late for good. So a difference comes
+every later random outcome. So does the world clock: a take carries it from 2026-11-01 on,
+and an older one needs it read once from a hidden replay
+(`../Extermination/.venv/bin/python tools/take_clock.py run1`, about a third of the take's
+length; without it the run says so and the clock runs free). A cutscene that ends a tick
+early would otherwise leave every bug's timer a tick late for good. So a difference comes
 from the logic. Your saves are not
 touched: a run uses its own empty card in `build/takes/<take>/card`. Takes played on an
 unformatted card (`run1`, `test1`) fail their saves here as they did there.

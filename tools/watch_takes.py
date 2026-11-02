@@ -26,7 +26,7 @@ Usage (native arm64 macOS; build/extermination first, native):
   python3 tools/watch_takes.py --check test1   # no window, full speed, comparison only
 
 rand()'s state follows the recording tick by tick (em_replay.c says why), and the
-world clock too once tools/take_clock.py has read it from a replay of the take, so a
+world clock too (take.rec's column, or tools/take_clock.py for an older take), so a
 difference comes from the logic and not from a load's length.
 
 Output: build/takes/<first take>/ (derived from the disc: never committed).
@@ -71,9 +71,15 @@ def lead_in(counter):
 
 
 def clocks(names):
-    """The takes' world clocks by counter (tools/take_clock.py), or None."""
+    """The takes' world clocks by counter: take.rec's clock column, or for a take
+    played before it the file tools/take_clock.py writes. None if a take has neither."""
     out = {}
     for name in names:
+        rows = [line.split() for line in (TAKES / name / 'take.rec').read_text().splitlines() if line[0] != '#']
+        played = [row for row in rows if row[2] == '0']
+        if len(played[0]) == len(COLS) + 2:
+            out.update((int(row[1]), row[-1]) for row in played)
+            continue
         path = OUT / name / 'clock.txt'
         if not path.exists():
             print(f'{name} has no clock.txt (tools/take_clock.py): the world clock runs free', flush=True)
@@ -113,6 +119,7 @@ def stitch(names, path):
             parts = line.split()
             if len(parts) == len(COLS):
                 parts.append('00000000')
+            parts = parts[:len(COLS) + 1]
             now = clock.get(int(parts[1]), now) if parts[2] == '0' else now
             kept.append(' '.join([*parts, now]))
         rows = kept

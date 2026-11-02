@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """The world clock of a recorded take, for tools/watch_takes.py.
 
-take.rec holds rand()'s state per tick but not the world clock 0x70003B68, which the
-bugs' timers read. A replay of the take on the original, hidden, reads it per tick (the
+A take played since the clock column holds it; this is for an older take. Its take.rec
+holds rand()'s state per tick but not the world clock 0x70003B68, which the bugs' timers
+read. A replay of the take on the original, hidden, reads it per tick (the
 decomp's record_original_play.py rows do not hold it). A cutscene that ends a tick
 early in the port leaves the clock one behind for good, so the playback follows it as
 it follows rand().
