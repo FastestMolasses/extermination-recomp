@@ -1849,6 +1849,17 @@ static int dispatch_later(EmArea01Runtime *r, EmArea01Call *c, int *out)
         code = f.code;
         break;
     }
+    case 0x00167C80u: {
+        EmLevel14PortHooks h;
+        EmLevel14PortFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        m14_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_level14_port_00167C80(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
     case 0x00169250u: {
         EmArea06PortHooks h;
         EmArea06PortFault f = {0, 0};
@@ -1867,6 +1878,51 @@ static int dispatch_later(EmArea01Runtime *r, EmArea01Call *c, int *out)
         m14_hooks(r, &h);
         r->sp = c->sp - 0x20u - EIGHTH_NEST;
         rc = em_level14_port_0016AC50(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0016BB80u: {
+        EmLevel14PortHooks h;
+        EmLevel14PortFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        m14_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_level14_port_0016BB80(&h, (uint32_t)c->a[0], &out_i, &f);
+        where = f.address;
+        code = f.code;
+        has = 1;
+        break;
+    }
+    case 0x0016BC40u: {
+        EmLevel14PortHooks h;
+        EmLevel14PortFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        m14_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_level14_port_0016BC40(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0016BE40u: {
+        EmLevel14PortHooks h;
+        EmLevel14PortFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x40u + EIGHTH_NEST) goto refused;
+        m14_hooks(r, &h);
+        r->sp = c->sp - 0x40u - EIGHTH_NEST;
+        rc = em_level14_port_0016BE40(&h, (uint32_t)c->a[0], c->sp, &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x0016BF80u: {
+        EmLevel14PortHooks h;
+        EmLevel14PortFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        m14_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_level14_port_0016BF80(&h, (uint32_t)c->a[0], c->sp, &f);
         where = f.address;
         code = f.code;
         break;
@@ -2866,6 +2922,17 @@ static int dispatch_later(EmArea01Runtime *r, EmArea01Call *c, int *out)
         code = f.code;
         break;
     }
+    case 0x001C2420u: {
+        EmLevel17BootHooks h;
+        EmLevel17BootFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x0u + EIGHTH_NEST) goto refused;
+        m17x_hooks(r, &h);
+        r->sp = c->sp - 0x0u - EIGHTH_NEST;
+        rc = em_level17_boot_001C2420(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
     case 0x001C2690u: {
         EmLevel15SupportHooks h;
         EmLevel15SupportFault f = {0, 0};
@@ -2873,6 +2940,17 @@ static int dispatch_later(EmArea01Runtime *r, EmArea01Call *c, int *out)
         m15s_hooks(r, &h);
         r->sp = c->sp - 0x40u - EIGHTH_NEST;
         rc = em_level15_support_001C2690(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], (uint32_t)c->a[2], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001C4A00u: {
+        EmLevel17BootHooks h;
+        EmLevel17BootFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        m17x_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_level17_boot_001C4A00(&h, (uint32_t)c->a[0], &f);
         where = f.address;
         code = f.code;
         break;
@@ -3696,6 +3774,18 @@ static int dispatch_later(EmArea01Runtime *r, EmArea01Call *c, int *out)
         rc = em_level12_port_00221C70(&h, (uint32_t)c->a[0], &f);
         where = f.address;
         code = f.code;
+        break;
+    }
+    case 0x00224600u: {
+        EmLevel14PortHooks h;
+        EmLevel14PortFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        m14_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_level14_port_00224600(&h, (uint32_t)c->a[0], &out_i, &f);
+        where = f.address;
+        code = f.code;
+        has = 1;
         break;
     }
     case 0x00224FE0u: {

@@ -131,6 +131,7 @@ static int spawn02(EmArea01Runtime *r, uint32_t sp, uint32_t fn, uint32_t a0, ui
 #include "game/em_level16_creature.h"
 #include "game/em_level16_beast.h"
 #include "game/em_level16_boot.h"
+#include "game/em_level17_boot.h"
 #include "game/em_owner_services_original.h"
 #include "game/em_sdk_math_original.h"
 #include "game/em_pose_host_workers.h"
