@@ -35,7 +35,9 @@ indices of the area and sub named (`tools/route_census.py graph`).
   a02c_01). Side beat a04e_s0_console: the console [69] moved the platform [68].
 - **Constructed starts (section 7c)**: k00 / k01 (item 0x24, and k01 also the reader / g[3]
   results) loaded by the original into AREA00 sub 2; from there [28] with item 0x26 was played
-  into AREA14 (k01_02). **Not entered**: AREA17, AREA18, AREA19 sub 1's tower.
+  into AREA14 (k01_02). Lane CAP3 (section 7d) played on through AREA14: the bench and item 0x19
+  (k01_03), the attribute-0x33 face to the top and its script (k01_04), the plateau to (650, 1015)
+  (k01_05). **Not entered**: AREA17, AREA18, AREA19 sub 1's tower.
 - Output: `../Extermination/build/fork_refs/levels-recordings-20261102-1/` (`s87/route_a04e/`,
   `route_a02c/`; the run log per beat, `progress.json`, `owner-bindings.json` at the top). Earlier
   sets were not touched; the chain starts from `levels-recordings-20261031-1`'s a07b_07.
@@ -323,15 +325,104 @@ inside [0]'s polygon (0x8238E0: y < 435, its script 0x826C10 and CC3 0x16 play o
 from the valley (y 390) up to the bench (y 430) was not found (the grid shows walls at x 484 and
 x 522 and small pockets at y 410 / 425 between, leads for ledge climbs).
 
+## 7d. Round 4 (lane CAP3): AREA14 from entry 0 to the plateau
+
+Lane CAP3, 2026-11-02. Beats `k01_03` .. `k01_05` run on from k01_02 (so after the constructed
+start k01; nothing in them is constructed). Same tool and set as section 7c
+(`levels-recordings-20261102-1`, group `k01`). Exploration side beats `k01_s2_face`,
+`k01_s3_plateau`, `k01_s4_fight` end on purpose with an error, so their traces stay in `_failed/`
+(leads, overwritten by the next try). Positions marked *grid* were read from a snapshot's collision
+grid (D_0028A598[0]) and then walked unless said otherwise. A public walkthrough (GameRevolution's
+Extermination guide) was used as a lead for the order only; every step below is the code's and the
+recording's.
+
+**Health.** At infection 100 health falls by 2 about every 240 frames outside scripts (measured:
+no loss during [0]'s and [2]'s scripts). The 0x3E reaction (+1F0 62) is a hit: the 00141D20
+creatures' attacks cost 20 and 5..10 (k01_s4_fight); one 0x3E at f93 of k01_03 cost 5 with no
+creature near (not identified). HEALING kinds (002160B0, C): item 0x1E +30, 0x1F full, 0x20 full and
+infection 0, 0x21 +30 (and infection -30 when D_00810707 is not 1), 0x22 full; with D_00810707 = 1
+(here) health is capped at 60 and infection is kept.
+
+**How the 0x33 face works (read, then measured).** 0015D4C0 case 0x33 (NM) mounts the face with
+item 0x19 (state 0xD, 00167C80 BM, then 0xE, 00168050 C). In state 0xE the stick picks a mode
+(00174FD0: up / down / left / right). Up: 001806E0 (C) probes 10 units ahead at feet + 18; a miss
+is the climb-over (states 0x1E..0x21, onto the floor above); else it moves while a probe at the
+skeleton's hip + 6 still hits attribute 0x33, so the feet stop about 14 below a patch's top.
+Sideways: 00180850 (C) needs attribute 0x33 at both side probes; at a patch's edge the player
+reaches (0x46 / 0x50) and Use (D_00810E74 & the press mask) runs 001809B0 (C): a hang ledge 0x3D,
+a bar 0x34, a ladder, or (00178080, C) a ledge whose top lies between feet + 9 and feet + 21 on the
+wall 10 to that side (12 below y 560); the jump (0x5A..0x5C) ends in the hang (state 9), and the
+stick toward the face pulls up. Measured rates: about 0.14 per frame up, 0.12 sideways.
+
+**Beats.**
+
+| Beat | Source | Frames | Counters | End |
+|---|---|---:|---|---|
+| `k01_03_item19` | k01_02 | 1,112 | 285756..286868 | the crate 1791 (grid floor y 404, x 485.5..499.5, z 1368.7..1382.7) climbed from the east facing -x (14 up), the block 1453 (top 431.6) from it facing -x (27.6 up: the hang, stick forward pulls up), the plateau y 432, the ramp 1002 onto the bench (y 448.5); g[1] taken (f1017, **item 0x19**); (402.1, 448.5, 1375.6), health 46 |
+| `k01_04_face` | k01_03 | 16,130 | 286868..302998 | round the eggs (00156620 at (447..463, 432, 1338..1340) block the line z 1338) to the face; [0]'s polygon: script 0x826C10 f228..f2882 (flag 0x3D = 0xFF, CC3 0x16 = 1; the player put at (403, 432, 1281)); Use at (384, 1274.8) facing yaw -2.71: the face 1618 / 1479 to feet 478.6, right to 1475 (x 453.7), up to 543, left over 1469 to 1473 (x 425.3), up to 551.9, right to 1471 / 1470 (x 440), up to 572.4, right to 1472 (x 453.7), up to 587, the side jump left (Use) onto the shelf's front 1311: hang, pull-up onto the y-602.2 shelf (440.1, 1241.5); the ledge climb facing yaw -1.14 onto 1341 (y 618.7); west over the 0x39 ledge 1487 (the wall-side shuffle) to the 0x33 floor 1481; 1468 up to 647.9, right over 1466 to 1465 (x 418.7), up: the climb-over onto 1482 (y 678.9) at f7185 starts [2]'s script 0x826FC0 (f7185..f14758; flag 0x3E = 0xFF, item 0x0F, CC3 0x17; the item page closed with Triangle); control at (409, 680, 1209), health 12 -> 6 on the way; g[4] taken (f15584, item 0x1E) and used (f15973, 6 -> 36) at (471.3, 677, 1295.4) |
+| `k01_05_plateau` | k01_04 | 1,490 | 302998..304488 | north along the plateau's west wall (attribute 0, x 450 -> 512 diagonal, y 680..953), the box 001551B0 at (546.1, 682.3, 946.6) broken with the light melee, g[6] taken (f721, item 0x1E), east along z 1015 and the item used at (649.2, 1015) (f1330, 28 -> 58); end (658.3, 682, 1015.3), health 58, 21 + 51 rounds |
+
+Line k01_02 -> k01_03..05: 18,732 trace frames, counters 285756..304488. Every beat passed the
+recorder's resume check.
+
+**Port side.** Chain `k01` in `tools/mid_route_beats.py` now k01_01 .. k01_05; cards `k01_03`,
+`k01_04`, `k01_05` in `tools/build_start_saves.py` (built into main's `build/start_saves/`, save and
+read-back checks passed). Rand tables (`tools/record_beat_rands.py`): k01_04 and k01_05 replayed
+exactly (0.000); **k01_03 did not** (largest position difference 7.016 at the 50-row samples, like
+k01_01's), so its table is not to be used until that is understood.
+
+**Tried and not kept (AREA14).**
+
+- The face's patches are separate: 1475's top (556.5) and 1472's foot (568.5) do not meet, nor do
+  1476 (top 505.5) and 1473 (foot 523.5); from 1472's top (feet 595.8) the side jump finds no
+  target (the reach, Cross four times, no jump), and Use on the face does nothing. The jump that
+  works is from 1472 at feet 587 (the shelf's top 602.2 inside feet + 9 .. feet + 21).
+- The bench's walk east at z 1338 was stopped by the eggs; the first face_move runs lost 45 frames
+  per stall and the first k01_04 runs died of the drain 6 units short of g[4] (health 4 at the top);
+  the kept run trims the stalls and the shelf walk (health 12 at the top, 6 at control).
+- **The plane (00190F20's quad).** The quad D_0024A4B0 ((754.1, 829.6), (767.6, 795), (809.8,
+  814.3), (791.2, 840.5)) lies over the plane's cargo ramp 1530 (attribute 4, slope from 658.5 at
+  z 798..820 up to the plane floor 705 at z 827..849). Over it leans a player-only panel 1531
+  (attribute 0x50, normal y 0.71; from y 664.6 along (739.7, 814.3)-(805.9, 849.4) up to 729.6 along
+  (771.5, 757.6)-(834.9, 791.1)); below both there is no floor (the grid's lowest is y 348). The
+  plane's body is boxed by player-only walls 1570..1577 / 1667..1671 (attribute 0x51 / 0x50, y 674
+  ..705); the creatures walk inside it at y 705, the player cannot. The pit round the ramp is walled
+  by 1493 / 1495 (west, x 742..760) and 1505 / 1509 (north-east), attribute 4: walked into from the
+  west ground (741, 833) and from the east corridor (789, 859), both stopped. The ridge east of the
+  corridor (x 816..849, y 712..736) has slopes of normal y 0.45..0.55 at its foot: the walk east from
+  (806, 868) stopped. South of z 780 there is no ground. Not found: how the player gets onto the
+  panel or the ramp (the walkthrough's "slide through the cargo doors").
+- **The two 00141D20 creatures** ([100] / [101] of the area's actors, cls 2 model 6, +0x34 300)
+  roam the plateau round the plane and walk into it. Shots (R1 held, Circle every 14 frames): no
+  lock (the lock bytes stayed 0), 2 hits in 51 rounds (-10 each). When one stands next to the
+  player its attacks cost 20 and then 5..10 each (k01_s4_fight: 48 -> 4 in about 800 frames); the
+  first probe died at (716.8, 918.2) on the way from (700, 975) to (720, 930). Shooting them down
+  is not possible with the ammunition held (600 hit points, 72 rounds).
+- **k01_05's end is next to a creature**: one 00141D20 stands about 42 units south (657.9, 686.5,
+  972.9) at the last frame. A probe that walked east along z 1000 toward the block 2086 (a ledge
+  climb onto its top at about 710 from its west face x 754..765, then the ridge from the north) was
+  caught at (677.8, 1008.2): health 58 -> 16 by f580 and 0 by f980, so the block and the ridge from
+  the north were not tried. A probe that went south-west first ((690, 960), then round the plane's
+  west and north sides) was not attacked until the east corridor. The next run should leave the
+  creature's side first.
+- The four turrets (overlay 0x823FC0, the AREA19 0x827DD0 family; at (509.1, 725.2, 1050.5),
+  (482.2, 725.2, 1111), (514.8, 725.2, 1005.4) and (421, 494.2, 1362.8)) did not hit the player on
+  any walk past them (read: not further).
+
 ## 8. Where the recording stops, and what the next run needs
 
-**The kept line now stops at k01_02's end: AREA14 entry 0 (600.9, 390.5, 1354.3), health 55,
-infection 100, after the constructed start k01 (section 7c).** Next: item 0x19 (g[1]) on the bench,
-the 0x33 climb to y 679, the plateau east to 00190F20's quad (754..810, 795..841), AREA18 (item 0x28,
-g[1] at (521.3, 153.1, 184.4); back at x <= 285 to AREA14 entry 1, where [4] plays with item 0x28),
-[6] (0x825FD0, Use point (222.5, 680.1, 1185.1), r 7, yaw about -1.85) to AREA17, the boss
-(00133E30), [34], item 0x18 and the cable floor (attribute 0x20 under 0x3C), [38] to AREA11
-entry 3. Cards: `area14k` (AREA14 entry 0), `k01_01`, `k01_02`.
+**The kept line now stops at k01_05's end: AREA14's plateau at (658.3, 682, 1015.3), health 58,
+infection 100, item 0x19 held, 21 + 51 rounds, after the constructed start k01 (sections 7c, 7d).**
+Next: onto the plane's cargo panel / ramp and into 00190F20's quad (section 7d "The plane"; the
+lead is the walkthrough's slide, and whether a script or the creatures change the panel 1531 or the
+walls 1493..1509), keeping clear of the two 00141D20 creatures; AREA18 (item 0x28, g[1] at (521.3,
+153.1, 184.4); the slider [18] and the panel [21] lock bit 0; back at x <= 285 to AREA14 entry 1
+(757.7, 705.1, 860.5), where [4] plays with item 0x28), [6] (0x825FD0, Use point (222.5, 680.1,
+1185.1), r 7, yaw about -1.85) to AREA17, the boss (00133E30), [34], item 0x18 and the cable floor
+(attribute 0x20 under 0x3C), [38] to AREA11 entry 3. Health: the drain is 2 per 240 frames; AREA14's
+remaining heals are g[2] (item 0x21, (327.6, 679.3, 1358.2), the top's west) and g[8] (item 0x21,
+(502.2, 515.2, 1210.4), a ledge not reached); AREA18 has g[2] (item 0x1E). Cards: `area14k` (=
+`k01_03`), `k01_04`, `k01_05`.
 
 The real line (no constructed state) still ends at a02c_01: AREA01 sub 1 at entry 3 (-25, 0,
 -210.1), health 60, infection 95, 21 in the gun and 51 held, no healing item. It stops there because the derived segment needs item 0x24 first,
@@ -355,7 +446,17 @@ attribute 0x3C; then [38] (0x825470) and AREA11 entry 3 (465.2, 270.5, 426.4). R
 code reading (BM / C files named in decomp `src/` and `src/overlays/AREA00, 14, 17, 18, 19`); none
 of it played.
 
-**What the port lanes need.** The recordings above; cards `a04e_00` .. `a02c_01`; chains `a04e`,
+**What the port lanes need (AREA14, section 7d).** The k01_03..05 recordings and cards. Overlay
+code on the live path: AREA14 0x8238E0 ([0]: polygon, script 0x826C10), 0x823B30 ([2]: script
+0x826FC0, items 0x0F / CC3 0x17), 0x823760 ([5]: the arrival, k01_02), the turrets 0x823FC0 with
+0x825AA0 (deferred group 0x826180) and the effects 0x823580 ([35] / [36]). Boot behaviours on the
+path: the face climb 0015D4C0 (case 0x33), 00167C80, 00168050 with 001806E0 / 00180850 / 001809B0 /
+00178080 / 00180300, the ledge and hang climbs (0015DF10, 00161790, state 9), the 0x39 shuffle, the
+item page and the HEALING page (002160B0), 00156620 (eggs), 001551B0 (boxes), 00219550 / 0015AFA0
+(pickups), 00141D20 (the creatures), 001E3D90. Assets: AREA14 sub 0 (whole: the valley, the face,
+the plateau and the plane).
+
+**What the port lanes need (earlier beats).** The recordings above; cards `a04e_00` .. `a02c_01`; chains `a04e`,
 `a02c`. New overlay code on the live path: AREA04 0x825510 (the console and platform; side beat
 only), none in AREA02 beyond its boot behaviours. Boot behaviours seen in these loads: 001BECC0
 (the pod / hazard, with 001BE6C0 and 001BF3C0 children), 001546C0 (tendril fields), 0015A2C0
