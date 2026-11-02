@@ -59,9 +59,8 @@
  *   VFTOI saturating, VITOF, raw VMAX / VMINI order, VABS the sign clear.
  *   An exponent-255 word reaching a multiply, add or divide on a live lane
  *   is not established: the MSCAL faults (EM_VU1P_FAULT_OPERAND). No
- *   captured page has one. So does ERCPR of a zero: what the EFU answers is not
- *   established (run1, AREA06, cutscene from counter 129356: a kind-2 particle
- *   whose head lands exactly on w = 0 stops the page here).
+ *   captured page has one. ERCPR of a zero is emvup_efu_zero's below (run1, AREA06,
+ *   cutscene from counter 129356: a kind-2 particle's head lands exactly on w = 0).
  * - The MAC flags the sprite program tests are the sign bits of the tested
  *   lanes (Sx 0x80 and Sw 0x10 of the one written lane).
  * - The random unit (sprite program): RINIT loads the 23-bit R from the
