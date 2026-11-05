@@ -24,6 +24,14 @@ Usage (native arm64 macOS; build/extermination first, native):
   python3 tools/watch_takes.py                 # the chain from run1, in a window
   python3 tools/watch_takes.py test1           # another chain
   python3 tools/watch_takes.py --check test1   # no window, full speed, comparison only
+  python3 tools/watch_takes.py --root ../Extermination/build/guided_play g01_title_newgame
+                                               # Claude's guided chain (docs FULL_RUN_PLAN 8.3)
+
+--root DIR plays the chains of another take folder; the default is the user's
+own takes. A chain never mixes the two: under --root, a take whose start state or
+card lies outside DIR is refused, and the output goes to build/guided_takes/.
+--port DIR runs another checkout's built binary (its build/extermination and
+assets), e.g. a worktree that has no build of its own.
 
 rand()'s state follows the recording tick by tick (em_replay.c says why), and the
 world clock too (take.rec's column, or tools/take_clock.py for an older take), so a
@@ -190,12 +198,42 @@ def compare(rec, log):
     return ticks, exact
 
 
+def use_root(root):
+    """Read takes from another folder (Claude's guided chain); its playbacks
+    go to their own output folder, never into the user's."""
+    global TAKES, OUT
+    TAKES = Path(root).resolve()
+    OUT = ROOT / 'build/guided_takes'
+
+
+def refuse_mixing(names):
+    """Under --root, every take of the chain starts inside that folder: from the
+    title state (no 'after') or from the end of a take in the same folder."""
+    user = (ROOT.parent / 'Extermination/build/human_play').resolve()
+    for name in names:
+        start = json.loads((TAKES / name / 'start.json').read_text())
+        for key in ('state', 'state_abs'):
+            if key in start and str(user) in str(Path(ROOT.parent / 'Extermination' / start[key]).resolve()):
+                sys.exit(f'{name}: starts from the user\'s own takes; a chain never mixes them')
+        if start.get('after') and not (TAKES / start['after'] / 'end.json').exists():
+            sys.exit(f'{name}: its previous take {start["after"]} is not in {TAKES}')
+
+
 def main():
+    global BIN
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('take', nargs='?', default='run1')
     parser.add_argument('--check', action='store_true', help='no window, full speed, silent')
+    parser.add_argument('--root', help='the take folder (default: the user\'s own takes)')
+    parser.add_argument('--port', help='run this port checkout\'s build (default: this one)')
     args = parser.parse_args()
+    if args.root:
+        use_root(args.root)
+    port = Path(args.port).resolve() if args.port else ROOT
+    BIN = port / 'build/extermination'
     names = chain(args.take)
+    if args.root:
+        refuse_mixing(names)
     beat = json.loads((TAKES / names[0] / 'start.json').read_text()).get('beat')
     if beat:
         sys.exit(f'{names[0]} starts where route beat {beat} ended (record_original_play.py --beat), not at the '
@@ -214,7 +252,7 @@ def main():
     if args.check:
         env.update(EM_HEADLESS='1', EM_UNCAPPED='1', EM_MUTE='1')
     with (out / 'run.log').open('w') as text:
-        result = subprocess.run([str(BIN)], cwd=ROOT, env=env, stdout=text, stderr=subprocess.STDOUT)
+        result = subprocess.run([str(BIN)], cwd=port, env=env, stdout=text, stderr=subprocess.STDOUT)
     faulted = False
     for line in (out / 'run.log').read_text(errors='replace').splitlines():
         stopped = 'FAULT' in line or 'player stage worker' in line or ' fault code ' in line or \
