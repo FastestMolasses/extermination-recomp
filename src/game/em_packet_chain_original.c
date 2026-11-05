@@ -330,6 +330,21 @@ int em_packet_chain_0021BA80(EmPacketChain *pc, int32_t a0, int32_t a1, int32_t 
     return 0;
 }
 
+/* 0021BA70 (decomp C, func_0021BA70.c): the doubleword D_00275670 + 0xB0 =
+ * the argument, then 0021B900 (em_sul_0021BA70). */
+int em_packet_chain_0021BA70(EmPacketChain *pc, uint64_t value)
+{
+    if (!pc || pc->fault) return -1;
+    uint8_t *c = context(pc, 0x0021BA70u);
+    if (!c) return -1;
+    EmSulWorkers w;
+    memset(&w, 0, sizeof w);
+    w.block_copy = latch_copy;
+    if (em_sul_0021BA70(&w, c, EM_PACKET_CHAIN_CONTEXT_SPAN, value) < 0)
+        return fault(pc, EM_PACKET_CHAIN_FAULT_WORKER, 0x0021BA70u, pc->d275670);
+    return 0;
+}
+
 #define F_110 UINT32_C(0x42DC0000) /* 110.0 (001D8FF4) */
 
 /* 001D8FD0 (byte-matched): the record comes first (001D7B30), then the flag

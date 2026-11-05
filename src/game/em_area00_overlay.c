@@ -1629,3 +1629,112 @@ int em_area00_ovl_008241B0(const EmArea00OvlHooks *h, uint32_t self, EmArea00Ovl
     a00_s2_fx(&o, self);
     return a00_end(&o);
 }
+
+/* ----------------------------------------------------------------------
+ * 0x823EB0 (func_overlay_AREA00_00823E70) — group 0x82CDD0's lamp nodes,
+ * placed by script 0x82D070's op14. The colour 0x828A20 is copied into the
+ * frame first; +0x04 1: the matrix +0xD0 copied (00102958), its last row set
+ * to (0, 0, 1, 1) and moved through +0xD0, 0x700038A0 = the table point
+ * 0x828990 through the copy less that row, normalised; d = -(its dot with
+ * D_00810600), stored to 0x70003A20 before and after the clamp at 0; the
+ * scale 0x8289B0 = 12 + 12 d (w 0); the packet 001CFA60(1.0, 0.1) /
+ * 001CFBE0(001CCF70(+0x100), 1, 0x828990, packet, 1); when 001C6190(self)
+ * lies outside 320..440 a 7 x 7 sprite 001CD520 at the row, its colour the
+ * copy's r, g, b times (128 - (00122BB8() & 31)) / 128. Other states: none.
+ * ---------------------------------------------------------------------- */
+#define A00_COLOUR_828A20 0x00828A20u
+#define A00_TABLE_828990 0x00828990u
+#define A00_SCALE_8289B0 0x008289B0u
+#define D_00810600 0x00810600u     /* the light direction the lamps face */
+#define F_320 0x43A00000u
+#define F_440 0x43DC0000u
+#define F_7 0x40E00000u
+
+static void a00_s2_lamp(A00Ovl *o, uint32_t self, uint32_t sp)
+{
+    const uint32_t frame = sp - 0xF0u, m = frame + 0x40u, pos = frame + 0x70u, packet = frame + 0x80u,
+                   col = frame + 0xE0u;
+    for (uint32_t k = 0; k < 16; k += 8) {   /* two doubleword copies */
+        uint8_t half[8];
+        memcpy(half, a00_at(o, A00_COLOUR_828A20 + k, 8, 0), 8);
+        memcpy(a00_at(o, col + k, 8, 1), half, 8);
+    }
+    if (a00_u8(o, self + 4) != 1) return;
+    (void)a00_c_00102958(o, m, self + 0xD0);
+    a00_w32(o, pos + 0, F_ZERO);
+    a00_w32(o, pos + 4, F_ZERO);
+    a00_w32(o, pos + 8, F_ONE);
+    a00_w32(o, pos + 12, F_ONE);
+    (void)a00_c_001026A0(o, pos, self + 0xD0, pos);
+    (void)a00_c_001026A0(o, S_700038A0, m, A00_TABLE_828990);
+    (void)a00_c_001028D0(o, S_700038A0, S_700038A0, pos);
+    (void)a00_c_00102760(o, S_700038A0, S_700038A0);
+    uint32_t dot = 0;
+    (void)a00_c_00102738(o, S_700038A0, D_00810600, &dot);
+    uint32_t d = em_ee_neg_bits(dot);
+    a00_w32(o, S_70003A20, d);
+    if (em_ee_c_lt_bits(d, F_ZERO)) d = F_ZERO;
+    a00_w32(o, S_70003A20, d);
+    uint32_t s = em_ee_add_bits(F_12, em_ee_mul_bits(F_12, d));
+    a00_w32(o, A00_SCALE_8289B0 + 0, s);
+    a00_w32(o, A00_SCALE_8289B0 + 4, s);
+    a00_w32(o, A00_SCALE_8289B0 + 8, s);
+    a00_w32(o, A00_SCALE_8289B0 + 12, F_ZERO);
+    int32_t h = 0;
+    (void)a00_c_001CCF70(o, self + 0x100, &h);
+    (void)a00_c_001CFA60(o, packet, m, fb(F_ONE), fb(em_ee_mul_bits(em_ee_cvt_s_w_bits(1), F_0_1)));
+    (void)a00_c_001CFBE0(o, h, 1, A00_TABLE_828990, packet, 1);
+    int32_t ix = 0;
+    (void)a00_c_001C6190(o, self, &ix);
+    uint32_t x = em_ee_cvt_s_w_bits((uint32_t)ix);
+    if (em_ee_c_lt_bits(x, F_320) || em_ee_c_lt_bits(F_440, x)) {
+        int32_t rnd = 0;
+        (void)a00_c_00122BB8(o, &rnd);
+        uint32_t k = 0x80u - ((uint32_t)rnd & 0x1Fu);
+        uint32_t b = a00_u32(o, col + 8) * k;
+        uint32_t g = a00_u32(o, col + 4) * k;
+        uint32_t r = a00_u32(o, col + 0) * k;
+        uint32_t c = (b >> 7) << 16;
+        c |= (g >> 7) << 8;
+        c |= r >> 7;
+        int32_t res = 0;
+        (void)a00_c_001CD520(o, 0, 2, pos, UINT64_C(0x20045B0599421EF0), c, fb(F_7), fb(F_7), fb(F_ZERO), &res);
+    }
+}
+
+int em_area00_ovl_00823EB0(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    a00_s2_lamp(&o, self, sp);
+    return a00_end(&o);
+}
+
+/* 0x824130 (func_overlay_AREA00_008240F0) — group 0x82CDD0's emitters:
+ * +0x04 1 calls 001EFEB0(0x80000050, +0xD0) and 001EFD20(0x80000015,
+ * +0x100); other states nothing. */
+int em_area00_ovl_00824130(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    if (a00_u8(&o, self + 4) == 1) {
+        (void)a00_c_001EFEB0(&o, (int32_t)0x80000050u, self + 0xD0);
+        (void)a00_c_001EFD20(&o, (int32_t)0x80000015u, self + 0x100);
+    }
+    return a00_end(&o);
+}
+
+/* 0x826CB0 (func_overlay_AREA00_00826C70) — script 0x82D070's op09
+ * callback: word a0 + 0x2EC = 2, returns 1 (a0 is [28], 0x826790). */
+int em_area00_ovl_00826CB0(const EmArea00OvlHooks *h, uint32_t a0, uint32_t block, uint32_t a2,
+                           int32_t *result, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    (void)block;
+    (void)a2;
+    if (!result || a00_begin(&o, h, fault)) return -1;
+    a00_w32(&o, a0 + 0x2EC, 2);
+    if (a00_failed(&o)) return -1;
+    *result = 1;
+    return 0;
+}

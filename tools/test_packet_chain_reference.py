@@ -134,6 +134,7 @@ def build_lib():
     lib.em_packet_chain_fog.argtypes = [P(Chain), P(C.c_uint32)]
     lib.em_packet_chain_0021B970.argtypes = [P(Chain), C.c_uint32, C.c_uint32]
     lib.em_packet_chain_0021BA80.argtypes = [P(Chain), C.c_int32, C.c_int32, C.c_int32]
+    lib.em_packet_chain_0021BA70.argtypes = [P(Chain), C.c_uint64]
     lib.em_packet_chain_001D8FD0.argtypes = [P(Chain), P(AreaFogWorkers)]
     lib.em_packet_chain_001CB8A0.argtypes = [P(Chain), C.c_int32, C.c_uint32, C.c_uint32]
     lib.em_packet_chain_001CB800.argtypes = [P(Chain), C.c_uint32, C.c_int32, C.c_uint32, C.c_uint32]
@@ -212,6 +213,8 @@ def oracle_call(e, call):
         e.run(0x21B970, (), (a[0], a[1]), stack=SPAD_STACK)
     elif name == 'fogcol':
         e.run(0x21BA80, (a[0], a[1], a[2]), stack=SPAD_STACK)
+    elif name == 'fogword':
+        e.run(0x21BA70, (a[0],), stack=SPAD_STACK)
     elif name == 'areafog':
         e.run(0x1D8FD0, (), stack=SPAD_STACK)
     elif name == 'start':
@@ -291,6 +294,8 @@ def native_call(n, call, adapters=None):
         rc = lib.em_packet_chain_0021B970(ch, *a)
     elif name == 'fogcol':
         rc = lib.em_packet_chain_0021BA80(ch, *a)
+    elif name == 'fogword':
+        rc = lib.em_packet_chain_0021BA70(ch, *a)
     elif name == 'areafog':
         rc = lib.em_packet_chain_001D8FD0(ch, C.byref(n.area_workers()))
     elif name == 'start':
@@ -333,6 +338,9 @@ def frame_cases(ctx):
     for rgb in ((48, 48, 48), (0, 0, 0), (-1, 0, 0), (0x7FFFFFFF, -0x80000000, 5), (255, 128, -300),
                 (1, 2, 3)):
         cases.append(('fogcol', [('fogcol', rgb)]))
+    # 0021BA70 on its own (the timeline's clock restore, lane P14)
+    for value in (0, 0x808080, 0xFFFFFFFFFFFFFFFF, 0x0123456789ABCDEF, 0x80000000):
+        cases.append(('fogword', [('fogword', (value,))]))
     # the area fog: the capture's own key and flags, flag word bit 0x80, the
     # 0x0F00 override (render flag 8), other area keys and an unknown one
     cases.append(('areafog', [('areafog', ())]))

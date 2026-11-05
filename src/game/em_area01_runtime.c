@@ -284,10 +284,11 @@ int em_area01_runtime_bind(EmArea01Runtime *r, const EmArea01RuntimeHost *host)
 
 int em_area01_runtime_bind_area(EmArea01Runtime *r, const EmArea01RuntimeHost *host, unsigned area)
 {
-    /* the areas em_area01_state binds: AREA00..02, AREA04, AREA06, AREA13, AREA15, AREA03, AREA19, AREA22 */
+    /* the areas em_area01_state binds: AREA00..02, AREA04, AREA06, AREA13, AREA15, AREA03, AREA19, AREA22,
+     * AREA08, AREA07 and AREA14 */
     if (!r || !host || !host->bytes || !host->worker || !(area <= 2 || area == 4 || area == 6 || area == 0x0D ||
                                                      area == 0x16 || area == 0x0F || area == 3 || area == 0x13 ||
-                                                     area == 8 || area == 7))
+                                                     area == 8 || area == 7 || area == 0x0E))
         return -1;
     memset(r, 0, sizeof *r);
     r->host = *host;
@@ -333,6 +334,7 @@ static int dispatch_overlay00(EmArea01Runtime *r, EmArea01Call *c)
     OVERLAY00(00826790);
     OVERLAY00(00826BE0);
     OVERLAY00(008241B0);
+    OVERLAY00(00824130);
 #undef OVERLAY00
     /* 0x825D70 (frame 0x20) calls 0x825E80 (frame 0x70, a quad local it
      * writes); 0x826CC0 (frame 0x30) passes a local to 001EFD20. Nested
@@ -345,6 +347,10 @@ static int dispatch_overlay00(EmArea01Runtime *r, EmArea01Call *c)
         if (c->na < 1 || c->nf || c->sp < 0x70u) return fail(r, c->function);
         r->sp = c->sp - 0x70u;
         return em_area00_ovl_00825E80(&r->overlay00, (uint32_t)c->a[0], c->sp, &r->overlay00_fault);
+    case 0x00823EB0u:   /* frame 0xF0: its matrix, packet and colour copy */
+        if (c->na < 1 || c->nf || c->sp < 0xF0u) return fail(r, c->function);
+        r->sp = c->sp - 0xF0u;
+        return em_area00_ovl_00823EB0(&r->overlay00, (uint32_t)c->a[0], c->sp, &r->overlay00_fault);
     case 0x00826CC0u:
         if (c->na < 1 || c->nf || c->sp < 0x30u) return fail(r, c->function);
         r->sp = c->sp - 0x30u;
@@ -357,11 +363,11 @@ static int dispatch_overlay00(EmArea01Runtime *r, EmArea01Call *c)
         if (c->na < 1 || c->nf || c->sp < 0x50u) return fail(r, c->function);
         r->sp = c->sp - 0x50u;
         return em_area00_ovl_00825600(&r->overlay00, (uint32_t)c->a[0], c->sp, &r->overlay00_fault);
-    case 0x008253E0u: {
+    case 0x008253E0u: case 0x00826CB0u: {
         if (c->na < 3 || c->nf) return fail(r, c->function);
         int32_t result = 0;
-        int rc = em_area00_ovl_008253E0(&r->overlay00, (uint32_t)c->a[0], (uint32_t)c->a[1],
-                                       (uint32_t)c->a[2], &result, &r->overlay00_fault);
+        int rc = (c->function == 0x008253E0u ? em_area00_ovl_008253E0 : em_area00_ovl_00826CB0)(
+            &r->overlay00, (uint32_t)c->a[0], (uint32_t)c->a[1], (uint32_t)c->a[2], &result, &r->overlay00_fault);
         if (rc == 0) c->v0 = (uint64_t)(int64_t)result;
         return rc;
     }

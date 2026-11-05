@@ -85,6 +85,8 @@ extern "C" {
 #define EM_AREA00_OVL_S2_29      0x00826BE0u /* [29] */
 #define EM_AREA00_OVL_S2_32      0x00826CC0u /* [32] */
 #define EM_AREA00_OVL_S2_FX      0x008241B0u /* the effect node 0014D260's 001EFE00 spawns */
+#define EM_AREA00_OVL_S2_LAMP    0x00823EB0u /* group 0x82CDD0's nodes (script 0x82D070's op14) */
+#define EM_AREA00_OVL_S2_EMIT    0x00824130u /* group 0x82CDD0's nodes (script 0x82D070's op14) */
 
 enum {
     EM_AREA00_OVL_FAULT_NONE = 0,
@@ -166,6 +168,11 @@ typedef struct {
     /* sub 2's effect owner 0x8241B0 */
     int (*w_00102918)(void *ctx, uint32_t dst, uint32_t a, uint32_t b);
     int (*w_001F00A0)(void *ctx, int32_t id, uint32_t pos, uint32_t rot, int32_t a3, uint32_t *result);
+    /* the nodes script 0x82D070 places (0x823EB0, 0x824130) */
+    int (*w_00102738)(void *ctx, uint32_t a, uint32_t b, float *result);
+    int (*w_00102760)(void *ctx, uint32_t dst, uint32_t src);
+    int (*w_001C6190)(void *ctx, uint32_t actor, int32_t *result);
+    int (*w_001EFEB0)(void *ctx, int32_t id, uint32_t matrix);
 
     /* ---- the actor's own callback: the function at actor +0x4C, called with the actor */
     int (*w_callback)(void *ctx, uint32_t function, uint32_t actor);
@@ -201,6 +208,15 @@ int em_area00_ovl_00826790(const EmArea00OvlHooks *h, uint32_t self, EmArea00Ovl
 int em_area00_ovl_00826BE0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
 int em_area00_ovl_00826CC0(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault);
 int em_area00_ovl_008241B0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
+/* 0x823EB0 keeps a matrix (sp - 0xF0 + 0x40, its last row at + 0x70), a
+ * packet (+ 0x80) and a colour copy (+ 0xE0) in its frame; it writes the
+ * matrix's last row and the colour copy itself, through `bytes`. */
+int em_area00_ovl_00823EB0(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault);
+int em_area00_ovl_00824130(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
+/* Script 0x82D070's op09 callback 0x826CB0 (a0 = [28]): its +0x2EC = 2 (the
+ * count to 824 starts), *result = 1. */
+int em_area00_ovl_00826CB0(const EmArea00OvlHooks *h, uint32_t a0, uint32_t block, uint32_t a2,
+                           int32_t *result, EmArea00OvlFault *fault);
 
 /* Script op09 callback (a0, a1 = the script block whose +0x04 / +0x05 it
  * steps, a2): the original reads only a1; the other two are taken so the

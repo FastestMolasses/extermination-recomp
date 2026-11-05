@@ -1211,8 +1211,9 @@ static int worker(void *ctx,EmArea01Call *c)
         return worker_result(l,rc,c->function);
     }
     /* 001F6B60 (AREA17's 0x823BA0) is 001F6B30 word for word
-     * (test_level17_boot_reference checks the ELF). */
-    if(c->function==0x001F6B30u || c->function==0x001F6B60u) {
+     * (test_level17_boot_reference checks the ELF); so is 001F6AD0 (AREA00
+     * sub 2's [28] 0x826790; test_area00_overlay_reference checks it). */
+    if(c->function==0x001F6B30u || c->function==0x001F6B60u || c->function==0x001F6AD0u) {
         if(em_area01_live_suspend(l)<0)return -1;
         int rc=em_effects_live_001F6B30(em_scene_state());
         if(em_area01_live_resume(l)<0)return -1;
@@ -1437,6 +1438,7 @@ static int worker(void *ctx,EmArea01Call *c)
     }
     case 0x001AEDB0u: case 0x001AEDE0u: case 0x001AEE10u: case 0x001B1E20u:
     case 0x001B0250u: case 0x0021B9A0u: case 0x001D2830u:
+    case 0x0021BA80u: case 0x0021BA70u:   /* the timeline's +0x7C track (AREA00 sub 2's [28] scene) */
     case 0x001DD980u: case 0x001D25F0u: case 0x001FB9F0u:
     case 0x001FAD70u: case 0x001FA790u: case 0x001FABB0u:
     case 0x001FAE70u: case 0x001FBC50u: {
@@ -1446,6 +1448,7 @@ static int worker(void *ctx,EmArea01Call *c)
             c->function==0x001B1E20u || c->function==0x001D2830u ||
             c->function==0x001DD980u) && c->na<2)return -1;
         if(c->function==0x0021B9A0u && (c->na<1 || c->nf<2))return -1;
+        if((c->function==0x0021BA80u && c->na<3) || (c->function==0x0021BA70u && c->na<1))return -1;
         if(c->function==0x001D25F0u && c->nf<1)return -1;
         if(c->function==0x001DD980u && (c->a[0]!=0x008105D0u || c->a[1]!=0x008105E0u))return -1;
         if(c->function==0x001FB9F0u && (c->na<4 || c->a[1]!=0x1000u))return -1;
@@ -1462,6 +1465,8 @@ static int worker(void *ctx,EmArea01Call *c)
         case 0x001B1E20u:rc=em_pad_actuator_001B1E20((int32_t)c->a[0],(int64_t)c->a[1]);break;
         case 0x001B0250u:rc=em_scene_bindings_001B0250();break;
         case 0x0021B9A0u:rc=em_rcl_0021B9A0((int32_t)c->a[0],c->f[0],c->f[1]);break;
+        case 0x0021BA80u:rc=em_rcl_0021BA80((int32_t)c->a[0],(int32_t)c->a[1],(int32_t)c->a[2]);break;
+        case 0x0021BA70u:rc=em_rcl_0021BA70(c->a[0]);break;
         case 0x001D2830u:rc=em_rcl_001D2830((int32_t)c->a[0],(int32_t)c->a[1]);break;
         case 0x001DD980u:rc=em_area11_interaction_host_camera_publish()==1 ? 0 : -1;break;
         case 0x001D25F0u:rc=em_rcl_001D25F0(c->f[0]);break;

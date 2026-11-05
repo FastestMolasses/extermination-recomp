@@ -249,6 +249,10 @@ int em_rcl_001E0CC0(void);              /* 001D2DE0(0, 0), +0x1D8 = +0x1E8 = 0 *
  * close's 001E0D70 CALLs into the page). */
 int em_rcl_001D2DE0(int32_t a0, uint32_t a1);
 int em_rcl_0021B9A0(int32_t mode, uint32_t scale, uint32_t bias);
+/* 0021BA80(r, g, b) / 0021BA70(value): the timeline's +0x7C track (the
+ * context's +0xB0 doubleword, then 0021B900; em_packet_chain_original). */
+int em_rcl_0021BA80(int32_t a0, int32_t a1, int32_t a2);
+int em_rcl_0021BA70(uint64_t value);
 /* 0021BAC0(slot) / 0021BAE0(slot): the fog record +0xA0..+0xBF saved to /
  * restored from +0x120 + 32 * slot (em_sul_0021BAC0 / em_cs_0021BAE0 on
  * this context): the status screen's 0020DFA0 save and 0020E080 restore. */

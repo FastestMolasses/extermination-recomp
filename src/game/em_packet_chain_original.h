@@ -159,6 +159,8 @@ int em_packet_chain_0021B970(EmPacketChain *pc, uint32_t near_bits, uint32_t far
  * each argument sign-extended to 64 bits before its shift. 0021BA70 (the
  * doubleword +0xB0, then 0021B900) is em_sul_0021BA70. */
 int em_packet_chain_0021BA80(EmPacketChain *pc, int32_t a0, int32_t a1, int32_t a2);
+/* 0021BA70(value): the doubleword +0xB0 = value, then 0021B900. */
+int em_packet_chain_0021BA70(EmPacketChain *pc, uint64_t value);
 
 /* 001D8FD0() (byte-matched C): the area fog. rec = 001D7B30() (an entry of
  * the room table D_00251C50, which must be mapped); when 001B0070() & 0x80:

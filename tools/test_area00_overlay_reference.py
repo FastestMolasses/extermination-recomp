@@ -154,6 +154,9 @@ FUNCS = {
     0x826BE0: ('em_area00_ovl_00826BE0', 0xC4, 'owner'),
     0x826CC0: ('em_area00_ovl_00826CC0', 0x294, 'owner_sp'),
     0x8241B0: ('em_area00_ovl_008241B0', 0x608, 'owner'),
+    0x823EB0: ('em_area00_ovl_00823EB0', 0x274, 'owner_sp'),
+    0x824130: ('em_area00_ovl_00824130', 0x78, 'owner'),
+    0x826CB0: ('em_area00_ovl_00826CB0', 0x10, 'op09'),
 }
 # 0x825E80 and 0x825FC0 are 0x825D70's (it calls them); they have no
 # placement of their own, so their capture cases are 0x825D70's nodes.
@@ -230,7 +233,15 @@ HOOKS = [
     ('w_001FBD50', 0x1FBD50, [(U, 4), (I, 5), (I, 6), (F, 12)], None),
     ('w_00102918', 0x102918, [(U, 4), (U, 5), (U, 6)], None),
     ('w_001F00A0', 0x1F00A0, [(I, 4), (U, 5), (U, 6), (I, 7)], U),
+    ('w_00102738', 0x102738, [(U, 4), (U, 5)], F),
+    ('w_00102760', 0x102760, [(U, 4), (U, 5)], None),
+    ('w_001C6190', 0x1C6190, [(U, 4)], I),
+    ('w_001EFEB0', 0x1EFEB0, [(I, 4), (U, 5)], None),
 ]
+# Stack bytes a function writes itself and a callee then reads: appended to
+# that callee's arguments at its first call in the entry (both sides): 0x823EB0
+# sets its matrix copy's last row before 001026A0 moves it.
+STACK_VALUES = {(0x823EB0, 'w_001026A0'): 16}
 # 001B1EA0's quad is a local of 0x825E80's frame that the function itself
 # fills (lq/sq from 0x82B740): its 16 words are compared as part of the
 # call's arguments (the oracle's private stack, the native STACK buffer).
@@ -239,7 +250,8 @@ BY_ADDRESS = {address: (name, args, result) for name, address, args, result in H
 
 # Callees that run as original code inside the oracle (writes replayed to
 # the native side). Pure helpers only: none of them reaches hardware.
-RUN = {0x1026A0, 0x1028B8, 0x1028D0, 0x102948, 0x102958, 0x1029C0, 0x122BB8, 0x1281C0, 0x1BA1A0, 0x1CFA60}
+RUN = {0x1026A0, 0x1028B8, 0x1028D0, 0x102948, 0x102958, 0x1029C0, 0x122BB8, 0x1281C0, 0x1BA1A0, 0x1CFA60,
+       0x102738, 0x102760}
 
 # The two dispatchers' step tables (runtime addresses), keyed by the
 # runtime address of their jump.
@@ -323,6 +335,10 @@ def load_captures(elf):
     and the boot text equal to the pinned ELF: every instruction the oracle
     executes is original."""
     overlay = OVERLAY_FILE.read_bytes()
+    # [28] 0x826790's 001F6AD0 runs as the port's 001F6B30 (em_area01_live):
+    # the two are equal word for word in the ELF (nine words, absolute calls)
+    word = lambda a: elf[0x300 + a - 0x100000:0x300 + a - 0x100000 + 0x24]
+    assert word(0x1F6AD0) == word(0x1F6B30), '001F6AD0 is not 001F6B30 word for word'
     text_end = ARENA + 0x40 + struct.unpack_from('<I', overlay, 12)[0]
     assert text_end == TEXT_END, hex(text_end)
     captures = {}
@@ -456,6 +472,7 @@ class Oracle:
     function itself touched to its first access ('r', or ('w', value))."""
 
     def __init__(self, ram, spad, entry, args, script, run_set, seen, own=False):
+        self.entry, self.stack_seen = entry, set()
         ee = self.ee = Coverage(None, ram, spad, own)
         ee.seen = seen
         self.log, self.stores, self.marks, self.first, self.problems = [], [], [], {}, []
@@ -602,6 +619,10 @@ class Oracle:
             self.marks.append(len(self.stores))
             self.access.append([])
             values = arg_values(e, arg_spec)
+            sv = STACK_VALUES.get((self.entry, name))
+            if sv and name not in self.stack_seen:
+                self.stack_seen.add(name)
+                values += struct.unpack('<%dI' % (sv // 4), bytes(EE.read(e, values[0], sv)))
             if address == QUAD_HOOK:
                 values += struct.unpack('<16I', bytes(EE.read(e, values[2], 64)))
             if address in self.run_set:
@@ -673,6 +694,7 @@ class Replay:
 
     def __init__(self, oracle, buffers):
         self.log, self.stores, self.marks = oracle.log, oracle.stores, oracle.marks
+        self.entry, self.stack_seen = oracle.entry, set()
         self.oracle_access, self.stopped = oracle.access, oracle.stopped
         self.access = [[]]      # per call interval: every `bytes` request, in order: [address, size, changed]
         self.pending = None     # the last request: (pointer, size, bytes when handed out, its access entry)
@@ -848,6 +870,12 @@ class Replay:
                 values, out = values[:-1], values[-1]
             normal = tuple(float_arg_bits(v) if k == F else v & 0xFFFFFFFFFFFFFFFF if k == Q else v & MASK
                            for (k, _), v in zip(args, values))
+            sv = STACK_VALUES.get((self.entry, name))
+            if sv and name not in self.stack_seen:
+                self.stack_seen.add(name)
+                at = normal[0] - STACK_BASE
+                if 0 <= at <= STACK_SIZE - sv:
+                    normal += struct.unpack('<%dI' % (sv // 4), C.string_at(C.addressof(STACK) + at, sv))
             if name == 'w_001B1EA0':
                 at = normal[2] - STACK_BASE
                 if 0 <= at <= STACK_SIZE - 64:
@@ -1892,6 +1920,28 @@ def targeted_sub2(add):
                 [(fx + 4, b8(1)), (fx + 5, b8(0)), (fx + 6, b8(0)), (parent + 4, b8(1)),
                  (fx + 0x230, f32b(t0)), (fx + 0x234, f32b(t1)), (fx + 0x270, w32(0x9E3779B9)),
                  (0x828A34, w32(modes[0])), (0x828A3C, w32(modes[1]))])
+    # script 0x82D070's group 0x82CDD0 nodes: 0x823EB0 and 0x824130 on a free node
+    lamp = free_node(ram)
+    mat = b''.join(struct.pack('<4f', *r) for r in ((0.0, 0.0, 1.0, 0.0), (0.0, 1.0, 0.0, 0.0),
+                                                    (-1.0, 0.0, 0.0, 0.0), (30.0, -59.0, -1600.0, 1.0)))
+    base = [(lamp, b8(1)), (lamp + 0x10, w32(0x823EB0)), (lamp + 0x4C, w32(0x2345670)), (lamp + 0xD0, mat),
+            (lamp + 0x100, struct.pack('<4f', 30.0, -59.0, -1600.0, 1.0))]
+    for state in (0, 1, 2, 3, 5):
+        add('s2 lamp s%d' % state, beat, 0x823EB0, [lamp, STACK_TOP], base + [(lamp + 4, b8(state))],
+            queues={0x1C6190: [100]})
+    for light in ((0.0, 0.0, 1.0), (0.0, 0.0, -1.0), (1.0, 0.0, 0.0), (-1.0, 0.0, 0.0), (0.0, 1.0, 0.0),
+                  (0.0, -1.0, 0.0), (0.6, -0.8, 0.0), (0.0, 0.0, 0.0)):
+        for screen in (319, 320, 440, 441, -5, 0x7FFFFFFF):
+            for rnd in (0, 31, -1):
+                if light != (0.0, 0.0, 1.0) and (screen != 100 and screen != 319 or rnd):
+                    continue
+                add('s2 lamp %r %d %d' % (light, screen, rnd), beat, 0x823EB0, [lamp, STACK_TOP],
+                    base + [(lamp + 4, b8(1)), (0x810600, struct.pack('<4f', *light, 0.0))],
+                    queues={0x1C6190: [screen], 0x122BB8: [rnd]}, run_set=RUN - {0x122BB8})
+    for word in (0, 1, 2, 0xFFFFFFFF):
+        add('s2 826CB0 %X' % word, beat, 0x826CB0, [n28, n28 + 0x1F0, 0x82D1F0], [(n28 + 0x2EC, w32(word))])
+    for state in (0, 1, 2, 3, 4):
+        add('s2 emit s%d' % state, beat, 0x824130, [lamp], base + [(lamp + 0x10, w32(0x824130)), (lamp + 4, b8(state))])
     for step in (3, 9):
         add('s2 832 step%d' % step, beat, 0x826CC0, [n32, STACK_TOP], st(n32, 1, step) + [(0x810803, b8(3))])
 
