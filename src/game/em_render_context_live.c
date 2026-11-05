@@ -1907,6 +1907,18 @@ int em_rcl_0021B9A0(int32_t mode, uint32_t scale, uint32_t bias)
     return done(em_packet_chain_0021B9A0(&R.pc, mode, scale, bias), 0x0021B9A0u);
 }
 
+int em_rcl_0021BA80(int32_t a0, int32_t a1, int32_t a2)
+{
+    READY(0);
+    return done(em_packet_chain_0021BA80(&R.pc, a0, a1, a2), 0x0021BA80u);
+}
+
+int em_rcl_0021BA70(uint64_t value)
+{
+    READY(0);
+    return done(em_packet_chain_0021BA70(&R.pc, value), 0x0021BA70u);
+}
+
 /* 00121870 block_copy inside the context for 0021BAC0 / 0021BAE0: the
  * record +0xA0..+0xBF and the save slots +0x120 + 32 * slot never overlap
  * for the slots the status page uses (0), so a forward copy is the

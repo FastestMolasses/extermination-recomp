@@ -507,11 +507,14 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
 - The flagged op/sub pairs (0x0A sub 8, 0x0B sub 5, 0x12 sub 0, 0x13 subs 0
   and 1, 0x17 sub 0, 0x1A subs 0 and 1) are not checked against the
   handlers here.
-- The capture kinds of the exporter, the texture and receiver profiles, and
-  the start cards wait for CAP2 (AREA14, AREA18, AREA17 first); AREA16, AREA20
-  and AREA21 have no recording planned yet.
-- No live run has loaded any of these areas: the module pack, the state and
-  the script windows are checked only by the oracle and the static export.
+- AREA14 (lane P14, docs/AREA14_PORT.md): its SUBS row holds the k01
+  recordings (k01_02 .. k01_05), its capture kinds, profile 14 and its sfx
+  scope are exported, and k01_02 loads it live from AREA00 sub 2; the first
+  owner to run there, 0x823FC0, is untranslated and faults. The capture
+  kinds of AREA18 and AREA17 wait for their recordings (the next guided
+  run); AREA16, AREA20 and AREA21 have no recording planned yet.
+- No other of these areas has loaded live: their module pack rows, state and
+  script windows are checked only by the oracle and the static export.
 
 ## 6. Boot translations (lane BOOT2)
 

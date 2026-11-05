@@ -55,7 +55,7 @@ static int rv_world_worker(void *ctx, EmArea00WorldCall *w)
  * em_area02_math); the bytes em_sdf hands back per node (+0x03,
  * +0x0D, +0xB0.., +0xC0.., +0x10, +0x20, +0x24, +0x2E; the 0x270E path's
  * +0x24 / +0x2E) are stored after the walk, then the owner's +0x2E. */
-enum { RV_PLACE_MAX = 16 };
+enum { RV_PLACE_MAX = 64 };   /* the binder's capacity (AREA00 sub 2's script 0x82D070 places more than 16) */
 typedef struct {
     EmArea01Runtime *r;
     uint32_t sp, node[RV_PLACE_MAX], fault;
@@ -134,6 +134,8 @@ static int rv_001BAC00(EmArea01Runtime *r, EmArea01Call *c)
     if (r->area == 8) { lo = 0x00825100u; hi = 0x00827F00u; }      /* AREA08's */
     if (r->area == 7) { lo = 0x00825B80u; hi = 0x00828080u; }      /* AREA07's */
     if (r->area == 0x13) { lo = 0x00829E00u; hi = 0x0082F880u; }   /* AREA19's */
+    if (r->area == 0) { lo = 0x00826F80u; hi = 0x0082D480u; }      /* AREA00's (sub 2's script 0x82D070) */
+    if (r->area == 0x0E) { lo = 0x00826180u; hi = 0x00828480u; }   /* AREA14's */
     const uint8_t *data = bytes(r, lo, hi - lo, 0);
     if (!rec || !self14 || !data) return fail(r, c->function);
     uint8_t record_bytes[0x18];

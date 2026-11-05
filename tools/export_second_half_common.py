@@ -66,6 +66,7 @@ import export_area13_sfx as SX  # noqa: E402
 C = A13.C
 ROOT, DECOMP = A13.ROOT, A13.DECOMP
 SCRATCH = ROOT / 'build/second_half/assets'
+K01 = DECOMP / 'build/fork_refs/levels-recordings-20261102-1/s87/route_k01'
 
 # SHA-256 of the user's extract/OVERLAY files (hashes, not disc data)
 AREA14_SHA256 = '43f7e9bbb9fb18bf398f197689231ec1b91ff5ece7e6eb05abbbba98d86690f7'
@@ -94,7 +95,11 @@ A13.TARGETS.update(TARGETS)
 # the load (None until an area lane binds the area from CAP2's recordings);
 # `dynamic`: the load's relocation list holds id 0x45 (module docstring)
 SUBS = {
-    ('area14', 0): dict(paths=None, previous=None, dynamic=False),
+    # AREA14 sub 0 (lane P14): the k01 run's beats that end in AREA14, in
+    # route order, after the load from AREA00 sub 2 (k01_01_slab's end)
+    ('area14', 0): dict(paths=tuple(K01 / b for b in ('k01_02_item26', 'k01_03_item19', 'k01_04_face',
+                                                     'k01_05_plateau')),
+                        previous=K01 / 'k01_01_slab', dynamic=False),
     ('area16', 0): dict(paths=None, previous=None, dynamic=True),
     ('area16', 1): dict(paths=None, previous=None, dynamic=True),
     ('area17', 0): dict(paths=None, previous=None, dynamic=True),
@@ -137,6 +142,10 @@ CALLERS_001A2370 = {'area14': (0x823FC0,), 'area16': (0x8273F0,), 'area17': (0x8
 CALLERS_0019C6F0 = {'area14': (), 'area16': (0x825800,), 'area17': (0x823BA0, 0x824700), 'area18': (),
                     'area20': (), 'area21': (0x826840, 0x827CD0)}
 CREATURES = {}            # target -> the modelled 001A2370 behaviour (LV.CREATURES), filled by an area lane
+# AREA14's 0x823FC0 (func_overlay_AREA14_00823F80.c, byte-identical C) passes
+# REC_B + 0x90, REC_B = *(D_00275B40 + 0xC) with D_00275B40 = node + 0x110 while
+# its behaviour runs: *(node + 0x11C) + 0x90, export_area13_level's rule.
+CREATURES['area14'] = 0x823FC0
 FLAG_RULES = {}           # target -> flag_calls(ram) for its 0019C6F0 callers, filled by an area lane
 
 
@@ -210,6 +219,11 @@ def install(target, sub, tree=None, need_captures=True):
     LV.CREATURES[target] = CREATURES.get(target)
     LV.FLAG_OWNERS[target] = None
     LV.flag_calls = FLAG_RULES.get(target, no_flag_calls)
+    # the colour windows D_00251BE0 / D_00251C20 hold the last class-6 draw's
+    # tint in a capture, no load state (export_area08_common.retained_colours,
+    # the original routines run over the capture)
+    import export_area08_common as A08
+    LV.E22.check_ctx_block = A08.check_ctx_block
     TB.SCRIPT_ENTRIES[target] = SCRIPT_ENTRIES[target]
     TB.WRITERS[target] = ()
     TB.DOOR_ROW[target] = DOOR_ROW[target]

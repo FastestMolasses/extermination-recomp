@@ -19,7 +19,10 @@ typedef struct {
  * export_area00_tables.scripts_window / overlay_data_window and the
  * corresponding AREA01 exports. Mutable script words stay in the loader. */
 static const AreaScripts k_areas[]={
-    {0,1,0x008284E0u,0x0082BB50u,0x00826F80u,0x6500u,EM_AREA00_SCRIPT_DEST_PATH},
+    /* AREA00: the window reaches sub 2's chain 0x82D070 (started by [28]
+     * 0x826790; tools/export_area00s2_assets.py --kind tables: 15 chains,
+     * 0x8284E0..0x82D370). */
+    {0,1,0x008284E0u,0x0082D370u,0x00826F80u,0x6500u,EM_AREA00_SCRIPT_DEST_PATH},
     {1,2,0x00829860u,0x0082BD50u,0x00828A00u,0x4300u,EM_AREA01_SCRIPT_DEST_PATH},
     /* AREA02 (export_area02_tables: the scripts window 0x826780..0x829190,
      * the overlay data 0x825680 + 0x3C00). */
@@ -263,6 +266,7 @@ static int record(void *ctx,uint32_t fn,uint32_t actor,uint32_t block,
         break;
     case 0x00824E40u: /* AREA00 arrival script 00828D60 */
     case 0x008253E0u: /* AREA00 terminal script 008299E0 */
+    case 0x00826CB0u: /* AREA00 sub 2's script 0082D070 ([28]) */
         if (s->area!=0) return -1;
         break;
     default: return -1;

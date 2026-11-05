@@ -433,6 +433,92 @@ static inline int a00_c_001FC3C0(A00Ovl *o, uint32_t actor, uint32_t handle, int
     return o->h->w_001FC3C0(o->h->ctx, actor, handle, cue, f12, f13) < 0 ? a00_latch(o, 0x001FC3C0u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
 }
 
+static inline int a00_c_001AEDE0(A00Ovl *o, int32_t a0, int32_t a1)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_001AEDE0) return a00_latch(o, 0x001AEDE0u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_001AEDE0(o->h->ctx, a0, a1) < 0 ? a00_latch(o, 0x001AEDE0u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_001B1EA0(A00Ovl *o, int32_t a0, uint32_t point, uint32_t quad, int32_t count, int32_t *result)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_001B1EA0) return a00_latch(o, 0x001B1EA0u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_001B1EA0(o->h->ctx, a0, point, quad, count, result) < 0 ? a00_latch(o, 0x001B1EA0u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_001C47E0(A00Ovl *o, int32_t item, int32_t a1)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_001C47E0) return a00_latch(o, 0x001C47E0u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_001C47E0(o->h->ctx, item, a1) < 0 ? a00_latch(o, 0x001C47E0u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_001F6AD0(A00Ovl *o)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_001F6AD0) return a00_latch(o, 0x001F6AD0u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_001F6AD0(o->h->ctx) < 0 ? a00_latch(o, 0x001F6AD0u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_001FB0B0(A00Ovl *o, int32_t a0)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_001FB0B0) return a00_latch(o, 0x001FB0B0u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_001FB0B0(o->h->ctx, a0) < 0 ? a00_latch(o, 0x001FB0B0u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_001FBD50(A00Ovl *o, uint32_t actor, int32_t id, int32_t a2, float f12)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_001FBD50) return a00_latch(o, 0x001FBD50u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_001FBD50(o->h->ctx, actor, id, a2, f12) < 0 ? a00_latch(o, 0x001FBD50u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_00102918(A00Ovl *o, uint32_t dst, uint32_t a, uint32_t b)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_00102918) return a00_latch(o, 0x00102918u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_00102918(o->h->ctx, dst, a, b) < 0 ? a00_latch(o, 0x00102918u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_001F00A0(A00Ovl *o, int32_t id, uint32_t pos, uint32_t rot, int32_t a3, uint32_t *result)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_001F00A0) return a00_latch(o, 0x001F00A0u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_001F00A0(o->h->ctx, id, pos, rot, a3, result) < 0 ? a00_latch(o, 0x001F00A0u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_00102738(A00Ovl *o, uint32_t a, uint32_t b, uint32_t *out)
+{
+    float r = 0;
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_00102738) return a00_latch(o, 0x00102738u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    if (o->h->w_00102738(o->h->ctx, a, b, &r) < 0) return a00_latch(o, 0x00102738u, EM_AREA00_OVL_FAULT_WORKER_FAILED);
+    *out = em_ee_bits(r);
+    return 0;
+}
+
+static inline int a00_c_00102760(A00Ovl *o, uint32_t dst, uint32_t src)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_00102760) return a00_latch(o, 0x00102760u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_00102760(o->h->ctx, dst, src) < 0 ? a00_latch(o, 0x00102760u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_001C6190(A00Ovl *o, uint32_t actor, int32_t *result)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_001C6190) return a00_latch(o, 0x001C6190u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_001C6190(o->h->ctx, actor, result) < 0 ? a00_latch(o, 0x001C6190u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_001EFEB0(A00Ovl *o, int32_t id, uint32_t matrix)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_001EFEB0) return a00_latch(o, 0x001EFEB0u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_001EFEB0(o->h->ctx, id, matrix) < 0 ? a00_latch(o, 0x001EFEB0u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
 
 /* The actor's own callback: the function at self +0x4C, called with self. */
 static inline void a00_callback(A00Ovl *o, uint32_t self)

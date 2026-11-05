@@ -76,6 +76,17 @@ extern "C" {
 #define EM_AREA00_OVL_8262D0     0x008262D0u /* examine owner, +0x30 = 0x2758B8 */
 #define EM_AREA00_OVL_FERRY_CAB  0x008263C0u /* placement [47] owner */
 #define EM_AREA00_OVL_BEAM       0x008266A0u /* placement [60] owner */
+/* Sub 2's placements (decomp tools/area_overview.py --area 0, sub2 place[n]) */
+#define EM_AREA00_OVL_S2_30      0x00825D70u /* [30]; runs 0x825E80 / 0x825FC0 */
+#define EM_AREA00_OVL_S2_30A     0x00825E80u /* 0x825D70's while D_00810803 <= 2 */
+#define EM_AREA00_OVL_S2_30B     0x00825FC0u /* 0x825D70's otherwise */
+#define EM_AREA00_OVL_S2_31      0x008260F0u /* [31] */
+#define EM_AREA00_OVL_S2_28      0x00826790u /* [28]: item 0x26, script 0x82D070, AREA14 */
+#define EM_AREA00_OVL_S2_29      0x00826BE0u /* [29] */
+#define EM_AREA00_OVL_S2_32      0x00826CC0u /* [32] */
+#define EM_AREA00_OVL_S2_FX      0x008241B0u /* the effect node 0014D260's 001EFE00 spawns */
+#define EM_AREA00_OVL_S2_LAMP    0x00823EB0u /* group 0x82CDD0's nodes (script 0x82D070's op14) */
+#define EM_AREA00_OVL_S2_EMIT    0x00824130u /* group 0x82CDD0's nodes (script 0x82D070's op14) */
 
 enum {
     EM_AREA00_OVL_FAULT_NONE = 0,
@@ -147,6 +158,21 @@ typedef struct {
     int (*w_001F5940)(void *ctx, int32_t a0, uint32_t point, int32_t a2);
     int (*w_001FB9F0)(void *ctx, int32_t id, int32_t a1, int32_t a2, int32_t a3);
     int (*w_001FC3C0)(void *ctx, uint32_t actor, uint32_t handle, int32_t cue, float f12, float f13);
+    /* sub 2's owners (0x825D70, 0x825E80, 0x825FC0, 0x826790, 0x826CC0) */
+    int (*w_001AEDE0)(void *ctx, int32_t a0, int32_t a1);
+    int (*w_001B1EA0)(void *ctx, int32_t a0, uint32_t point, uint32_t quad, int32_t count, int32_t *result);
+    int (*w_001C47E0)(void *ctx, int32_t item, int32_t a1);
+    int (*w_001F6AD0)(void *ctx);
+    int (*w_001FB0B0)(void *ctx, int32_t a0);
+    int (*w_001FBD50)(void *ctx, uint32_t actor, int32_t id, int32_t a2, float f12);
+    /* sub 2's effect owner 0x8241B0 */
+    int (*w_00102918)(void *ctx, uint32_t dst, uint32_t a, uint32_t b);
+    int (*w_001F00A0)(void *ctx, int32_t id, uint32_t pos, uint32_t rot, int32_t a3, uint32_t *result);
+    /* the nodes script 0x82D070 places (0x823EB0, 0x824130) */
+    int (*w_00102738)(void *ctx, uint32_t a, uint32_t b, float *result);
+    int (*w_00102760)(void *ctx, uint32_t dst, uint32_t src);
+    int (*w_001C6190)(void *ctx, uint32_t actor, int32_t *result);
+    int (*w_001EFEB0)(void *ctx, int32_t id, uint32_t matrix);
 
     /* ---- the actor's own callback: the function at actor +0x4C, called with the actor */
     int (*w_callback)(void *ctx, uint32_t function, uint32_t actor);
@@ -169,6 +195,28 @@ int em_area00_ovl_008261E0(const EmArea00OvlHooks *h, uint32_t self, EmArea00Ovl
 int em_area00_ovl_008262D0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
 int em_area00_ovl_008263C0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
 int em_area00_ovl_008266A0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
+/* Sub 2's owners. 0x825D70 and 0x825E80 take sp: 0x825E80 copies a
+ * four-vector quad into a local of its frame (sp - 0x70 + 0x30) and passes
+ * its address to 001B1EA0, so the module writes that local through `bytes`;
+ * 0x825D70 calls 0x825E80 with its own sp (entry sp - 0x20). 0x826CC0 passes
+ * a local (sp - 0x30 + 0x20) to 001EFD20 and never touches it itself. */
+int em_area00_ovl_00825D70(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault);
+int em_area00_ovl_00825E80(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault);
+int em_area00_ovl_00825FC0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
+int em_area00_ovl_008260F0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
+int em_area00_ovl_00826790(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
+int em_area00_ovl_00826BE0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
+int em_area00_ovl_00826CC0(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault);
+int em_area00_ovl_008241B0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
+/* 0x823EB0 keeps a matrix (sp - 0xF0 + 0x40, its last row at + 0x70), a
+ * packet (+ 0x80) and a colour copy (+ 0xE0) in its frame; it writes the
+ * matrix's last row and the colour copy itself, through `bytes`. */
+int em_area00_ovl_00823EB0(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault);
+int em_area00_ovl_00824130(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
+/* Script 0x82D070's op09 callback 0x826CB0 (a0 = [28]): its +0x2EC = 2 (the
+ * count to 824 starts), *result = 1. */
+int em_area00_ovl_00826CB0(const EmArea00OvlHooks *h, uint32_t a0, uint32_t block, uint32_t a2,
+                           int32_t *result, EmArea00OvlFault *fault);
 
 /* Script op09 callback (a0, a1 = the script block whose +0x04 / +0x05 it
  * steps, a2): the original reads only a1; the other two are taken so the
