@@ -1008,7 +1008,7 @@ int em_level13_port_00827B60(const H13 *h, uint32_t self, F13 *fault)
  * frame (sp - 0x10), 00102948(o +0xB0, src +0x30), 00102958(o +0xD0, src),
  * 001026A0(o +0x100, o +0xD0, sp - 0x10), o +0x10 = 0x1F5040.
  * ---------------------------------------------------------------------- */
-int em_level13_port_00829840(const H13 *h, uint32_t src, uint32_t sp, F13 *fault)
+static int spawner(const H13 *h, uint32_t src, uint32_t sp, uint32_t colour, F13 *fault)
 {
     L13 o;
     if (l13_begin(&o, h, fault)) return -1;
@@ -1016,7 +1016,7 @@ int em_level13_port_00829840(const H13 *h, uint32_t src, uint32_t sp, F13 *fault
     if (l13_c_001AFA90(&o, 0xC, &obj)) return -1;
     if (obj != 0) {
         uint8_t v[16];
-        l13_q(&o, 0x0082F680u, v);
+        l13_q(&o, colour, v);
         l13_wq(&o, sp - 0x10u, v);
         if (l13_c_00102948(&o, obj + 0xB0, src + 0x30)) return -1;
         if (l13_c_00102958(&o, obj + 0xD0, src)) return -1;
@@ -1024,6 +1024,19 @@ int em_level13_port_00829840(const H13 *h, uint32_t src, uint32_t sp, F13 *fault
         l13_w32(&o, obj + 0x10, 0x001F5040u);
     }
     return l13_end(&o);
+}
+
+int em_level13_port_00829840(const H13 *h, uint32_t src, uint32_t sp, F13 *fault)
+{
+    return spawner(h, src, sp, 0x0082F680u, fault);
+}
+
+/* AREA14's 0x825A10 (called by its 0x823FC0): 0x829840 word for word but
+ * the colour quadword's address, AREA14's 0x828110
+ * (test_level13_port_reference runs the 0x829840 cases on AREA14's overlay). */
+int em_level13_port_00825A10(const H13 *h, uint32_t src, uint32_t sp, F13 *fault)
+{
+    return spawner(h, src, sp, 0x00828110u, fault);
 }
 
 /* The two turns 0x829A70 applies: 0019C6F0(5, 0), then the +0x74 floats

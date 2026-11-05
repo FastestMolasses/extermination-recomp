@@ -77,6 +77,15 @@ import reference_root as refs  # noqa: E402  (EM_REFERENCE: fork by default)
 DECOMP = ROOT.parent / 'Extermination'
 OVERLAY_FILES = {5: DECOMP / 'extract/OVERLAY/AREA04.BIN', 10: DECOMP / 'extract/OVERLAY/AREA13.BIN',
                  16: DECOMP / 'extract/OVERLAY/AREA19.BIN'}
+# AREA14's probe 0x825530 (the twin of 0x829370 but for its tint record):
+# every 0x829370 case runs again on images holding AREA14's whole overlay
+# file in place of AREA19's (A14_PREFIX), and on the k01 captures with
+# AREA14 resident (levels-recordings-20261102-1; not designed-record images,
+# so outside BEATS and load_captures' zero-window check)
+A14_FILE = DECOMP / 'extract/OVERLAY/AREA14.BIN'
+A14_PREFIX = 'a14/'
+K01_BEATS = ('k01_02_item26', 'k01_03_item19', 'k01_04_face', 'k01_05_plateau')
+K01_DIR = refs.capture('levels-recordings-20261102-1/s87/route_k01')
 OUT = ROOT / 'build/level10/port'
 MASK = 0xFFFFFFFF
 MASK64 = 0xFFFFFFFFFFFFFFFF
@@ -129,6 +138,7 @@ FUNCS = {
     0x826100: ('em_level10_port_00826100', 0x364, [U], None),
     0x827790: ('em_level10_port_00827790', 0x250, [U, S], None),
     0x829370: ('em_level10_port_00829370', 0x4D0, [U, U, S], I),
+    0x825530: ('em_level10_port_00825530', 0x4D4, [U, U, S], I),   # AREA14
     # AREA13 overlay
     0x8236E0: ('em_level10_port_008236E0', 0x20, [], None),
     # boot
@@ -140,10 +150,11 @@ FUNCS = {
     0x1885F0: ('em_level10_port_001885F0', 0x1C, [U], I),
     0x1E6F60: ('em_level10_port_001E6F60', 0xEC, [I, I, I, I, I, I, I], None),
 }
-OVERLAY_OF = {entry: (10 if entry == 0x8236E0 else 16) for entry in FUNCS if entry >= ARENA}
+OVERLAY_OF = {entry: (10 if entry == 0x8236E0 else 0x0B if entry == 0x825530 else 16)
+              for entry in FUNCS if entry >= ARENA}
 # The entries whose passing cases are all contract sites (they return from
 # their own body): the default run and EM_TEST_FULL=1.
-RETURN_SITES = (0x118790, 0x1885F0, 0x829370)
+RETURN_SITES = (0x118790, 0x1885F0, 0x829370, 0x825530)
 RETURN_SITES_FULL = RETURN_SITES
 
 
@@ -593,6 +604,10 @@ class Oracle:
         ee.save, ee.write, ee.load = self.save, self.write, self.load
         for address in BY_ADDRESS:
             if address == entry:   # a hook of its callers: here it is the entry
+                continue
+            if entry == 0x825530 and address >= ARENA:
+                # AREA19's overlay hooks (0x825930 lies inside AREA14's
+                # probe body); the AREA14 probe calls no overlay function
                 continue
             ee.hooks[address] = self.handler(address)
         for callback in args[1]:
@@ -1515,7 +1530,7 @@ def load_captures(elf):
 # translated callee)
 SELF_ENTRIES = {0x8250F0, 0x825240, 0x8255D0, 0x8257C0, 0x825C70, 0x825EE0, 0x826100}
 SCRIBBLED_CALLBACKS = set()
-HEAVY = {0x829370, 0x1305B0}
+HEAVY = {0x829370, 0x825530, 0x1305B0}
 
 
 def callbacks_of(entry, native_args, ram):
@@ -1589,7 +1604,49 @@ def case_list(elf):
     probe_cases(add, rng)
     boot_cases(add, rng)
     survivor_cases(add)
+    a14_probe_cases(cases)
     return cases, captured, len(cases) - captured
+
+
+def a14_images():
+    """AREA14's whole overlay file over every AREA19 image (A14_PREFIX), and
+    the k01 captures: their overlay header and text must equal AREA14.BIN
+    and their boot text the pinned ELF."""
+    data = A14_FILE.read_bytes()
+    assert data[4] == 0x0B
+    for beat in A19_BEATS:
+        ram, spad = CAPTURES[beat]
+        image = bytearray(ram)
+        image[ARENA:ARENA + len(data)] = data
+        CAPTURES[A14_PREFIX + beat] = (bytes(image), spad)
+    elf = read_elf()
+    end = ARENA + 0x40 + struct.unpack_from('<I', data, 12)[0]
+    for beat in K01_BEATS:
+        ram = (K01_DIR / beat / 'eeMemory.bin').read_bytes()
+        spad = (K01_DIR / beat / 'scratchpad.bin').read_bytes()
+        assert len(ram) == RAM_SIZE and len(spad) == SPAD_SIZE, beat
+        assert ram[ARENA:ARENA + 8] == data[:8], (beat, 'overlay header')
+        assert ram[ARENA + 0x40:end] == data[0x40:end - ARENA], (beat, 'overlay text differs')
+        assert ram[0x100000:0x241000] == elf[0x300:0x300 + 0x141000], (beat, 'boot text differs from the ELF')
+        CAPTURES[beat] = (ram, spad)
+
+
+def a14_probe_cases(cases):
+    """Every 0x829370 case again as AREA14's 0x825530 on the A14_PREFIX
+    image of its beat (labels 'a14 ...', all kept by the default run), and
+    0x825530 on every 0x823FC0 node of the k01 captures."""
+    for label, beat, entry, args, patches, spad, script, run_set in list(cases):
+        if entry == 0x829370:
+            queues = {a: list(v) for a, v in script.queues.items()}
+            cases.append(('a14 ' + label, A14_PREFIX + beat, 0x825530, args, list(patches), list(spad),
+                          Script(queues, dict(script.default)), run_set))
+    for beat in K01_BEATS:
+        ram, _ = CAPTURES[beat]
+        for node in owners(ram, 0x823FC0):
+            rec_b = u32(ram, node + 0x110 + 0xC)
+            cases.append(('a14 capture %s 825530 @%X' % (beat, node), beat, 0x825530,
+                          (node, rec_b + 0x90, STACK_TOP), [(0x275B40, w32(node + 0x110))], [],
+                          Script(), frozenset(RUN)))
 
 
 BEHAVIOUR_ENTRY = {0x823580: 0x823580, 0x8250F0: 0x8250F0, 0x8255D0: 0x8255D0, 0x8257C0: 0x8257C0,
@@ -2421,7 +2478,7 @@ def select_cases(elf):
     total = len(cases)
     if not reference_mode.FULL and not os.environ.get('EM_LEVEL10_PORT_ALL'):
         cases = cases[:captured] + [c for c in cases[captured:]
-                                    if c[0] in DEFAULT_KEEP or c[0].startswith(SURVIVORS)]
+                                    if c[0] in DEFAULT_KEEP or c[0].startswith(SURVIVORS + ('a14 ',))]
         return cases, captured, len(cases) - captured, total
     return cases, captured, targeted, total
 
@@ -2430,6 +2487,8 @@ def image_for(entry):
     """An image holding the entry's code (boot text is the same in all)."""
     if entry == 0x8236E0:
         return CAPTURES[A13_BEATS[0]][0]
+    if entry == 0x825530:
+        return CAPTURES[K01_BEATS[0]][0]
     return CAPTURES[A19_BEATS[0]][0]
 
 
@@ -2437,6 +2496,7 @@ def main():
     global NATIVE
     elf = read_elf()
     CAPTURES.update(load_captures(elf))
+    a14_images()
     NATIVE = build(os.environ.get('EM_LEVEL10_PORT_SOURCE'))
     selected, captured, targeted, total = select_cases(elf)
     CASES[:] = selected

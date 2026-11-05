@@ -1,8 +1,14 @@
-/* AREA19 00827DD0 deferred turret owner. UNWIRED. Adapted from this
- * project's AREA01 translation after reading the matching AREA19 decomp C.
- * AREA19 has no flag-6 gate or waiting state; its missed-probe effect also
- * depends on the previous hit kind. Every access is checked independently
- * against original AREA19 instructions by test_area19_route_reference.py. */
+/* AREA19 00827DD0 deferred turret owner. Adapted from this project's AREA01
+ * translation after reading the matching AREA19 decomp C. AREA19 has no
+ * flag-6 gate or waiting state; its missed-probe effect also depends on the
+ * previous hit kind. Every access is checked independently against original
+ * AREA19 instructions by test_area19_route_reference.py.
+ *
+ * AREA14's 0x823FC0 is the same code (the decomp C differs in three places;
+ * the instruction streams align word for word elsewhere): its probe is
+ * 0x825530, its spawner 0x825A10, and a missed probe gives 0x8000002C when
+ * the earlier hit record's +0x1A was 5, else 0x80000003. The same test runs
+ * it over AREA14's own overlay (o->area14). */
 #include "em_area19_route_internal.h"
 
 #define D_00275B40 0x00275B40u /* gp - 0x7830 */
@@ -119,6 +125,13 @@ static void a19r_companion_matrix(A19R *o, uint32_t self)
     uint32_t own = a19r_u32(o, self + 0x11C);
     uint32_t dst = a19r_u32(o, companion + 0x11C);
     (void)a19r_c_00102958(o, dst + 0x90, own + 0x90);
+}
+
+/* The group's probe: AREA19 0x829370, AREA14 0x825530. */
+static void a19r_probe(A19R *o, uint32_t self, uint32_t matrix, int32_t *result)
+{
+    if (o->area14) (void)a19r_c_00825530(o, self, matrix, result);
+    else (void)a19r_c_00829370(o, self, matrix, result);
 }
 
 static void a19r_draw_with_matrix(A19R *o, uint32_t self)
@@ -306,7 +319,7 @@ static void a19r_state4_idle(A19R *o, uint32_t self)
     }
     a19r_draw_with_matrix(o, self);
     r = 0;
-    (void)a19r_c_00829370(o, self, a19r_rec_b(o) + 0x90, &r);
+    a19r_probe(o, self, a19r_rec_b(o) + 0x90, &r);
     if (a19r_s16(o, self + 0x36) != 0 && a19r_u32(o, self + 0x208) == 0) a19r_rearm(o, self);
     a19r_w16(o, self + 0x36, 0);
     if (a19r_u32(o, self + 0x204) != 0) {
@@ -326,7 +339,8 @@ static void a19r_period_effect(A19R *o, uint32_t self)
     int32_t r = 0;
     uint32_t hit, kind, t;
     (void)a19r_c_001FBD50(o, self, 0x425, 0, fv(K_300), &r);
-    (void)a19r_c_00829840(o, a19r_rec_b(o) + 0x90);
+    if (o->area14) (void)a19r_c_00825A10(o, a19r_rec_b(o) + 0x90);
+    else (void)a19r_c_00829840(o, a19r_rec_b(o) + 0x90);
     (void)a19r_c_00102948(o, S_38A0, S_31B0);
     hit = a19r_u32(o, S_31D0);
     kind = a19r_u32(o, S_31D8);
@@ -355,7 +369,8 @@ static void a19r_period_effect(A19R *o, uint32_t self)
         r = 0;
         (void)a19r_c_0019B6C0(o, S_3190, S_31A0, hit, &r);
         if (r == 0) {
-            uint32_t id = old_kind == 6 ? 0x80000026u : old_kind == 8 ? 0x80000067u : 0x80000003u;
+            uint32_t id = o->area14 ? (old_kind == 5 ? 0x8000002Cu : 0x80000003u)
+                        : old_kind == 6 ? 0x80000026u : old_kind == 8 ? 0x80000067u : 0x80000003u;
             (void)a19r_c_001EFD90(o, (int32_t)id, S_38A0, S_38B0, &r);
         } else {
             uint32_t id;
@@ -490,7 +505,7 @@ static void a19r_state1_track(A19R *o, uint32_t self)
 
     a19r_draw_plain(o, self);
     a19r_w16(o, self + 0x28, (uint32_t)(a19r_s16(o, self + 0x28) + 1));
-    (void)a19r_c_00829370(o, self, a19r_rec_b(o) + 0x90, &result);
+    a19r_probe(o, self, a19r_rec_b(o) + 0x90, &result);
     if (result == 2) a19r_w16(o, self + 0x2A, 0x12C);
     else a19r_w16(o, self + 0x2A, (uint32_t)(a19r_s16(o, self + 0x2A) - 1));
 
@@ -593,5 +608,12 @@ static int turret_00827DD0(A19R *o, uint32_t self)
 int em_area19_route_00827DD0(const EmArea19RouteHooks *h, uint32_t self, EmArea19RouteFault *fault)
 {
     A19R o; if (a19r_begin(&o, h, fault)) return -1;
+    return turret_00827DD0(&o, self);
+}
+
+int em_area19_route_00823FC0(const EmArea19RouteHooks *h, uint32_t self, EmArea19RouteFault *fault)
+{
+    A19R o; if (a19r_begin(&o, h, fault)) return -1;
+    o.area14 = 1;
     return turret_00827DD0(&o, self);
 }

@@ -878,7 +878,7 @@ int em_level10_port_00827790(const EmLevel10PortHooks *h, uint32_t self, uint32_
 #define K_0_8 0x3F4CCCCDu     /* 0.8f */
 #define K_10000 0x461C4000u   /* 10000.0f */
 
-static int32_t probe(L10 *o, uint32_t self, uint32_t matrix, uint32_t sp)
+static int32_t probe(L10 *o, uint32_t self, uint32_t matrix, uint32_t sp, uint32_t tint_record)
 {
     uint32_t dir = sp - 0x20, tint = sp - 0x10;
     int32_t r = 0;
@@ -957,7 +957,7 @@ static int32_t probe(L10 *o, uint32_t self, uint32_t matrix, uint32_t sp)
             l10_c_001E2BA0(o, dir, S_700038A0, S_700038C0, F_100);
         } else if (l10_s32(o, self + 0x200) >= 0xD) {
             uint8_t q[16];
-            l10_q(o, A19_TINT, q);
+            l10_q(o, tint_record, q);
             l10_wq(o, tint, q);
             l10_c_001031E0(o, S_700038A0, S_700031B0);
             uint32_t table = l10_u32(o, D_00275B40);
@@ -984,13 +984,30 @@ static int32_t probe(L10 *o, uint32_t self, uint32_t matrix, uint32_t sp)
     return mine == other ? 2 : 1;
 }
 
-int em_level10_port_00829370(const EmLevel10PortHooks *h, uint32_t self, uint32_t matrix, uint32_t sp,
-                             int32_t *result, EmLevel10PortFault *fault)
+static int probe_entry(const EmLevel10PortHooks *h, uint32_t self, uint32_t matrix, uint32_t sp,
+                       uint32_t tint_record, int32_t *result, EmLevel10PortFault *fault)
 {
     L10 o;
     if (!result || l10_begin(&o, h, fault)) return -1;
-    int32_t r = probe(&o, self, matrix, sp);
+    int32_t r = probe(&o, self, matrix, sp, tint_record);
     if (l10_failed(&o)) return -1;
     *result = r;
     return 0;
+}
+
+int em_level10_port_00829370(const EmLevel10PortHooks *h, uint32_t self, uint32_t matrix, uint32_t sp,
+                             int32_t *result, EmLevel10PortFault *fault)
+{
+    return probe_entry(h, self, matrix, sp, A19_TINT, result, fault);
+}
+
+/* AREA14's 0x825530 (called by its 0x823FC0): 0x829370's instructions with
+ * the tint record at AREA14's 0x828100 (the decomp C spells the 001CD520
+ * call differently; the loads, stores and calls are the same, in the same
+ * order: test_level10_port_reference runs every 0x829370 case again on
+ * AREA14's overlay). */
+int em_level10_port_00825530(const EmLevel10PortHooks *h, uint32_t self, uint32_t matrix, uint32_t sp,
+                             int32_t *result, EmLevel10PortFault *fault)
+{
+    return probe_entry(h, self, matrix, sp, 0x00828100u, result, fault);
 }

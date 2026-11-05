@@ -2,6 +2,11 @@
 """AREA19 route gaps: original code identity, ordered memory and worker replay.
 
 Standalone and UNWIRED. Uses the existing level-14 comparator unchanged.
+AREA14's 0x823FC0 is 0x827DD0's code but its two overlay callees (0x825530,
+0x825A10) and the missed-probe effect: em_area19_route_00823FC0 runs every
+0x827DD0 case again on AREA14's overlay header and text loaded over the same
+images, plus the miss kinds AREA14 tests and every 0x823FC0 node of the k01
+captures (AREA14 resident, levels-recordings-20261102-1).
 EM_TEST_FULL=1 sweeps every failure site; the default still covers every
 reachable word. EM_AREA19_ROUTE_ONLY is diagnostic, never certification.
 """
@@ -18,9 +23,11 @@ U, I, F, S = O.U, O.I, O.F, O.S
 FUNCS = {
     0x824690: ('em_area19_route_00824690', 0x3F4, [U,S], None),
     0x827DD0: ('em_area19_route_00827DD0', 0x15A0, [U], None),
+    0x823FC0: ('em_area19_route_00823FC0', 0x1568, [U], None),
 }
-OVERLAY_OF = {entry:16 for entry in FUNCS}
-OVERLAY_FILES = {16:ROOT.parent/'Extermination/extract/OVERLAY/AREA19.BIN'}
+OVERLAY_OF = {entry:(0x0B if entry==0x823FC0 else 16) for entry in FUNCS}
+OVERLAY_FILES = {16:ROOT.parent/'Extermination/extract/OVERLAY/AREA19.BIN',
+                 0x0B:ROOT.parent/'Extermination/extract/OVERLAY/AREA14.BIN'}
 HOOKS = [
     ('w_001026A0',0x001026A0,[('u', 4), ('u', 5), ('u', 6)],None),
     ('w_00102760',0x00102760,[('u', 4), ('u', 5)],None),
@@ -54,21 +61,29 @@ HOOKS = [
     ('w_001FC520',0x001FC520,[('u', 4)],None),
     ('w_00829370',0x00829370,[('u', 4), ('u', 5)],'i'),
     ('w_00829840',0x00829840,[('u', 4)],None),
+    ('w_00825530',0x00825530,[('u', 4), ('u', 5)],'i'),
+    ('w_00825A10',0x00825A10,[('u', 4)],None),
  ]
-BEATS = ('a19_00_duct',)
+K01 = ('k01_02_item26','k01_03_item19','k01_04_face','k01_05_plateau')
+BEATS = ('a19_00_duct',)+K01
 BEAT = BEATS[0]
-A = O.FREE+0x1000
+# This 256 KiB window is zero in every input (the k01 captures use
+# O.FREE's default window)
+FREE = 0x1E61000
+A = FREE+0x1000
 
 
 def configure():
+    O.FREE = FREE
     O.FUNCS, O.HOOKS = FUNCS, HOOKS
     O.OVERLAY_OF, O.OVERLAY_FILES = OVERLAY_OF, OVERLAY_FILES
     O.OUT = ROOT/'build/levels/area19_route'
     O.SOURCES = ('em_area19_route_flame.c','em_area19_route_turret.c')
     O.BEATS = BEATS
     O.BEAT_DIRS = {b:refs.v263('s87/route_a19/'+b,
-        'fork route is not recorded from a04b_00; retained original captures explicitly selected') for b in BEATS}
-    O.RESIDENT = {b:16 for b in BEATS}
+        'fork route is not recorded from a04b_00; retained original captures explicitly selected') for b in BEATS[:1]}
+    O.BEAT_DIRS.update({b:refs.capture('levels-recordings-20261102-1/s87/route_k01')/b for b in K01})
+    O.RESIDENT = {b:(0x0B if b in K01 else 16) for b in BEATS}
     O.BY_ADDRESS = {a:(n,args,res) for n,a,args,res in HOOKS}
     O.BY_NAME = {n:a for n,a,_,_ in HOOKS}
     O.HOOK_NAMES = [h[0] for h in HOOKS]+['w_callback']
@@ -76,12 +91,12 @@ def configure():
         [('ctx',C.c_void_p),('bytes',O.BYTES_FN)] +
         [(name,O.hook_proto(args,res)) for name,_,args,res in HOOKS] +
         [('w_callback',O.CALLBACK_FN)]})
-    O.SELF_ENTRIES, O.HEAVY = {0x827DD0}, set()
+    O.SELF_ENTRIES, O.HEAVY = {0x827DD0,0x823FC0}, set()
     O.RETURN_SITES = O.RETURN_SITES_FULL = ()
     O.CONTRACT_UNREACHABLE = {}
     O.LOCAL_STORES = set()
-    O.DEFAULT_ARGS = {0x824690:[A,O.STACK_TOP],0x827DD0:[A]}
-    O.image_for = lambda _:O.CAPTURES[BEAT][0]
+    O.DEFAULT_ARGS = {0x824690:[A,O.STACK_TOP],0x827DD0:[A],0x823FC0:[A]}
+    O.image_for = lambda e:O.CAPTURES[K01[0] if e==0x823FC0 else BEAT][0]
     O.CAPTURES.clear()
     O.CAPTURES.update(O.load_captures(O.read_elf()))
     O.JUMP_TABLES = {}
@@ -99,6 +114,16 @@ def configure():
         designed[O.ARENA:O.ARENA+length]=data[:length]
         assert designed[O.ARENA:O.ARENA+length]==data[:length]
         O.CAPTURES['designed/'+beat]=(bytes(designed),spad)
+    # AREA14's header and text over the AREA19 images above, so the same
+    # designed nodes run AREA14's words
+    data=OVERLAY_FILES[0x0B].read_bytes()
+    length=0x40+struct.unpack_from('<I',data,12)[0]
+    assert data[4]==0x0B
+    for key,(ram,spad) in list(O.CAPTURES.items()):
+        if key in K01: continue
+        designed=bytearray(ram)
+        designed[O.ARENA:O.ARENA+length]=data[:length]
+        O.CAPTURES['a14/'+key]=(bytes(designed),spad)
 
 
 def cases():
@@ -144,8 +169,23 @@ def cases():
         for entry in FUNCS:
             for node in O.owners(ram,entry):
                 args=(node,O.STACK_TOP) if entry==0x824690 else (node,)
-                patches=[(0x275B40,w(node+0x110))] if entry==0x827DD0 else []
+                patches=[(0x275B40,w(node+0x110))] if entry in (0x827DD0,0x823FC0) else []
                 out.append((f'capture/{beat}/{entry:x}/{node:x}',beat,entry,args,patches,[],O.Script(),set()))
+    # AREA14's 0x823FC0: every designed 0x827DD0 case again on AREA14's
+    # words (its callees renamed), and the miss kinds it tests (5 and others)
+    remap={0x829370:0x825530,0x829840:0x825A10}
+    def a14(script):
+        return O.Script({remap.get(a,a):list(v) for a,v in script.queues.items()},
+                        {remap.get(a,a):v for a,v in script.default.items()})
+    for label,beat,entry,args,patches,spad,script,run_set in list(out):
+        if entry!=0x827DD0 or label.startswith('capture/') or label.startswith('miss-kind/'): continue
+        out.append(('a14/'+label,'a14/'+beat,0x823FC0,args,patches,spad,a14(script),run_set))
+    label,beat,entry,args,patches,spad,script,run_set=template
+    for kind in (5,6,4,0,255):
+        hit=O.FREE+0x4000
+        out.append((f'a14/miss-kind/{kind}','a14/'+beat,0x823FC0,args,patches+[(hit,bytes(0x100)),(hit+0x1A,b(kind))],
+                    spad+[(0x700031D0,w(hit)),(0x700031D8,w(0))],
+                    O.Script({0x825530:[1],0x19B6C0:[O.Scribble(0,[(hit+0x1A,b(1))])]}),run_set))
     return out
 
 

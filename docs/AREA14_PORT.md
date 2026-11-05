@@ -15,8 +15,8 @@ path; the rand() tables of k01_01 and k01_03 are not usable, CAP3's note).
 | Beat | Status alone from its card |
 |---|---|
 | k01_01 | runs to its end with no fail-stop, at the recording's position (26.11, -60, -1630.21); vitals differ: health 25 against 55 (hits of 15 at frame ~200 and 20 by frame 300 where the recording took one of 5 at frame 198), infection 100 and D_00810706/07 1 / 1 against 95 and 0 / 0. Its rand() table is not usable, so the hits are not yet attributed |
-| k01_02 | the ledge climb onto [23], item 0x26 used on [28] from the EVENT page, script 0x82D070 with its op14 nodes (0x823EB0, 0x824130), the op09 0x826CB0, the count to 824 (001F6AD0, the group 0x827FB0), the timeline's grey track, the area change to AREA14 and its load; stops at the fail-stop of AREA14's 0x823FC0 (the creature group's owner, untranslated) on the first frame there |
-| k01_03 .. k01_05 | not run: they start in AREA14, whose first owner 0x823FC0 faults |
+| k01_02 | the ledge climb onto [23], item 0x26 used on [28] from the EVENT page, script 0x82D070 with its op14 nodes (0x823EB0, 0x824130), the op09 0x826CB0, the count to 824 (001F6AD0, the group 0x827FB0), the timeline's grey track, the area change to AREA14 and its load, the four 0x823FC0 group owners with their probe 0x825530 (lane P14b); stops at the fail-stop of [0] 0x8238E0 (untranslated) on the first frame there |
+| k01_03 .. k01_05 | not run: they start in AREA14, whose owner [0] 0x8238E0 faults |
 
 Chain `k01` (`python3 tools/mid_route_beats.py k01`) stops where k01_02 does.
 
@@ -91,15 +91,45 @@ level: sixteen files, none equal to n0's. It is bound as a later area's sub.
   0x825AA0, 0x825FD0) bind, 0x825AA0 runs BOOT2's twin (dispatch_second_half)
   and every other one faults at its address when it runs; op14 reads
   AREA14's overlay data window.
-- **Missing (fail-stops)**: every AREA14 overlay owner but 0x825AA0. The
-  first to run is 0x823FC0 (func_overlay_AREA14_00823F80.c, the creature
-  group 0x826180 [13] / [15] / [17] / [19], with its internal 0x825530);
-  then [0] 0x8238E0 (script 0x826C10 on entering its polygon), [5] 0x823760
-  (the arrival script 0x826800 that sets flag 0x2C), [2] 0x823B30 (0x826FC0 at
-  the climb's top), [4] 0x823E30, [6] 0x825FD0, [35] / [36] 0x823580. The
-  boot behaviours AREA14 places are all in a ledger or defined (the
-  checklist in SECOND_HALF_AREAS.md section 4); which of them fault live is
-  not known until 0x823FC0 runs.
+- **The group owner 0x823FC0 and its two callees** (lane P14b,
+  `dispatch_second_half`). The three AREA14 functions align word for word
+  with AREA19's 0x827DD0 / 0x829370 / 0x829840 (an instruction-stream
+  alignment with the immediates and branch offsets masked) except: the
+  owner's three calls to its own overlay callees and its missed-probe
+  effect (0x8000002C when the earlier hit record's +0x1A was 5, else
+  0x80000003, where AREA19 tests 6 and 8); the probe's tint record
+  (0x828100 for 0x82F670) and the order of its 001CD520 argument set-up
+  (registers only: the loads, stores and calls are the same); the
+  spawner's colour (0x828110 for 0x82F680). So the existing translations
+  run them with those differences as parameters:
+  - 0x823FC0: `em_area19_route_00823FC0` (the turret with `o->area14`; two
+    hooks w_00825530 / w_00825A10 added). `test_area19_route_reference`
+    runs every designed 0x827DD0 case again on AREA14's overlay header and
+    text loaded over the same images, five AREA14 miss kinds (5, 6, 4, 0,
+    255) and the 16 captured 0x823FC0 nodes of k01_02 .. k01_05: 1285
+    cases, 1170/1170 reachable words of 0x823FC0. A mutation of the kind-5
+    effect id fails it.
+  - 0x825530: `em_level10_port_00825530` (0x829370's probe with the tint
+    record as a parameter). `test_level10_port_reference` runs every
+    0x829370 case again (labels `a14 ...`) on images holding AREA14's whole
+    overlay file, and 0x825530 on the 16 captured 0x823FC0 nodes: 64
+    cases, 265/265 reachable words. On AREA14's entry the oracle installs
+    no hook at an overlay address: the harness's AREA19 hook 0x825930 lies
+    inside AREA14's probe body, and the first run stopped at the step limit
+    there (an artifact of the harness, not of the code).
+  - 0x825A10: `em_level13_port_00825A10` (0x829840 with the colour as a
+    parameter); `test_level13_port_reference` reruns the 0x829840 cases on
+    AREA14's overlay (`a14 ov 829840 ...`): 2 cases, 27/27 reachable words.
+- **Missing (fail-stops)**: every other AREA14 overlay owner. The first to
+  run is [0] 0x8238E0 (script 0x826C10 on entering its polygon); then [5]
+  0x823760 (the arrival script 0x826800 that sets flag 0x2C) with its op09
+  0x8238C0, [2] 0x823B30 (0x826FC0 at the climb's top), [4] 0x823E30, [6]
+  0x825FD0 with its op09 0x825C40, [35] / [36] 0x823580. None has a twin in
+  another overlay (the same alignment over every overlay file: best match
+  under 33 % of the words, except 0x8238C0, a two-call wrapper); each needs
+  its own translation and oracle. The boot behaviours AREA14 places are all
+  in a ledger or defined (the checklist in SECOND_HALF_AREAS.md section 4);
+  which of them fault live is not known until the owners run.
 
 ## After the merge (in main)
 
@@ -126,6 +156,11 @@ the direct calls above, since level_asset_audit.private_assets refuses.)
 - `test_area00s2_creature_reference`: 666 cases, every reachable word but
   0x14D9DC (named dead in the test).
 - `test_packet_chain_reference` (with 0021BA70's own cases).
+- Lane P14b: `test_area19_route_reference` (1285 cases), the `a14 `
+  subsets of `test_level10_port_reference` and
+  `test_level13_port_reference` (the full default level10 run, before the
+  hook fix, passed every non-AREA14 check, its contract and reuse checks
+  included).
 - `test_area01_sfx_registry` fails here: its pre-extension baseline differs
   from the registry in 8,581 entries spread over every scope after AREA00's,
   AREA04 sub 0 included, which the two scopes this lane appends cannot shift.

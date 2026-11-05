@@ -509,8 +509,10 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   handlers here.
 - AREA14 (lane P14, docs/AREA14_PORT.md): its SUBS row holds the k01
   recordings (k01_02 .. k01_05), its capture kinds, profile 14 and its sfx
-  scope are exported, and k01_02 loads it live from AREA00 sub 2; the first
-  owner to run there, 0x823FC0, is untranslated and faults. The capture
+  scope are exported, and k01_02 loads it live from AREA00 sub 2; its group
+  owner 0x823FC0 and the probe / spawner 0x825530 / 0x825A10 run (lane
+  P14b: AREA19's translations with AREA14's differences as parameters,
+  section 6); the next owner, [0] 0x8238E0, is untranslated and faults. The capture
   kinds of AREA18 and AREA17 wait for their recordings (the next guided
   run); AREA16, AREA20 and AREA21 have no recording planned yet.
 - No other of these areas has loaded live: their module pack rows, state and
@@ -549,6 +551,7 @@ and 0x15 only):
 |---|---|---|---|
 | AREA14 0x825AA0 (sub 0 group 0x826180 [14], [16], [18], [20]) | AREA03 0x825290, AREA11 0x827490, AREA19 0x8298D0 | all 104 equal, no overlay-relocated word | `em_area03_route_00825290`; `make test-area03-route-reference` runs every 0x825290 case again on AREA14's header and text loaded over the same images (72/72 words) |
 | AREA21 0x823A10 (group 0x82B500 [2]), 0x823AB0 (group 0x82BA70 [23]) | AREA01 0x8239C0, AREA19 0x825030 | 35 of 36 equal; the one that differs is the rate's float immediate: 40.0 and 8.0 (AREA01's and AREA19's 5.0), so AREA01's translation (which fixes 5.0) is not reused | `em_level17_boot_a21_00823A10` / `_00823AB0`; `make test-level17-boot-reference` runs them on AREA21's header and text over the capture (27/27 words each; a 5.0 mutation fails) |
+| AREA14 0x823FC0 (sub 0 group 0x826180 [13], [15], [17], [19]) with 0x825530 and 0x825A10 (lane P14b) | AREA19 0x827DD0, 0x829370, 0x829840 | aligned word for word but the owner's three overlay calls and its missed-probe effect (kind 5: 0x8000002C, else 0x80000003), the probe's tint record (0x828100) and register-only set-up of its 001CD520 call, the spawner's colour (0x828110) | `em_area19_route_00823FC0`, `em_level10_port_00825530`, `em_level13_port_00825A10`; test_area19_route_reference / test_level10_port_reference / test_level13_port_reference rerun the AREA19 cases on AREA14's overlay, plus the 16 captured nodes of k01_02 .. k01_05 (docs/AREA14_PORT.md) |
 
 Section 4's tables still show these rows as missing: the generator counts an
 overlay owner only through a port file of its own area.
