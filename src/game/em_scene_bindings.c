@@ -233,7 +233,7 @@ static int mid_area(unsigned area, unsigned sub)
     /* AREA00 sub 2 (chunk04.n2, another level than subs 0 / 1; tools/
      * export_area00s2_assets.py, docs/AREA14_PORT.md) keeps its folder
      * assets/area00/sub2 in the later areas' layout. */
-    return (area == 0u && sub == 2u) || ((area == 0x16u || area == 6u || area == 0x0Du) && sub == 0) ||
+    return (area == 0u && sub == 2u) || ((area == 0x16u || area == 6u || area == 0x0Du || area == 0x0Eu) && sub == 0) ||
            ((area == 0x0Fu || area == 0x13u) && sub <= 1) || (area == 3u && sub <= 2) || (area == 4u && sub == 1) ||
            ((area == 8u || area == 7u) && (sub == 0 || sub == 2 || sub == 3));
 }
@@ -2893,7 +2893,8 @@ static int arrival_scene(void)
            strcmp(g.scene_dir, "assets/area19s1/sub1") == 0 ||
            strcmp(g.scene_dir, "assets/area07/sub2") == 0 ||
            strcmp(g.scene_dir, "assets/area07/sub3") == 0 ||
-           strcmp(g.scene_dir, "assets/area00/sub2") == 0;
+           strcmp(g.scene_dir, "assets/area00/sub2") == 0 ||
+           strcmp(g.scene_dir, "assets/area14/sub0") == 0;
 }
 
 /* A scene with the original's world: its collision world, live camera,
@@ -4010,6 +4011,22 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
             return -1;
         }
     }
+    /* AREA14's owners (lane P14): 0x825AA0 is bound (em_area01_runtime's
+     * dispatch_second_half); every other placement's and group's overlay
+     * behaviour (decomp tools/area_overview.py --area 14) runs through the
+     * runtime, where an untranslated one faults at its address. Its boot
+     * owners bind as the later areas' do. */
+    if (s_state.d810700 == 0x0E && fn >= 0x00823500u) {
+        switch (fn) {
+        case 0x00823580u: case 0x00823760u: case 0x008238E0u: case 0x00823B30u: case 0x00823E30u:
+        case 0x00823FC0u: case 0x00825AA0u: case 0x00825FD0u:
+            goto bind;
+        default:
+            return -1;
+        }
+    }
+    if (s_state.d810700 == 0x0E && fn < 0x00823500u && fn && fn != 0x001F5040u)
+        goto bind;
     /* AREA00 sub 2's boot owners (its placements', groups' and spawns'), as
      * the later areas' below: the runtime's owners or its fallback
      * (em_area01_runtime_later); an untranslated one faults at its address

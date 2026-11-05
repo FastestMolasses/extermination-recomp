@@ -1633,6 +1633,20 @@ static int worker(void *ctx,EmArea01Call *c)
         request[0]=1;request[1]=(uint8_t)c->a[0];
         c->v0=0;return 0;
     }
+    case 0x001C47E0u: {
+        /* 001C47E0(type, n) (the decomp C, func_001C47E0.c): the item count
+         * D_00810C64[type] less n, refused (v0 -1, nothing written) when the
+         * count is below n; v0 the count re-read after the store. AREA00 sub
+         * 2's [28] 0x826790 uses item 0x26 (k01_02: D_00810C8A 1 -> 0, the
+         * recording's end block). */
+        if(c->na<2)return -1;
+        uint8_t *count=bytes(l,0x00810C64u+(uint32_t)c->a[0],1,1);
+        if(!count)return -1;
+        int32_t v=*count;
+        if(v<(int32_t)c->a[1]){c->v0=(uint64_t)(int64_t)-1;return 0;}
+        *count=(uint8_t)(v-(int32_t)c->a[1]);
+        c->v0=(uint64_t)*count;return 0;
+    }
     case 0x001A2370u: case 0x001C5570u: {
         if(c->na<(c->function==0x001C5570u ? 4u : 2u))return -1;
         EmActor *a=actor(l,(uint32_t)c->a[0]);float data[16];

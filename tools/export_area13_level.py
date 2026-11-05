@@ -225,7 +225,7 @@ def check_cells(image, caps, elf):
     hit = image.locate(table)
     if hit is None:
         raise SystemExit(f'cell directory {table:#x} outside the load map')
-    disc = image.read(table, hit[0] + hit[3] - table)
+    disc = image.read(table, directory_span(image, hit, table))
     count, hulls, size = L.cell_directory(disc, 0)
     disc = disc[:size]
     for cap in caps:
@@ -247,6 +247,19 @@ def relocation_rows(caps):
             problems.append(f'{cap.name}: relocated addresses differ from the first capture')
         where = w
     return problems, where
+
+
+def directory_span(image, hit, table):
+    """Bytes from the cell directory `table` to the end of its load-map row
+    and of the contiguous rows that follow it: AREA14's directory runs past
+    the end of its own row into the next loaded bytes (the cells checks then
+    compare every directory byte with every capture)."""
+    end = hit[0] + hit[3]
+    while True:
+        more = image.locate(end)
+        if more is None or more[0] != end:
+            return end - table
+        end = more[0] + more[3]
 
 
 def previous_word(target, at):
@@ -396,7 +409,7 @@ def export_target(target, el, elf, out_root, iso, skip_collision):
     hit = image.locate(cells_table)
     if hit is None:
         raise SystemExit(f'cell directory {cells_table:#x} outside the load map')
-    _count, _hulls, cells_size = L.cell_directory(image.read(cells_table, hit[0] + hit[3] - cells_table), 0)
+    _count, _hulls, cells_size = L.cell_directory(image.read(cells_table, directory_span(image, hit, cells_table)), 0)
     load_rows = {}
     for cap in caps:
         rows = C.compare_load_map(image, cap, allow=[(cells_table, cells_table + cells_size)])

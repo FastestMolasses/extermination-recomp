@@ -665,7 +665,7 @@ int em_area01_runtime_later(EmArea01Runtime *r, EmArea01Call *c, int *rc)
 static int mid_host(unsigned area)
 {
     return area == 0x16 || area == 6 || area == 0x0D || area == 0x0F || area == 3 || area == 0x13 || area == 8 ||
-           area == 7;
+           area == 7 || area == 0x0E;
 }
 
 /* AREA00 sub 2 (D_00810701 == 2: chunk04.n2, the constructed start k01's
@@ -712,7 +712,7 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
      * to their own dispatch or reach the host's fail-stop below). */
     const int sub2 = area00_sub2(r);
     const int later = (r->area == 0x0D || r->area == 0x0F || r->area == 3 || r->area == 0x13 || r->area == 8 ||
-                       r->area == 7 || sub2) &&
+                       r->area == 7 || r->area == 0x0E || sub2) &&
                       c->function < 0x00823500u;
     const int creatures = r->area == 4 || later;
     if (creatures && dispatch_level8(r, c, &rc))
