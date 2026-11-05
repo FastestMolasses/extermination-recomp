@@ -53,6 +53,7 @@ SOURCES = (('em_area04_port.h', 'm04', 'EmArea04PortHooks', 'EmArea04PortFault')
            ('em_area21_boot.h', 'a21x', 'EmArea21BootHooks', 'EmArea21BootFault'),
            ('em_area21_creature_b.h', 'a21cb', 'EmArea21CreatureBHooks', 'EmArea21CreatureBFault'),
            ('em_area21_creature_c.h', 'a21cc', 'EmArea21CreatureCHooks', 'EmArea21CreatureCFault'),
+           ('em_area00s2_creature.h', 'a0s2', 'EmArea00s2CreatureHooks', 'EmArea00s2CreatureFault'),
            ('em_area08_route.h', 'r08', 'EmArea08RouteHooks', 'EmArea08RouteFault'))
 PROTO = re.compile(r'^int (em_(?:level|area)\w+?_([0-9A-F]{8}))\(([^;]*?)\);', re.M | re.S)
 OVERLAY = 0x823500

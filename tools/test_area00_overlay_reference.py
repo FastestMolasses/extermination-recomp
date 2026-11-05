@@ -112,6 +112,11 @@ BEAT_DIRS = {b: refs.capture('s87/route_a00') / b for b in (
     'a00_00_descend', 'a00_01_door51_locked', 'a00_02_south_route', 'a00_03_padlock', 'a00_04_cage_terminal',
     'a00_05_ferry_deck', 'a00_06_cab_roof', 'a00_07_duct_to_ne_room', 'a00_08_switch', 'a00_09_ne_room_out')}
 BEAT_DIRS['a01_07_level_exit'] = refs.capture('s87/route_a01/a01_07_level_exit')
+# AREA00 sub 2 (D_00810701 = 2): the constructed start k01's arrival and its
+# first beat (EIGHTEENTH_LEVEL_ROUTE.md section 7c; lane P14)
+K01 = refs.capture('levels-recordings-20261102-1/s87/route_k01')
+BEAT_DIRS['k01_00_load'] = K01 / 'k01_00_load'
+BEAT_DIRS['k01_01_slab'] = K01 / 'k01_01_slab'
 BEATS = list(BEAT_DIRS)
 POOL, NODE, NODES = 0x7A5640, 0x2F0, 400
 
@@ -140,7 +145,19 @@ FUNCS = {
     0x8262D0: ('em_area00_ovl_008262D0', 236, 'owner'),
     0x8263C0: ('em_area00_ovl_008263C0', 724, 'owner'),
     0x8266A0: ('em_area00_ovl_008266A0', 232, 'owner'),
+    # sub 2's owners (lane P14; the k01 captures below)
+    0x825D70: ('em_area00_ovl_00825D70', 0x104, 'owner_sp'),
+    0x825E80: ('em_area00_ovl_00825E80', 0x13C, 'owner_sp'),
+    0x825FC0: ('em_area00_ovl_00825FC0', 0xEC, 'owner'),
+    0x8260F0: ('em_area00_ovl_008260F0', 0xE8, 'owner'),
+    0x826790: ('em_area00_ovl_00826790', 0x44C, 'owner'),
+    0x826BE0: ('em_area00_ovl_00826BE0', 0xC4, 'owner'),
+    0x826CC0: ('em_area00_ovl_00826CC0', 0x294, 'owner_sp'),
+    0x8241B0: ('em_area00_ovl_008241B0', 0x608, 'owner'),
 }
+# 0x825E80 and 0x825FC0 are 0x825D70's (it calls them); they have no
+# placement of their own, so their capture cases are 0x825D70's nodes.
+CALLED_ONLY = {0x825E80: 0x825D70, 0x825FC0: 0x825D70}
 OWNER_ENTRIES = [e for e, (_, _, kind) in FUNCS.items() if kind != 'op09']
 
 
@@ -205,7 +222,19 @@ HOOKS = [
     ('w_001F5940', 0x1F5940, [(I, 4), (U, 5), (I, 6)], None),
     ('w_001FB9F0', 0x1FB9F0, [(I, 4), (I, 5), (I, 6), (I, 7)], None),
     ('w_001FC3C0', 0x1FC3C0, [(U, 4), (U, 5), (I, 6), (F, 12), (F, 13)], None),
+    ('w_001AEDE0', 0x1AEDE0, [(I, 4), (I, 5)], None),
+    ('w_001B1EA0', 0x1B1EA0, [(I, 4), (U, 5), (U, 6), (I, 7)], I),
+    ('w_001C47E0', 0x1C47E0, [(I, 4), (I, 5)], None),
+    ('w_001F6AD0', 0x1F6AD0, [], None),
+    ('w_001FB0B0', 0x1FB0B0, [(I, 4)], None),
+    ('w_001FBD50', 0x1FBD50, [(U, 4), (I, 5), (I, 6), (F, 12)], None),
+    ('w_00102918', 0x102918, [(U, 4), (U, 5), (U, 6)], None),
+    ('w_001F00A0', 0x1F00A0, [(I, 4), (U, 5), (U, 6), (I, 7)], U),
 ]
+# 001B1EA0's quad is a local of 0x825E80's frame that the function itself
+# fills (lq/sq from 0x82B740): its 16 words are compared as part of the
+# call's arguments (the oracle's private stack, the native STACK buffer).
+QUAD_HOOK = 0x1B1EA0
 BY_ADDRESS = {address: (name, args, result) for name, address, args, result in HOOKS}
 
 # Callees that run as original code inside the oracle (writes replayed to
@@ -573,6 +602,8 @@ class Oracle:
             self.marks.append(len(self.stores))
             self.access.append([])
             values = arg_values(e, arg_spec)
+            if address == QUAD_HOOK:
+                values += struct.unpack('<16I', bytes(EE.read(e, values[2], 64)))
             if address in self.run_set:
                 v0, f0, writes = self.run_callee(address, arg_spec, result)
                 e.r[2], e.f[0] = v0, f0
@@ -667,6 +698,10 @@ class Replay:
     def bytes(self, ctx, address, size):
         self.check_ctx(ctx, 'bytes')
         self.settle()
+        if STACK_BASE <= address and address + size <= STACK_BASE + STACK_SIZE and not address % min(size, 16):
+            # the oracle's private stack (0x825E80's quad local): neither
+            # logged nor counted, as the oracle does not log it (key_of)
+            return C.addressof(STACK) + address - STACK_BASE
         self.requests += 1
         if self.requests - 1 == self.refuse_at:
             return None
@@ -813,6 +848,10 @@ class Replay:
                 values, out = values[:-1], values[-1]
             normal = tuple(float_arg_bits(v) if k == F else v & 0xFFFFFFFFFFFFFFFF if k == Q else v & MASK
                            for (k, _), v in zip(args, values))
+            if name == 'w_001B1EA0':
+                at = normal[2] - STACK_BASE
+                if 0 <= at <= STACK_SIZE - 64:
+                    normal += struct.unpack('<16I', C.string_at(C.addressof(STACK) + at, 64))
             k = self.i
             entry = self.take(name, normal)
             if entry is None:
@@ -852,6 +891,8 @@ class Replay:
 
 
 BUFFERS = []
+STACK_BASE, STACK_SIZE = 0x7F000000, 0x100000   # the oracle's private stack window (stop_if_unmapped)
+STACK = (C.c_uint8 * STACK_SIZE)()
 CTX = 0xA00C7C00   # the hook table's ctx in every Replay: opaque, never dereferenced by the module
 
 
@@ -1296,7 +1337,8 @@ def case_list(elf):
     for beat in BEATS:
         ram, spad = CAPTURES[beat]
         for entry in OWNER_ENTRIES:
-            nodes = owners(ram, entry) or ([n for n in any_owner(ram, entry)] if entry == 0x824EA0 else [])
+            nodes = owners(ram, CALLED_ONLY.get(entry, entry)) or (
+                [n for n in any_owner(ram, entry)] if entry == 0x824EA0 else [])
             for node in nodes:
                 add('capture %s %06X @%X' % (beat, entry, node), beat, entry, owner_args(entry, node),
                     world_patch(beat, node))
@@ -1307,6 +1349,7 @@ def case_list(elf):
                 [terminal[0], terminal[0] + 0x1F0, record])
     captured = len(cases)
     targeted_cases(add)
+    targeted_sub2(add)
     targeted = len(cases) - captured
 
     # ---------------------------------------------------------------- perturbed
@@ -1733,6 +1776,124 @@ def targeted_cases(add):
             add('arrival s1 step%d wide %s' % (step, tag), abeat, 0x824EA0, [arrival],
                 aw(arrival) + [(arrival + 4, b8(1)), (arrival + 5, b8(step))], [(0x70003B84, h16(0x10))],
                 queues={0x1C2770: [width], 0x1BA1F0: [width]})
+
+
+def targeted_sub2(add):
+    """Designed cases for sub 2's owners (lane P14) over the k01_01 image:
+    every state and step, the story bytes on both sides of every test,
+    callee results 0 / 1 / other at every tested result, the counters at
+    their boundaries and the float level of 0x826CC0 around 1.0."""
+    beat = 'k01_01_slab'
+    ram, _ = CAPTURES[beat]
+
+    def one(callback):
+        return owners(ram, callback)[0]
+    n28, n29, n30, n31, n32 = (one(a) for a in (0x826790, 0x826BE0, 0x825D70, 0x8260F0, 0x826CC0))
+
+    def st(node, state, step=0):
+        return [(node + 4, b8(state)), (node + 5, b8(step))]
+    for state in (0, 1, 2, 3, 4):
+        for story in (0, 0xFF):
+            for r in (0, 1, 2):
+                add('s2 829 s%d %X %d' % (state, story, r), beat, 0x826BE0, [n29],
+                    st(n29, state) + [(0x810784, b8(story)), (0x810804, b8(2 if r == 2 else story & 1))],
+                    queues={0x1B0FD0: [r]})
+    for state in (0, 1, 2, 3, 5):
+        for d in (0, 1, 2, 0x80):
+            for r in (0, 1, 7):
+                add('s2 831 s%d %X %d' % (state, d, r), beat, 0x8260F0, [n31], st(n31, state) + [(0x810803, b8(d))],
+                    queues={0x1BA1C0: [r]})
+    for state in (0, 1, 2, 3, 7):
+        for d in (0, 1, 2, 3, 0x80, 0xFF):
+            for r in (0, 1):
+                add('s2 830 s%d %X %d' % (state, d, r), beat, 0x825D70, [n30, STACK_TOP],
+                    st(n30, state, 1 if d == 2 else 0) + [(0x810803, b8(d))],
+                    queues={0x1BA1C0: [r], 0x1BA1F0: [r], 0x1B1EA0: [r]})
+    for step in (0, 1, 2, 5):
+        for d in (0, 2, 3):
+            for r in (0, 1, 2):
+                add('s2 830a step%d %X %d' % (step, d, r), beat, 0x825E80, [n30, STACK_TOP],
+                    st(n30, 1, step) + [(0x810803, b8(d))], queues={0x1B1EA0: [r], 0x1BA1F0: [r]})
+    add('s2 830a scribble', beat, 0x825E80, [n30, STACK_TOP], st(n30, 1, 1) + [(0x810803, b8(2))],
+        queues={0x1BA1F0: [Scribble(1, [(n30 + 0x4C, w32(0x1234560))])],
+                0x1B6660: [Scribble(0, [(n30 + 5, b8(0x33))])]})
+    for step in (0, 1, 3):
+        for d in (0, 0x80, 0xFF):
+            for count in (0, 0x184, 0x185, 0x186, 0x7FFF, 0xFFFF):
+                for r in (0, 1):
+                    if step != 1 and (count or r):
+                        continue
+                    add('s2 830b step%d %X %X %d' % (step, d, count, r), beat, 0x825FC0, [n30],
+                        st(n30, 1, step) + [(0x810803, b8(d)), (n30 + 0x28, h16(count))],
+                        queues={0x1BA1F0: [r]})
+    for state in (0, 1, 2, 3, 7):
+        for story in (0, 0xFF):
+            for r in (0, 1, 3):
+                add('s2 828 s%d %X %d' % (state, story, r), beat, 0x826790, [n28],
+                    st(n28, state) + [(0x810784, b8(story))], queues={0x1B0FD0: [r]})
+    for use in (0, 1, 4, 5, 0xFF, 0xFB):
+        for flag in (0, 1):
+            add('s2 828 step0 %X %d' % (use, flag), beat, 0x826790, [n28],
+                st(n28, 1, 0) + [(n28 + 0xB, b8(use)), (n28 + 0x2EC, w32(3))], [(0x70003B92, b8(flag))])
+    for done in (0, 1, 2):
+        for word in (0, 1, 2, 3, -1):
+            for count in (0, 822, 823, 824, 999, 1000, 0x7FFF, 0x8000):
+                for flag in (0, 1):
+                    if flag and (count or done != 1):
+                        continue
+                    add('s2 828 step1 %d %d %X %d' % (done, word, count, flag), beat, 0x826790, [n28],
+                        st(n28, 1, 1) + [(n28 + 0x2EC, w32(word)), (n28 + 0x28, h16(count)),
+                                         (0x810784, b8(0x5A))], [(0x70003B92, b8(flag))],
+                        queues={0x1BA1F0: [done]})
+    for step in (2, 7):
+        add('s2 828 step%d' % step, beat, 0x826790, [n28], st(n28, 1, step))
+    add('s2 828 step1 scribble', beat, 0x826790, [n28],
+        st(n28, 1, 1) + [(n28 + 0x2EC, w32(2)), (n28 + 0x28, h16(823))],
+        queues={0x1BA1F0: [Scribble(0, [(n28 + 0x2EC, w32(0))])],
+                0x1F6AD0: [Scribble(0, [(0x810784, b8(0x11)), (n28 + 0x2EC, w32(1))])]})
+    for state in (0, 1, 2, 3, 4):
+        for d in (0, 1, 2, 0xFF):
+            add('s2 832 s%d %X' % (state, d), beat, 0x826CC0, [n32, STACK_TOP],
+                st(n32, state) + [(0x810803, b8(d))])
+    for count in (0, 1, 5, 0xFFFF, 0x8000):
+        add('s2 832 step1 %X' % count, beat, 0x826CC0, [n32, STACK_TOP],
+            st(n32, 1, 1) + [(0x810803, b8(2)), (n32 + 0x28, h16(count))])
+    for level in (0.0, 0.5, 0.99, 1.0, 1.0000001, 2.0, -1.0):
+        for count in (0, 1, 7, 8, 9, 0x13, 0xFFF4, 0xFFF5, 0x7FFF, 0xFFFF):
+            add('s2 832 step2 %r %X' % (level, count), beat, 0x826CC0, [n32, STACK_TOP],
+                st(n32, 1, 2) + [(0x810803, b8(3)), (n32 + 0x2A, h16(count)), (n32 + 0x64, f32b(level))])
+    # 0x8241B0, the creature's effect node (its +0x24 is the creature 0014D260)
+    fx = one(0x8241B0)
+    parent = u32(ram, fx + 0x24)
+    bones = [u32(ram, parent + 0x110 + 4 * u32(ram, 0x828A40 + 4 * k)) for k in range(7)]
+    for state in (0, 1, 2, 3, 4):
+        for pstate in (1, 3):
+            add('s2 fx s%d p%d' % (state, pstate), beat, 0x8241B0, [fx],
+                [(fx + 4, b8(state)), (fx + 5, b8(1)), (fx + 6, b8(1)), (parent + 4, b8(pstate))],
+                queues={0x1F00A0: [0x7B8AB0, 0] * 7})
+    for step in (0, 1, 2, 3, 4, 0x63):
+        for seen in (step, 0x7F):
+            for count in (0, 9, 10, 0x7FFFFFFF, -10, -11):
+                if seen != step and count:
+                    continue
+                for heights in ((-60.0, -50.0), (-50.0, -60.0), (-54.0, -54.0), (-53.99, -54.01)):
+                    if step != 3 and heights != (-60.0, -50.0):
+                        continue
+                    p = [(fx + 4, b8(1)), (fx + 5, b8(step)), (fx + 6, b8(seen)), (fx + 0x274, w32(count)),
+                         (parent + 4, b8(1))]
+                    for k, b in enumerate(bones):
+                        p.append((b + 0xC4, f32b(heights[0] if k % 2 else heights[1])))
+                        p.append((fx + 0x1F0 + 4 * k, f32b(heights[1] if k % 3 else heights[0])))
+                    q = {0x1F00A0: [0x7B8AB0 if k % 2 else 0 for k in range(7)] * 2}
+                    add('s2 fx step%X %X %d %r' % (step, seen, count, heights), beat, 0x8241B0, [fx], p, queues=q)
+    for t0, t1 in ((-1.0, -0.05), (0.0, 1.996), (1.997, 2.0), (2.0000002, 5.0), (-0.0, 3.4e38)):
+        for modes in ((2, 2), (0, 1), (3, 7), (-1, 2)):
+            add('s2 fx timers %r %r %r' % (t0, t1, modes), beat, 0x8241B0, [fx],
+                [(fx + 4, b8(1)), (fx + 5, b8(0)), (fx + 6, b8(0)), (parent + 4, b8(1)),
+                 (fx + 0x230, f32b(t0)), (fx + 0x234, f32b(t1)), (fx + 0x270, w32(0x9E3779B9)),
+                 (0x828A34, w32(modes[0])), (0x828A3C, w32(modes[1]))])
+    for step in (3, 9):
+        add('s2 832 step%d' % step, beat, 0x826CC0, [n32, STACK_TOP], st(n32, 1, step) + [(0x810803, b8(3))])
 
 
 def reachable_words(ram, entry, size):

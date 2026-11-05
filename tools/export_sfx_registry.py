@@ -81,7 +81,7 @@ ATTACHMENT_IDS = tuple(range(0x5DC, 0x5E2))
 # (export_area13_sfx.target_binding), each its captures' binding; resolved
 # after AREA04, so every earlier scope keeps its samples and indices.
 MID_SCOPES = ((0x16, 0), (6, 0), (0x0D, 0), (0x0F, 0), (0x0F, 1), (3, 0), (8, 0), (8, 2), (8, 3), (7, 0), (7, 2), (7, 3),
-              (3, 1), (3, 2), (4, 1))
+              (3, 1), (3, 2), (4, 1), (0, 2))
 MID_IDS = AREA00_IDS
 # AREA19 sub 0 and sub 1 (lane J1): the capture-checked bindings
 # export_area19_sfx.py / export_area19s1_sfx.py recorded in each sub's
@@ -332,6 +332,11 @@ def mid_bindings():
         for key in ('03_1', '03_2', '04_1'):
             A3X.install(key)
             result.update(A3X.SX.target_binding(A3X.KEYS[key]['name']))
+        # AREA00 sub 2 (chunk04.n2, the constructed start k01's room; the same
+        # path, tools/export_area00s2_assets.py).
+        import export_area00s2_assets as A0S2
+        A0S2.install()
+        result.update(A0S2.SX.target_binding('area00'))
         assert sorted(result) == sorted(MID_SCOPES), sorted(result)
         return result
     finally:

@@ -183,6 +183,10 @@ static const struct {
     {"a07b_05", 0x07},
     {"a07b_06", 0x07},
     {"a07b_07", 0x07},
+    /* constructed start k01: AREA00 sub 2 to AREA14 (lane P14) */
+    {"k01_01", 0x00},
+    {"k01_02", 0x00},
+    {"area14k", 0x0E},
 };
 
 static struct {
@@ -588,7 +592,7 @@ int em_start_at_check(void)
                              "a22_02, a01u, a01u_01, a01u_02, a01u_s0, area06, a06_01 .. a06_05, a06b, "
                              "a06b_01, a01v, a01v_01, a01v_02, a22b, a22b_01, a04_00 .. a04_05, a04b_00 .. "
                              "a04b_04, boss, area13, a13_01 .. a13_05, a13b_01 .. a13b_05, "
-                             "a13c_00 .. a13c_06, a13d_00 .. a13d_07)", NULL);
+                             "a13c_00 .. a13c_06, a13d_00 .. a13d_07, k01_01, k01_02, area14k)", NULL);
     }
     const char *ng = getenv("EM_NEW_GAME");
     if (ng && ng[0] && strcmp(ng, "0") != 0)

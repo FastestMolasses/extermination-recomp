@@ -327,7 +327,28 @@ static int dispatch_overlay00(EmArea01Runtime *r, EmArea01Call *c)
     OVERLAY00(008262D0);
     OVERLAY00(008263C0);
     OVERLAY00(008266A0);
+    /* sub 2's (docs/AREA14_PORT.md) */
+    OVERLAY00(00825FC0);
+    OVERLAY00(008260F0);
+    OVERLAY00(00826790);
+    OVERLAY00(00826BE0);
+    OVERLAY00(008241B0);
 #undef OVERLAY00
+    /* 0x825D70 (frame 0x20) calls 0x825E80 (frame 0x70, a quad local it
+     * writes); 0x826CC0 (frame 0x30) passes a local to 001EFD20. Nested
+     * hooks get sp below the deepest frame (as 0x823820 / 0x825600). */
+    case 0x00825D70u:
+        if (c->na < 1 || c->nf || c->sp < 0x90u) return fail(r, c->function);
+        r->sp = c->sp - 0x90u;
+        return em_area00_ovl_00825D70(&r->overlay00, (uint32_t)c->a[0], c->sp, &r->overlay00_fault);
+    case 0x00825E80u:
+        if (c->na < 1 || c->nf || c->sp < 0x70u) return fail(r, c->function);
+        r->sp = c->sp - 0x70u;
+        return em_area00_ovl_00825E80(&r->overlay00, (uint32_t)c->a[0], c->sp, &r->overlay00_fault);
+    case 0x00826CC0u:
+        if (c->na < 1 || c->nf || c->sp < 0x30u) return fail(r, c->function);
+        r->sp = c->sp - 0x30u;
+        return em_area00_ovl_00826CC0(&r->overlay00, (uint32_t)c->a[0], c->sp, &r->overlay00_fault);
     case 0x00823820u:
         if (c->na < 1 || c->nf || c->sp < 0xE0u) return fail(r, c->function);
         r->sp = c->sp - 0xE0u;
@@ -647,6 +668,18 @@ static int mid_host(unsigned area)
            area == 7;
 }
 
+/* AREA00 sub 2 (D_00810701 == 2: chunk04.n2, the constructed start k01's
+ * room; docs/AREA14_PORT.md): its overlay owners stay dispatch_overlay00's,
+ * its boot owners take the later areas' boot dispatch (the creature family,
+ * the boss family, the mid areas' routines and em_area02_math's), as AREA13's
+ * and AREA19's do. Subs 0 and 1 keep their own routing. */
+static int area00_sub2(EmArea01Runtime *r)
+{
+    if (r->area != 0) return 0;
+    const uint8_t *sub = bytes(r, 0x00810701u, 1, 0);
+    return sub && *sub == 2;
+}
+
 static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
 {
     if (r->area == 0 && c->function >= 0x00823500u)
@@ -677,8 +710,9 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
     /* The creature family's boot entries and the script actors serve AREA13,
      * AREA15, AREA03, AREA19, AREA08 and AREA07 too (their overlay addresses went
      * to their own dispatch or reach the host's fail-stop below). */
+    const int sub2 = area00_sub2(r);
     const int later = (r->area == 0x0D || r->area == 0x0F || r->area == 3 || r->area == 0x13 || r->area == 8 ||
-                       r->area == 7) &&
+                       r->area == 7 || sub2) &&
                       c->function < 0x00823500u;
     const int creatures = r->area == 4 || later;
     if (creatures && dispatch_level8(r, c, &rc))
@@ -742,7 +776,7 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
     }
     if (c->function == 0x001F8350u)
         return dispatch_infection(r, c);
-    if ((mid_host(r->area) || (r->area == 4 && c->function == 0x0012D940u)) && dispatch_mid(r, c, &rc))
+    if ((mid_host(r->area) || sub2 || (r->area == 4 && c->function == 0x0012D940u)) && dispatch_mid(r, c, &rc))
         return rc;
     if (mid_host(r->area) && c->function >= 0x00823500u)
         return r->host.worker(r->host.ctx, c);
@@ -792,7 +826,7 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
     /* em_area02_math's boot routines (the panels, the bed, the lift, the
      * light owners 001C48C0..): boot code, so AREA04's, AREA06's, AREA13's
      * and AREA22's too. */
-    if ((r->area == 2 || r->area == 4 || mid_host(r->area)) && dispatch_math02(r, c, &rc))
+    if ((r->area == 2 || r->area == 4 || mid_host(r->area) || sub2) && dispatch_math02(r, c, &rc))
         return rc;
     int32_t i32 = 0;
     uint32_t u32 = 0;

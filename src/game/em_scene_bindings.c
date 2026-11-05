@@ -230,7 +230,10 @@ static const char *area02_file(unsigned sub, const char *name)
  * _tables / _sfx, export_area06_*): assets/area<NN>/sub0/. */
 static int mid_area(unsigned area, unsigned sub)
 {
-    return ((area == 0x16u || area == 6u || area == 0x0Du) && sub == 0) ||
+    /* AREA00 sub 2 (chunk04.n2, another level than subs 0 / 1; tools/
+     * export_area00s2_assets.py, docs/AREA14_PORT.md) keeps its folder
+     * assets/area00/sub2 in the later areas' layout. */
+    return (area == 0u && sub == 2u) || ((area == 0x16u || area == 6u || area == 0x0Du) && sub == 0) ||
            ((area == 0x0Fu || area == 0x13u) && sub <= 1) || (area == 3u && sub <= 2) || (area == 4u && sub == 1) ||
            ((area == 8u || area == 7u) && (sub == 0 || sub == 2 || sub == 3));
 }
@@ -248,7 +251,8 @@ static const char *mid_file(unsigned area, const char *name)
     else if (area == 3u || area == 4u)
         snprintf(out, sizeof path[0], "assets/levels/%02u/sub%u%s%s", area, s_state.d810701, name[0] ? "/" : "", name);
     else
-        snprintf(out, sizeof path[0], "assets/area%02u/sub%u%s%s", area, (area == 0x0Fu || area == 8u || area == 7u) ? s_state.d810701 : 0u,
+        snprintf(out, sizeof path[0], "assets/area%02u/sub%u%s%s", area,
+                 (area == 0x0Fu || area == 8u || area == 7u || area == 0u) ? s_state.d810701 : 0u,
                  name[0] ? "/" : "", name);
     return out;
 }
@@ -2888,7 +2892,8 @@ static int arrival_scene(void)
            strcmp(g.scene_dir, "assets/area19/sub0") == 0 ||
            strcmp(g.scene_dir, "assets/area19s1/sub1") == 0 ||
            strcmp(g.scene_dir, "assets/area07/sub2") == 0 ||
-           strcmp(g.scene_dir, "assets/area07/sub3") == 0;
+           strcmp(g.scene_dir, "assets/area07/sub3") == 0 ||
+           strcmp(g.scene_dir, "assets/area00/sub2") == 0;
 }
 
 /* A scene with the original's world: its collision world, live camera,
@@ -3011,7 +3016,7 @@ static int state0_001AF8E0(void *ctx)
         EmModuleLoader *ml = em_module_loader_live();
         EmStatusSceneLoader *ld = ml ? em_module_loader_state(ml) : NULL;
         if (!ld || em_area11_boxes_bind_world_bank(
-                s_state.d810700 == 0 ? AREA00_SCENE_DIR "/world_models.emwm" :
+                s_state.d810700 == 0 && s_state.d810701 <= 1 ? AREA00_SCENE_DIR "/world_models.emwm" :
                 s_state.d810700 == 2 ? area02_file(s_state.d810701, "world_models.emwm") :
                 s_state.d810700 == 4 && s_state.d810701 == 0 ? AREA04_SCENE_DIR "/world_models.emwm" :
                 mid_area(s_state.d810700, s_state.d810701) ? mid_file(s_state.d810700, "world_models.emwm") :
@@ -3101,7 +3106,7 @@ static int w_001AFCA0(void *ctx)
         /* The selected area's exported collision and cell directory, plus
          * the global SDK tables used by 001B07C0's 001B0460. */
         if (em_collision_world_load(&g.coll, g.coll_path,
-                                    s_state.d810700 == 0 ? AREA00_CELLS_PATH :
+                                    s_state.d810700 == 0 && s_state.d810701 <= 1 ? AREA00_CELLS_PATH :
                                     s_state.d810700 == 2 ? area02_file(s_state.d810701, "area02_cells.bin") :
                                     s_state.d810700 == 4 && s_state.d810701 == 0 ? AREA04_SCENE_DIR "/area04_cells.bin" :
                                     mid_area(s_state.d810700, s_state.d810701) ? mid_cells(s_state.d810700)
@@ -3142,7 +3147,7 @@ static int w_001AFCA0(void *ctx)
      * the area load delivered at D_0028A594. Rebind their data without
      * resetting D_002821B0 or the existing stream/presenter workers. */
     if (world_scene() && !em_message_live_select_area(
-            s_state.d810700 == 0 ? AREA00_SCENE_DIR "/message_data.emmd" :
+            s_state.d810700 == 0 && s_state.d810701 <= 1 ? AREA00_SCENE_DIR "/message_data.emmd" :
             /* AREA02: the area's message tables with sub 0's bank. Sub 1
              * delivers no bank (its D_0028A594 is the loader's top cursor;
              * export_area02_tables refuses it), and the selection is per
@@ -3994,10 +3999,23 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
         case 0x00825480u: case 0x00825600u: case 0x00825920u: case 0x00825C80u:
         case 0x008261E0u: case 0x008262D0u: case 0x008263C0u: case 0x008266A0u:
             goto bind;
+        /* sub 2's placements (decomp tools/area_overview.py --area 0): each
+         * runs through em_area01_runtime's dispatch_overlay00, where an
+         * untranslated one faults at its address */
+        case 0x00825D70u: case 0x008260F0u: case 0x00826790u: case 0x00826BE0u: case 0x00826CC0u:
+        case 0x008241B0u:   /* the effect node 0014D260 spawns */
+            if (s_state.d810701 == 2) goto bind;
+            return -1;
         default:
             return -1;
         }
     }
+    /* AREA00 sub 2's boot owners (its placements', groups' and spawns'), as
+     * the later areas' below: the runtime's owners or its fallback
+     * (em_area01_runtime_later); an untranslated one faults at its address
+     * when it runs. */
+    if (s_state.d810700 == 0 && s_state.d810701 == 2 && fn < 0x00823500u && fn && fn != 0x001F5040u)
+        goto bind;
     /* AREA02's pool owners (the 0x823930 / 0x823D70 / 0x824FA0 / 0x825100
      * placements and 0x823580's spawned node; em_area01_runtime area 2). */
     if (s_state.d810700 == 2 && fn >= 0x00823500u) {

@@ -1039,3 +1039,593 @@ int em_area00_ovl_008266A0(const EmArea00OvlHooks *h, uint32_t self, EmArea00Ovl
     a00_beam(&o, self);
     return a00_end(&o);
 }
+
+/* ======================================================================
+ * Sub 2's owners (lane P14, docs/AREA14_PORT.md). Each follows the decomp's
+ * byte-identical C; tools/test_area00_overlay_reference.py runs the
+ * original over the k01 captures (route_k01) and designed states.
+ * ====================================================================== */
+#define D_0081028C 0x0081028Cu /* float: the player's yaw request (pi / 2) */
+#define D_00810350 0x00810350u /* the player record's position */
+#define D_008106C0 0x008106C0u /* word: 0x825D70's spawned group record */
+#define D_00810784 0x00810784u /* AREA00 story byte */
+#define D_00810803 0x00810803u /* AREA00 counter (sub 2's sequence) */
+#define D_00810804 0x00810804u /* AREA00 counter (sub 2's [28]) */
+#define S_70003B92 0x70003B92u
+#define A00_GROUP_827EF0 0x00827EF0u
+#define A00_GROUP_827F50 0x00827F50u
+#define A00_GROUP_827FB0 0x00827FB0u
+#define A00_QUAD_82B740 0x0082B740u   /* four 16-byte points (0x825E80's area) */
+#define A00_SCRIPT_82ABC0 0x0082ABC0u
+#define A00_SCRIPT_82B080 0x0082B080u
+#define A00_POINT_82CD00 0x0082CD00u
+#define A00_SCRIPT_82D070 0x0082D070u
+#define F_HALF_PI 0x3FC90FDBu      /* 1.5707964 */
+#define F_0_02 0x3CA3D70Au
+#define F_0_008 0x3C03126Fu
+#define F_0_5 0x3F000000u
+#define F_0_8 0x3F4CCCCDu
+#define F_300 0x43960000u
+
+/* ----------------------------------------------------------------------
+ * 0x826BE0 (func_overlay_AREA00_00826BA0) — [29]. +0x04: 0 sets +0x0D =
+ * 0x12 when D_00810784 is 0xFF, then 001C6380 unless 001B0FD0 is set; 1 the
+ * +0x4C callback unless D_00810804 is 2; 2 / 3 free; others nothing.
+ * ---------------------------------------------------------------------- */
+static void a00_s2_29(A00Ovl *o, uint32_t self)
+{
+    uint32_t state = a00_u8(o, self + 4);
+    int32_t r;
+
+    if (state == 0) {
+        if (a00_u8(o, D_00810784) == 0xFF) a00_w8(o, self + 0xD, 0x12);
+        r = 0;
+        (void)a00_c_001B0FD0(o, self, &r);
+        if (r == 0) (void)a00_c_001C6380(o, self);
+    } else if (state == 1) {
+        if (a00_u8(o, D_00810804) != 2) a00_callback(o, self);
+    } else if (state == 2 || state == 3) {
+        (void)a00_c_001AFC10(o, self);
+    }
+}
+
+int em_area00_ovl_00826BE0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    a00_s2_29(&o, self);
+    return a00_end(&o);
+}
+
+/* ----------------------------------------------------------------------
+ * 0x8260F0 (func_overlay_AREA00_008260B0) — [31]. +0x04: 0 goes to 3 when
+ * 001BA1C0(self, 0x2B) is set, else 001B10B0(self, +0x0D, 0x6B),
+ * 001C63E0(self, 0) and +0x04 = 1; 1 animates (001C64F0 at 1.0, 001B17A0,
+ * 001C68C0, the callback) unless D_00810803 is 0 or 1; 2 / 3 free.
+ * ---------------------------------------------------------------------- */
+static void a00_s2_31(A00Ovl *o, uint32_t self)
+{
+    uint32_t state = a00_u8(o, self + 4);
+    int32_t r;
+
+    if (state == 0) {
+        r = 0;
+        (void)a00_c_001BA1C0(o, self, 0x2B, &r);
+        if (r != 0) {
+            a00_w8(o, self + 4, 3);
+            return;
+        }
+        r = 0;
+        (void)a00_c_001B10B0(o, self, (int32_t)a00_u8(o, self + 0xD), 0x6B, &r);
+        (void)a00_c_001C63E0(o, self, 0);
+        a00_w8(o, self + 4, 1);
+    } else if (state == 1) {
+        uint32_t d = a00_u8(o, D_00810803);
+        if (d == 0 || d == 1) return;
+        r = 0;
+        (void)a00_c_001C64F0(o, self, fb(F_ONE), &r);
+        r = 0;
+        (void)a00_c_001B17A0(o, self, &r);
+        (void)a00_c_001C68C0(o, self);
+        a00_callback(o, self);
+    } else if (state == 2 || state == 3) {
+        (void)a00_c_001AFC10(o, self);
+    }
+}
+
+int em_area00_ovl_008260F0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    a00_s2_31(&o, self);
+    return a00_end(&o);
+}
+
+/* ----------------------------------------------------------------------
+ * 0x825E80 (func_overlay_AREA00_00825E40, called by 0x825D70) — copies the
+ * quad 0x82B740 into its frame (sp - 0x40; eight doubleword copies), then +0x05: 0 starts script
+ * 0x82ABC0 once 001B1EA0(0, D_00810350, quad, 4) is 1; 1 sets +0x2E =
+ * 0xFFFF while D_00810803 is 2 and at the script's end sets +0x05 = 0,
+ * D_00810803 = 3, D_0081028C = pi / 2, 001B6660(0x827F50), 001FB0B0(0x17).
+ * Then 001C6380, +0x01 = 1, 001B1B70 and the callback.
+ * ---------------------------------------------------------------------- */
+static void a00_s2_30a(A00Ovl *o, uint32_t self, uint32_t sp)
+{
+    const uint32_t quad = sp - 0x70u + 0x30u;
+    int32_t r;
+
+    /* the copy is eight doubleword loads, each stored to the local */
+    for (uint32_t k = 0; k < 64; k += 8) {
+        uint8_t row[8];
+        memcpy(row, a00_at(o, A00_QUAD_82B740 + k, 8, 0), 8);
+        memcpy(a00_at(o, quad + k, 8, 1), row, 8);
+    }
+    uint32_t step = a00_u8(o, self + 5);
+    if (step == 0) {
+        r = 0;
+        (void)a00_c_001B1EA0(o, 0, D_00810350, quad, 4, &r);
+        if (r == 1) {
+            (void)a00_c_001BA1A0(o, self + 0x1F0, A00_SCRIPT_82ABC0);
+            a00_w8(o, self + 5, 1);
+        }
+    } else if (step == 1) {
+        if (a00_u8(o, D_00810803) == 2) a00_w16(o, self + 0x2E, 0xFFFF);
+        r = 0;
+        (void)a00_c_001BA1F0(o, self, &r);
+        if (r != 0) {
+            a00_w8(o, self + 5, 0);
+            a00_w8(o, D_00810803, 3);
+            a00_w32(o, D_0081028C, F_HALF_PI);
+            uint32_t e = 0;
+            (void)a00_c_001B6660(o, A00_GROUP_827F50, &e);
+            (void)a00_c_001FB0B0(o, 0x17);
+        }
+    }
+    (void)a00_c_001C6380(o, self);
+    a00_w8(o, self + 1, 1);
+    (void)a00_c_001B1B70(o, self);
+    a00_callback(o, self);
+}
+
+int em_area00_ovl_00825E80(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    a00_s2_30a(&o, self, sp);
+    return a00_end(&o);
+}
+
+/* ----------------------------------------------------------------------
+ * 0x825FC0 (func_overlay_AREA00_00825F80, called by 0x825D70) — +0x05: 0
+ * starts script 0x82B080 when D_00810803 is 0x80 (+0x28 = 0); 1 counts
+ * +0x28 (001AEDE0(1, 1) at 0x186) and at the script's end calls
+ * 001FB0B0(0) and sets +0x04 = 3. Unless D_00810803 is 0xFF: 001C6380,
+ * +0x01 = 1, 001B1B70 and the callback.
+ * ---------------------------------------------------------------------- */
+static void a00_s2_30b(A00Ovl *o, uint32_t self)
+{
+    uint32_t step = a00_u8(o, self + 5);
+    int32_t r;
+
+    if (step == 0) {
+        if (a00_u8(o, D_00810803) == 0x80) {
+            a00_w8(o, self + 5, 1);
+            (void)a00_c_001BA1A0(o, self + 0x1F0, A00_SCRIPT_82B080);
+            a00_w16(o, self + 0x28, 0);
+        }
+    } else if (step == 1) {
+        a00_w16(o, self + 0x28, a00_u16(o, self + 0x28) + 1);
+        if ((int16_t)a00_u16(o, self + 0x28) == 0x186) (void)a00_c_001AEDE0(o, 1, 1);
+        r = 0;
+        (void)a00_c_001BA1F0(o, self, &r);
+        if (r != 0) {
+            (void)a00_c_001FB0B0(o, 0);
+            a00_w8(o, self + 4, 3);
+        }
+    }
+    if (a00_u8(o, D_00810803) != 0xFF) {
+        (void)a00_c_001C6380(o, self);
+        a00_w8(o, self + 1, 1);
+        (void)a00_c_001B1B70(o, self);
+        a00_callback(o, self);
+    }
+}
+
+int em_area00_ovl_00825FC0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    a00_s2_30b(&o, self);
+    return a00_end(&o);
+}
+
+/* ----------------------------------------------------------------------
+ * 0x825D70 (func_overlay_AREA00_00825D30) — [30]. +0x04: 0 goes to 3 when
+ * 001BA1C0(self, 0x2B) is set, else 001B0FD0, 001C6380, D_008106C0 =
+ * 001B6660(0x827EF0), +0x04 = 1, +0x00 = 1; 1 runs 0x825E80 while
+ * D_00810803 is 0..2, else 0x825FC0; 2 / 3 free.
+ * ---------------------------------------------------------------------- */
+static void a00_s2_30(A00Ovl *o, uint32_t self, uint32_t sp)
+{
+    uint32_t state = a00_u8(o, self + 4);
+    int32_t r;
+
+    if (state == 0) {
+        r = 0;
+        (void)a00_c_001BA1C0(o, self, 0x2B, &r);
+        if (r != 0) {
+            a00_w8(o, self + 4, 3);
+            return;
+        }
+        r = 0;
+        (void)a00_c_001B0FD0(o, self, &r);
+        (void)a00_c_001C6380(o, self);
+        uint32_t e = 0;
+        (void)a00_c_001B6660(o, A00_GROUP_827EF0, &e);
+        a00_w32(o, D_008106C0, e);
+        a00_w8(o, self + 4, 1);
+        a00_w8(o, self + 0, 1);
+    } else if (state == 1) {
+        if (a00_u8(o, D_00810803) <= 2)
+            a00_s2_30a(o, self, sp - 0x20u);
+        else
+            a00_s2_30b(o, self);
+    } else if (state == 2 || state == 3) {
+        (void)a00_c_001AFC10(o, self);
+    }
+}
+
+int em_area00_ovl_00825D70(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    a00_s2_30(&o, self, sp);
+    return a00_end(&o);
+}
+
+/* ----------------------------------------------------------------------
+ * 0x826790 (func_overlay_AREA00_00826750) — [28], the machine item 0x26
+ * opens (EIGHTEENTH_LEVEL_ROUTE.md section 7c). +0x04: 0 once 001B0FD0 is
+ * 0: 001C6380, +0x00 = +0x08 = 1, +0x30 = 0x82CD00 (001F6AD0 and +0x04 = 3
+ * when D_00810784 is 0xFF), then two points of its matrix (001026A0 of
+ * (-11.017, 26.99, -41) and (.., -36.954)) at +0x2E0.. / +0x2D4..; 1: +0x05
+ * 0 on a Use (+0x0B bit 2) either (bit 0, item 0x26 used) D_00810804 = 2,
+ * 001C47E0(0x26, 1), +0x2EC = 1 and script 0x82D070, or event 0x8000001C
+ * and the boot script 0x246F20; then both points through 001F5940(9);
+ * +0x05 1 at the script's end: with +0x2EC set +0x2E = 0xFFFF,
+ * 001B0C60(0xE, 0, 0) (AREA14 entry 0) and +0x04 = 2, else +0x05 = +0x0B =
+ * 0; with +0x2EC == 2 it counts +0x28 to 824 (001F6AD0 and 001B6660(
+ * 0x827FB0) with D_00810784 = 0xFF for that call); +0x2EC == 0 emits the
+ * points. Then, while 0x70003B92 is 0 or +0x2EC is 0, 001B1B70 and the
+ * callback. 2: 001B1B70 and the callback. 3 and any other value: free.
+ * ---------------------------------------------------------------------- */
+static void a00_s2_28_points(A00Ovl *o, uint32_t self)
+{
+    a00_w32(o, S_700038AC, F_ONE);
+    a00_w32(o, S_700038A0, a00_u32(o, self + 0x2E8));
+    a00_w32(o, S_700038A4, a00_u32(o, self + 0x2E4));
+    a00_w32(o, S_700038A8, a00_u32(o, self + 0x2E0));
+    (void)a00_c_001F5940(o, 9, S_700038A0, 0);
+    a00_w32(o, S_700038A0, a00_u32(o, self + 0x2DC));
+    a00_w32(o, S_700038A4, a00_u32(o, self + 0x2D8));
+    a00_w32(o, S_700038A8, a00_u32(o, self + 0x2D4));
+    (void)a00_c_001F5940(o, 9, S_700038A0, 0);
+}
+
+static void a00_s2_28(A00Ovl *o, uint32_t self)
+{
+    uint32_t state = a00_u8(o, self + 4);
+    uint32_t talk = self + 0x1F0;
+    int32_t r;
+
+    if (state == 0) {
+        r = 0;
+        (void)a00_c_001B0FD0(o, self, &r);
+        if (r != 0) return;
+        (void)a00_c_001C6380(o, self);
+        a00_w8(o, self + 0, 1);
+        a00_w8(o, self + 8, 1);
+        a00_w32(o, self + 0x30, A00_POINT_82CD00);
+        if (a00_u8(o, D_00810784) == 0xFF) {
+            (void)a00_c_001F6AD0(o);
+            a00_w8(o, self + 4, 3);
+        }
+        a00_w32(o, S_700038AC, F_ONE);
+        a00_w32(o, S_700038A0, F_MINUS_11_017);
+        a00_w32(o, S_700038A4, F_26_99);
+        a00_w32(o, S_700038A8, F_MINUS_41);
+        (void)a00_c_001026A0(o, S_700038B0, self + 0xD0, S_700038A0);
+        a00_w32(o, self + 0x2E8, a00_u32(o, S_700038B0));
+        a00_w32(o, self + 0x2E4, a00_u32(o, S_700038B4));
+        a00_w32(o, self + 0x2E0, a00_u32(o, S_700038B8));
+        a00_w32(o, S_700038A8, F_MINUS_36_954);
+        (void)a00_c_001026A0(o, S_700038B0, self + 0xD0, S_700038A0);
+        a00_w32(o, self + 0x2DC, a00_u32(o, S_700038B0));
+        a00_w32(o, self + 0x2D8, a00_u32(o, S_700038B4));
+        a00_w32(o, self + 0x2D4, a00_u32(o, S_700038B8));
+        return;
+    }
+    if (state == 2) {
+        (void)a00_c_001B1B70(o, self);
+        a00_callback(o, self);
+        return;
+    }
+    if (state != 1) {
+        (void)a00_c_001AFC10(o, self);
+        return;
+    }
+    uint32_t step = a00_u8(o, self + 5);
+    if (step == 0) {
+        uint32_t b = a00_u8(o, self + 0xB);
+        if (b & 4) {
+            if (b & 1) {
+                a00_w8(o, D_00810804, 2);
+                (void)a00_c_001C47E0(o, 0x26, 1);
+                a00_w32(o, self + 0x2EC, 1);
+                a00_w8(o, self + 5, a00_u8(o, self + 5) + 1);
+                a00_w16(o, self + 0x28, 0);
+                (void)a00_c_001BA1A0(o, talk, A00_SCRIPT_82D070);
+            } else {
+                a00_w32(o, D_00246FB4, 0x8000001Cu);
+                (void)a00_c_001BA1A0(o, talk, D_00246F20);
+                a00_w32(o, self + 0x2EC, 0);
+                a00_w8(o, self + 5, a00_u8(o, self + 5) + 1);
+            }
+        }
+        a00_s2_28_points(o, self);
+    } else if (step == 1) {
+        r = 0;
+        (void)a00_c_001BA1F0(o, self, &r);
+        if (r != 0) {
+            if (a00_s32(o, self + 0x2EC) != 0) {
+                a00_w16(o, self + 0x2E, 0xFFFF);
+                (void)a00_c_001B0C60(o, 0xE, 0, 0);
+                a00_w8(o, self + 4, 2);
+            } else {
+                a00_w8(o, self + 5, 0);
+                a00_w8(o, self + 0xB, 0);
+            }
+        }
+        uint32_t count;
+        if (a00_s32(o, self + 0x2EC) == 2 && (int16_t)(count = a00_u16(o, self + 0x28)) < 1000) {
+            a00_w16(o, self + 0x28, count + 1);
+            if ((int16_t)a00_u16(o, self + 0x28) == 824) {
+                uint32_t saved = a00_u8(o, D_00810784);
+                a00_w8(o, D_00810784, 0xFF);
+                (void)a00_c_001F6AD0(o);
+                uint32_t e = 0;
+                (void)a00_c_001B6660(o, A00_GROUP_827FB0, &e);
+                a00_w8(o, D_00810784, saved);
+            }
+        }
+        if (a00_s32(o, self + 0x2EC) == 0) a00_s2_28_points(o, self);
+    }
+    if (a00_u8(o, S_70003B92) == 0 || a00_s32(o, self + 0x2EC) == 0) {
+        (void)a00_c_001B1B70(o, self);
+        a00_callback(o, self);
+    }
+}
+
+int em_area00_ovl_00826790(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    a00_s2_28(&o, self);
+    return a00_end(&o);
+}
+
+/* ----------------------------------------------------------------------
+ * 0x826CC0 (func_overlay_AREA00_00826C80) — [32]. +0x04: 0 001B0FD0, +0x64
+ * = 1.0 when D_00810803 is non-zero else 0.0, 001C6380; 1: +0x04 = 3 when
+ * D_00810803 is 0xFF, then +0x05: 0 waits for D_00810803 == 2 (+0x28 = 30,
+ * +0x2A = 0); 1 counts +0x28 down, at 0 001EFD20(4, a frame local) and +0x05
+ * = 2; 2 counts +0x2A, raises +0x64 by 0.02 (bit 3 of the count) or 0.008
+ * while it is <= 1.0 (else +0x05 = 3), sound 0x9F at 300 every tenth count
+ * (001FBD50) and moves +0xB0 / +0xB8 by -/+0.5 / +/-0.8 (bit 1); then
+ * 001C6380, 001B1B70 unless D_00810803 is 0, and the callback. 2 / 3 free.
+ * ---------------------------------------------------------------------- */
+static void a00_s2_32(A00Ovl *o, uint32_t self, uint32_t sp)
+{
+    uint32_t state = a00_u8(o, self + 4);
+    int32_t r;
+
+    if (state == 0) {
+        r = 0;
+        (void)a00_c_001B0FD0(o, self, &r);
+        a00_w32(o, self + 0x64, a00_u8(o, D_00810803) != 0 ? F_ONE : F_ZERO);
+        (void)a00_c_001C6380(o, self);
+        return;
+    }
+    if (state == 2 || state == 3) {
+        (void)a00_c_001AFC10(o, self);
+        return;
+    }
+    if (state != 1) return;
+    if (a00_u8(o, D_00810803) == 0xFF) a00_w8(o, self + 4, 3);
+    uint32_t step = a00_u8(o, self + 5);
+    if (step == 0) {
+        if (a00_u8(o, D_00810803) == 2) {
+            a00_w16(o, self + 0x28, 30);
+            a00_w16(o, self + 0x2A, 0);
+            a00_w8(o, self + 5, 1);
+        }
+    } else if (step == 1) {
+        if (a00_u16(o, self + 0x28) == 0) {
+            (void)a00_c_001EFD20(o, 4, sp - 0x30u + 0x20u);
+            a00_w8(o, self + 5, 2);
+        }
+        a00_w16(o, self + 0x28, a00_u16(o, self + 0x28) - 1);
+    } else if (step == 2) {
+        a00_w16(o, self + 0x2A, a00_u16(o, self + 0x2A) + 1);
+        uint32_t level = a00_u32(o, self + 0x64);
+        if (em_ee_c_le_bits(level, F_ONE)) {
+            if (a00_u16(o, self + 0x2A) & 8)
+                a00_w32(o, self + 0x64, em_ee_add_bits(level, F_0_02));
+            else
+                a00_w32(o, self + 0x64, em_ee_add_bits(level, F_0_008));
+        } else {
+            a00_w8(o, self + 5, 3);
+        }
+        if ((int16_t)a00_u16(o, self + 0x2A) % 10 == 0) (void)a00_c_001FBD50(o, self, 0x9F, 0, fb(F_300));
+        if (a00_u16(o, self + 0x2A) & 2) {
+            a00_w32(o, self + 0xB0, em_ee_sub_bits(a00_u32(o, self + 0xB0), F_0_5));
+            a00_w32(o, self + 0xB8, em_ee_add_bits(a00_u32(o, self + 0xB8), F_0_8));
+        } else {
+            a00_w32(o, self + 0xB0, em_ee_add_bits(a00_u32(o, self + 0xB0), F_0_5));
+            a00_w32(o, self + 0xB8, em_ee_sub_bits(a00_u32(o, self + 0xB8), F_0_8));
+        }
+    }
+    (void)a00_c_001C6380(o, self);
+    if (a00_u8(o, D_00810803) != 0) (void)a00_c_001B1B70(o, self);
+    a00_callback(o, self);
+}
+
+int em_area00_ovl_00826CC0(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    a00_s2_32(&o, self, sp);
+    return a00_end(&o);
+}
+
+/* ----------------------------------------------------------------------
+ * 0x8241B0 (func_overlay_AREA00_00824170) — the effect node the sub-2
+ * creature 0014D260 spawns (001EFE00); its +0x24 is the creature. Seven of
+ * the creature's bone nodes (+0x110 + 4 * D_00828A40[k]) are followed:
+ * +0x04 0 keeps their heights at +0x1F0.., sets the two timers +0x230 /
+ * +0x234 to -1.5 * (i / 2), the seed +0x270 = 00122BB8(), +0x274 = 0, and
+ * falls into 1. 1: +0x04 = 3 once the creature's +0x04 is 3; a change of
+ * +0x05 (kept in +0x06) restarts the count; +0x05 1 spawns effect
+ * 0x80000015 at every node's x / z with y -65 (then +0x05 = 0), 2 every
+ * tenth count, 3 where a node falls below y -54, 0x63 ends (+0x04 = 3); then
+ * the count, the heights again and two timer pairs from 0x828A30 (node,
+ * mode): a timer at or above 0 places 0x700036A0 at its node (001029C0,
+ * 00102918), 001CCF70(0x700036D0), steps 0.004 and wraps past 2.0 by -1;
+ * a negative one steps 0.1. The seed's fraction goes to 0x70003A20 each
+ * time. 2 / 3 free.
+ * ---------------------------------------------------------------------- */
+#define A00_NODE_INDEX_828A40 0x00828A40u
+#define A00_TIMER_PAIRS_828A30 0x00828A30u
+#define S_700036A0_M 0x700036A0u
+#define S_700036D0_V 0x700036D0u
+#define S_70003A20 0x70003A20u
+#define F_MINUS_1_5 0xBFC00000u
+#define F_MINUS_65 0xC2820000u
+#define F_MINUS_54 0xC2580000u
+#define F_65535 0x477FFF00u
+#define F_0_0001 0x38D1B717u
+#define F_0_004 0x3B83126Fu
+#define F_0_1 0x3DCCCCCDu
+
+static uint32_t a00_fx_node(A00Ovl *o, uint32_t parent, uint32_t k)
+{
+    int32_t index = a00_s32(o, A00_NODE_INDEX_828A40 + 4u * k);
+    return a00_u32(o, parent + 0x110u + (uint32_t)index * 4u);
+}
+
+/* NODE(parent, k) is read again for every field (index, pointer, field) */
+static void a00_fx_spawn_at(A00Ovl *o, uint32_t parent, uint32_t k, int with_w, uint32_t node)
+{
+    /* step 3 reads x through the node its height test computed */
+    a00_w32(o, S_700038A0, a00_u32(o, (node ? node : a00_fx_node(o, parent, k)) + 0xC0));
+    a00_w32(o, S_700038A8, a00_u32(o, a00_fx_node(o, parent, k) + 0xC8));
+    a00_w32(o, S_700038A4, F_MINUS_65);
+    if (with_w) a00_w32(o, S_700038AC, F_ONE);
+    uint32_t e = 0;
+    (void)a00_c_001F00A0(o, (int32_t)0x80000015u, S_700038A0, S_700038A0, 0, &e);
+    if (e != 0) {
+        (void)a00_c_001029C0(o, e + 0xD0);
+        (void)a00_c_00102948(o, e + 0x100, S_700038A0);
+    }
+}
+
+static void a00_s2_fx(A00Ovl *o, uint32_t self)
+{
+    const uint32_t fx = self + 0x1F0;
+    uint32_t parent = a00_u32(o, self + 0x24);
+    uint32_t state = a00_u8(o, self + 4);
+    uint32_t i;
+
+    if (state == 2 || state == 3) {
+        (void)a00_c_001AFC10(o, self);
+        return;
+    }
+    if (state == 0) {
+        for (i = 0; i < 2; ++i)
+            a00_w32(o, fx + 0x40 + 4 * i,
+                    em_ee_mul_bits(F_MINUS_1_5, em_ee_div_bits(em_ee_cvt_s_w_bits(i), F_2)));
+        for (i = 0; i < 7; ++i)
+            a00_w32(o, fx + 4 * i, a00_u32(o, a00_fx_node(o, parent, i) + 0xC4));
+        int32_t seed = 0;
+        (void)a00_c_00122BB8(o, &seed);
+        a00_w32(o, fx + 0x80, (uint32_t)seed);
+        a00_w32(o, fx + 0x84, 0);
+        a00_w8(o, self + 4, 1);
+        a00_w8(o, self + 5, 0);
+        a00_w8(o, self + 6, 0);
+    } else if (state != 1) {
+        return;
+    }
+    if (a00_u8(o, parent + 4) == 3) {
+        a00_w8(o, self + 4, 3);
+        return;
+    }
+    uint32_t seen = a00_u8(o, self + 6), now = a00_u8(o, self + 5);
+    if (seen != now) {
+        a00_w8(o, self + 6, now);
+        a00_w32(o, fx + 0x84, 0);
+    }
+    uint32_t step = a00_u8(o, self + 5);
+    if (step == 1) {
+        for (i = 0; i < 7; ++i) a00_fx_spawn_at(o, parent, i, 1, 0);
+        a00_w8(o, self + 5, 0);
+    } else if (step == 2) {
+        if (a00_s32(o, fx + 0x84) % 10 == 0)
+            for (i = 0; i < 7; ++i) a00_fx_spawn_at(o, parent, i, 0, 0);
+    } else if (step == 3) {
+        for (i = 0; i < 7; ++i) {
+            uint32_t node = a00_fx_node(o, parent, i);
+            if (em_ee_c_lt_bits(a00_u32(o, node + 0xC4), F_MINUS_54) &&
+                !em_ee_c_le_bits(a00_u32(o, fx + 4 * i), F_MINUS_54))
+                a00_fx_spawn_at(o, parent, i, 1, node);
+        }
+    } else if (step == 0x63) {
+        a00_w8(o, self + 4, 3);
+    }
+    a00_w32(o, fx + 0x84, a00_u32(o, fx + 0x84) + 1);
+    for (i = 0; i < 7; ++i)
+        a00_w32(o, fx + 4 * i, a00_u32(o, a00_fx_node(o, parent, i) + 0xC4));
+    uint32_t seed = a00_u32(o, fx + 0x80);
+    for (i = 0; i < 2; ++i) {
+        uint32_t r = em_ee_cvt_s_w_bits((seed >> 16) & 0xFFFFu);
+        r = em_ee_div_bits(r, F_65535);
+        r = em_ee_add_bits(r, F_0_0001);
+        seed = seed * 37u + 11u;
+        /* the fraction is stored before the timer's test; after the calls
+         * the step and the wrap test each read the timer */
+        a00_w32(o, S_70003A20, r);
+        uint32_t t = a00_u32(o, fx + 0x40 + 4 * i);
+        if (!em_ee_c_lt_bits(t, F_ZERO)) {
+            uint32_t node = a00_u32(o, A00_TIMER_PAIRS_828A30 + 8 * i);
+            uint32_t mode = a00_u32(o, A00_TIMER_PAIRS_828A30 + 8 * i + 4);
+            (void)a00_c_001029C0(o, S_700036A0_M);
+            (void)a00_c_00102918(o, S_700036A0_M, S_700036A0_M, a00_u32(o, parent + 0x110 + node * 4) + 0xC0);
+            int32_t r2 = 0;
+            (void)a00_c_001CCF70(o, S_700036D0_V, &r2);
+            if (mode <= 2)
+                a00_w32(o, fx + 0x40 + 4 * i, em_ee_add_bits(a00_u32(o, fx + 0x40 + 4 * i), F_0_004));
+            t = a00_u32(o, fx + 0x40 + 4 * i);
+            if (!em_ee_c_le_bits(t, F_2)) a00_w32(o, fx + 0x40 + 4 * i, em_ee_sub_bits(t, F_ONE));
+        } else {
+            a00_w32(o, fx + 0x40 + 4 * i, em_ee_add_bits(t, F_0_1));
+        }
+    }
+}
+
+int em_area00_ovl_008241B0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    a00_s2_fx(&o, self);
+    return a00_end(&o);
+}
