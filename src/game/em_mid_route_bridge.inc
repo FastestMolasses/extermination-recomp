@@ -11606,6 +11606,26 @@ static int m19_w_00829840(void *ctx, uint32_t a0)
     return rc;
 }
 
+static int m19_w_00825530(void *ctx, uint32_t a0, uint32_t a1, int32_t *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x00825530u, .sp = r->sp, .na = 2, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)(int32_t)a1;
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = (int32_t)c.v0;
+    return rc;
+}
+
+static int m19_w_00825A10(void *ctx, uint32_t a0)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x00825A10u, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
 static int m19_w_callback(void *ctx, uint32_t function, uint32_t self)
 {
     EmArea01Runtime *r = ctx;
@@ -11657,6 +11677,8 @@ static inline void m19_hooks(EmArea01Runtime *r, EmArea19RouteHooks *h)
     h->w_001FC520 = m19_w_001FC520;
     h->w_00829370 = m19_w_00829370;
     h->w_00829840 = m19_w_00829840;
+    h->w_00825530 = m19_w_00825530;
+    h->w_00825A10 = m19_w_00825A10;
     h->w_callback = m19_w_callback;
 }
 
