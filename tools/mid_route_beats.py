@@ -32,7 +32,8 @@ Usage (native arm64 macOS; build/extermination and make start-saves first):
   python3 tools/mid_route_beats.py a22 a06               # some chains
   python3 tools/mid_route_beats.py --single a22_02       # one beat from its own card
 
-Output: build/mid_route/<beat>.log (the run), build/mid_route/pads/ (the
+Output: build/mid_route/<beat>.log (the run; a FAIL's problems beyond the first three, cut to 300
+characters, in <log>.<beat>.problems.txt; EM_VERBOSE=1 prints them all), build/mid_route/pads/ (the
 pads and paths, disc-derived: never committed).
 """
 import json
@@ -675,8 +676,15 @@ def main(argv):
             total += 1
             passed += not problems
             print(f'  {b}: {"PASS" if not problems else "FAIL"}')
-            for p in problems:
-                print(f'    {p}')
+            verbose = os.environ.get('EM_VERBOSE') == '1' or os.environ.get('V') == '1'
+            for p in (problems if verbose else problems[:3]):
+                print(f'    {p if verbose else p[:300]}')
+            if problems and not verbose:
+                # The full detail beside the run log; EM_VERBOSE=1 prints it all.
+                result = log_path.with_suffix(f'.{b}.problems.txt')
+                result.write_text('\n'.join(problems) + '\n')
+                if len(problems) > 3 or any(len(p) > 300 for p in problems):
+                    print(f'    (all {len(problems)} in {result.relative_to(ROOT)})')
         for b in beats[len(results):]:
             total += 1
             print(f'  {b}: not reached')

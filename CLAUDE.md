@@ -191,6 +191,15 @@ sample per run is enough. Python reference tests use `tools/reference_mode.py`
 line, `parallel_map` to spread independent oracle cases over forked workers;
 `EM_TEST_JOBS=1` forces serial).
 
+**Quiet output.** Every `make test-*` target prints a compact summary
+(tools/quiet.py through tools/quiet_shell): one PASS/FAIL line per check cut to
+130 characters, compiler warnings, a `[quiet]` footer with the log path
+(`build/quiet/<name>.log`), and on a failure the first failing detail and the
+last 12 lines. The checks and exit codes are unchanged. `EM_VERBOSE=1` (or
+`V=1`) prints the full output as before. Direct runs: `make test-newgame-control`
+or `python3 tools/quiet.py -- <command>`. `mid_route_beats.py` shows a failed
+beat's first three problems (rest in `build/mid_route/*.problems.txt`).
+
 **No windows.** Automated runs must never put a window in front of the user.
 The app is headless automatically whenever a test/capture/trace variable is set
 (`EM_*TEST`, `EM_CAPTURE*`, `EM_FRAME_TRACE`); use `EM_HEADLESS=0` only when the

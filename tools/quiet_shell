@@ -1,0 +1,4 @@
+#!/bin/sh
+# make's SHELL for the test-* targets (see the Makefile "Quiet output"): runs each recipe line
+# through tools/quiet.py, which prints a compact summary and logs the full output.
+exec python3 "$(dirname "$0")/quiet.py" "$@"
