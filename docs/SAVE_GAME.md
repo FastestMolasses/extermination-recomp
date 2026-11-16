@@ -584,7 +584,7 @@ cue passes 0x1000 for all three) and the style colour's high byte dropped
 
 ### 6.2 The fork's cards: fresh and formatted
 
-The user's decisions of 2026-10-09 (HANDOFF item 9: a separate card file,
+The user's decisions of 2026-10-09 (decomp HANDOFF_HISTORY.md item 9: a separate card file,
 never the user's own). The fork's launcher gives every session two fresh
 8 MB card files (`Mcd001.ps2`, `Mcd002.ps2` in the session's scratch
 folder), which the emulator creates unformatted. The takes recorded before

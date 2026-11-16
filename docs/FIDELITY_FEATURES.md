@@ -68,7 +68,7 @@ translations are read from.
   byte-identical is kept marked `// NEARMISS`, and the link then uses the
   original code that each user generates locally from their own disc. The
   decomp's `tools/verify_all.py` (six stages) checks the rebuild.
-- Evidence: decomp `docs/HANDOFF.md`, Verification toolkit: 2150/2211 units,
+- Evidence: decomp `docs/HANDOFF_HISTORY.md`, Verification toolkit: 2150/2211 units,
   boot ELF byte-identical, 19/19 overlays (commit bdd40fb). Decomp
   `docs/PROGRESS.md`: matched_code 98.60%; about 1,516 boot functions link
   from ordinary compiled C. At decomp HEAD 5f68d84, 731 of the 2,953 boot C
@@ -456,7 +456,7 @@ and the tools extract the assets locally.
   runs in the pre-commit leak scan. A GPL static recompiler was evaluated
   read-only and rejected; it is not linked, copied or run.
 - Evidence: port CLAUDE.md "Hard rules"; Makefile FRAMEWORKS/LDFLAGS; port
-  `.gitignore`; decomp `docs/HANDOFF.md` (decision 2026-09-26). PCSX2 is used
+  `.gitignore`; decomp `docs/HANDOFF_HISTORY.md` (decision 2026-09-26). PCSX2 is used
   only as an external measuring instrument.
 - Status: **PARTIAL**. **macOS only for now**: the Windows and Linux
   backends are skeletons, and the Linux build has no movie decoder (its
@@ -2630,7 +2630,7 @@ shooting and knifing anywhere also run without a fault.
   overlay 14, math 30, render 21 and sys 25, plus asset exports) and efe9f83
   (wave 2: 65 side-path and exit translations, split into UI 17, side 20,
   exitA 12 and exitB 16). `AREA01_OVERVIEW.md`, `SECOND_LEVEL_ROUTE.md`,
-  `AREA01_*.md`. Decomp `docs/HANDOFF.md` "Level 2": the census delta has
+  `AREA01_*.md`. Decomp `docs/HANDOFF_HISTORY.md` "Level 2": the census delta has
   154 new functions (89 on the main line). Overlay matching bdd40fb: 32 of
   41 functions are byte-identical C and 3 are NEARMISS. The lanes found
   wrong decomp NEARMISS bodies, which were then corrected: 7 in 07c4e32, 2

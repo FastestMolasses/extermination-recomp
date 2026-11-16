@@ -1464,7 +1464,7 @@ loader-chain sub-point):**
   from the delivered area data. em_message_live's area handling and
   em_coll_segment_walkers' 0019D770 path are not reached by the arrival
   (no message, no collision walk before the first AREA01 world frame);
-  the decomp's extract_data.py label shift (decomp HANDOFF.md) needs no fix
+  the decomp's extract_data.py label shift (decomp HANDOFF_HISTORY.md) needs no fix
   here: the AREA01 exports the arrival reads (roster, collision, cell
   directory, spawn table) are checked byte for byte against the AREA01
   captures (AREA01_ASSETS.md), the arrival's pool equals the capture's,

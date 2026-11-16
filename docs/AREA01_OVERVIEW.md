@@ -590,7 +590,7 @@ Delta functions per lane (address, bytes, status at fa4b42c; "arrival" = ran in 
 
 ### Recommended order (sub 0 first, smallest risk to the first-level chain)
 
-Status at port aaacac6 / decomp fa4b42c (the AREA01 phase-2 commits e21bd95 and efe9f83; decomp HANDOFF "Level 2"):
+Status at port aaacac6 / decomp fa4b42c (the AREA01 phase-2 commits e21bd95 and efe9f83; decomp HANDOFF_HISTORY "Level 2"):
 
 1. **Data exporters (no port `src/` change):** **done for sub 0** (port e21bd95, AREA01_ASSETS.md): level geometry and textures, collision, cell directory, roster, spawn and door tables, the 14 scripts and the overlay data, messages, world models, the sound registry and banks, each checked against the 12 AREA01 sub-0 captures. Open: sub 1 (`chunk05.n1`, no capture), the dynamic list as EMDL, shadow receivers, object textures (AREA01_ASSETS.md "What is left"), and the cell-directory decision (its finding 1: the port's loader rejects AREA01's directory).
 2. **Matching lane (decomp only):** not started since bdd40fb. The remaining overlay assembly: 0x826D40 (O4, runs every frame on the route), then the three jr-table dispatchers 0x823580 (O5), 0x823CD0 and 0x824340 (O3), and the three NEARMISS. Update 2026-09-28: all of these are done; the three dispatchers link from C because the overlay link now places a compiled jump table at the original address (decomp docs/AREA01_OVERLAY_C.md, docs/OVERLAYS.md section 6), and AREA01 has no NEARMISS left. The overlay build must stay 19/19 byte-identical (`tools/verify_all.py`).
