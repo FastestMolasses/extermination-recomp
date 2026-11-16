@@ -112,7 +112,12 @@ built from one codebase (full rules: `docs/PORT_PROFILES.md`).
   49–52 AREA11 owners, measured in PCSX2.
 - Per-subsystem docs in `docs/` (STARTUP, FIRST_CONTROL, AREA11_*, DOOR_ORIGINAL,
   ROGER_*, STATUS_HUB, PLAYER_*, SFX_*, ACTOR_LIGHTING, MESSAGE_SERVICE, ...).
-- The decomp's `docs/HANDOFF.md` is the cross-repo entry point.
+- `docs/SECOND_HALF_AREAS.md` (the remaining areas' checklist) and `AREA*_PORT.md`;
+  `tools/mid_route_beats.py` (beats from start cards), `tools/watch_takes.py`
+  (the user's takes; `--root` for Claude's guided chain).
+- The decomp's `docs/HANDOFF.md` is the cross-repo entry point; its `docs/INDEX.md`
+  says which doc answers what. Coordination: the decomp's project skill
+  `orchestrator` (`../Extermination/.claude/skills/orchestrator/SKILL.md`).
 Keep these current in the same session as the work.
 
 ## Architecture
@@ -159,8 +164,12 @@ touches a GPU API. Each native stage names the original address it stands in for
   → opening → first control; 30 input ticks must travel 9.599989) and the level
   smoke test. Frame order: `tools/compare_frame_order.py` against the original
   traces.
-- Parallel agents build privately:
-  `make -n -B all | grep -- '-o build/extermination' | tail -1 | sed 's#-o build/extermination#-o build/<lane>/extermination#'`
+- Build with `make -j8 INC=1` (per-object, byte-identical to the one-command build;
+  0.3-0.5 s after an edit; decomp docs/PIPELINE_PERF.md P1). Parallel agents work in
+  their own worktree (`git worktree add -b <lane> ../port-<lane> main`, then
+  `python3 tools/worktree_link.py` there to link assets/data/start_saves/beat_rands);
+  a private build in a shared checkout:
+  `make -j8 INC=1 BIN=build/<lane>/extermination MAC_OBJ_DIR=build/<lane>/obj all`
   (zero warnings). Before committing, build the staged index in isolation
   (`git checkout-index -a --prefix=<scratch>/ && make all` there).
 
