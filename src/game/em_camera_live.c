@@ -16,6 +16,7 @@
 #include "game/em_area01_room.h"
 #include "game/em_area22_port.h"
 #include "game/em_area06_port.h"
+#include "game/em_area14_overlay.h"
 #include "game/em_effects_live.h"
 #include "game/em_level9_port.h"
 #include "game/em_level13_port.h"
@@ -1407,6 +1408,59 @@ static int sp_00823FE0(void *ctx, uint8_t *cam, int32_t *result)
     return 0;
 }
 
+/* 00230230 (case 0xE, AREA14's camera arm): em_area14_overlay's translation
+ * (test_area14_overlay_reference), over 001944B0's map and callees, with
+ * the follow height 00191D40 and its area test's 001B1EA0 over the boot
+ * area D_0024A4F0. */
+static int a14c_00191120(void *c, float goal, float current, float rate, float limit, float *o)
+{
+    (void)c;
+    uint32_t out = 0;
+    if (em_camera_follow_00191120(&C.fw, em_ee_bits(goal), em_ee_bits(current), em_ee_bits(rate),
+                                  em_ee_bits(limit), &out) < 0) return -1;
+    *o = em_ee_float(out);
+    return 0;
+}
+static int a14c_00191D40(void *c, uint32_t a0, float want, float rate)
+{
+    (void)c;
+    if (a0 != CAM_BASE) return -1;
+    return em_camera_follow_00191D40(&C.cam.rec, &C.fg, em_ee_bits(want), em_ee_bits(rate));
+}
+/* 00191350's 001B1EA0: the point is the player's +0xA0, the area D_0024A4F0
+ * the boot data (the exported constants, read only). */
+static int a14c_001B1EA0(void *c, int32_t mode, uint32_t point, uint32_t quad, int32_t count, int32_t *result)
+{
+    (void)c;
+    const float *p = (const float *)(const void *)aim_map(NULL, point, 12, 0);
+    const float (*q)[4] = (const float (*)[4])(const void *)em_effects_live_window(quad, 16u * (uint32_t)count);
+    if (!p || !q) return -1;
+    return em_director_original_001B1EA0_bound(mode, p, q, count, a13c_atan2, em_collision_world_sdk(), result);
+}
+static int sp_00230230(void *ctx, uint8_t *cam, EmPlayerLiveActor *player, int32_t *result)
+{
+    (void)ctx;
+    if (cam != C.cam.rec.bytes || player != &C.player || !C.tables_loaded) return -1;
+    EmArea14OverlayHooks h;
+    memset(&h, 0, sizeof h);
+    h.bytes = a06c_bytes;
+    h.w_0011DE90 = a06c_0011DE90; h.w_0011DF78 = a06c_0011DF78; h.w_0011E2A8 = a06c_0011E2A8;
+    h.w_001B1470 = a06c_001B1470; h.w_001B12B0 = a06c_001B12B0; h.w_00191120 = a14c_00191120;
+    h.w_00191D40 = a14c_00191D40; h.w_00192010 = later_00192010; h.w_0018D7B0 = a06c_0018D7B0;
+    h.w_0018C6A0 = a06c_0018C6A0; h.w_0018C4B0 = a06c_0018C4B0; h.w_001B1EA0 = a14c_001B1EA0;
+    EmArea14OverlayFault f = {0, 0};
+    int32_t r = 0;
+    SP_ENTER();
+    const int rc = em_area14_overlay_00230230(&h, CAM_BASE, 0x008102B0u, &r, &f);
+    SP_LEAVE();
+    if (rc < 0) {
+        fprintf(stderr, "em_camera_live: 00230230 fault code %d at %08X\n", (int)f.code, (unsigned)f.address);
+        return -1;
+    }
+    if (result) *result = r;
+    return 0;
+}
+
 /* 001B0C60(area, sub, entry): the request 00193EB0's region events store
  * (AREA13's falls into AREA19); the scene's one translation. */
 static int sp_001B0C60(void *ctx, int32_t a, int32_t b, int32_t c)
@@ -1849,10 +1903,12 @@ static void bind_worlds(void)
     k->w_001912B0 = sp_001912B0;
     k->w_001B0300 = sp_001B0300;
     /* 001944B0: AREA06's states 29..37 (em_area06_port, sp_001944B0);
-     * 0x823FE0: AREA13's area test. The other areas' arms (00194DB0,
-     * 00230230, 001AEDE0) stay NULL: the readiness check requires
-     * them only where they are reachable, so reaching one faults. */
+     * 0x823FE0: AREA13's area test; 00230230: AREA14's arm
+     * (em_area14_overlay). The other areas' arms (00194DB0, 001AEDE0) stay
+     * NULL: the readiness check requires them only where they are
+     * reachable, so reaching one faults. */
     k->w_001944B0 = sp_001944B0;
+    k->w_00230230 = sp_00230230;
     k->w_00823FE0 = sp_00823FE0;
     k->w_001B0C60 = sp_001B0C60;
 

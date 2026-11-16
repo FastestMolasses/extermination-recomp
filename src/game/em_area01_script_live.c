@@ -264,6 +264,9 @@ static int record(void *ctx,uint32_t fn,uint32_t actor,uint32_t block,
         /* AREA03's lift scripts (em_area03_route) */
         if (s->area!=3) return -1;
         break;
+    case 0x008238C0u: case 0x00825C40u: /* AREA14's: scripts 0x826800 / 0x828120 (em_area14_overlay) */
+        if (s->area!=0x0E) return -1;
+        break;
     case 0x00824E40u: /* AREA00 arrival script 00828D60 */
     case 0x008253E0u: /* AREA00 terminal script 008299E0 */
     case 0x00826CB0u: /* AREA00 sub 2's script 0082D070 ([28]) */

@@ -425,9 +425,11 @@ static int status_page_event(void *context, EmStatusPageEvent event, unsigned ar
         world.status_ui_context = 0;
         return em_rcl_0021BAE0(0) < 0 ? 0 : 1;
     case EM_STATUS_PAGE_RESTORE_PLAYER:
-        /* Equipment status1->2 requires its original player worker. The
-         * initial AREA11 inventory has status0 and never takes this route. */
-        return 0;
+        /* 0015C7B0(D_008102B0): equipment status 1 -> 2 (AREA14's item
+         * 0x19, k01_03) rebinds the player's model through the closure's
+         * 0015C1F0. The initial AREA11 inventory has status 0 and never
+         * takes this route. */
+        return em_player_closure_live_0015C7B0() < 0 ? 0 : 1;
     default:
         return 0; /* Sounds, ITEM and module dispatch are adapter-owned. */
     }

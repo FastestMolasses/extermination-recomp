@@ -80,6 +80,10 @@ int em_player_closure_live_001798D0(EmPlayerLiveActor *actor);
  * port does not keep: a nonzero +0x1C faults (unmapped). 0, or -1. */
 int em_player_closure_live_0015C750(uint32_t d8106C8, int (*table16)(void *, uint32_t, int16_t *),
                                     void *table_context, uint8_t *d810707);
+/* 0015C7B0(D_008102B0) (byte-matched C: a jump to 0015C1F0): the status
+ * page's equipment change from status 1 to 2 (0020CDC0 phase 4's close);
+ * this closure's em_player_misc_0015C1F0 over the live record. 0, or -1. */
+int em_player_closure_live_0015C7B0(void);
 
 /* 0017B490(p, cmd, idx, tbl) over the record (em_loco_0017B490 on the record
  * pose's regions): the stage callees' clip_lookup shape. -1 until bound. */

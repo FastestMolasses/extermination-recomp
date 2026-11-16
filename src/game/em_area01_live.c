@@ -1212,8 +1212,9 @@ static int worker(void *ctx,EmArea01Call *c)
     }
     /* 001F6B60 (AREA17's 0x823BA0) is 001F6B30 word for word
      * (test_level17_boot_reference checks the ELF); so is 001F6AD0 (AREA00
-     * sub 2's [28] 0x826790; test_area00_overlay_reference checks it). */
-    if(c->function==0x001F6B30u || c->function==0x001F6B60u || c->function==0x001F6AD0u) {
+     * sub 2's [28] 0x826790; test_area00_overlay_reference checks it), and
+     * 001F6B00 (AREA14's [5] 0x823760; test_area14_overlay_reference). */
+    if(c->function==0x001F6B30u || c->function==0x001F6B60u || c->function==0x001F6AD0u || c->function==0x001F6B00u) {
         if(em_area01_live_suspend(l)<0)return -1;
         int rc=em_effects_live_001F6B30(em_scene_state());
         if(em_area01_live_resume(l)<0)return -1;

@@ -4012,11 +4012,11 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
             return -1;
         }
     }
-    /* AREA14's owners (lane P14): 0x825AA0 is bound (em_area01_runtime's
-     * dispatch_second_half); every other placement's and group's overlay
-     * behaviour (decomp tools/area_overview.py --area 14) runs through the
-     * runtime, where an untranslated one faults at its address. Its boot
-     * owners bind as the later areas' do. */
+    /* AREA14's owners (lanes P14, P14b, P14c): every placement's and
+     * group's overlay behaviour (decomp tools/area_overview.py --area 14)
+     * runs through the runtime's dispatch_second_half (0x825AA0 and
+     * 0x823FC0 as twins, the rest em_area14_overlay's). Its boot owners
+     * bind as the later areas' do. */
     if (s_state.d810700 == 0x0E && fn >= 0x00823500u) {
         switch (fn) {
         case 0x00823580u: case 0x00823760u: case 0x008238E0u: case 0x00823B30u: case 0x00823E30u:
@@ -4179,7 +4179,8 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
      * AREA01 spawner pointed at 001F5040 (adopted here): its behaviour
      * 001F5040 is bound by em_aim_fire_runtime (em_aim_fire_flash). */
     if ((s_state.d810700 == 1 || s_state.d810700 == 4 || s_state.d810700 == 0x0F || s_state.d810700 == 3 || s_state.d810700 == 0x13 ||
-         s_state.d810700 == 8 || s_state.d810700 == 7 || s_state.d810700 == 0x0D) && fn == 0x001F5040u) {
+         s_state.d810700 == 8 || s_state.d810700 == 7 || s_state.d810700 == 0x0D || s_state.d810700 == 0x0E) &&
+        fn == 0x001F5040u) {
         if (!em_aim_fire_flash_owns(a) && em_area01_live_adopt_flash(&s_area01_live, a) < 0)
             return -1;
         a->callback = fn;
@@ -4366,6 +4367,8 @@ static int area01_missing_worker(void *ctx, EmArea01Call *call)
         return area_spawn_deferred(call, 8u, 0x00825100u, 0x00827F00u);
     if (s_state.d810700 == 7 && call->function == 0x001B6660u)
         return area_spawn_deferred(call, 7u, 0x00825B80u, 0x00828080u);
+    if (s_state.d810700 == 0x0E && call->function == 0x001B6660u)   /* AREA14: [5] 0x823760's group 0x8265A0 */
+        return area_spawn_deferred(call, 0x0Bu, 0x00826180u, 0x00828480u);
     if ((s_state.d810700 == 8 || s_state.d810700 == 7) && call->function == 0x001B0460u && call->na >= 1)
         return em_area11_script_host_001B0460((int)call->a[0]);
     /* 001D8C20(mode): the light mode of the next owner draw (001CB1F0's

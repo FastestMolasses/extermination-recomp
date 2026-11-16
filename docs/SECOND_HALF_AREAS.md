@@ -495,8 +495,9 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
 ## 5. Open
 
 - Every overlay owner of the six areas (66 behaviours, their op09 callbacks
-  and helpers) but the three twins of section 6 is untranslated; the area
-  lanes translate them against captures. The twins are bound only in the
+  and helpers) but AREA14's (section 6's twins and em_area14_overlay,
+  AREA14_PORT.md) and AREA21's two twins is untranslated; the area lanes
+  translate them against captures. The twins are bound only in the
   shared composition's dispatch; none of these areas runs there yet.
 - Every boot behaviour of the six areas is now in a census ledger or
   defined (section 6 for the six BOOT2 added); those marked only "defined"
@@ -512,7 +513,9 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   scope are exported, and k01_02 loads it live from AREA00 sub 2; its group
   owner 0x823FC0 and the probe / spawner 0x825530 / 0x825A10 run (lane
   P14b: AREA19's translations with AREA14's differences as parameters,
-  section 6); the next owner, [0] 0x8238E0, is untranslated and faults. The capture
+  section 6); lane P14c translated the rest of AREA14's owners and the
+  camera arm 00230230 (em_area14_overlay, test_area14_overlay_reference) and
+  the beats k01_02 .. k01_05 pass from their cards (AREA14_PORT.md). The capture
   kinds of AREA18 and AREA17 wait for their recordings (the next guided
   run); AREA16, AREA20 and AREA21 have no recording planned yet.
 - No other of these areas has loaded live: their module pack rows, state and

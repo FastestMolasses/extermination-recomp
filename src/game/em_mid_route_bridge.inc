@@ -3,6 +3,7 @@
  * Do not edit by hand. */
 
 #include "game/em_area00s2_creature.h"
+#include "game/em_area14_overlay.h"
 
 static int m22_w_0011DE90(void *ctx, float f0, float *result)
 {
@@ -17249,6 +17250,471 @@ static inline void a0s2_hooks(EmArea01Runtime *r, EmArea00s2CreatureHooks *h)
     h->w_001FBD50 = a0s2_w_001FBD50;
     h->w_0021BE40 = a0s2_w_0021BE40;
     h->w_callback = a0s2_w_callback;
+}
+
+static int a14o_w_001028D0(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001028D0u, .sp = r->sp, .na = 3, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)(int32_t)a1;
+    c.a[2] = (uint64_t)(int64_t)(int32_t)a2;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_00102918(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x00102918u, .sp = r->sp, .na = 3, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)(int32_t)a1;
+    c.a[2] = (uint64_t)(int64_t)(int32_t)a2;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_00102948(void *ctx, uint32_t a0, uint32_t a1)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x00102948u, .sp = r->sp, .na = 2, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)(int32_t)a1;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001029C0(void *ctx, uint32_t a0)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001029C0u, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_00102C58(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x00102C58u, .sp = r->sp, .na = 3, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)(int32_t)a1;
+    c.a[2] = (uint64_t)(int64_t)(int32_t)a2;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_0011E2A8(void *ctx, float a0, float *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x0011E2A8u, .sp = r->sp, .na = 0, .nf = 1};
+    c.f[0] = em_ee_bits(a0);
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = em_ee_float(c.f0);
+    return rc;
+}
+
+static int a14o_w_00122BB8(void *ctx, int32_t *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x00122BB8u, .sp = r->sp, .na = 0, .nf = 0};
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = (int32_t)c.v0;
+    return rc;
+}
+
+static int a14o_w_00158590(void *ctx, uint32_t a0, int32_t a1, int32_t a2)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x00158590u, .sp = r->sp, .na = 3, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    c.a[2] = (uint64_t)(int64_t)a2;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_00183010(void *ctx, uint32_t a0, uint32_t a1)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x00183010u, .sp = r->sp, .na = 2, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)(int32_t)a1;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_00183160(void *ctx, int32_t a0, float a1)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x00183160u, .sp = r->sp, .na = 1, .nf = 1};
+    c.a[0] = (uint64_t)(int64_t)a0;
+    c.f[0] = em_ee_bits(a1);
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001AEDE0(void *ctx, int32_t a0, int32_t a1)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001AEDE0u, .sp = r->sp, .na = 2, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001AFC10(void *ctx, uint32_t a0)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001AFC10u, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001B0C60(void *ctx, int32_t a0, int32_t a1, int32_t a2)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001B0C60u, .sp = r->sp, .na = 3, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    c.a[2] = (uint64_t)(int64_t)a2;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001B0FD0(void *ctx, uint32_t a0, int32_t *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001B0FD0u, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = (int32_t)c.v0;
+    return rc;
+}
+
+static int a14o_w_001B10B0(void *ctx, uint32_t a0, int32_t a1, int32_t a2)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001B10B0u, .sp = r->sp, .na = 3, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    c.a[2] = (uint64_t)(int64_t)a2;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001B17A0(void *ctx, uint32_t a0)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001B17A0u, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001B1EA0(void *ctx, int32_t a0, uint32_t a1, uint32_t a2, int32_t a3, int32_t *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001B1EA0u, .sp = r->sp, .na = 4, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)a0;
+    c.a[1] = (uint64_t)(int64_t)(int32_t)a1;
+    c.a[2] = (uint64_t)(int64_t)(int32_t)a2;
+    c.a[3] = (uint64_t)(int64_t)a3;
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = (int32_t)c.v0;
+    return rc;
+}
+
+static int a14o_w_001B6660(void *ctx, uint32_t a0)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001B6660u, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001BA1A0(void *ctx, uint32_t a0, uint32_t a1)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001BA1A0u, .sp = r->sp, .na = 2, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)(int32_t)a1;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001BA1C0(void *ctx, uint32_t a0, int32_t a1, int32_t *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001BA1C0u, .sp = r->sp, .na = 2, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = (int32_t)c.v0;
+    return rc;
+}
+
+static int a14o_w_001BA1F0(void *ctx, uint32_t a0, int32_t *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001BA1F0u, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = (int32_t)c.v0;
+    return rc;
+}
+
+static int a14o_w_001BA540(void *ctx, uint32_t a0)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001BA540u, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001BA580(void *ctx, uint32_t a0, int32_t a1)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001BA580u, .sp = r->sp, .na = 2, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001BA8E0(void *ctx, uint32_t a0, int32_t a1)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001BA8E0u, .sp = r->sp, .na = 2, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001C4760(void *ctx, int32_t a0, int32_t a1)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001C4760u, .sp = r->sp, .na = 2, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001C47A0(void *ctx, int32_t a0, int32_t a1)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001C47A0u, .sp = r->sp, .na = 2, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001C6380(void *ctx, uint32_t a0)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001C6380u, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001C63E0(void *ctx, uint32_t a0, int32_t a1)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001C63E0u, .sp = r->sp, .na = 2, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001C64F0(void *ctx, uint32_t a0, float a1, int32_t *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001C64F0u, .sp = r->sp, .na = 1, .nf = 1};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.f[0] = em_ee_bits(a1);
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = (int32_t)c.v0;
+    return rc;
+}
+
+static int a14o_w_001C67E0(void *ctx, uint32_t a0, int32_t a1, float a2, float a3)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001C67E0u, .sp = r->sp, .na = 2, .nf = 2};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    c.f[0] = em_ee_bits(a2);
+    c.f[1] = em_ee_bits(a3);
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001C68C0(void *ctx, uint32_t a0)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001C68C0u, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001CA6F0(void *ctx, uint32_t a0, int32_t a1)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001CA6F0u, .sp = r->sp, .na = 2, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001CCF70(void *ctx, uint32_t a0, int32_t *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001CCF70u, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = (int32_t)c.v0;
+    return rc;
+}
+
+static int a14o_w_001CFB50(void *ctx, uint32_t a0, int32_t a1, uint32_t a2, float a3, float a4, float a5, float a6, float a7)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001CFB50u, .sp = r->sp, .na = 3, .nf = 5};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    c.a[2] = (uint64_t)(int64_t)(int32_t)a2;
+    c.f[0] = em_ee_bits(a3);
+    c.f[1] = em_ee_bits(a4);
+    c.f[2] = em_ee_bits(a5);
+    c.f[3] = em_ee_bits(a6);
+    c.f[4] = em_ee_bits(a7);
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001CFBE0(void *ctx, int32_t a0, int32_t a1, uint32_t a2, uint32_t a3, int32_t a4)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001CFBE0u, .sp = r->sp, .na = 5, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    c.a[2] = (uint64_t)(int64_t)(int32_t)a2;
+    c.a[3] = (uint64_t)(int64_t)(int32_t)a3;
+    c.a[4] = (uint64_t)(int64_t)a4;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001F6B00(void *ctx)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001F6B00u, .sp = r->sp, .na = 0, .nf = 0};
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001FAE70(void *ctx, int32_t a0)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001FAE70u, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_001FB9F0(void *ctx, int32_t a0, int32_t a1, int32_t a2, int32_t a3)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001FB9F0u, .sp = r->sp, .na = 4, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)a0;
+    c.a[1] = (uint64_t)(int64_t)a1;
+    c.a[2] = (uint64_t)(int64_t)a2;
+    c.a[3] = (uint64_t)(int64_t)a3;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_0021B9A0(void *ctx, int32_t a0, float a1, float a2)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x0021B9A0u, .sp = r->sp, .na = 1, .nf = 2};
+    c.a[0] = (uint64_t)(int64_t)a0;
+    c.f[0] = em_ee_bits(a1);
+    c.f[1] = em_ee_bits(a2);
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int a14o_w_callback(void *ctx, uint32_t function, uint32_t self)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = function, .sp = r->sp, .na = 1, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)self;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static uint8_t *a14o_view(void *ctx, uint32_t address, uint32_t size)
+{
+    return bytes(ctx, address, size, 0);
+}
+
+static inline void a14o_hooks(EmArea01Runtime *r, EmArea14OverlayHooks *h)
+{
+    memset(h, 0, sizeof *h);
+    h->ctx = r;
+    h->bytes = a14o_view;
+    h->w_001028D0 = a14o_w_001028D0;
+    h->w_00102918 = a14o_w_00102918;
+    h->w_00102948 = a14o_w_00102948;
+    h->w_001029C0 = a14o_w_001029C0;
+    h->w_00102C58 = a14o_w_00102C58;
+    h->w_0011E2A8 = a14o_w_0011E2A8;
+    h->w_00122BB8 = a14o_w_00122BB8;
+    h->w_00158590 = a14o_w_00158590;
+    h->w_00183010 = a14o_w_00183010;
+    h->w_00183160 = a14o_w_00183160;
+    h->w_001AEDE0 = a14o_w_001AEDE0;
+    h->w_001AFC10 = a14o_w_001AFC10;
+    h->w_001B0C60 = a14o_w_001B0C60;
+    h->w_001B0FD0 = a14o_w_001B0FD0;
+    h->w_001B10B0 = a14o_w_001B10B0;
+    h->w_001B17A0 = a14o_w_001B17A0;
+    h->w_001B1EA0 = a14o_w_001B1EA0;
+    h->w_001B6660 = a14o_w_001B6660;
+    h->w_001BA1A0 = a14o_w_001BA1A0;
+    h->w_001BA1C0 = a14o_w_001BA1C0;
+    h->w_001BA1F0 = a14o_w_001BA1F0;
+    h->w_001BA540 = a14o_w_001BA540;
+    h->w_001BA580 = a14o_w_001BA580;
+    h->w_001BA8E0 = a14o_w_001BA8E0;
+    h->w_001C4760 = a14o_w_001C4760;
+    h->w_001C47A0 = a14o_w_001C47A0;
+    h->w_001C6380 = a14o_w_001C6380;
+    h->w_001C63E0 = a14o_w_001C63E0;
+    h->w_001C64F0 = a14o_w_001C64F0;
+    h->w_001C67E0 = a14o_w_001C67E0;
+    h->w_001C68C0 = a14o_w_001C68C0;
+    h->w_001CA6F0 = a14o_w_001CA6F0;
+    h->w_001CCF70 = a14o_w_001CCF70;
+    h->w_001CFB50 = a14o_w_001CFB50;
+    h->w_001CFBE0 = a14o_w_001CFBE0;
+    h->w_001F6B00 = a14o_w_001F6B00;
+    h->w_001FAE70 = a14o_w_001FAE70;
+    h->w_001FB9F0 = a14o_w_001FB9F0;
+    h->w_0021B9A0 = a14o_w_0021B9A0;
+    h->w_callback = a14o_w_callback;
 }
 
 static int r15_w_00102948(void *ctx, uint32_t a0, uint32_t a1)

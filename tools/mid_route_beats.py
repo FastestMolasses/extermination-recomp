@@ -395,6 +395,11 @@ BEAT_MODE = {'a08_02': 'steer', 'a08_03': 'steer', 'a08_04': 'steer', 'a08_06': 
 # the load anchors, and on RESTORE_STEERED the source's creatures; the steering
 # stays (a card's camera is not the recording's).
 N1_BEATS = ('a03b_', 'a03c_', 'a03d_', 'a04c_', 'a04d_')
+# Beats that cross a load with only its anchor (EM_START_AT_LOADS): the
+# constructed start k01's AREA00 sub 2 -> AREA14 load (k01_02), whose end
+# block holds the infection drain's phase (0015D100 counts the player's
+# +0x2FC only in play; the host drive's shorter load ran it ~300 frames longer).
+LOAD_BEATS = ('k01_',)
 RESTORE_STEERED = {'a03b_02', 'a03b_03', 'a03b_04', 'a03b_05', 'a03c_02', 'a03c_03', 'a03d_00', 'a04c_01', 'a04c_02',
                    'a04d_01', 'a04d_02'}
 
@@ -529,6 +534,10 @@ def run(name, card, beats, timeout):
             env['EM_START_AT_LOADS'] = str(loads)
         if beats[0] in RESTORE_STEERED:
             env['EM_START_AT_RESTORE'] = restore_anchor(beats[0])
+    elif beats[0].startswith(LOAD_BEATS):
+        loads = load_anchors(name, beats, traces)
+        if loads:
+            env['EM_START_AT_LOADS'] = str(loads)
     start = moved = time.time()
     ended = False
     clock = 0
