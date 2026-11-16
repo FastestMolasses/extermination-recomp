@@ -96,10 +96,25 @@ def main():
     finally:X.AREA01_IDS,X.AREA01_SHARED_IDS,X.AREA00_SCOPES,X.AREA02_SCOPES,X.area02_bindings,X.scene_ids=saved
     old_entries,old_samples,old_ladder=T.parse_emsr((OUT/'baseline/sfx_registry.emsr').read_bytes())
     indexed={key(e):e for e in entries};json_index={key(e):e for e in report['entries']}
-    assert all(indexed[key(e)]==e for e in old_entries)
-    assert all(json_index[key(e)]==e for e in old['entries'])
-    assert samples[:len(old_samples)]==old_samples and ladder==old_ladder
-    assert report['samples'][:len(old['samples'])]==old['samples']
+    # The baseline still holds every scope the later areas added (only
+    # AREA01's, AREA00's and AREA02's are left out), and the full export
+    # places AREA01 / AREA00 / AREA02's samples before those scopes'. So a
+    # baseline sample keeps its identity (container, offset, ADPCM hash) but
+    # not its index: compare samples by identity and entries with their
+    # sample indices mapped to the full export's.
+    full_index={sample_key(m):i for i,m in enumerate(report['samples'])}
+    remap=[full_index[sample_key(m)] for m in old['samples']]
+    def mapped(entry):
+        entry=json.loads(json.dumps(entry))
+        for field in ('ops','events'):
+            for op in entry.get(field,[]):
+                if 'sample' in op:op['sample']=remap[op['sample']]
+        return entry
+    assert all(indexed[key(e)]==mapped(e) for e in old_entries)
+    assert all(json_index[key(e)]==mapped(e) for e in old['entries'])
+    assert all(samples[remap[i]]==old_samples[i] for i in range(len(old_samples))) and ladder==old_ladder
+    assert all({k:v for k,v in report['samples'][remap[i]].items() if k!='index'}==
+               {k:v for k,v in m.items() if k!='index'} for i,m in enumerate(old['samples']))
     # The existing full AREA01 bank export is an independent installed
     # catalog. Normalize only registry-local sample indices for comparison.
     area=json.loads((A.ROOT/'assets/area01/sfx/sfx_registry.json').read_text())
@@ -147,15 +162,23 @@ def main():
     lib.shim_free(native)
     # Pin the finite loader cap with otherwise valid registries. Added
     # synthetic ABSENT entries carry no wave or original data.
-    at=24+len(ladder)*2+sum(16+len(e['ops'])*32 for e in entries)
-    for count in (8192,8193):   # EMSR_MAX_ENTRIES (AREA02's two domains raised it from 4096)
+    # the entries follow the ladder and the pan table (header word +20:
+    # D_00242630's size when a pan slide is exported, else 0)
+    pans=struct.unpack_from('<I',raw,20)[0]
+    at=24+len(ladder)*2+pans*2+sum(16+len(e['ops'])*32 for e in entries)
+    # EMSR_MAX_ENTRIES, read from the loader's source (4096, then 8192 for
+    # AREA02's two domains, then 65536: one scope per loaded area sub)
+    import re
+    cap=int(re.search(r'EMSR_MAX_ENTRIES = (\d+)',(A.ROOT/'src/game/em_sfx_bank.c').read_text()).group(1))
+    assert cap>=len(entries),(cap,len(entries))
+    for count in (cap,cap+1):
         blob=bytearray(raw[:at])
         struct.pack_into('<I',blob,12,count)
         for i in range(count-len(entries)):
             blob+=struct.pack('<IhhBBHHH',0x1000+i,0,0,2,0,0,0,0)
         blob+=raw[at:];path=OUT/f'cap-{count}.emsr';path.write_bytes(blob)
         check=lib.shim_new(str(path).encode(),T.STREAM_VOICES,0,0,0,1)
-        assert bool(check)==(count==8192),count
+        assert bool(check)==(count==cap),count
         if check:lib.shim_free(check)
     for label,blob in (('truncated',raw[:-1]),('extra',raw+b'\0')):
         path=OUT/f'malformed-{label}.emsr';path.write_bytes(blob)

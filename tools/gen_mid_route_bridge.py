@@ -50,6 +50,7 @@ SOURCES = (('src/game/em_area22_port.h', 'EmArea22PortHooks', 'm22'),
            ('src/game/em_area21_creature_b.h', 'EmArea21CreatureBHooks', 'a21cb'),
            ('src/game/em_area21_creature_c.h', 'EmArea21CreatureCHooks', 'a21cc'),
            ('src/game/em_area00s2_creature.h', 'EmArea00s2CreatureHooks', 'a0s2'),
+           ('src/game/em_area14_overlay.h', 'EmArea14OverlayHooks', 'a14o'),
            ('src/game/em_area15_route.h', 'EmArea15RouteHooks', 'r15'),
            ('src/game/em_area03_route.h', 'EmArea03RouteHooks', 'r03'),
            ('src/game/em_area03_arrival.h', 'EmArea03ArrivalHooks', 'a03'),
@@ -58,7 +59,7 @@ SOURCES = (('src/game/em_area22_port.h', 'EmArea22PortHooks', 'm22'),
            ('src/game/em_area07_probe.h', 'EmArea07ProbeHooks', 'p07'))
 # Headers of SOURCES the runtime (em_area01_runtime.c) does not include
 # itself: the generated file includes them before their adapters.
-OWN_INCLUDES = ('src/game/em_area00s2_creature.h',)
+OWN_INCLUDES = ('src/game/em_area00s2_creature.h', 'src/game/em_area14_overlay.h')
 HOOK = re.compile(r'int \(\*w_([0-9A-F]{8}|callback)\)\(void \*ctx(?:, )?([^)]*)\);')
 
 

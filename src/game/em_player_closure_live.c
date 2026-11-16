@@ -3387,6 +3387,13 @@ static int c750_call(void *ctx, EmArea02MiscCall *call)
     return unbound(what);
 }
 
+int em_player_closure_live_0015C7B0(void)
+{
+    if (!L.bound || !L.actor) return -1;
+    FAULT(refresh_all());
+    return x_0015C1F0(NULL, L.actor) < 0 ? -1 : 0;
+}
+
 int em_player_closure_live_0015C750(uint32_t d8106C8, int (*table16)(void *, uint32_t, int16_t *),
                                     void *table_context, uint8_t *d810707)
 {

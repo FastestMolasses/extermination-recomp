@@ -123,6 +123,21 @@ Both modes verify the 16 capture bank bindings and four loader boundary
 cases: valid 2,048 entries, refused 2,049 entries, truncated data, and extra
 data.
 
+Repaired 2026-11-16 (lane P14c; it had failed on main since the later
+areas' scopes were appended). Three stale points, no exporter fault: (1)
+the "pre-extension" baseline leaves out only AREA01's, AREA00's and AREA02's
+scopes, so the later areas' scopes it still holds number their samples 154
+lower than the full export, where AREA01 / AREA00 / AREA02's samples come
+first: the test now compares samples by identity (container, offset, ADPCM
+hash) and the entries with their sample indices mapped (every one of the
+20,298 baseline entries and 1,284 samples then equal); (2) the AREA01 bank
+catalog `assets/area01/sfx/` predated the resolver's key-on fields
+(`pan_level`, `level`, `product`, `slide`, `pan_slide`): rerun
+`python3 tools/export_area01_sfx.py`; (3) the loader boundary is now read
+from `EMSR_MAX_ENTRIES` in em_sfx_bank.c (65,536 and 65,537 entries), and
+the synthetic entries are spliced in after the pan table (header word +20).
+Quick run: PASS, 25,298 entries, 37 s.
+
 The existing AREA11 original quick regression passes with the expanded
 registry: 48 panel dispatch cases, 216 pitch cases, 92 registry/request
 cases and 112 key-ons, all 270 first-level census IDs and 82 recorded

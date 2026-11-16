@@ -15,10 +15,21 @@ path; the rand() tables of k01_01 and k01_03 are not usable, CAP3's note).
 | Beat | Status alone from its card |
 |---|---|
 | k01_01 | runs to its end with no fail-stop, at the recording's position (26.11, -60, -1630.21); vitals differ: health 25 against 55 (hits of 15 at frame ~200 and 20 by frame 300 where the recording took one of 5 at frame 198), infection 100 and D_00810706/07 1 / 1 against 95 and 0 / 0. Its rand() table is not usable, so the hits are not yet attributed |
-| k01_02 | the ledge climb onto [23], item 0x26 used on [28] from the EVENT page, script 0x82D070 with its op14 nodes (0x823EB0, 0x824130), the op09 0x826CB0, the count to 824 (001F6AD0, the group 0x827FB0), the timeline's grey track, the area change to AREA14 and its load, the four 0x823FC0 group owners with their probe 0x825530 (lane P14b); stops at the fail-stop of [0] 0x8238E0 (untranslated) on the first frame there |
-| k01_03 .. k01_05 | not run: they start in AREA14, whose owner [0] 0x8238E0 faults |
+| k01_02 | **passes** (lane P14c): the ledge climb onto [23], item 0x26 used on [28] from the EVENT page, script 0x82D070 with its op14 nodes (0x823EB0, 0x824130), the op09 0x826CB0, the count to 824 (001F6AD0, the group 0x827FB0), the timeline's grey track, the area change to AREA14 and its load, the arrival [5] 0x823760 (script 0x826800, its op09 0x8238C0, the flames' group 0x8265A0 through 001B6660), the camera arm 00230230, the turrets; end block and position equal the recording's |
+| k01_03 | **passes**: the crate and block climbs, the plateau, item 0x19 taken (the item page closes with the equipment change 1 -> 2: 0015C7B0) |
+| k01_04 | **passes**: [0]'s script 0x826C10, the 0x33 face climb, the shelf hang, the 0x39 shuffle, [2]'s script 0x826FC0 (item 0x0F), g[4] and its HEALING use |
+| k01_05 | **passes**: the plateau walk, the box broken by the light melee (its muzzle node 001F5040), g[6] and its use |
 
-Chain `k01` (`python3 tools/mid_route_beats.py k01`) stops where k01_02 does.
+Chain `k01` (`python3 tools/mid_route_beats.py k01`) starts at k01_01, whose
+vitals differ (above).
+
+**The load anchor.** k01_02 crosses the AREA00 sub 2 -> AREA14 load. The host
+drive ends it about 300 frames sooner than the recording's, and the infection
+drain 0015D100 (2 every 240 counts of the player's +0x2FC, counted only in
+play) then ran 300 frames more: health 53 against the recording's 55 at the
+end. `tools/mid_route_beats.py` gives the k01 beats the load anchors the N1
+beats use (`LOAD_BEATS`, EM_START_AT_LOADS: the script clock jumps to the
+recording's row at the fade-in after the load; comparison only).
 
 ## AREA00 sub 2
 
@@ -120,16 +131,33 @@ level: sixteen files, none equal to n0's. It is bound as a later area's sub.
   - 0x825A10: `em_level13_port_00825A10` (0x829840 with the colour as a
     parameter); `test_level13_port_reference` reruns the 0x829840 cases on
     AREA14's overlay (`a14 ov 829840 ...`): 2 cases, 27/27 reachable words.
-- **Missing (fail-stops)**: every other AREA14 overlay owner. The first to
-  run is [0] 0x8238E0 (script 0x826C10 on entering its polygon); then [5]
-  0x823760 (the arrival script 0x826800 that sets flag 0x2C) with its op09
-  0x8238C0, [2] 0x823B30 (0x826FC0 at the climb's top), [4] 0x823E30, [6]
-  0x825FD0 with its op09 0x825C40, [35] / [36] 0x823580. None has a twin in
-  another overlay (the same alignment over every overlay file: best match
-  under 33 % of the words, except 0x8238C0, a two-call wrapper); each needs
-  its own translation and oracle. The boot behaviours AREA14 places are all
-  in a ledger or defined (the checklist in SECOND_HALF_AREAS.md section 4);
-  which of them fault live is not known until the owners run.
+- **AREA14's own owners** (lane P14c, `em_area14_overlay.c`, generated hook
+  block `tools/gen_area14_overlay.py`, bound in `dispatch_second_half`):
+  [35] / [36] 0x823580 (its packet in its frame), [5] 0x823760 with script
+  0x826800's op09 0x8238C0, [0] 0x8238E0 (the 80-byte area copied into its
+  frame for 001B1EA0), [2] 0x823B30 (scripts 0x826FC0 / 0x827340), [4]
+  0x823E30 (NEARMISS C; the oracle runs its original words), [6] 0x825FD0
+  with script 0x828120's op09 0x825C40 (the ride's ease: its float maths
+  are EE-exact, a divide by 2.0 included). None has a twin in another
+  overlay. Two boot functions only AREA14 reaches are in the same module:
+  the camera arm 00230230 (case 0xE of em_camera_area11_specials, bound in
+  em_camera_live) and its area test 00191350 (001B1EA0 over the boot area
+  D_0024A4F0). `test_area14_overlay_reference` (`make
+  test-area14-overlay-reference`, the test_level14_port_reference harness
+  over the k01_02 .. k01_05 recordings with AREA14.BIN resident): 333 cases
+  (the 26 live owner nodes of the four recordings and designed states),
+  every reachable word of the ten functions (00230230's two state-21 arms
+  inside states 10 / 25 are dead, named in the test), the callee inventory,
+  the hook contract, and 001F6B00 = 001F6B30 word for word.
+- **Pieces the live run needed** (lane P14c): 001F6B00 runs as the port's
+  001F6B30 (em_area01_live); 001B6660 in AREA14 reads the overlay data
+  0x826180 .. 0x828480 (em_scene_bindings area_spawn_deferred); the muzzle
+  node 001F5040 binds in AREA14 as in the other later areas; the status
+  page's RESTORE_PLAYER event (equipment status 1 -> 2) runs 0015C7B0 ->
+  the closure's em_player_misc_0015C1F0 (em_player_closure_live_0015C7B0);
+  AREA14's stream cues (export_streams.py: its D_0026EC60 rows, spawn
+  records' music and message table D_00264DD0[0x0F]; the arrival's first
+  read faulted at 00112610, code 8); start points k01_03 .. k01_05.
 
 ## After the merge (in main)
 
@@ -143,6 +171,7 @@ python3 -c "import sys; sys.path.insert(0,'tools'); import export_level_world_te
 for prof, sub in (('00s2', 2), ('14', 0)):
     W.export(prof, sub, None); d, r = S.build(prof, sub); o = P.output(prof, sub) / 'shadow_receivers.emsr'; o.write_bytes(d); o.with_suffix('.json').write_text(json.dumps(r, indent=2) + '\\n'); V.export(prof, sub, None)"
 python3 tools/export_sfx_registry.py                  # scopes (0, 2) and (0x0E, 0)
+python3 tools/export_streams.py                       # lane P14c: AREA14's cues
 ```
 
 (`--profile 00s2` / `14` of the three texture/receiver tools work as well
@@ -161,7 +190,11 @@ the direct calls above, since level_asset_audit.private_assets refuses.)
   `test_level13_port_reference` (the full default level10 run, before the
   hook fix, passed every non-AREA14 check, its contract and reuse checks
   included).
-- `test_area01_sfx_registry` fails here: its pre-extension baseline differs
-  from the registry in 8,581 entries spread over every scope after AREA00's,
-  AREA04 sub 0 included, which the two scopes this lane appends cannot shift.
-  Not run against main (so not proven to fail there too); not changed here.
+- Lane P14c: `test_area14_overlay_reference` (333 cases, every reachable
+  word but the 32 dead ones of 00230230's state-21 arms); the beats k01_02 ..
+  k01_05 with `--single` and a19d_00; `test-camera-area11-specials-reference`
+  and `test-area01-stream-export` (18 extents) unchanged in result.
+- `test_area01_sfx_registry` failed (lane P14 noted it): a stale test and a
+  stale AREA01 bank export, not an exporter fault; repaired by lane P14c
+  (LEVEL2_AUDIO.md "Repaired 2026-11-16"; after the merge, main needs
+  `python3 tools/export_area01_sfx.py`).
