@@ -194,7 +194,7 @@ the direct calls above, since level_asset_audit.private_assets refuses.)
   word but the 32 dead ones of 00230230's state-21 arms); the beats k01_02 ..
   k01_05 with `--single` and a19d_00; `test-camera-area11-specials-reference`
   and `test-area01-stream-export` (18 extents) unchanged in result.
-- `test_area01_sfx_registry` fails here: its pre-extension baseline differs
-  from the registry in 8,581 entries spread over every scope after AREA00's,
-  AREA04 sub 0 included, which the two scopes this lane appends cannot shift.
-  Not run against main (so not proven to fail there too); not changed here.
+- `test_area01_sfx_registry` failed (lane P14 noted it): a stale test and a
+  stale AREA01 bank export, not an exporter fault; repaired by lane P14c
+  (LEVEL2_AUDIO.md "Repaired 2026-11-16"; after the merge, main needs
+  `python3 tools/export_area01_sfx.py`).
