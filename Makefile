@@ -7,6 +7,14 @@
 
 UNAME := $(shell uname)
 
+# Quiet output: every test-* target (and the builds it triggers) runs each recipe line through
+# tools/quiet.py: one PASS/FAIL line per check, the first failing detail on a failure, the
+# full output in build/quiet/<name>.log. EM_VERBOSE=1 (or V=1) prints everything as before.
+# The exit codes and the checks are untouched.
+ifneq ($(EM_VERBOSE)$(V),1)
+test-%: SHELL = $(CURDIR)/tools/quiet_shell
+endif
+
 BIN     := build/extermination
 # -ffp-contract=off: no fused multiply-add anywhere (docs/PERFORMANCE.md
 # "Progress", P1). Each a * b + c rounds the product and the sum separately,
@@ -477,6 +485,10 @@ test-spawn-place-reference:
 .PHONY: test-manager-8257a0-reference
 test-manager-8257a0-reference:
 	python3 tools/test_manager_8257a0_reference.py
+
+.PHONY: test-newgame-control
+test-newgame-control: $(BIN)
+	EM_STARTUP_TEST=newgame-control $(BIN)
 
 .PHONY: test-area-load-reference
 test-area-load-reference: $(BIN)
