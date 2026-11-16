@@ -485,7 +485,8 @@ recording-derived and stay in the ignored `build/`.
   the recordings).
 - **Compatible** (every other `EM_*` variable the source reads;
   tools/test_start_at.py checks that each is refused or named here): the
-  host's `EM_HEADLESS`, `EM_HEADLESS_RASTER`, `EM_UNCAPPED`, `EM_MUTE`,
+  host's `EM_HEADLESS`, `EM_HEADLESS_RASTER`, `EM_UNCAPPED`, `EM_MUTE`, `EM_NO_RENDER` (headless runs
+  that read no picture skip the draws, em_norender.h), `EM_STATE_TRACE` (a per-frame state digest file),
   `EM_INPUT_TEST` (prints the pad's changes), the disc-drive timing `EM_PS2_DRIVE_REPLAY` and
   `EM_IOP_TICK_PHASE`, the GS head's `EM_GS_BANDS`, `EM_GS_EARLY_OPS`,
   `EM_GS_EARLY_PARSE`, `EM_GS_LIST`, `EM_GS_SPEC`, `EM_GS_SPEC_CHECK`,

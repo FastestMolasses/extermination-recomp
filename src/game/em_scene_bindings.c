@@ -6335,3 +6335,73 @@ int em_scene_bindings_node_commit(const uint8_t *image)
     memcpy(a->rot, image + 0xC0, 16);
     return area01_rebind(NULL, a, a->callback);
 }
+
+/* ------------------------------------------- EM_STATE_TRACE
+ *
+ * One line per frame step: the frame counter, then FNV-1a digests of the
+ * render-context storage (every writable view: the packet arena, the
+ * context, the GS blocks, the skin records, the scratchpad copies), the
+ * scene state, the actor pool's record images and the AREA01 actor view's
+ * records (original layout), the rand() state, the player and the camera.
+ * A digest names state the game reads; it never includes anything a draw
+ * module keeps for the picture. */
+static FILE *s_state_trace;
+
+static uint64_t st_fnv(uint64_t h, const void *data, size_t n)
+{
+    const uint8_t *p = data;
+    for (size_t i = 0; i < n; ++i) h = (h ^ p[i]) * 0x100000001B3ull;
+    return h;
+}
+
+static void state_trace_step(void)
+{
+    const uint64_t basis = 0xCBF29CE484222325ull;
+    uint64_t rcl = basis, scene = basis, pool = basis, view = basis, play = basis;
+    uint32_t address[EM_RCL_VIEWS_MAX], size[EM_RCL_VIEWS_MAX];
+    uint8_t *bytes[EM_RCL_VIEWS_MAX];
+    int writable[EM_RCL_VIEWS_MAX];
+    const unsigned nv = em_rcl_views(address, size, bytes, writable, EM_RCL_VIEWS_MAX);
+    for (unsigned i = 0; i < nv; ++i) {
+        if (!writable[i] || !bytes[i]) continue;
+        rcl = st_fnv(rcl, &address[i], sizeof address[i]);
+        rcl = st_fnv(rcl, bytes[i], size[i]);
+    }
+    scene = st_fnv(scene, &s_state, sizeof s_state);
+    for (uint32_t i = 0; i < EM_ACTOR_POOL_CAPACITY; ++i) {
+        uint8_t raw[EM_ACTOR_RECORD_SIZE];
+        em_actor_pool_record_image(&s_pool, &s_pool.records[i], raw);
+        pool = st_fnv(pool, raw, sizeof raw);
+        if (s_area01_live.bound) {
+            uint8_t rec[EM_ACTOR_RECORD_SIZE];
+            const int rc = em_area01_actor_view_snapshot(&s_area01_live.actors,
+                                                         EM_ACTOR_POOL_BASE + i * EM_ACTOR_RECORD_SIZE,
+                                                         EM_ACTOR_RECORD_SIZE, rec);
+            view = st_fnv(view, &rc, sizeof rc);
+            if (rc == 0) view = st_fnv(view, rec, sizeof rec);
+        }
+    }
+    play = st_fnv(play, g.pos, sizeof g.pos);
+    play = st_fnv(play, &g.yaw, sizeof g.yaw);
+    play = st_fnv(play, g.cam.eye, sizeof g.cam.eye);
+    play = st_fnv(play, g.cam.tgt, sizeof g.cam.tgt);
+    play = st_fnv(play, &g.cam.yaw, sizeof g.cam.yaw);
+    play = st_fnv(play, &g.frame_no, sizeof g.frame_no);
+    fprintf(s_state_trace, "%u %016llx %016llx %016llx %016llx %016llx %u\n", (unsigned)em_frame_counter(),
+            (unsigned long long)rcl, (unsigned long long)scene, (unsigned long long)pool,
+            (unsigned long long)view, (unsigned long long)play, (unsigned)em_random_peek());
+}
+
+int em_scene_bindings_state_trace_install(void)
+{
+    const char *path = getenv("EM_STATE_TRACE");
+    if (!path || !path[0]) return 0;
+    s_state_trace = fopen(path, "w");
+    if (!s_state_trace) {
+        fprintf(stderr, "em_scene: EM_STATE_TRACE=%s cannot be opened\n", path);
+        return -1;
+    }
+    setvbuf(s_state_trace, NULL, _IOLBF, 0);   /* a run stopped by its driver keeps every line */
+    em_frame_set_after_step(state_trace_step);
+    return 0;
+}

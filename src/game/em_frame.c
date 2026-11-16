@@ -659,6 +659,9 @@ movie_phase:
 static int (*s_timing_probe)(void *ctx, EmFrameGsCost *out);
 static void *s_timing_probe_ctx;
 
+static void (*s_after_step)(void);
+void em_frame_set_after_step(void (*fn)(void)) { s_after_step = fn; }
+
 void em_frame_set_timing_probe(int (*probe)(void *ctx, EmFrameGsCost *out), void *ctx)
 {
     s_timing_probe = probe;
@@ -712,6 +715,7 @@ void em_frame_run(void)
     while (!s_frame.quit) {
         const int64_t w0 = tf ? timing_ns(CLOCK_MONOTONIC) : 0, c0 = tf ? timing_ns(CLOCK_THREAD_CPUTIME_ID) : 0;
         em_frame_step();
+        if (s_after_step) s_after_step();
         if (tf) {
             const int64_t dw = timing_ns(CLOCK_MONOTONIC) - w0, dc = timing_ns(CLOCK_THREAD_CPUTIME_ID) - c0;
             /* The Original profile's GS frame, when this step ran one: its

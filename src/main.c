@@ -411,6 +411,7 @@ int main(void)
     /* EM_RAND_TRACE stamps each rand() call with the main-loop counter
      * (test instrumentation, tools/rand_order.py). */
     em_random_trace_clock(em_frame_counter);
+    if (em_scene_bindings_state_trace_install() != 0) return 1;
     /* 001AAE40's start-up: the SNDN2DRV.IRX bring-up's IOP buffers and the
      * stream files' sectors, then 001F9820 (the stream lanes' initial
      * state; em_stream_live, WP-8b). Without the stream export the game

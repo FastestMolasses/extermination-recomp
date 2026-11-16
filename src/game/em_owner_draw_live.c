@@ -1,5 +1,6 @@
 /* em_owner_draw_live.c - see em_owner_draw_live.h and docs/OWNER_DRAW.md. */
 #include "game/em_owner_draw_live.h"
+#include "game/em_norender.h"
 #include "game/em_world_textures_live.h"
 
 #include <stdio.h>
@@ -1444,7 +1445,11 @@ static int draw_units(EmGfx *gfx, uint32_t end)
     }
     if (end > L.unit_count) end = L.unit_count;
     int rc = 0;
-    if (L.drawn < end) {
+    if (L.drawn < end && em_norender()) {
+        /* EM_NO_RENDER: the units' kernels and the GS model's draw are the
+         * picture only; the bookkeeping is the draw's own. */
+        L.drawn = end;
+    } else if (L.drawn < end) {
         if (!gfx) rc = report(0, "no graphics device");
         else if (load_textures(gfx) < 0) rc = -1;
         for (uint32_t i = L.drawn; !rc && i < end; ++i)

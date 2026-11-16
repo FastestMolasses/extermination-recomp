@@ -53,6 +53,10 @@ OUT = ROOT / 'build/mid_route'
 # The host switches of a run: headless, unpaced, silent; tools/watch_recording.py
 # replaces them to show the same run in a window.
 HOST = dict(EM_HEADLESS='1', EM_UNCAPPED='1', EM_MUTE='1')
+# A beat's checks read no picture: skip the draws (EM_NO_RENDER, docs/LAUNCHER_OPTIONS.md; proof:
+# tools/test_norender_equal.py). EM_MID_ROUTE_RENDER=1 draws as before.
+if os.environ.get('EM_MID_ROUTE_RENDER') != '1':
+    HOST['EM_NO_RENDER'] = '1'
 # Seconds without a new pad frame line before a run gives up (None: the timeout
 # alone). A player who died stops the script's clock.
 STALL = None

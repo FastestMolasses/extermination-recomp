@@ -133,6 +133,9 @@ int em_shadow_live_owner_001F8D30(const uint32_t owner[4], const uint32_t point[
  * 0015BF90 fans' plus the other owners' 001F9100 fans (sum of n - 2), else
  * the fault latches. 0, or -1. */
 int em_shadow_live_page_drew(uint32_t decal_triangles);
+/* EM_NO_RENDER: the page was not walked (em_norender.h); consumes the frame's fans and owner triangles as
+ * em_shadow_live_page_drew does after a match. */
+int em_shadow_live_page_skipped(void);
 
 /* The level smoke's view of the last 0015C160 shadow call (the tick log's
  * "shadow"): its frame counter, route, the 001DA6A0 result (1 drawn, 0

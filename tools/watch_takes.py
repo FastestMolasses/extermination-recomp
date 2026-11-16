@@ -23,7 +23,8 @@ Usage (native arm64 macOS; build/extermination first, native):
 
   python3 tools/watch_takes.py                 # the chain from run1, in a window
   python3 tools/watch_takes.py test1           # another chain
-  python3 tools/watch_takes.py --check test1   # no window, full speed, comparison only
+  python3 tools/watch_takes.py --check test1   # no window, full speed, comparison only (EM_NO_RENDER=1;
+                                               # --render draws the picture as well)
   python3 tools/watch_takes.py --root ../Extermination/build/guided_play g01_title_newgame
                                                # Claude's guided chain (docs FULL_RUN_PLAN 8.3)
 
@@ -224,6 +225,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('take', nargs='?', default='run1')
     parser.add_argument('--check', action='store_true', help='no window, full speed, silent')
+    parser.add_argument('--render', action='store_true', help='with --check: draw the picture too (default: EM_NO_RENDER=1, state only)')
     parser.add_argument('--root', help='the take folder (default: the user\'s own takes)')
     parser.add_argument('--port', help='run this port checkout\'s build (default: this one)')
     args = parser.parse_args()
@@ -251,6 +253,8 @@ def main():
     env.update(EM_TEST_CARD_FRESH=str(fresh_until(names)))
     if args.check:
         env.update(EM_HEADLESS='1', EM_UNCAPPED='1', EM_MUTE='1')
+        if not args.render:
+            env.update(EM_NO_RENDER='1')    # a comparison reads no picture (docs/LAUNCHER_OPTIONS.md)
     with (out / 'run.log').open('w') as text:
         result = subprocess.run([str(BIN)], cwd=port, env=env, stdout=text, stderr=subprocess.STDOUT)
     faulted = False
