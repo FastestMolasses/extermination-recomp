@@ -1,5 +1,6 @@
 /* em_background_live.c - see em_background_live.h. */
 #include "game/em_background_live.h"
+#include "game/em_norender.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -47,6 +48,7 @@ static uint32_t fnv(uint32_t h, uint32_t w)
 int em_background_live_draw(EmGfx *gfx)
 {
     if (S.fault) return -1;
+    if (em_norender()) return 0;   /* a pure read of the list: the grid's draw is the picture only */
     const uint8_t *head = em_rcl_bytes(EM_RCL_CONTEXT + 0x1D8u, 4);
     if (!head) return fail(0x001E0DF0u, "the render context has no +0x1D8 word");
     const uint32_t start = (uint32_t)head[0] | (uint32_t)head[1] << 8 | (uint32_t)head[2] << 16 |

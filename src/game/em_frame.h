@@ -213,6 +213,9 @@ typedef struct EmFrameGsCost {
     double display_wait_ns, field_wait_ns;
 } EmFrameGsCost;
 void em_frame_set_timing_probe(int (*probe)(void *ctx, EmFrameGsCost *out), void *ctx);
+/* A callback run after every em_frame_step of em_frame_run (EM_STATE_TRACE,
+ * em_scene_bindings_state_trace_install); NULL removes it. */
+void em_frame_set_after_step(void (*fn)(void));
 
 void em_frame_set_step_b(int (*service)(void *context, int32_t index), void *context);
 /* The bytes of D_00810E80 (a halfword, 0 or 1; step W flips it), for the

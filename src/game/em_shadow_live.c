@@ -1,6 +1,7 @@
 /* em_shadow_live.c - the player's drop shadow, live (census L29 + L29b).
  * See em_shadow_live.h and docs/SHADOW_ORIGINAL.md "Binding". */
 #include "game/em_shadow_live.h"
+#include "game/em_norender.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -765,6 +766,10 @@ int em_shadow_live_actor_001DA6A0(uint32_t record, const uint8_t *bytes, uint32_
 
 static int flush_pass(EmGfx *gfx, const float viewproj[16], Pass *p)
 {
+    if (em_norender()) {   /* the passes' draws are the picture only; the pass is consumed as when drawn */
+        p->cmd_count = 0;
+        return 0;
+    }
     for (u32 i = 0; i < p->cmd_count; ++i) {
         const int index = p->cmd[i].index;
         int r = -1;
@@ -848,7 +853,7 @@ int em_shadow_live_flush(EmGfx *gfx, const float viewproj[16])
     return flush_calls(gfx, viewproj, 0);
 }
 
-int em_shadow_live_page_drew(uint32_t decal_triangles)
+static int page_drew(uint32_t decal_triangles, int check)
 {
     if (S.fault) return -1;
     u32 want = 0;
@@ -857,7 +862,7 @@ int em_shadow_live_page_drew(uint32_t decal_triangles)
     const u32 owners = S.owner_frame == em_frame_counter() ? S.owner_triangles : 0u;
     want += owners;
     S.owner_triangles = 0;
-    if (decal_triangles != want)
+    if (check && decal_triangles != want)
         return fail(0x001CE300u, "the chain page did not draw exactly the decal's triangles");
     if (want) {
         S.fan_count = 0;
@@ -866,6 +871,13 @@ int em_shadow_live_page_drew(uint32_t decal_triangles)
     }
     return 0;
 }
+
+int em_shadow_live_page_drew(uint32_t decal_triangles) { return page_drew(decal_triangles, 1); }
+
+/* EM_NO_RENDER: the page was not walked, so its decal count is unknown and
+ * not compared; the consumption of the frame's fans and owner triangles is
+ * the same as after a draw that matched. */
+int em_shadow_live_page_skipped(void) { return page_drew(0, 0); }
 
 /* 001CE300 for an effect node (001F77B0, the 0x80000043 death decal): the
  * kernel over the render context's packet chain, page D_007635C0 slot 0,

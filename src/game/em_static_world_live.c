@@ -1,6 +1,7 @@
 /* em_static_world_live.c - the static world drawn live from its original
  * packets (em_static_world_live.h, docs/STATIC_WORLD.md section 7). */
 #include "game/em_static_world_live.h"
+#include "game/em_norender.h"
 #include "game/em_diag.h"
 
 #include <stdio.h>
@@ -93,6 +94,7 @@ int em_static_world_live_draw(EmGfx *gfx)
     if (S.fault) return -1;
     uint32_t start, end;
     if (em_rcl_static_run(&start, &end) < 0) return 0;   /* no 001C1D00 this frame */
+    if (em_norender()) return 0;   /* the run is consumed above; its draw is the picture only */
     const int ch3 = background_called();
     if (ch3 < 0) return fail(0x001D2300u, "the step V gate faulted");
     if (end < start || end - start > RUN_MAX) return fail(start, "the run is larger than RUN_MAX");

@@ -1,6 +1,7 @@
 /* em_chain_page_live.c - the chain page drawn live at the frame close
  * (em_chain_page_live.h, docs/CHAIN_PAGE.md section 7). */
 #include "game/em_chain_page_live.h"
+#include "game/em_norender.h"
 #include "game/em_area11_roger.h"
 #include "game/em_aim_fire_tables.h"
 #include "game/em_aim_fire_world_live.h"
@@ -311,6 +312,7 @@ int em_chain_page_live_draw(EmGfx *gfx)
     if (S.fault) return -1;
     uint32_t start, targets[EM_CHAIN_PAGE_PASSES_MAX], npass;
     if (em_rcl_page(&start, targets, &npass) < 0) return 0;     /* no kick since the last draw */
+    if (em_norender()) return em_shadow_live_bound() ? em_shadow_live_page_skipped() : 0;   /* the walk is the picture only */
     if (!gfx) return fail(0x001CB800u, "no frame to draw the page in");
     if (em_chain_page_live_textures(gfx) < 0) return fail(0x001CB800u, "no page textures");
     /* The frame's slot-0xFFF CALLs (CHAIN_PAGE.md section 6.2: 001DDE10's

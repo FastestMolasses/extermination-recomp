@@ -1635,6 +1635,18 @@ test-title-load-game: $(BIN)
 # unchanged; the refusals (unknown name, other switches, missing, stale or
 # changed cards). Needs start-saves. EM_TEST_FULL=1 also reports how far
 # area00 and area01-revisit get (about 11 s).
+# EM_NO_RENDER=1 changes no game state: the newgame run and one beat, switch off and on,
+# per-frame state digests and logs equal (tools/test_norender_equal.py; the take test1 and more
+# beats behind EM_TEST_FULL=1).
+.PHONY: test-norender-equal
+test-norender-equal: $(BIN)
+	python3 tools/test_norender_equal.py newgame
+	python3 tools/test_norender_equal.py beat a19d_00
+ifdef EM_TEST_FULL
+	python3 tools/test_norender_equal.py beat k01_02 a01u_00
+	python3 tools/test_norender_equal.py take test1
+endif
+
 .PHONY: test-start-at
 test-start-at: $(BIN)
 	python3 tools/test_start_at.py

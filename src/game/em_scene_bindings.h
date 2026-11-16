@@ -159,6 +159,12 @@ int em_scene_bindings_module_loader_check(void);
 void em_scene_bindings_module_loader_report(FILE *out);
 /* The number of live nodes in the actor pool (D_00275BC0 list length) when
  * the pool holds the AREA11 roster, else -1 (test instrumentation). */
+/* EM_STATE_TRACE=<file>: after every frame step, one line with FNV-1a digests of the
+ * game's state (render-context storage views, scene state, actor pool and AREA01 actor
+ * view records, rand state, player and camera): the proof input of
+ * tools/test_norender_equal.py. Test instrumentation, never changes behaviour.
+ * 0, or -1 (the file cannot be opened). Inert when the variable is unset. */
+int em_scene_bindings_state_trace_install(void);
 int em_scene_bindings_pool_census(void);
 /* The number of live AREA11 pool nodes with this original callback, or -1
  * without a roster pool (test instrumentation, S12b). */
