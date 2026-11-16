@@ -186,9 +186,31 @@ endif
 all: $(BIN)
 
 ifneq ($(UNAME),Linux)
+ifeq ($(INC),1)
+# INC=1: one object per source with its own header dependencies (-MMD), so an
+# edit recompiles only what it touches and `make -j8 INC=1 all` compiles in
+# parallel (decomp docs/PIPELINE_PERF.md: the one-command build below takes
+# about 73 s on one core for every edit; INC=1 about 14 s clean at -j8 and
+# under a second for one edited file). The objects link in SRC order with the
+# same flags: the same executable byte for byte. A private lane build:
+# make -j8 INC=1 BIN=build/<lane>/extermination MAC_OBJ_DIR=build/<lane>/obj all
+MAC_OBJ_DIR ?= build/mac-obj
+MAC_OBJ := $(SRC:%=$(MAC_OBJ_DIR)/%.o)
+$(BIN): $(MAC_OBJ)
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) $(MAC_OBJ) $(LDFLAGS) -o $@
+$(MAC_OBJ_DIR)/%.c.o: %.c Makefile
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+$(MAC_OBJ_DIR)/%.m.o: %.m Makefile
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+-include $(MAC_OBJ:.o=.d)
+else
 $(BIN): $(SRC) $(wildcard src/*.h src/game/*.h src/game/*.inc)
 	@mkdir -p build
 	$(CC) $(CFLAGS) $(SRC) $(LDFLAGS) -o $(BIN)
+endif
 endif
 
 run: $(BIN)
