@@ -81,7 +81,7 @@ ATTACHMENT_IDS = tuple(range(0x5DC, 0x5E2))
 # (export_area13_sfx.target_binding), each its captures' binding; resolved
 # after AREA04, so every earlier scope keeps its samples and indices.
 MID_SCOPES = ((0x16, 0), (6, 0), (0x0D, 0), (0x0F, 0), (0x0F, 1), (3, 0), (8, 0), (8, 2), (8, 3), (7, 0), (7, 2), (7, 3),
-              (3, 1), (3, 2), (4, 1), (0, 2), (0x0E, 0), (0x11, 0), (0x10, 0), (0x10, 1), (6, 1), (1, 1), (2, 2))
+              (3, 1), (3, 2), (4, 1), (0, 2), (0x0E, 0), (0x11, 0), (0x10, 0), (0x10, 1), (6, 1), (1, 1), (2, 2), (0x12, 0))
 MID_IDS = AREA00_IDS
 # AREA19 sub 0 and sub 1 (lane J1): the capture-checked bindings
 # export_area19_sfx.py / export_area19s1_sfx.py recorded in each sub's
@@ -369,6 +369,10 @@ def mid_bindings():
         import export_area02s2_assets as A2S2
         A2S2.install()
         result.update(A2S2.SX.target_binding('area02'))
+        # AREA18 sub 0 (the guided run's g41 arrival; export_second_half_common), last: every earlier
+        # scope keeps its samples and indices.
+        SH.install('area18', 0)
+        result.update(SH.SX.target_binding('area18'))
         assert sorted(result) == sorted(MID_SCOPES), sorted(result)
         return result
     finally:

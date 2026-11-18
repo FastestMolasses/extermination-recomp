@@ -681,6 +681,10 @@ python3 tools/guided_chain.py --list
 python3 tools/guided_chain.py g17 --steer g45      # card g45: g45 .. g58 (AREA14 -> AREA17 -> AREA11 -> ...)
 python3 tools/guided_chain.py g11                  # card g49 (g48's end, AREA11 entry 3): g49 .. g58
 python3 tools/guided_chain.py g16                  # card g59: g59 .. g68 (AREA01 sub 1 -> AREA06 sub 1 -> AREA16 -> AREA06 -> AREA01)
+python3 tools/capture_from_take.py --set guided-20261117/s87/route_g18 \
+    g39_area14_face g40_area14_booster g41_area14_area18 g42_area18_area14 g43_area14_area18 g44_area18_area14
+python3 tools/build_start_saves.py g40 g41 g42 g43 g44      # cards (route_g18)
+python3 tools/guided_chain.py g18 --steer g41      # card g41 (AREA14): g41 .. g58 (AREA18 twice, then g45 into AREA17 ...)
 python3 tools/guided_chain.py g11 --until g50      # stop after a take
 ```
 
@@ -711,6 +715,18 @@ real load: g49 4778 / 4841 compared rows on the row, g50 1037 / 1037, g51
 original's hits. Assets it needs: AREA01 sub 1's and AREA02 sub 2's exports
 (docs/AREA01_ASSETS.md, docs/AREA02_ASSETS.md, their sub sections), the
 module packs and the sfx registry re-run after them.
+Chain g18 (lane PORT-A18A14, AREA14_PORT.md "Lane PORT-A18A14") starts one
+area earlier than g17: card g41 (g40's end, AREA14 in play), the cargo ramp
+into AREA18 (a real area change), item 0x28, back to AREA14 entry 1, the
+fork-back into AREA18, back again, then g45 into AREA17 from a real area
+change instead of card g45, and on as g17. Its takes come from three route
+sets (guided_chain.take_route: G18_TAKES route_g18, G17_TAKES route_g17,
+G49_TAKES route_g49). At frame 0 EM_START_AT_RESTORE also restores
+AREA14's beasts 00141D20 (em_scene_restore_bugs' kinds, AREA14 only), and
+guided_chain.RESTORE_AT_TAKES adds a second entry at g42's row 0 (g41's end
+image): the card stretch g41 is steered and takes a hit the original did
+not, and the original's vitals at g42 keep the walk on the row (health
+changes the gait). Both comparison only.
 A row is sampled at a frame's start (lane PORT-A16-G62): the frontend's
 frame-end hook (em_start_at_frame_end) keeps the rand() word, position and
 heading, the next hook traces them and re-seeds the row's word with the

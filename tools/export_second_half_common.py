@@ -71,6 +71,7 @@ K01 = DECOMP / 'build/fork_refs/levels-recordings-20261102-1/s87/route_k01'
 # take's end.p2s entries; the take's end is the next take's start)
 G17 = DECOMP / 'build/fork_refs/guided-20261117/s87/route_g17'
 G16 = DECOMP / 'build/fork_refs/guided-20261117/s87/route_g16'
+G18 = DECOMP / 'build/fork_refs/guided-20261117/s87/route_g18'
 
 # SHA-256 of the user's extract/OVERLAY files (hashes, not disc data)
 AREA14_SHA256 = '43f7e9bbb9fb18bf398f197689231ec1b91ff5ece7e6eb05abbbba98d86690f7'
@@ -118,7 +119,11 @@ SUBS = {
     # the load is g45's end (the area bytes already 0x11 entry 0, AREA14's overlay still resident)
     ('area17', 0): dict(paths=tuple(G17 / b for b in ('g46_area17_ramp', 'g47_area17_roger')),
                         previous=G17 / 'g45_area14_area17', dynamic=True),
-    ('area18', 0): dict(paths=None, previous=None, dynamic=False),
+    # AREA18 sub 0 (lane PORT-A18A14): the guided takes that end in AREA18 (g41 and g43: the
+    # arrival by AREA14's cargo ramp, 00190F20, entry 0, with AREA18's overlay resident); the
+    # capture before the first load is g40's end (AREA14 in play)
+    ('area18', 0): dict(paths=tuple(G18 / b for b in ('g41_area14_area18',)),
+                        previous=G18 / 'g40_area14_booster', dynamic=False),
     ('area20', 0): dict(paths=None, previous=None, dynamic=False),
     ('area21', 0): dict(paths=None, previous=None, dynamic=True),
 }
@@ -160,6 +165,11 @@ CREATURES = {}            # target -> the modelled 001A2370 behaviour (LV.CREATU
 # AREA14's 0x823FC0 (func_overlay_AREA14_00823F80.c, byte-identical C) passes
 # REC_B + 0x90, REC_B = *(D_00275B40 + 0xC) with D_00275B40 = node + 0x110 while
 # its behaviour runs: *(node + 0x11C) + 0x90, export_area13_level's rule.
+# AREA18's load relocates no id 0x41 (g41: ids 0x42 .. 0x46 and the module ids, no 0x41):
+# it has no area message bank, and D_0028A594 keeps AREA14's (g40's) word
+NO_AREA_BANK = {'area18'}
+# AREA18's captures are its arrivals (export_area13_level.UNDRAWN)
+LV.UNDRAWN.add('area18')
 CREATURES['area14'] = 0x823FC0
 # AREA17's 0x825560 (func_overlay_AREA17_00825520.c, NEARMISS: the call is the C's
 # func_001A2370(self, self + 0xD0) in its state-1 arm, which the original's words make too
@@ -416,6 +426,11 @@ def install(target, sub, tree=None, need_captures=True):
     A13.capture_paths = lambda: list(v['paths'] or ())
     A13.configure(t)
     LV.PREVIOUS[target] = v['previous']
+    if target in NO_AREA_BANK and v['previous'] is not None:
+        # no id 0x41 in the load's list: no area message bank; *D_0028A594 keeps the previous
+        # load's word (export_area13_tables.NO_AREA_BANK, as AREA02 sub 2)
+        TB.NO_AREA_BANK[target] = LV.previous_word(target, LV.D_0028A594)
+        TB.GLOBAL_ONLY_MESSAGES.add(target)     # and D_00264DD0[0x13] is 0: no area table (AREA22's case)
     LV.CREATURES[target] = None if target in MATRIX_RULES else CREATURES.get(target)
     LV.FLAG_OWNERS[target] = None
     LV.flag_calls = FLAG_RULES.get(target, no_flag_calls)

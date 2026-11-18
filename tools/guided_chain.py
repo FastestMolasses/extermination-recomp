@@ -44,6 +44,7 @@ Usage (native arm64 macOS; build/extermination and the cards g45 / g49 / g59 fir
 
   python3 tools/guided_chain.py --list
   python3 tools/guided_chain.py g17            # g45 -> g46 -> g47 -> g48 from card g45 (AREA14)
+  python3 tools/guided_chain.py g18 --steer g41   # card g41 (AREA14) -> AREA18 -> AREA14 -> ... -> g45 -> AREA17 ...
   python3 tools/guided_chain.py g16            # g59 -> g60 -> ... from card g59 (AREA01 sub 1)
   python3 tools/guided_chain.py g16 --until g62   # stop the chain after g62
   python3 tools/guided_chain.py g17 --steer    # steer where the player falls behind the path
@@ -78,8 +79,22 @@ G49_TAKES = ('g49_area11_area01', 'g50_area01_area02', 'g51_area02_area04', 'g52
              'g57_area19_area04', 'g58_area04_area01')
 
 
+# Takes before the AREA17 ones (lane PORT-A18A14: tools/capture_from_take.py --set ... g39 .. g44):
+# AREA14 -> AREA18 -> AREA14 -> AREA18 -> AREA14.
+G18_ROUTE = 'guided-20261117/s87/route_g18'
+G18_TAKES = ('g40_area14_booster', 'g41_area14_area18', 'g42_area18_area14', 'g43_area14_area18',
+             'g44_area18_area14')
+G17_TAKES = ('g45_area14_area17', 'g46_area17_ramp', 'g47_area17_roger', 'g48_area17_cable')
+
+
 def take_route(route, take):
-    return G49_ROUTE if take in G49_TAKES else route
+    if take in G49_TAKES:
+        return G49_ROUTE
+    if take in G18_TAKES:
+        return G18_ROUTE
+    if take in G17_TAKES:
+        return mrb.G17_ROUTE
+    return route
 
 
 # chain: (start card, route set, takes in order). The card is the first take's source state.
@@ -92,6 +107,10 @@ CHAINS = {
                                    'g51_area02_area04', 'g52_area04_area03', 'g53_area03_tag7',
                                    'g54_area03_tag10', 'g55_area03_area19', 'g56_area15_cindy',
                                    'g57_area19_area04', 'g58_area04_area01')),
+    # AREA14 (g40's end, in play) -> the cargo ramp (00190F20): AREA18 entry 0 (a real area change)
+    # -> item 0x28 -> AREA14 entry 1 -> the fork-back into AREA18 again -> AREA14 entry 1 -> [6]'s
+    # Use -> AREA17 entry 0 (g45 from a real area change, not the card g45) -> ... as g17
+    'g18': ('g41', G18_ROUTE, G18_TAKES[1:] + G17_TAKES + G49_TAKES),
     # AREA11 entry 3 in play after the cable ride's scene (g48's end; the scene itself, script
     # 0x828C70, is not ported yet: the g17 chain stops there) -> AREA01 sub 1 -> AREA02 sub 1 -> ...
     'g11': ('g49', G49_ROUTE, G49_TAKES),
@@ -106,11 +125,18 @@ CHAINS = {
 
 
 # The behaviours the trace lists per frame (EM_START_AT_TRACE_KINDS): the creatures that roam.
-KINDS = {'g17': '141d20,133e30', 'g16': '12a5d0,1c1030'}
+KINDS = {'g17': '141d20,133e30', 'g16': '12a5d0,1c1030', 'g18': '141d20,147390,133e30'}
 # Chains whose card rebuilds records the recording had mid-cycle: at frame 0 they take the source
 # state's bytes (EM_START_AT_RESTORE, comparison only). g11: AREA11's security gun (its patrol
 # timers ran through the cable ride's scene) and the fan pair's spin (em_area11_bindings_restore_owners).
-RESTORE_AT_START = {'g11'}
+RESTORE_AT_START = {'g11', 'g18'}
+# Takes at whose row 0 the chain takes the vitals (health, infection) and the restore kinds of
+# em_scene_restore_bugs again from the previous take's end image (EM_START_AT_RESTORE's later
+# entries, comparison only). g18: the card stretch g41 is steered (the card restarts AREA14's beasts
+# and the camera; its stick heading leaves the rows at row 6) and takes a hit the original did not
+# (row 1488, 20 health); from g42's row 0 (AREA18 after a real area change) the chain plays the pad
+# alone, and the original's vitals there keep the walk (health changes the gait) on the row.
+RESTORE_AT_TAKES = {'g18': ('g42_area18_area14',)}
 
 
 def load(route, takes):
@@ -184,7 +210,8 @@ def row0_fade(row):
     return fade[4] if fade[0] else 0
 
 
-def run(name, card, rows, files, timeout, kinds, extra=(), steer=False, source_ram=None, restore=False):
+def run(name, card, rows, files, timeout, kinds, extra=(), steer=False, source_ram=None, restore=False,
+        restore_more=()):
     pad, rands, clocks, loads, marks, _ = files
     out = OUT / name
     trace = out / 'trace.jsonl'
@@ -200,7 +227,8 @@ def run(name, card, rows, files, timeout, kinds, extra=(), steer=False, source_r
     if kinds:
         env['EM_START_AT_TRACE_KINDS'] = kinds
     if restore and source_ram and source_ram.exists():
-        env['EM_START_AT_RESTORE'] = f"{source_ram}:0:{rows[0].get('clock', 0):x}"
+        env['EM_START_AT_RESTORE'] = ','.join([f"{source_ram}:0:{rows[0].get('clock', 0):x}"] +
+                                              [f"{ram}:{f}:{rows[f].get('clock', 0):x}" for ram, f in restore_more])
     if source_ram and source_ram.exists():
         # The status pages' background D_002655A0 as the card's source state holds it (its pulse
         # timers draw rand(); a card started from boot holds the ELF's .data image instead).
@@ -364,9 +392,15 @@ def main(argv):
         timeout = float(os.environ.get('EM_GUIDED_CHAIN_TIMEOUT', '1800'))
         source = json.loads((refs.capture(route) / takes[0] / 'trace.json').read_text()).get('source_state')
         source_ram = Path(source).parent / 'eeMemory.bin' if source else None
+        more = []
+        for take in RESTORE_AT_TAKES.get(args.chain, ()):
+            if take in takes:
+                k = takes.index(take)
+                state = json.loads((refs.capture(take_route(route, take)) / take / 'trace.json').read_text())
+                more.append((Path(state['source_state']).parent / 'eeMemory.bin', starts[k]))
         seconds, faults, trace, log_path = run(args.chain, card, rows, files, timeout,
                                                args.kinds or KINDS.get(args.chain), args.set, steer, source_ram,
-                                               args.chain in RESTORE_AT_START)
+                                               args.chain in RESTORE_AT_START, more)
         print(f'run: {seconds:.0f} s, {log_path.relative_to(ROOT)}')
         for f in faults[:3]:
             print(f'  stopped: {f[:240]}')

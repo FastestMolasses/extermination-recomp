@@ -3068,6 +3068,17 @@ static int dispatch_later(EmArea01Runtime *r, EmArea01Call *c, int *out)
         code = f.code;
         break;
     }
+    case 0x00183160u: {
+        EmArea22PortHooks h;
+        EmArea22PortFault f = {0, 0};
+        if (c->na < 1u || c->nf < 1u || c->sp < 0x20u + EIGHTH_NEST) goto refused;
+        m22_hooks(r, &h);
+        r->sp = c->sp - 0x20u - EIGHTH_NEST;
+        rc = em_area22_port_00183160(&h, (int32_t)c->a[0], em_ee_float(c->f[0]), &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
     case 0x001831F0u: {
         EmLevel12PortHooks h;
         EmLevel12PortFault f = {0, 0};

@@ -329,7 +329,9 @@ pad alone):
   689, 851), (694, 690, 881)), the port's are ~95 units away at row 248. A
   card difference (no earlier
   AREA14 card exists: AREA18 has no live run); the steering carries the
-  route to [6].
+  route to [6]. Since lane PORT-A18A14 the chain g18 plays g45 from a real
+  area change (AREA18 -> AREA14 entry 1): 1819 of 1819 rows on the row
+  (AREA14_PORT.md "Lane PORT-A18A14"), which confirms the card cause.
 - **[6]'s ride** (0x825C40, AREA14): 00183010 adds (0, s, 0, 1) to the
   player's +0xA0 and +0xB0 quadwords, so their w lanes become 2.0; the
   player view refused any change there (fault code 3 at 0x81035C). The

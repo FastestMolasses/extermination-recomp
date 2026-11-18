@@ -198,3 +198,62 @@ the direct calls above, since level_asset_audit.private_assets refuses.)
   stale AREA01 bank export, not an exporter fault; repaired by lane P14c
   (LEVEL2_AUDIO.md "Repaired 2026-11-16"; after the merge, main needs
   `python3 tools/export_area01_sfx.py`).
+
+## Lane PORT-A18A14 (2026-11-17, branch `a18a14`): the chain g18
+
+`python3 tools/guided_chain.py g18 --steer g41` plays Claude's kept takes
+g41 .. g58 as one run from card g41 (g40's end, AREA14 in play;
+route_g18, AREA18_PORT.md "Live"): the cargo ramp into AREA18, item 0x28,
+AREA14 entry 1, the fork-back into AREA18, AREA14 entry 1 again, then g45
+into AREA17 from a real area change, and on as g17. So g45 no longer
+starts from card g45, whose LOAD GAME restarted AREA14's timer-driven
+effects and beasts (lane PORT-CHAIN).
+
+**What it needed in AREA14** (each from the original's code):
+- **00183160** (byte-matched decomp C): [4] 0x823E30 calls it every frame
+  of its 360-frame step on entry 1 (index 2, then 0). Translated as
+  `em_area22_port_00183160` (D_008104EF, D_008104F0 from D_00248870, the
+  heading D_00810374 through 001B1470, the player's +5 / +6 latch), bound
+  through the later dispatch (gen_later_dispatch); `make
+  test-area22-port-reference` runs the original over the AREA22 images:
+  39 cases, 30 of 30 reachable words, the hook contract (a NaN or
+  infinite delta never leaves 001B1470's loop in the original: no case).
+- **A hold that ends inside the takeover stage.** [4]'s script 0x827490
+  takes the player (0015B130's prelude) and walks it down the cargo ramp;
+  the walk drops off the ramp's end, and the fall (+5 = 5) and landing
+  (+5 = 8, +6 = 5: 00163B40 -> 00163C10) end through 0017C540, which
+  writes +4 = 1 with no 00182DF0. On the next stage the prelude admits the
+  player again for the still-running script. The pose host
+  (em_player_pose_host.c player_pose_stage_hook) now ends its hold when it
+  finds the record back at +4 = 1, with no release and no end hook; before
+  it the run fail-stopped there (g42 row 6653, "shared player-stage worker
+  failed").
+- **The boot script workers** 001B7670 / 001B7700 / 001B8AB0 / 001B6AE0
+  now serve AREA14 (and AREA18): script 0x827590 (step 2 of [4]) runs
+  001B7670 (g42 row 6740).
+- **Comparison aids** (guided_chain, comparison only): at frame 0
+  EM_START_AT_RESTORE restores AREA14's beasts 00141D20 from the card's
+  source state (em_scene_restore_bugs, AREA14 only); at g42's row 0 a
+  second entry restores the vitals from g41's end image
+  (guided_chain.RESTORE_AT_TAKES).
+
+**The card stretch g41.** From the card the stick's heading leaves the
+rows at row 6 (the camera after a LOAD GAME is not the recording's: the
+target heading differs by ~0.07) and the beasts start at their placements,
+so g41 is steered along the path (`--steer g41`). It reaches the ramp and
+AREA18 at the original's row, but takes a hit at row 1488 the original did
+not (health 80 against 100). Without the vitals restore at g42 the walk
+from g43 on differs (the footstep draws 4 frames early at g43 row 668:
+health changes the gait) and the player dies in g44 (row 1382).
+
+**Where it stands** (card g41, `--steer g41`): g41 7 of 2201 compared
+rows on the row (steered; reaches the ramp and the area change at the
+original's row 2518), **g42 8821 / 8821, g43 1302 / 1302, g44 5295 / 5295,
+g45 1819 / 1819** (from card g45, chain g17, g45 leaves the rows at 667),
+then as g17: g46 1964 / 1964, g47 6524 / 6524, g48 19489 / 19489 to row
+19587, every hit at the original's row and health from g42 on; rand()
+equal on every compared row from g42 to g45. The chain stops in the AREA11
+entry-3 load from AREA17 (g48 row 19587), which chain g17 passes: "render
+context: static world fault in module 2 at 450A20DC (code 4)" (an address
+that is a float's bits) on the first AREA11 frame after AREA18 and
+AREA14 were each loaded twice. Not investigated: the next blocker.

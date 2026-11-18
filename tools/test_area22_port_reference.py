@@ -126,6 +126,7 @@ FUNCS = {
     0x1028E8: ('em_area22_port_001028E8', 0x14, [U, U, U], None),
     0x12D940: ('em_area22_port_0012D940', 0x428, [U, U], None),
     0x183010: ('em_area22_port_00183010', 0x74, [U, U], None),
+    0x183160: ('em_area22_port_00183160', 0x90, [U, F], None),
     0x18C850: ('em_area22_port_0018C850', 0xCC, [U, F, F], I),
     0x18C920: ('em_area22_port_0018C920', 0x168, [U, U, F], I),
     0x1963A0: ('em_area22_port_001963A0', 0x5C4, [U, U], None),
@@ -1322,6 +1323,7 @@ def case_list(elf):
         add('capture %s 18C920 eye' % beat, beat, 0x18C920, [CAM + 0x10, EYE, F_0_2])
         add('capture %s 18C920 cam20' % beat, beat, 0x18C920, [PLAYER + 0xA0, CAM + 0x20, F_0_1])
         add('capture %s 183010' % beat, beat, 0x183010, [PLAYER, 0x700038A0])
+        add('capture %s 183160' % beat, beat, 0x183160, [2, fb(0.0)])
         for callback in DOORS:
             for node in owners(ram, callback):
                 add('capture %s 1BB310 @%X' % (beat, node), beat, 0x1BB310, [node])
@@ -1413,6 +1415,22 @@ def targeted_cases(add):
         add('183010 stub %d' % result, beat, 0x183010, [PLAYER, 0x700038A0],
             queues={0x1028B8: [Scribble(0, [(PLAYER + 0xC0, f32b(9.0)), (0x70003B40, f32b(1.0))])]},
             run_set=no(0x1028B8))
+
+    # ---- 00183160 the input index, its turn rate and the heading (001B1470 runs as original code);
+    # AREA14's [4] 0x823E30 passes (2, 0.0) for 360 frames, then (0, 0.0)
+    for index in (0, 2, 3, 0x100, 0x102, -1):
+        for state5 in (0, 1):
+            for delta in (0.0, -3.5):
+                add('183160 %d +5=%d %r' % (index, state5, delta), beat, 0x183160, [index, fb(delta)],
+                    [(PLAYER + 5, b8(state5)), (PLAYER + 6, b8(9))])
+    for heading in (3.1, -3.1, 6.5):
+        add('183160 heading %r' % heading, beat, 0x183160, [2, fb(0.5)], [(PLAYER + 0xC4, f32b(heading))])
+    # (a NaN or infinite delta never leaves 001B1470's wrap loop in the original either: not a case)
+    for tb in (0x80000000, fb(40.0)):
+        add('183160 delta %08X' % tb, beat, 0x183160, [2, tb])
+    add('183160 stub wrap', beat, 0x183160, [2, fb(1.0)], queues={0x1B1470: [fb(123.0)]}, run_set=no(0x1B1470))
+    add('183160 scribble wrap', beat, 0x183160, [1, fb(1.0)], [(PLAYER + 5, b8(0))],
+        queues={0x1B1470: [Scribble(fb(2.0), [(0x8104EF, b8(0)), (PLAYER + 5, b8(3))])]}, run_set=no(0x1B1470))
 
     # ---- 0018C850 the y chase (0011DF78 runs as original code unless stubbed)
     for cur, target, step in ((10.0, 10.2, 0.2), (10.0, 10.3, 0.2), (10.0, 9.7, 0.2), (10.0, 10.0, 0.2),
@@ -1672,6 +1690,7 @@ DEFAULT_ARGS = {
     0x1028E8: [0x70003900, 0x700038A0, 0x700038B0],
     0x12D940: [0x7A6AD0, 0x7A6AD0 + 0x1F0],
     0x183010: [PLAYER, 0x700038A0],
+    0x183160: [2, fbits(0.0)],
     0x18C850: [EYE, fbits(1.0), F_0_2],
     0x18C920: [CAM + 0x10, EYE, F_0_2],
     0x1963A0: [CAM, PLAYER],

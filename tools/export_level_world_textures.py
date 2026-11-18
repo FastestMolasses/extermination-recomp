@@ -58,6 +58,11 @@ def resources(E, capture, image, keys):
             E.resource_model_tex0(data, ident, f'face {ident:#x} ({label})', keys)
 
 
+# (area, sub) whose captures are all arrivals with no frame drawn since the load
+# (export_area13_level.UNDRAWN): AREA18 sub 0 (the guided run's g41)
+UNDRAWN = {(0x12, 0)}
+
+
 def collect(C, caps, replay=True):
     import export_area01_world_textures as E
     keys, elf = {}, C.read_elf()
@@ -94,7 +99,11 @@ def collect(C, caps, replay=True):
             for vertex in range(3):
                 key = struct.unpack_from('<Q', data, 0x50+64*vertex)[0] & E.O.CLD_MASK
                 keys.setdefault(key, set()).add(f'dynamic record {ident}')
-    E.L.check_kicks(caps, objects, dynamic)
+    if (C.AREA, C.SUB) in UNDRAWN:
+        import export_area13_level as LV
+        LV.undrawn_kicks(caps)          # every capture an arrival with no frame drawn: no kick to check
+    else:
+        E.L.check_kicks(caps, objects, dynamic)
     for capture in caps:
         image = C.LoadedImage(C.build_load_map(capture)[0])
         E.library_tex0(capture, keys)

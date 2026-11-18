@@ -214,6 +214,23 @@ EXPLICIT_MODELS = {0x826850: (2, 0xD)}
 # this load's id list (name -> the previous capture's word, the value the
 # load left in place)
 NO_AREA_BANK = {}
+# Targets with no area message table either (D_00264DD0[area + 1] is 0, AREA22's case): their
+# message_data.emmd holds the global records and bank only (global_only_messages)
+GLOBAL_ONLY_MESSAGES = set()
+
+
+def global_only_messages(t, caps, path):
+    """export_area22_tables.export_messages (the EMMD v1 layout with no area
+    records and no area bank, every global record, stream row and the global
+    bank compared with each capture's RAM) for target `t`."""
+    import export_area22_tables as M22     # its import points the common module at AREA22
+    A13.configure(t)                       # back to the target
+    saved = M22.MSG_TABLE_INDEX
+    M22.MSG_TABLE_INDEX = t.area + 1
+    try:
+        return M22.export_messages(caps, path)
+    finally:
+        M22.MSG_TABLE_INDEX = saved
 
 
 def explicit_model_nodes(ram):
@@ -446,6 +463,9 @@ def export_target(name, out_root):
             (out / 'message_data.emmd').unlink()
         report['messages'] = dict(area_bank=None, stale_word=hex(NO_AREA_BANK[name]),
                                   file=None, reason='no id 0x41 in the nested list: no area message bank')
+        if name in GLOBAL_ONLY_MESSAGES:
+            report['messages'].update(global_only_messages(t, caps, out / 'message_data.emmd'),
+                                      file='message_data.emmd')
     else:
         bank, _label = E02.area_bank(image, caps[0])
         for cap in caps[1:]:
@@ -481,12 +501,19 @@ def export_target(name, out_root):
     (side / 'door_destinations.emsp').write_bytes(doors)
 
     records = chain_records(ov[olo - C.OVERLAY_ARENA:ohi - C.OVERLAY_ARENA], olo)
-    slo, shi = scripts_window(ov)
-    sdata, schanged = window_export(ov, caps, slo, shi, records)
-    chains = {f'{e:08X}': len(T.walk_chain(sdata, slo, e)) for e in SCRIPT_ENTRIES[name]}
-    report['scripts'] = dict(window=[hex(slo), hex(shi)], chains=chains, records=sum(chains.values()),
-                             distinct_records=len(records), run_time_words=schanged, sha256=C.sha(sdata))
-    (side / 'scripts.emsc').write_bytes(C.emsc(slo, sdata))
+    if SCRIPT_ENTRIES[name]:
+        slo, shi = scripts_window(ov)
+        sdata, schanged = window_export(ov, caps, slo, shi, records)
+        chains = {f'{e:08X}': len(T.walk_chain(sdata, slo, e)) for e in SCRIPT_ENTRIES[name]}
+        report['scripts'] = dict(window=[hex(slo), hex(shi)], chains=chains, records=sum(chains.values()),
+                                 distinct_records=len(records), run_time_words=schanged, sha256=C.sha(sdata))
+        (side / 'scripts.emsc').write_bytes(C.emsc(slo, sdata))
+    else:
+        # an area whose C starts no chain (AREA18): no scripts window, no scripts.emsc
+        chains = {}
+        report['scripts'] = dict(window=None, chains={}, records=0, reason='the C starts no chain')
+        if (side / 'scripts.emsc').exists():
+            (side / 'scripts.emsc').unlink()
 
     odata, ochanged = window_export(ov, caps, olo, ohi, records)
     report['overlay_data'] = dict(window=[hex(olo), hex(ohi)], run_time_words=ochanged,

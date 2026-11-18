@@ -84,9 +84,11 @@ int em_area01_script_worker_handles_area(uint32_t fn,unsigned area)
 {
     /* the boot workers serve every bound area (AREA00..02, AREA04, AREA06,
      * AREA13, AREA15, AREA03, AREA19, AREA08, AREA07, AREA22, AREA16: the
-     * booth [11] 0x824690's script 0x829D30 runs 001B7670, g64) */
+     * booth [11] 0x824690's script 0x829D30 runs 001B7670, g64; AREA14: [4]'s
+     * script 0x827590 on entry 1, the guided run's g42; AREA18: its boot
+     * doors' programs) */
     if(area>2 && area!=4 && area!=6 && area!=0x0D && area!=0x13 && area!=0x16 && area!=0x0F && area!=3 && area!=8 &&
-       area!=7 && area!=0x10)return 0;
+       area!=7 && area!=0x10 && area!=0x0E && area!=0x12)return 0;
     return fn==0x001B7670u || fn==0x001B7700u || fn==0x001B8AB0u || fn==0x001B6AE0u ||
            (area==1 && (fn==0x00825910u || fn==0x00826950u)) ||
            (area==0 && fn==0x00824E40u);
