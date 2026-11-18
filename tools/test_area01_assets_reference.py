@@ -1101,10 +1101,20 @@ def script_00119EA0(ram, handle, group, index):
 
 def events_001152D8(ram, at):
     """[(kind, tick, fields)] of one trigger script (running status, VLQ
-    deltas, the track accumulator stepped by 0x1E0000 / D_0027F740[0x1D])."""
+    deltas, the track accumulator stepped by 0x1E0000 / D_0027F740[0x1D]).
+    Controllers: B0 41 portamento (00118078), B0 07 volume slide (001181B0)
+    and B0 0A pan slide (00118418), each `ctl length target prog note`; B0 60
+    lo hi count (00118790) loops the track to the script offset hi:lo on the
+    next tick with the accumulator cleared, so only an uncounted loop whose
+    target is an event start reached with an empty accumulator (on the tick
+    grid) is a fixed program; nothing after it runs. Every event carries its
+    script address (the loop's target names one)."""
     step = 0x1E0000 // C.u16(ram, D_0027F740 + 2 * 0x1D)
-    out, running, acc, tick, end = [], None, 0, 0, at + 0x1000
+    out, running, acc, tick, start = [], None, 0, 0, at
+    end, seen = at + 0x1000, {}
     while at < end:
+        here = at
+        seen.setdefault(here, acc)
         if ram[at] & 0x80:
             running = ram[at]
             at += 1
@@ -1113,13 +1123,22 @@ def events_001152D8(ram, at):
         if running == 0xFF:
             if ram[at:at + 2] != b'\x2f\x00':
                 raise Refuse('script')
-            out.append(('end', tick, ()))
+            out.append(('end', tick, (), here))
             return out
         if running & 0xF0 == 0xA0:
-            out.append(('a0', tick, tuple(ram[at:at + 3])))
+            out.append(('a0', tick, tuple(ram[at:at + 3]), here))
             at += 3
-        elif running & 0xF0 == 0xB0 and ram[at] == 0x41:
-            out.append(('porta', tick, tuple(ram[at + 1:at + 5])))
+        elif running & 0xF0 == 0xB0 and ram[at] == 0x60:
+            low, high, count = ram[at + 1:at + 4]
+            target = start + (high << 8 | low)
+            if count or target not in seen or seen[target] or \
+                    not any(e[3] == target for e in out):
+                raise Refuse('script')
+            out.append(('loop', tick, (target,), here))
+            return out
+        elif running & 0xF0 == 0xB0 and ram[at] in (0x41, 0x07, 0x0A):
+            kind = {0x41: 'porta', 0x07: 'volume', 0x0A: 'pan'}[ram[at]]
+            out.append((kind, tick, tuple(ram[at + 1:at + 5]), here))
             at += 5
         else:
             raise Refuse('script')
@@ -1227,6 +1246,15 @@ def pitch_00117918(ladder, note, center, fine):
     return pitch
 
 
+_ELF = []
+
+
+def _boot_elf():
+    if not _ELF:
+        _ELF.append(C.read_elf())
+    return _ELF[0]
+
+
 def registry_from_ram(ram, bound, containers):
     """The whole EMSR v2 for (area, sub) of the capture, rebuilt."""
     area, sub = ram[0x810700], ram[0x810701]
@@ -1261,12 +1289,27 @@ def registry_from_ram(ram, bound, containers):
             velocities = hdr + C.u32(ram, hdr + 0x14)
             ch = channel_defaults([ram[state + 0x10 + 16 * t:state + 0x20 + 16 * t] for t in range(48)])
             ops = []
-            for kind, tick, f in events:
+            # A volume slide's key-ons keep the velocity level and the 40-bit
+            # product of the other five 001179E0 factors (the slide rescales
+            # it); a pan slide's keep the tone's pan byte +0x0C (00116598
+            # starts there).
+            slide = any(e[0] == 'volume' for e in events)
+            pan_slide = any(e[0] == 'pan' for e in events)
+            loop = events[-1][2][0] if events[-1][0] == 'loop' else None
+            loop_row = None
+            for kind, tick, f, here in events:
+                if here == loop:
+                    loop_row = len(ops)
                 if kind == 'end':
                     ops.append(struct.pack(OP, tick, 4, *[0] * 18))
-                elif kind == 'porta':
+                elif kind == 'loop':
+                    ops.append(struct.pack(OP, tick, 7, *[0] * 14, loop_row, 0, 0, 0))
+                elif kind in ('porta', 'volume', 'pan'):
                     length, depth, prog, note = f
-                    ops.append(struct.pack(OP, tick, 3, note, prog, *[0] * 12, length, depth, 0, 0))
+                    if kind == 'pan' and depth >= 0x80:
+                        raise Refuse('script')
+                    ops.append(struct.pack(OP, tick, {'porta': 3, 'volume': 5, 'pan': 6}[kind], note, prog,
+                                           *[0] * 12, length, depth, 0, 0))
                 elif f[1] == 0:
                     ops.append(struct.pack(OP, tick, 2, f[0], f[2], *[0] * 16))
                 else:
@@ -1285,27 +1328,44 @@ def registry_from_ram(ram, bound, containers):
                         raise Refuse('noise')
                     center = tone[2]
                     pitch = pitch_00117918(ladder, note, center, fine)
-                    scalar = (ch[14] * ch[3] * tone[11] * ram[velocities + vel + 2] * ram[program + 1] *
-                              ram[state]) >> 27
+                    level = ram[velocities + vel + 2]
+                    product = ch[14] * ch[3] * tone[11] * ram[program + 1] * ram[state]
+                    scalar = (product * level) >> 27
+                    if pan_slide and tone[12] >= 0x80:
+                        raise Refuse('script')
                     pan = C.u16(ram, PAN + 2 * (tone[12] >> 2))
                     name, data, base = body_of[handle]
                     start = base + (C.u16(tone, 4) << 3)
                     key = (name, start)
                     if key not in samples:
-                        pcm, loop, body = adpcm(data, start)
-                        samples[key] = (len(samples), pcm, loop, body)
+                        pcm, loop_frame, body = adpcm(data, start)
+                        samples[key] = (len(samples), pcm, loop_frame, body)
                     ops.append(struct.pack(OP, tick, 1, note, prog, flags, samples[key][0], pitch, pan, scalar,
                                            C.u16(tone, 6), C.u16(tone, 8), center, fine, tone[13], tone[0],
-                                           tone[1], 0, 0, 0, 0))
+                                           tone[1], level if slide else 0, product >> 32 if slide else 0,
+                                           tone[12] if pan_slide else 0,
+                                           product & 0xFFFFFFFF if slide else 0))
             if not any(o[2] == 1 for o in ops):
                 raise Refuse('novoice')
-            if len(ops) > 32:
+            if len(ops) > 64:
                 raise Refuse('script')
             entries.append((sid, 1, ops, 0, (g & 0xFF) << 8 | (bi & 0xFF)))
         except Refuse as why:
             entries.append((sid, 3, [], REASON[str(why)], 0))
-    out = bytearray(struct.pack('<4sIIIII', b'EMSR', 2, len(samples), len(entries), 0x240, 0))
+    # D_00242630 (64 pan words) follows the ladder only when a script has a
+    # pan slide; the header's last word counts it.
+    # The table proper is 32 words (pan 0..0x7F >> 2; errno 0x242670 follows
+    # it and is live data in RAM). The registry carries 64 words, the tail as
+    # the boot ELF holds it; no slide reaches it (each pan slide's tone pan
+    # and target are below 0x80, refused above), so only the 32 are RAM's.
+    pans = []
+    if any(o[2] == 6 for e in entries for o in e[2]):
+        image = _boot_elf()
+        pans = [C.u16(ram, PAN + 2 * i) for i in range(32)] + \
+            [C.u16(image, 0x300 + PAN - 0x100000 + 2 * i) for i in range(32, 64)]
+    out = bytearray(struct.pack('<4sIIIII', b'EMSR', 2, len(samples), len(entries), 0x240, len(pans)))
     out += struct.pack('<576H', *ladder)
+    out += struct.pack(f'<{len(pans)}H', *pans)
     for sid, st, ops, reason, bank in entries:
         out += struct.pack('<IhhBBHHH', sid, area, sub, st, len(ops), reason, bank, 0) + b''.join(ops)
     for _i, pcm, loop, body in sorted(samples.values(), key=lambda x: x[0]):
@@ -1853,7 +1913,7 @@ def extent_controls(K, V, cap):
     ram = ram_copy(cap, 'tempo', [(SCRATCH_RAM, script), (D_0027F740 + 2 * 0x1D, struct.pack('<H', 25))]).ram
     got = events_001152D8(ram, SCRATCH_RAM)
     # delta 0x60: 0x60 << 12 over the step 0x1E0000 // 25 = 78643 is 5.00001
-    check(got[-1] == ('end', 6, ()), miss(f'the integer tick step at tempo 25 ({got})'))
+    check(got[-1][:3] == ('end', 6, ()), miss(f'the integer tick step at tempo 25 ({got})'))
     def pitch(ladder, note, center, fine):
         try:
             return pitch_00117918(ladder, note, center, fine)
@@ -2142,8 +2202,13 @@ def sweep2_controls(K, V, cap):
     for word, result in ((0xFFFF, want), (0xFFFFFFFF, None)):
         r = ram_copy(cap, 'hdr', [(hdr_at + 0x20, struct.pack('<I', word))]).ram
         check(script_00119EA0(r, h, *gi) == result, miss(f'00119EA0 header +0x20 = {word:#x}'))
-    # -- 001152D8: a B0 event must start with 0x41; the end event is FF 2F 00
-    for what, data in (('B0 event 0x07', bytes([0xB0, 0x07, 0x10, 0x20, 0x30, 0x40, 0x00, 0xFF, 0x2F, 0x00])),
+    # -- 001152D8: a B0 event is 0x41, 0x07, 0x0A or an uncounted 0x60 loop to
+    # an event start on the tick grid; the end event is FF 2F 00
+    for what, data in (('B0 event 0x0B', bytes([0xB0, 0x0B, 0x10, 0x20, 0x30, 0x40, 0x00, 0xFF, 0x2F, 0x00])),
+                       ('a counted B0 60 loop', bytes([0xA0, 0x10, 0x20, 0x30, 0x00, 0xB0, 0x60, 0, 0, 1, 0x00])),
+                       ('a B0 60 target inside an event', bytes([0xA0, 0x10, 0x20, 0x30, 0x00, 0xB0, 0x60, 1, 0, 0, 0x00])),
+                       ('a B0 60 target off the tick grid', bytes([0xA0, 0x10, 0x20, 0x30, 0x01, 0xA0, 0x10, 0x00, 0x30, 0x00,
+                                                                   0xB0, 0x60, 5, 0, 0, 0x00])),
                        ('end FF 2F 01', bytes([0xA0, 0x10, 0x20, 0x30, 0x00, 0xFF, 0x2F, 0x01]))):
         try:
             events_001152D8(ram_copy(cap, 'script', [(SCRATCH_RAM, data)]).ram, SCRATCH_RAM)
@@ -2379,7 +2444,7 @@ def sweep3_controls(K, V, cap):
         got = events_001152D8(ram_copy(cap, 'porta', [(SCRATCH_RAM, script)]).ram, SCRATCH_RAM)
     except Refuse as why:
         got = f'Refuse({why})'
-    check(got == [('porta', 0, (1, 2, 3, 4)), ('end', 0, ())], miss(f'a B0 41 portamento event ({got})'))
+    check(not isinstance(got, str) and [e[:3] for e in got] == [('porta', 0, (1, 2, 3, 4)), ('end', 0, ())], miss(f'a B0 41 portamento event ({got})'))
     # S49: a record (1, 1) whose handle word is 0 is unbound (state 3,
     # reason 7); only (1, 0) plays without a handle
     rec = record_001FB9F0(ram, sid, area, sub)

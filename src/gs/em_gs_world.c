@@ -2047,6 +2047,11 @@ static int gif_registers_only(const uint8_t *p, size_t bytes)
     return off == bytes;
 }
 
+int em_gs_gif_registers_only(const void *gif, size_t bytes)
+{
+    return gif && bytes && bytes % 16u == 0u && gif_registers_only(gif, bytes);
+}
+
 /* The texture state GIF register data leave (gif_registers_only's shape:
  * PACKED tags), and their textured primitives' reads (the PRIM of a PRE tag,
  * an A+D or PACKED PRIM; a kick is an XYZ2 / XYZF2 write, PACKED with ADC
@@ -2545,18 +2550,16 @@ static int gif_frame_check(EmGsWorld *w, const uint8_t *p, size_t bytes)
     return off == bytes ? 0 : fail(w, "a GIF frame that is not whole GIF packets", off);
 }
 
-int em_gs_world_gif_frame(EmGsWorld *w, const void *gif, size_t bytes, uint64_t display_frame,
-                          uint64_t display_scissor)
+/* A GIF stream run whole on the model that holds the GS registers (the
+ * parser, or the direct worker), on this thread while the workers wait, as
+ * the GS runs a list, transfers included; after the recorder's checks over
+ * a recording that is then dropped (the orderings it notes are the
+ * workers', and the workers take no part). The frame before must have been
+ * waited for. `what` names the stream in a refusal. Its primitive and pixel
+ * counts are added to *prims / *pixels. 0, or -1 (the fault latched). */
+static int gif_direct(EmGsWorld *w, const void *gif, size_t bytes, const char *what, uint64_t *prims_out,
+                      uint64_t *pixels_out)
 {
-    if (!w) return -1;
-    if (w->fault[0]) return -1;
-    if (w->recording) return fail(w, "a GIF frame inside a recorded world frame", bytes);
-    if (!gif || !bytes || bytes % 16u) return fail(w, "a GIF frame that is not whole quadwords", bytes);
-    if (!w->memory_loaded) return fail(w, "a GIF frame before the GS memory image", bytes);
-    /* the frame before is drawn first (the workers and the memory are one) */
-    if (em_gs_world_wait(w) < 0) return -1;
-    /* the recorder's checks, over a recording that is then dropped (the
-     * orderings it notes are the workers', and the workers take no part) */
     em_gs_world_begin(w);
     const int checked = gif_frame_check(w, gif, bytes);
     Job *j = &w->job[w->rec];
@@ -2564,15 +2567,11 @@ int em_gs_world_gif_frame(EmGsWorld *w, const void *gif, size_t bytes, uint64_t 
     j->op_count = 0;
     j->gif_used = 0;
     if (checked < 0) return -1;
-    /* the stream on the model that holds the GS registers (the parser, or
-     * the direct worker), on this thread while the workers wait: as the GS
-     * runs the list, transfers included */
     EmGs *gs = front(w);
     const uint32_t refusals = gs->refusals, refused = gs->refused_prims, span_faults = gs->span_faults;
     const uint64_t prims = gs->drawn_prims, pixels = gs->drawn_pixels;
-    const double t0 = now_ns(), c0 = cpu_now_ns();
     /* the parser draws nothing and keeps no decoded textures (tc_off): for
-     * this frame it draws, with a cache of its own, empty at the start
+     * this stream it draws, with a cache of its own, empty at the start
      * (memory changed under it) and dropped again at the end */
     const int tc_off = gs->tc_off;
     if (gs == &w->parser) {
@@ -2585,17 +2584,40 @@ int em_gs_world_gif_frame(EmGsWorld *w, const void *gif, size_t bytes, uint64_t 
         em_gs_memory_written(gs, 0, BLOCKS);
         gs->tc_off = tc_off;
     }
-    /* the other models' decoded textures over what this frame wrote */
+    /* the other models' decoded textures over what this stream wrote */
     workers_memory_written(w, 0, BLOCKS);
     checked_reset(w);
-    if (used != bytes) return fail(w, "a GIF packet of the GIF frame is malformed", used);
+    char what_why[192];
+    if (used != bytes) {
+        snprintf(what_why, sizeof what_why, "a GIF packet of the %s is malformed", what);
+        return fail(w, what_why, used);
+    }
     if (gs->refusals != refusals || gs->refused_prims != refused) {
-        char what[192];
-        snprintf(what, sizeof what, "GIF frame: the GS model refused a primitive: %s", gs->reason);
-        return fail(w, what, gs->refusals - refusals);
+        snprintf(what_why, sizeof what_why, "%s: the GS model refused a primitive: %s", what, gs->reason);
+        return fail(w, what_why, gs->refusals - refusals);
     }
     if (gs->span_faults != span_faults)
         return fail(w, "a span fault (an unmeasured span boundary decides the grid)", gs->span_faults - span_faults);
+    *prims_out += gs->drawn_prims - prims;
+    *pixels_out += gs->drawn_pixels - pixels;
+    return 0;
+}
+
+int em_gs_world_gif_frame(EmGsWorld *w, const void *gif, size_t bytes, uint64_t display_frame,
+                          uint64_t display_scissor)
+{
+    if (!w) return -1;
+    if (w->fault[0]) return -1;
+    if (w->recording) return fail(w, "a GIF frame inside a recorded world frame", bytes);
+    if (!gif || !bytes || bytes % 16u) return fail(w, "a GIF frame that is not whole quadwords", bytes);
+    if (!w->memory_loaded) return fail(w, "a GIF frame before the GS memory image", bytes);
+    /* the frame before is drawn first (the workers and the memory are one) */
+    if (em_gs_world_wait(w) < 0) return -1;
+    const double t0 = now_ns(), c0 = cpu_now_ns();
+    uint64_t prims = 0, pixels = 0;
+    if (gif_direct(w, gif, bytes, "GIF frame", &prims, &pixels) < 0) return -1;
+    Job *j = &w->job[w->rec];
+    EmGs *gs = front(w);
     j->list = 1;
     j->frame = display_frame;
     j->height = (uint32_t)(display_scissor >> 48 & 0x7FFu) + 1u;
@@ -2616,13 +2638,37 @@ int em_gs_world_gif_frame(EmGsWorld *w, const void *gif, size_t bytes, uint64_t 
     w->field_xyoffset_known = j->xyoffset_known;
     w->have_field = 1;
     w->stats.writes = 0;
-    w->stats.prims = gs->drawn_prims - prims;
-    w->stats.pixels = gs->drawn_pixels - pixels;
+    w->stats.prims = prims;
+    w->stats.pixels = pixels;
     w->stats.span_faults = 0;
     w->stats.refused = 0;
     w->stats.ns = now_ns() - t0;
     w->stats.cpu_max_ns = w->stats.cpu_sum_ns = cpu_now_ns() - c0;
     w->stats.runs++;
+    return 0;
+}
+
+int em_gs_world_tail(EmGsWorld *w, const void *gif, size_t bytes)
+{
+    if (!w) return -1;
+    if (w->fault[0]) return -1;
+    if (w->recording) return fail(w, "a world frame's tail before its kick", bytes);
+    if (!gif || !bytes || bytes % 16u) return fail(w, "a world frame's tail that is not whole quadwords", bytes);
+    Job *j = w->run;
+    if (!j || j->list || !w->busy) return fail(w, "a world frame's tail without the world frame kicked before it", bytes);
+    /* the frame's body is drawn first (the workers and the memory are one) */
+    if (em_gs_world_wait(w) < 0) return -1;
+    const double t0 = now_ns(), c0 = cpu_now_ns();
+    uint64_t prims = 0, pixels = 0;
+    if (gif_direct(w, gif, bytes, "world frame's tail", &prims, &pixels) < 0) return -1;
+    /* the field again, with what the tail drew into it */
+    read_rows(w, j, 0, j->height - 1u);
+    w->stats.prims += prims;
+    w->stats.pixels += pixels;
+    w->stats.ns += now_ns() - t0;
+    const double c = cpu_now_ns() - c0;
+    w->stats.cpu_sum_ns += c;
+    if (c > w->stats.cpu_max_ns) w->stats.cpu_max_ns = c;
     return 0;
 }
 

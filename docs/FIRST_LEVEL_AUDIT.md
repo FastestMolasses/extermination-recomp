@@ -2046,6 +2046,11 @@ pool's free list (item 5): those are port work that needs no new recording
      draws them, per field pixel at the field's draw offset with the CLUT's
      ink colour (em_gfx_overlay_glyph_gs; GS_EXACT.md 10.4: the AREA01 title
      exact at 15); the skewed strips (markup tag 3) are not;
+     since 2026-11-18 (lane PORT-SLOT1-2D) the rest of a world frame's
+     slot-1 segment is drawn into the field after the world and the page
+     (GS_EXACT.md section 9 "Slot 1"; the sights, the Gatling's gauge
+     bars); the glyph runs are left out of it while the bars and the fade
+     stay GPU overlays, which is the next step;
    - the status screen's frames (the hub and its pages, the MAP page's
      models on the renderer's skinned path) draw with the GPU renderer;
      since 2026-10-20 (side lane "status", STATUS_FIELD.md) the CPU GS model

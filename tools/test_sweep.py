@@ -14,7 +14,8 @@ failed, so no assertion ran). Results go to build/test_sweep/<timestamp>/results
 that fails and is not in the baseline, or whose status got worse (e.g. FAIL -> BUILD).
 A baselined test that passes is reported as FIXED (remove it from the baseline).
 Tests that fail outside the baseline are re-run once serially, so a shared-build race
-between parallel jobs is not reported as rot.
+between parallel jobs is not reported as rot. COMMANDS runs an oracle the way its make
+target does (a fresh log from the binary, or an expected-failure wrapper).
 
 EM_TEST_FULL is never set here: this is the quick mode of CLAUDE.md "Tests". Nothing
 opens a window.
@@ -29,13 +30,22 @@ BASELINE = os.path.join(ROOT, 'tests', 'sweep_baseline.json')
 ARGS = {
     'level14_shared_player': [(f':{s}', ['--suite', s]) for s in ('closure', 'ladder', 'major2', 'heal')],
 }
+# Oracles that read a log their make target writes from the current binary: the
+# sweep runs the target (it rebuilds the binary first, incrementally), never a stale log.
+COMMANDS = {
+    'player_pose_live': ['make', '-s', '-j8', 'INC=1', 'test-first-control-reference'],
+    # The strict 0015BCF0 oracle fails by design (docs/LEVEL_ORACLE_AUDIT.md
+    # "Requests for main: protected player wrapper"); its make target runs the
+    # expected-failure check that pins the exact failure signature.
+    'level14_player_frame': [sys.executable, os.path.join(ROOT, 'tools', 'test_level14_player_frame_expected_failure.py')],
+}
 # Oracles that need a local capture the repo cannot ship (disc-derived): reported SKIP.
 SKIP = {
     'camera': 'needs --ee/--track over a local opening_ee.bin capture (docs/CAMERA_LIVE.md)',
 }
 # Oracles whose quick run legitimately exceeds the default cap (name -> seconds).
 # Measured under load 25+ (quick mode, solo CPU time is about a third of these).
-TIMEOUTS = {'area11_sfx': 900, 'area21_groups': 300, 'area01_revisit_runtime': 240}
+TIMEOUTS = {'area11_sfx': 900, 'area21_groups': 300, 'area01_revisit_runtime': 240, 'area00_delivery': 240}
 SEVERITY = {'PASS': 0, 'SKIP': 0, 'FAIL': 1, 'TIMEOUT': 2, 'BUILD': 3}
 
 BUILD_RE = re.compile(r"Undefined symbols|ld: |linker command failed|error: |"
@@ -94,7 +104,8 @@ def main():
             skipped.append(name)
             continue
         for suffix, extra in ARGS.get(name, [('', [])]):
-            jobs.append((name + suffix, [sys.executable, path] + extra, TIMEOUTS.get(name, a.timeout)))
+            cmd = COMMANDS.get(name) or [sys.executable, path] + extra
+            jobs.append((name + suffix, cmd, TIMEOUTS.get(name, a.timeout)))
     if a.make:
         for t in make_targets():
             jobs.append(('make:' + t[5:], ['make', t], TIMEOUTS.get('make:' + t[5:], a.timeout)))

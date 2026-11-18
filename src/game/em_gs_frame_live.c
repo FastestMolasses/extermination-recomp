@@ -9,6 +9,7 @@
 #include "game/em_display_env_live.h"
 #include "game/em_effects_live.h"
 #include "game/em_render_context_live.h"
+#include "game/em_status_gs_page.h"
 
 #define HEAD_MAX 0x800u
 
@@ -68,11 +69,15 @@ int em_gs_frame_live_kick(EmGfx *gfx)
         }
     }
     if (!gs) return 0;
+    /* The list's slot-1 segment, which 001D2300 sends after slot 0 and the
+     * chain page (em_status_gs_page): its register packets into the body
+     * before the kick, a stream with transfers right after it. */
+    if (em_sgp_world_slot1(gfx) < 0) return -1;
     if (em_gfx_gs_world_kick(gfx, env, env_bytes, clear, clear_bytes) < 0) {
         fprintf(stderr, "gs frame: the frame faulted: %s\n", em_gfx_gs_world_fault(gfx));
         return -1;
     }
-    return 0;
+    return em_sgp_world_tail(gfx);
 }
 
 int em_gs_frame_live_cost(void *gfx, struct EmFrameGsCost *out)

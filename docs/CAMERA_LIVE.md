@@ -515,9 +515,11 @@ window 0x7F000000..0x7F000FFF below the aim host's sp (001D64A0, 001CBA50,
 `assets/sight_tables.emst` (tools/export_sight_tables.py). They write the
 slot-1 packets byte-exact into the render context (001D64A0 em_rcl_001D64A0,
 00207F80 em_sgp_00207F80, 001CBA50 em_sgp_001CBA50, 001DB9D0 / 002082B0 /
-002081A0 directly). The Original profile's GS frame does not draw a
-gameplay frame's slot-1 2D packets yet (as AREA21's Gatling gauge bars):
-the sights are exact in memory, not on the field. One fail-stop remains:
+002081A0 directly). Since lane PORT-SLOT1-2D (2026-11-18) the Original
+profile's GS frame draws a world frame's slot-1 segment after the world
+and the chain page, as 001D2300 kicks it (GS_EXACT.md section 9 "Slot
+1"): the sights are on the field, the zoom scope's pixels equal the
+original's displayed field (`make test-slot1-field`). One fail-stop remains:
 00199770's lock mark 001DD170 (the missile launcher with a class-2 target
 within 360 and on screen), whose vf23 input has no certified value at the
 camera step (AIM_FIRE.md section 7). Verified by `make

@@ -53,7 +53,10 @@ def main():
     assert n.em_area01_script_worker_handles_area(0x824E40, 1) == 0
     assert n.em_area01_script_worker_handles_area(0x825910, 0) == 0
     assert n.em_area01_script_worker_handles_area(0x826950, 0) == 0
-    assert n.em_area01_script_worker_handles_area(0x1B7700, 2) == 0
+    # The boot workers serve every bound area (AREA02 binds since its scene
+    # merge); an area with no script set (AREA05) still refuses them.
+    assert n.em_area01_script_worker_handles_area(0x1B7700, 2) == 1
+    assert n.em_area01_script_worker_handles_area(0x1B7700, 5) == 0
     elf = read_elf()
     folder = refs.capture('s87/route_a01/a01_07_level_exit')
     initial, scratch = folder.joinpath('eeMemory.bin').read_bytes(), folder.joinpath('scratchpad.bin').read_bytes()

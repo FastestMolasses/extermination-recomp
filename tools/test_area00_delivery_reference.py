@@ -56,10 +56,22 @@ def sound_check(path):
     finally:
         X.AREA00_SCOPES = saved
     _oldraw, old, (old_entries, old_samples, old_ladder) = catalog(OUT / 'baseline/sfx_registry.emsr')
-    assert all(indexed[key(e)] == e for e in old_entries)
-    assert all(json_index[key(e)] == e for e in old['entries'])
-    assert samples[:len(old_samples)] == old_samples and ladder == old_ladder
-    assert report['samples'][:len(old['samples'])] == old['samples']
+    # The exporter allocates samples in scope order and AREA00 is not the
+    # last scope (AREA02, AREA04, the mid areas, AREA19 and the attachments
+    # follow it), so the later scopes' sample indices shift by AREA00's
+    # samples. Entries compare by the samples they name, not by index, and
+    # the older samples must keep their order.
+    def subsequence(small, big):
+        it = iter(big)
+        return all(any(x == y for y in it) for x in small)
+    identity = lambda c: [(s['container'], s['offset'], s['adpcm_sha256']) for s in c['samples']]
+    assert all(normalized(indexed[key(e)], samples, 'ops') == normalized(e, old_samples, 'ops')
+               for e in old_entries)
+    assert all(normalized(json_index[key(e)], identity(report), 'events') ==
+               normalized(e, identity(old), 'events') for e in old['entries'])
+    assert subsequence(old_samples, samples) and ladder == old_ladder
+    without_index = lambda c: [{k: v for k, v in s.items() if k != 'index'} for s in c['samples']]
+    assert subsequence(without_index(old), without_index(report))
     counts = {}
     for sub in (0, 1):
         _raw, area, (local, local_samples, local_ladder) = catalog(
@@ -68,20 +80,23 @@ def sound_check(path):
         assert {e['id'] for e in local} == set(X.AREA00_IDS)
         for e in local:
             assert normalized(e, local_samples, 'ops') == normalized(indexed[key(e)], samples, 'ops'), key(e)
-        identity = lambda c: [(s['container'], s['offset'], s['adpcm_sha256']) for s in c['samples']]
         for e in area['entries']:
             assert normalized(e, identity(area), 'events') == normalized(json_index[key(e)], identity(report), 'events'), key(e)
         counts[sub] = {state: sum(e['state'] == state for e in local) for state in (1, 2, 3)}
-    libpath = OUT / 'sfx-bank.dylib'
+    libpath, shim = OUT / 'sfx-bank.dylib', OUT / 'sfx-bank-size.c'
+    # The registry's size comes from the header (it grew with the pan table).
+    shim.write_text('#include <stddef.h>\n#include "game/em_sfx_bank.h"\n'
+                    'size_t delivery_registry_size(void) { return sizeof(EmSfxRegistry); }\n')
     subprocess.run(['cc', '-std=c11', '-O1', '-ffp-contract=off', '-Wall', '-Wextra', '-Werror',
-                    '-shared', '-fPIC', '-Isrc', 'src/game/em_sfx_bank.c', '-o', str(libpath)],
+                    '-shared', '-fPIC', '-Isrc', 'src/game/em_sfx_bank.c', str(shim), '-o', str(libpath)],
                    cwd=ROOT, check=True)
     lib = CT.CDLL(str(libpath))
+    lib.delivery_registry_size.restype = CT.c_size_t
     lib.em_sfx_registry_load.argtypes = [CT.c_void_p, CT.c_char_p]
     lib.em_sfx_registry_find.argtypes = [CT.c_void_p, CT.c_uint, CT.c_int, CT.c_int]
     lib.em_sfx_registry_find.restype = CT.c_void_p
     lib.em_sfx_registry_free.argtypes = [CT.c_void_p]
-    storage = CT.create_string_buffer(64)  # exceeds sizeof(EmSfxRegistry)
+    storage = CT.create_string_buffer(lib.delivery_registry_size())
     try:
         assert lib.em_sfx_registry_load(storage, str(path).encode()) == 1
         for e in entries:

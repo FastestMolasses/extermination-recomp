@@ -121,6 +121,11 @@ int lp_frame(const uint8_t *raw, const int16_t *rows, const float *hip, uint32_t
     memcpy(&g.status.health, raw + 0x220, 4);
     memcpy(&g.pd_pend_hp, raw + 0x224, 4);
     memcpy(&g.status.infection, raw + 0x228, 4);
+    /* Health and infection live in the progress block D_00810858 /
+     * D_0081085C (the scene's storage since 2fb30313); the stage's vitals
+     * view loads +0x220 / +0x228 from there before 0015BA50. */
+    memcpy(&lp_scene.d810858, raw + 0x220, 4);
+    memcpy(&lp_scene.d81085C, raw + 0x228, 4);
     memcpy(&g.pd_pend_inf, raw + 0x22C, 4);
     g.pd_infected = raw[0x234];
     g.pd_iframes = (int16_t)em_live_u16(&live.a, 0x20E);

@@ -81,7 +81,11 @@ FINAL_RECORD_OFFSETS = [
     (77, [178, 179, 182, 183, 186, 187, 794, 795]),
     (77, [178, 179, 182, 183, 186, 187, 795]),
 ]
-PUBLICATION_SLOTS = [(1334, [5, 7]), (50, [5, 7, 9])]
+# 2026-11-18 (TEST-HEALTH-3): slot 9 (the canonical busy byte B3) now matches
+# in every case: em_player_0015BCF0 publishes the stage's busy result
+# (player_states_busy), the audit's last listed cause; the 50 [5, 7, 9] cases
+# became [5, 7]. Every other table is unchanged.
+PUBLICATION_SLOTS = [(1384, [5, 7])]
 BOUNDARY_ARGUMENT_MISMATCH = [(425, [_V])]
 _LATE = {_V: [546, 560, 736, 795]}
 BOUNDARY_RECORD_OFFSETS = [
@@ -104,7 +108,7 @@ BOUNDARY_RECORD_OFFSETS = [
     (2, {_D: [546, 736], _C: [162, 163, 560, 795], _E: [546], "001C6DA0": [560]}),
 ]
 # SHA-256 of the canonical JSON list [[case, path, mismatches], ...] by case.
-CASE_DIGEST = "5aca27d7874b48ba8e669966eeb781977310665c70d8c90ee658118d2c1a96ae"
+CASE_DIGEST = "58531eaa593650db28e31b45520a0fe2cbb6fea60fe4a76753f03faff647a17f"
 
 
 def canon(value):

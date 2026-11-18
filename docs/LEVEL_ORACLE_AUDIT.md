@@ -754,7 +754,7 @@ outcomes, no case matches, and the mismatch signature is exactly the pinned
 one. The pin has two layers, both measured from the oracle's own report
 (call addresses and record offsets only): tables of the distinct mismatch key
 sets (710 / 425 / 249 cases), call orders (6), final-record offset sets (5),
-publication slot sets (`[5,7]` x1334, `[5,7,9]` x50), boundary record offsets
+publication slot sets (`[5,7]` x1384 since 2026-11-18; before, `[5,7]` x1334 and `[5,7,9]` x50), boundary record offsets
 (14) and boundary argument mismatches (`0011A070` x425), each with its case
 count; and a SHA-256 over every case's index, inputs and mismatches. Any
 added, removed or moved difference, so a new owner regression as well as a
@@ -780,7 +780,12 @@ The current production owner is **FAIL** and remains U. Confirmed causes:
 camera precedes animation; kill-plane/loop-stop runs before its original
 place; vitals runs after footstep; final actor `+B0` retains feet instead of
 bone-1 position; published Euler X/Z are zeroed; and the original stage busy
-state is replaced by legacy host locks. These independent differences are
+state is replaced by legacy host locks (fixed since: the wrapper publishes
+`player_states_busy()`, so slot 9 matches in all 1,384 cases; re-pinned
+2026-11-18 by TEST-HEALTH-3, which also seeded the bridge's progress-block
+vitals D_00810858 / D_0081085C, the storage the stage loads +0x220 / +0x228
+from since 2fb30313; without them every case showed +0x222/+0x223 at every
+boundary, a harness gap, not an owner change). These independent differences are
 not normalized away. The exact protected-owner proposal and its final private
 validation are recorded below; no shared production file is edited here.
 
