@@ -80,6 +80,12 @@ section "Live".
 
 ## Open
 
+- g62's card (section "Live"): it respawns the three curtains the guided
+  run broke in g61; choose between a card from a later state and a melee
+  prefix. g66's return to the title (health 25 at pad frame 1000) is not
+  investigated yet; check it the same way (per-frame progress past the
+  last good pad frame, the nodes near the player against the recording's
+  source state).
 - The live run (section "Live"): g61's next stop, [10]'s +0x4C draw
   method 001CAE30 (model kind 3: 001CACC0 with 001CA7B0, 001C7420,
   001D39A0 / 001D3DA0, all untranslated); a live 001BAD40 worker for sub
@@ -161,9 +167,24 @@ each take; `em_start_at.c`), beats g61 .. g67 in `mid_route_beats.py`.
   display list 001DB480; it now fail-stops on its first frame at
   001CAE30, [10]'s +0x4C draw method (model kind 3, untranslated).
 - g62 (sub 0 after the barrier: [10] in state 2, [13] makes no effect)
-  plays in sub 0 to pad frame 3000 with no fault, then returns to the title
-  (001AC070 again at engine frame 8105) without reaching sub 1; not
-  investigated (the run was stopped there).
+  plays in sub 0 to pad frame 3042 with no fault, then returns to the
+  title (001AC070 again at engine frame 8105) without reaching sub 1.
+  Cause (lane PORT-A16FX): a death, from the start card, not from a
+  translation. In g61 the guided player broke the three curtains
+  0x1C1030 at (350, 325), (390, 325) and (445, 290) with one light melee
+  each (decomp FULL_RUN_PLAN.md, `_g63_corridor`); g61's end state holds
+  them in state 2 sub 1 (+0x36 0x1003, +0x34 -2: 001C1030's destroyed
+  arm, waiting for its clip). 001C1030 records a kill only in state 3
+  (001B1190(+0x9A): ids 0x76 .. 0x78, D_00810860[0x10] word 3 bits 22 ..
+  24), and those bits are clear in g61's and g62's end blocks, so the
+  card's LOAD GAME spawns the curtains whole (state 1, as 001C1030's own
+  code does from that block). g62's recorded pad (no melee) then walks
+  into the curtain at (445, 290): the player stops at (445.0, 281.87),
+  the path steering holds the pad at frame 3042, the three bugs 0x12A5D0
+  nearby bite (infection 44 -> 100 in steps of 12, then health 55 -> 0)
+  and 001ADF00 returns to the title. No game-code fix applies; the beat
+  needs a card made after the curtains are gone, or the three melees
+  before its pad (a harness decision, section "Open").
 - g64 fail-stops at 001BAD40, called by 0x824E10 (the booth's group
   owner): em_sdf_001BAD40 exists, but only AREA11's opening binds it (with
   its own workers); there is no live worker for an overlay owner's node.

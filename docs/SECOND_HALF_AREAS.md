@@ -570,8 +570,11 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   001DAFA0, 001DB240, 001DB250, 001DB040, 001DB480 (with 001DAE10 /
   001DAC90) in `em_area16_water`, bound through the fallback dispatch, the
   grid block 0x818000 .. 0x81C03F mapped live. g62 plays in sub 0 to pad
-  frame 3000 with no fault, then returns to the title (engine frame 8105)
-  before sub 1.
+  frame 3042 with no fault, then returns to the title (engine frame 8105)
+  before sub 1: a death from its card, not a translation (lane
+  PORT-A16FX, AREA16_PORT.md "Live": the card respawns the three curtains
+  0x1C1030 the guided run broke by melee in g61, the recorded pad walks
+  into one and the bugs bite).
 - AREA16's effects (lane PORT-A16FX, AREA16_PORT.md "Effects"): the five
   effect behaviours of ids 0..4 (0x8237A0 .. 0x824110) in
   em_area16_overlay_f, proven by test_area16_overlay_reference (2018 cases
