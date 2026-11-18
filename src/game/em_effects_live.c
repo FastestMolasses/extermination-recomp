@@ -1664,7 +1664,9 @@ static int eb440_001CFBE0(void *ctx, int32_t a0, int32_t a1, u32 a2, u32 a3, int
 }
 /* 001EB250, its twin (also g77): the same views plus the node's +0xD0
  * matrix, whose translation z (+0x38 of it) it lowers by 2 while the
- * accumulator is above 0.8; sources D_00255B30 / D_00255BC0. */
+ * accumulator is above 0.8; sources D_00255B30 / D_00255BC0. 001EB600
+ * (g77 row 3622): lowers it by 3 while the accumulator is above 0 and
+ * sets the translation y (+0x34) to 20; sources D_00255D70 / D_00255E00. */
 static int handler_001EB440(u32 handler, EmEffectOriginalNode *node, int32_t depth, EmEffectOriginalWork *work)
 {
     Slot *slot = slot_of_node(node);
@@ -1680,6 +1682,7 @@ static int handler_001EB440(u32 handler, EmEffectOriginalNode *node, int32_t dep
     const EmEffect001EB440Hooks h = {&v, eb440_bytes, eb440_fog, eb440_001CFB50, eb440_001CFBE0};
     EmEffect001EB440Fault f = {0, 0};
     const int rc = handler == 0x001EB440u ? em_effect_001EB440(&h, at + 0xD0u, depth, &f)
+                 : handler == 0x001EB600u ? em_effect_001EB600(&h, at + 0xD0u, depth, &f)
                                           : em_effect_001EB250(&h, at + 0xD0u, depth, &f);
     if (rc < 0) return fail(f.address ? f.address : handler, "AREA21 effect fault (em_effect_001EB440)");
     return 0;
@@ -1712,7 +1715,8 @@ static int w_handler(void *ctx, u32 handler, EmEffectOriginalNode *node, int32_t
     if (handler == 0x001ECA20u || handler == 0x001EBE10u || handler == 0x001EBE90u)
         return handler_area06(handler, node, depth, work);
     if (handler == 0x001EF780u) return handler_001EF780(node, depth, work);
-    if (handler == 0x001EB440u || handler == 0x001EB250u) return handler_001EB440(handler, node, depth, work);
+    if (handler == 0x001EB440u || handler == 0x001EB250u || handler == 0x001EB600u)
+        return handler_001EB440(handler, node, depth, work);
     if (splash_handler(handler)) return handler_splash(handler, node, depth, work);
     return fail(handler, "untranslated effect handler");
 }
@@ -1796,6 +1800,7 @@ static int w_001CFBE0(void *ctx, int32_t id, int32_t kind, u32 source, u32 xf, i
                               source == 0x00257B40u ||                          /* 001EF780's */
                               source == 0x00255C50u || source == 0x00255CE0u || /* 001EB440's */
                               source == 0x00255B30u || source == 0x00255BC0u || /* 001EB250's */
+                              source == 0x00255D70u || source == 0x00255E00u || /* 001EB600's */
                               source == 0x00257510u || source == 0x002575A0u || /* 001EDAF0's middle row */
                               source == 0x00257630u || source == 0x00257870u ||
                               source == 0x00257900u || source == 0x002571B0u || source == 0x00257240u ||

@@ -52,23 +52,30 @@ static int pass(E *e, uint32_t a0, int32_t a1, uint32_t source)
     return 0;
 }
 
+/* lower: 0 none; 1 (001EB250) a0 + 0x38 -= 2.0 unless w[+0x54] <= 0.8;
+ * 2 (001EB600) a0 + 0x38 -= 3.0 unless w[+0x54] <= 0, and a0 + 0x34 = 20.0
+ * after the two fog calls */
 static int pair(const EmEffect001EB440Hooks *h, uint32_t a0, int32_t a1, EmEffect001EB440Fault *fault,
                 int lower, uint32_t first, uint32_t second)
 {
     if (!h) return -1;
     E e = {h, fault};
-    if (lower) {   /* 001EB250: a0 + 0x38 -= 2 unless w[+0x54] <= 0.8 */
+    if (lower) {
         uint32_t w, scale, z;
         TRY(word(&e, WORK, &w, 0));
         TRY(word(&e, w + 0x54u, &scale, 0));
-        if (!em_ee_c_le_bits(scale, 0x3F4CCCCDu)) {
+        if (!em_ee_c_le_bits(scale, lower == 1 ? 0x3F4CCCCDu : K_0)) {
             TRY(word(&e, a0 + 0x38u, &z, 0));
-            z = em_ee_sub_bits(z, 0x40000000u);
+            z = em_ee_sub_bits(z, lower == 1 ? 0x40000000u : 0x40400000u);
             TRY(word(&e, a0 + 0x38u, &z, 1));
         }
     }
     TRY(fog(&e, 2, K_0));
     TRY(fog(&e, 3, K_2000));
+    if (lower == 2) {
+        uint32_t y = 0x41A00000u;   /* 20.0 */
+        TRY(word(&e, a0 + 0x34u, &y, 1));
+    }
     TRY(pass(&e, a0, a1, first));
     TRY(pass(&e, a0, a1, second));
     return fog(&e, 1, K_0);
@@ -84,4 +91,10 @@ int em_effect_001EB250(const EmEffect001EB440Hooks *h, uint32_t a0, int32_t a1,
                        EmEffect001EB440Fault *fault)
 {
     return pair(h, a0, a1, fault, 1, 0x00255B30u, 0x00255BC0u);
+}
+
+int em_effect_001EB600(const EmEffect001EB440Hooks *h, uint32_t a0, int32_t a1,
+                       EmEffect001EB440Fault *fault)
+{
+    return pair(h, a0, a1, fault, 2, 0x00255D70u, 0x00255E00u);
 }

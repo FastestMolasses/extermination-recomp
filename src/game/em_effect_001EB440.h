@@ -10,8 +10,12 @@
  * 001EB250(a0, a1), its twin (first reached in g77 too): first, unless
  * w[+0x54] <= 0.8, the word a0 + 0x38 (the node matrix's translation z)
  * -= 2.0; then the same with the sources D_00255B30 / D_00255BC0.
+ * 001EB600(a0, a1) (first reached in g77 row 3622, lane PORT-A21-BOSS):
+ * unless w[+0x54] <= 0, a0 + 0x38 -= 3.0; the two fog calls; a0 + 0x34 (the
+ * matrix's translation y) = 20.0; the two passes with the sources
+ * D_00255D70 / D_00255E00.
  * Ground truth: the decomp's byte-identical C (src/func_001EB440.c,
- * func_001EB250.c);
+ * func_001EB250.c, func_001EB600.c);
  * evidence: tools/test_effect_001EB440_reference.py (the ORIGINAL
  * instructions). Float arithmetic is the EE's (em_ee_float.h).
  *
@@ -38,6 +42,8 @@ typedef struct {
 int em_effect_001EB440(const EmEffect001EB440Hooks *h, uint32_t a0, int32_t a1,
                        EmEffect001EB440Fault *fault);
 int em_effect_001EB250(const EmEffect001EB440Hooks *h, uint32_t a0, int32_t a1,
+                       EmEffect001EB440Fault *fault);
+int em_effect_001EB600(const EmEffect001EB440Hooks *h, uint32_t a0, int32_t a1,
                        EmEffect001EB440Fault *fault);
 #ifdef __cplusplus
 }

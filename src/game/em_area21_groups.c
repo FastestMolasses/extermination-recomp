@@ -98,7 +98,7 @@ static void a21p_823580(A21P *o, uint32_t self, uint32_t sp)
         a21p_w32(o, pos, a21p_u32(o, self + 0x100));
         const uint32_t z = a21p_u32(o, self + 0x108);
         a21p_w32(o, pos + 8, A21P_ADD(F_15, z));
-        (void)a21p_c_001EFD20(o, 0x80000047u, pos);
+        { uint32_t e_ = 0; (void)a21p_c_001EFD20(o, 0x80000047u, pos, &e_); }
     } else if (kind == 3) {
         int32_t v = 0;
         (void)a21p_c_001C6190(o, self, &v);
@@ -116,7 +116,7 @@ static void a21p_823580(A21P *o, uint32_t self, uint32_t sp)
         (void)a21p_c_0011DE90(o, A21P_SUB(A21P_MUL(F_2PI, unit), F_PI), &s);
         const uint32_t z = a21p_u32(o, self + 0x108);
         a21p_w32(o, pos + 8, A21P_ADD(z, A21P_MUL(F_10, s)));
-        (void)a21p_c_001EFD20(o, 0x80000059u, pos);
+        { uint32_t e_ = 0; (void)a21p_c_001EFD20(o, 0x80000059u, pos, &e_); }
     }
 }
 
@@ -141,7 +141,7 @@ static void a21p_8237B0(A21P *o, uint32_t self)
     (void)a21p_c_001C6190(o, self, &v);
     int32_t k = 25;
     if (v > 600 && v < 950) k = 65;
-    if (a21p_s32(o, D_70003B68) % k == 0) (void)a21p_c_001EFD20(o, 0, self + 0x100);
+    if (a21p_s32(o, D_70003B68) % k == 0) { uint32_t e_ = 0; (void)a21p_c_001EFD20(o, 0, self + 0x100, &e_); }
 }
 
 int em_area21_groups_008237B0(const EmArea21GroupsHooks *h, uint32_t a0, EmArea21GroupsFault *fault)
@@ -160,7 +160,7 @@ int em_area21_groups_008237B0(const EmArea21GroupsHooks *h, uint32_t a0, EmArea2
 static void a21p_823860(A21P *o, uint32_t self)
 {
     if (a21p_u8(o, self + 4) != 1) return;
-    if (a21p_s32(o, D_70003B68) % 30 == 0) (void)a21p_c_001EFD20(o, 1, self + 0x100);
+    if (a21p_s32(o, D_70003B68) % 30 == 0) { uint32_t e_ = 0; (void)a21p_c_001EFD20(o, 1, self + 0x100, &e_); }
 }
 
 int em_area21_groups_00823860(const EmArea21GroupsHooks *h, uint32_t a0, EmArea21GroupsFault *fault)
@@ -387,8 +387,8 @@ int em_area21_groups_008243B0(const EmArea21GroupsHooks *h, uint32_t a0, uint32_
 }
 
 /* ----------------------------------------------------------------------
- * 0x824CF0 (decomp func_overlay_AREA21_00824CB0) — no static reference
- * (unreached in the original). The work block is +0x1F0: [0] a phase,
+ * 0x824CF0 (decomp func_overlay_AREA21_00824CB0) — no static reference;
+ * a 001EFD20 effect node of the boss fight (g77 row 3024). The work block is +0x1F0: [0] a phase,
  * [1] a scale, [2] a seed, [3] a frame count. State 0: the +0xD0 matrix
  * from 001029C0 / 00102C58 (+0xC0) / 00102918 (+0xB0), count 0 (before
  * the call), seed = 00122BB8(), phase 0, scale 1.0, state 1, and on into
@@ -462,5 +462,256 @@ int em_area21_groups_00824CF0(const EmArea21GroupsHooks *h, uint32_t a0, uint32_
     A21P o;
     if (a21p_begin(&o, h, fault)) return -1;
     a21p_824CF0(&o, a0, sp);
+    return a21p_end(&o);
+}
+
+/* ----------------------------------------------------------------------
+ * 0x824FE0 (decomp func_overlay_AREA21_00824FA0, byte-identical C) — the
+ * node [43] / [44]'s deferred spawn starts (001B6660 from 0x8262D0; the
+ * 001EFD20 effect node 0014EC00 creates, behaviour named only in spawn
+ * data). A child of the node at +0x24 (par): it watches n of par's child
+ * objects, obj(k) = the word at par + 0x110 + 4 * tbl[k], each with its
+ * position at +0xC0 and matrix at +0x90. Work block W = +0x1F0: v[12]
+ * (saved positions, 16 bytes each), ph[12] at +0xC0, the strength f0 at
+ * +0xF0, the table pointer tbl at +0xF4, n at +0xF8, the seed at +0xFC.
+ * State 0: by +0xD, 6: mode +5 = 0, tbl 0x82B090, n 7; 7: mode 3, tbl
+ * 0x82B0B0, n 12 (other kinds keep tbl and n); clears v[] to (0, 0, 0, 1)
+ * and ph[], seed = 00122BB8(), f0 = 1.0, state 1, +6 = 0, and on into
+ * state 1. State 1: when par's state +4 is 3, state 3 and nothing more.
+ * Else by the mode +5:
+ *   0, 4: f0 = 0.
+ *   1: each k whose saved y is below -40 and whose object y is now above
+ *      -40: effect 0x80000047 at (x, 20, z - 10 * (k / 7)) (D_700038A0);
+ *      then f0 = 1.0.
+ *   2: f0 = 1.0 when +6 differs from +5; f0 -= 1/60, 0 below 0; each k
+ *      whose saved y is above 50 and whose object y is now below 50: an
+ *      effect at (x, 20, z - 30 * (k / 7)), 0x80000059 for k 0 and
+ *      0x80000047 for the others.
+ *   3: f0 = 0; each k whose object y is above -10 and below 20: effect
+ *      0x80000047 at (x, 20, z) on frames where D_70003B68 % 12 is 0.
+ *   10: for k 6 and 9, when the saved y is above 46 and the object y now
+ *      below 46: three effects 2 at the object matrix applied to
+ *      (15 * i, 0, 0, 1) (001026A0 into D_700038A0) with y 40; then on
+ *      frames where D_70003B68 % 12 is 0, one more from (10, 0, 0, 1)
+ *      through the matrix of par's child slot 7 (00122BB8() odd) or 19,
+ *      y 40, and the returned node's +0x38 word cleared when non-zero.
+ *   11 / 12: three effects 2 at k 6 / 9 the same way (y not forced),
+ *      then mode 0.
+ *   0x63: state 3, f0 = 0.
+ * Then fog 0021B9A0(2, 0, 0) and (3, 0, 2000); when f0 is non-zero, for
+ * each k: the matrix D_700036A0 = identity (001029C0) rotated by pi
+ * (00102BB0) and translated to the object position (00102918), its
+ * translation z (D_700036D8) + 20; the random ((seed >> 16) & 0xFFFF) /
+ * 65535 + 0.0001 into D_70003A20 (seed = seed * 37 + 11, a local: the
+ * stored seed does not change); when the translation y (D_700036D4) is
+ * above 10: h = 001CCF70(D_700036D0), the frame packet from
+ * 001CFB50(packet, 0, D_700036A0, ph[k], D_70003A20, f0, 0.1, 20) queued
+ * by 001CFBE0(h, 5, 0x82B000, packet, 0); ph[k] += 0.015, less 1.0 when
+ * above 2.0. Then fog (1, 0, 0), +6 = +5, and v[k] = the object position
+ * (00102948) for each k. States 2 / 3: 001AFC10(self). Others: nothing.
+ * ---------------------------------------------------------------------- */
+#define A21P_TABLE_82B090 0x0082B090u   /* 7 child slots (+0xD 6) */
+#define A21P_TABLE_82B0B0 0x0082B0B0u   /* 12 child slots (+0xD 7) */
+#define A21P_GROUP_82B000 0x0082B000u   /* the packet group */
+#define F_M40 0xC2200000u
+#define F_50 0x42480000u
+#define F_M10 0xC1200000u
+#define F_46 0x42380000u
+#define F_40 0x42200000u
+#define F_7 0x40E00000u
+#define F_30 0x41F00000u
+#define F_2000 0x44FA0000u
+#define F_0_015 0x3C75C28Fu
+#define A21P_824FE0_PACKET 0x90u   /* the packet: sp - 0x60 */
+
+/* obj(k): par's child pointer for table entry k */
+static uint32_t a21p_824FE0_obj(A21P *o, uint32_t par, uint32_t w, uint32_t k)
+{
+    const uint32_t tbl = a21p_u32(o, w + 0xF4);
+    return a21p_u32(o, par + 0x110 + 4u * a21p_u32(o, tbl + 4u * k));
+}
+
+/* three effects 2 along the object matrix of entry k (mode 10 / 11 / 12):
+ * D_700038A0 = (15 * i, 0, 0, 1) through obj(k) + 0x90, y = 40 when
+ * `force` */
+static void a21p_824FE0_three(A21P *o, uint32_t par, uint32_t w, uint32_t k, int force)
+{
+    for (int32_t i = 0; i < 3; i++) {
+        a21p_w32(o, D_700038A0, A21P_MUL(F_15, A21P_CVT_S_W(i)));
+        a21p_w32(o, D_700038A0 + 4, F_ZERO);
+        a21p_w32(o, D_700038A0 + 8, F_ZERO);
+        a21p_w32(o, D_700038A0 + 12, F_ONE);
+        (void)a21p_c_001026A0(o, D_700038A0, a21p_824FE0_obj(o, par, w, k) + 0x90, D_700038A0);
+        if (force) a21p_w32(o, D_700038A0 + 4, F_40);
+        uint32_t e = 0;
+        (void)a21p_c_001EFD20(o, 2, D_700038A0, &e);
+    }
+}
+
+static void a21p_824FE0(A21P *o, uint32_t self, uint32_t sp)
+{
+    const uint32_t packet = sp - 0xF0u + A21P_824FE0_PACKET;
+    const uint32_t par = a21p_u32(o, self + 0x24);
+    const uint32_t w = self + 0x1F0;
+    const uint32_t state = a21p_u8(o, self + 4);
+
+    if (state == 2 || state == 3) {
+        (void)a21p_c_001AFC10(o, self);
+        return;
+    }
+    if (state == 0) {
+        const uint32_t kind = a21p_u8(o, self + 0xD);
+        if (kind == 6) {
+            a21p_w8(o, self + 5, 0);
+            a21p_w32(o, w + 0xF4, A21P_TABLE_82B090);
+            a21p_w32(o, w + 0xF8, 7);
+        } else if (kind == 7) {
+            a21p_w8(o, self + 5, 3);
+            a21p_w32(o, w + 0xF4, A21P_TABLE_82B0B0);
+            a21p_w32(o, w + 0xF8, 12);
+        }
+        for (int32_t j = 0; j < a21p_s32(o, w + 0xF8); j++) {
+            const uint32_t v = w + 16u * (uint32_t)j;
+            a21p_w32(o, v, F_ZERO);
+            a21p_w32(o, v + 4, F_ZERO);
+            a21p_w32(o, v + 8, F_ZERO);
+            a21p_w32(o, v + 12, F_ONE);
+            a21p_w32(o, w + 0xC0 + 4u * (uint32_t)j, F_ZERO);
+        }
+        int32_t r = 0;
+        (void)a21p_c_00122BB8(o, &r);
+        a21p_w32(o, w + 0xFC, (uint32_t)r);
+        a21p_w32(o, w + 0xF0, F_ONE);
+        a21p_w8(o, self + 4, 1);
+        a21p_w8(o, self + 6, 0);
+    } else if (state != 1) {
+        return;
+    }
+    if (a21p_u8(o, par + 4) == 3) {
+        a21p_w8(o, self + 4, 3);
+        return;
+    }
+    const uint32_t mode = a21p_u8(o, self + 5);
+    switch (mode) {
+    case 0:
+    case 4:
+        a21p_w32(o, w + 0xF0, F_ZERO);
+        break;
+    case 1:
+        for (int32_t j = 0; j < a21p_s32(o, w + 0xF8); j++) {
+            if (!A21P_LT(a21p_u32(o, w + 16u * (uint32_t)j + 4), F_M40)) continue;
+            if (A21P_LE(a21p_u32(o, a21p_824FE0_obj(o, par, w, (uint32_t)j) + 0xC4), F_M40)) continue;
+            a21p_w32(o, D_700038A0 + 4, F_20);
+            a21p_w32(o, D_700038A0, a21p_u32(o, a21p_824FE0_obj(o, par, w, (uint32_t)j) + 0xC0));
+            const uint32_t z = a21p_u32(o, a21p_824FE0_obj(o, par, w, (uint32_t)j) + 0xC8);
+            a21p_w32(o, D_700038A0 + 8, A21P_SUB(z, A21P_MUL(F_10, A21P_DIV(A21P_CVT_S_W(j), F_7))));
+            uint32_t e = 0;
+            (void)a21p_c_001EFD20(o, 0x80000047u, D_700038A0, &e);
+        }
+        a21p_w32(o, w + 0xF0, F_ONE);
+        break;
+    case 2: {
+        if (a21p_u8(o, self + 6) != mode) a21p_w32(o, w + 0xF0, F_ONE);
+        const uint32_t f0 = A21P_SUB(a21p_u32(o, w + 0xF0), F_1_60);
+        a21p_w32(o, w + 0xF0, f0);
+        if (A21P_LT(f0, F_ZERO)) a21p_w32(o, w + 0xF0, F_ZERO);
+        for (int32_t j = 0; j < a21p_s32(o, w + 0xF8); j++) {
+            if (A21P_LE(a21p_u32(o, w + 16u * (uint32_t)j + 4), F_50)) continue;
+            if (!A21P_LT(a21p_u32(o, a21p_824FE0_obj(o, par, w, (uint32_t)j) + 0xC4), F_50)) continue;
+            a21p_w32(o, D_700038A0 + 4, F_20);
+            a21p_w32(o, D_700038A0, a21p_u32(o, a21p_824FE0_obj(o, par, w, (uint32_t)j) + 0xC0));
+            const uint32_t z = a21p_u32(o, a21p_824FE0_obj(o, par, w, (uint32_t)j) + 0xC8);
+            a21p_w32(o, D_700038A0 + 8, A21P_SUB(z, A21P_MUL(F_30, A21P_DIV(A21P_CVT_S_W(j), F_7))));
+            uint32_t e = 0;
+            (void)a21p_c_001EFD20(o, j == 0 ? 0x80000059u : 0x80000047u, D_700038A0, &e);
+        }
+        break;
+    }
+    case 3:
+        a21p_w32(o, w + 0xF0, F_ZERO);
+        for (int32_t k = 0; k < a21p_s32(o, w + 0xF8); k++) {
+            const uint32_t y = a21p_u32(o, a21p_824FE0_obj(o, par, w, (uint32_t)k) + 0xC4);
+            if (A21P_LE(y, F_M10) || !A21P_LT(y, F_20)) continue;
+            a21p_w32(o, D_700038A0 + 4, F_20);
+            const int32_t frame = a21p_s32(o, D_70003B68);
+            a21p_w32(o, D_700038A0, a21p_u32(o, a21p_824FE0_obj(o, par, w, (uint32_t)k) + 0xC0));
+            a21p_w32(o, D_700038A0 + 8, a21p_u32(o, a21p_824FE0_obj(o, par, w, (uint32_t)k) + 0xC8));
+            if (frame % 12 == 0) {
+                uint32_t e = 0;
+                (void)a21p_c_001EFD20(o, 0x80000047u, D_700038A0, &e);
+            }
+        }
+        break;
+    case 10:
+        for (uint32_t j = 0; j < 2; j++) {
+            const uint32_t k = j == 0 ? 6 : 9;
+            if (A21P_LE(a21p_u32(o, w + 16u * k + 4), F_46)) continue;
+            if (!A21P_LT(a21p_u32(o, a21p_824FE0_obj(o, par, w, k) + 0xC4), F_46)) continue;
+            a21p_824FE0_three(o, par, w, k, 1);
+        }
+        if (a21p_s32(o, D_70003B68) % 12 == 0) {
+            int32_t r = 0;
+            (void)a21p_c_00122BB8(o, &r);
+            const uint32_t slot = (r & 1) ? 7 : 0x13;
+            a21p_w32(o, D_700038A0, F_10);
+            a21p_w32(o, D_700038A0 + 4, F_ZERO);
+            a21p_w32(o, D_700038A0 + 8, F_ZERO);
+            a21p_w32(o, D_700038A0 + 12, F_ONE);
+            (void)a21p_c_001026A0(o, D_700038A0, a21p_u32(o, par + 0x110 + slot * 4) + 0x90, D_700038A0);
+            a21p_w32(o, D_700038A0 + 4, F_40);
+            uint32_t e = 0;
+            (void)a21p_c_001EFD20(o, 2, D_700038A0, &e);
+            if (e != 0) a21p_w32(o, e + 0x38, 0);
+        }
+        break;
+    case 11:
+        a21p_824FE0_three(o, par, w, 6, 0);
+        a21p_w8(o, self + 5, 0);
+        break;
+    case 12:
+        a21p_824FE0_three(o, par, w, 9, 0);
+        a21p_w8(o, self + 5, 0);
+        break;
+    case 0x63:
+        a21p_w8(o, self + 4, 3);
+        a21p_w32(o, w + 0xF0, F_ZERO);
+        break;
+    default:
+        break;
+    }
+    (void)a21p_c_0021B9A0(o, 2, F_ZERO, F_ZERO);
+    (void)a21p_c_0021B9A0(o, 3, F_ZERO, F_2000);
+    if (!A21P_EQ(a21p_u32(o, w + 0xF0), F_ZERO)) {
+        uint32_t seed = a21p_u32(o, w + 0xFC);
+        for (int32_t j = 0; j < a21p_s32(o, w + 0xF8); j++) {
+            (void)a21p_c_001029C0(o, D_700036A0);
+            (void)a21p_c_00102BB0(o, D_700036A0, D_700036A0, F_PI);
+            (void)a21p_c_00102918(o, D_700036A0, D_700036A0, a21p_824FE0_obj(o, par, w, (uint32_t)j) + 0xC0);
+            a21p_w32(o, D_700036D0 + 8, A21P_ADD(a21p_u32(o, D_700036D0 + 8), F_20));
+            const uint32_t rr = A21P_ADD(A21P_DIV(A21P_CVT_S_W((seed >> 16) & 0xFFFFu), F_65535), F_0_0001);
+            seed = seed * 37u + 11u;
+            const uint32_t ty = a21p_u32(o, D_700036D0 + 4);
+            a21p_w32(o, D_70003A20, rr);
+            if (!A21P_LE(ty, F_10)) {
+                int32_t hh = 0;
+                (void)a21p_c_001CCF70(o, D_700036D0, &hh);
+                (void)a21p_c_001CFB50(o, packet, 0, D_700036A0, a21p_u32(o, w + 0xC0 + 4u * (uint32_t)j),
+                                      a21p_u32(o, D_70003A20), a21p_u32(o, w + 0xF0), F_0_1, F_20);
+                (void)a21p_c_001CFBE0(o, hh, 5, A21P_GROUP_82B000, packet, 0);
+            }
+            a21p_8243B0_advance(o, w + 0xC0 + 4u * (uint32_t)j, F_0_015);
+        }
+    }
+    (void)a21p_c_0021B9A0(o, 1, F_ZERO, F_ZERO);
+    a21p_w8(o, self + 6, a21p_u8(o, self + 5));
+    for (int32_t j = 0; j < a21p_s32(o, w + 0xF8); j++)
+        (void)a21p_c_00102948(o, w + 16u * (uint32_t)j, a21p_824FE0_obj(o, par, w, (uint32_t)j) + 0xC0);
+}
+
+int em_area21_groups_00824FE0(const EmArea21GroupsHooks *h, uint32_t a0, uint32_t sp, EmArea21GroupsFault *fault)
+{
+    A21P o;
+    if (a21p_begin(&o, h, fault)) return -1;
+    a21p_824FE0(&o, a0, sp);
     return a21p_end(&o);
 }

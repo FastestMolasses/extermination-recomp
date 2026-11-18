@@ -109,6 +109,14 @@ static inline int a21p_end(const A21P *o) { return a21p_failed(o) ? -1 : 0; }
  * wrapper runs, so a fault latched while reading an argument stops the
  * call. Each returns 0 on success, -1 when skipped or failed. */
 /* BEGIN GENERATED WRAPPERS */
+static inline int a21p_c_001026A0(A21P *o, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    if (a21p_failed(o)) return -1;
+    if (!o->h->w_001026A0) return a21p_latch(o, 0x001026A0u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
+    if (o->h->w_001026A0(o->h->ctx, a0, a1, a2) < 0) return a21p_latch(o, 0x001026A0u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
+    return 0;
+}
+
 static inline int a21p_c_00102918(A21P *o, uint32_t a0, uint32_t a1, uint32_t a2)
 {
     if (a21p_failed(o)) return -1;
@@ -130,6 +138,14 @@ static inline int a21p_c_001029C0(A21P *o, uint32_t a0)
     if (a21p_failed(o)) return -1;
     if (!o->h->w_001029C0) return a21p_latch(o, 0x001029C0u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
     if (o->h->w_001029C0(o->h->ctx, a0) < 0) return a21p_latch(o, 0x001029C0u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
+    return 0;
+}
+
+static inline int a21p_c_00102BB0(A21P *o, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    if (a21p_failed(o)) return -1;
+    if (!o->h->w_00102BB0) return a21p_latch(o, 0x00102BB0u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
+    if (o->h->w_00102BB0(o->h->ctx, a0, a1, a21p_float(a2)) < 0) return a21p_latch(o, 0x00102BB0u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
     return 0;
 }
 
@@ -215,11 +231,11 @@ static inline int a21p_c_001CFBE0(A21P *o, int32_t a0, int32_t a1, uint32_t a2, 
     return 0;
 }
 
-static inline int a21p_c_001EFD20(A21P *o, uint32_t a0, uint32_t a1)
+static inline int a21p_c_001EFD20(A21P *o, uint32_t a0, uint32_t a1, uint32_t *out)
 {
     if (a21p_failed(o)) return -1;
     if (!o->h->w_001EFD20) return a21p_latch(o, 0x001EFD20u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
-    if (o->h->w_001EFD20(o->h->ctx, a0, a1) < 0) return a21p_latch(o, 0x001EFD20u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
+    if (o->h->w_001EFD20(o->h->ctx, a0, a1, out) < 0) return a21p_latch(o, 0x001EFD20u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
     return 0;
 }
 
