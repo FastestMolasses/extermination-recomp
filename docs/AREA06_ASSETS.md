@@ -458,7 +458,23 @@ is bound:
 ## Known gaps
 
 1. **Sub 1** (`chunk10.n1`, placements 0x8283D0 and group 0x8265E0, the
-   director 0x825E20) is loaded by no capture and not exported.
+   director 0x825E20) is loaded by no route capture and not exported.
+   Claude's guided run holds it (lane PORT-A16-DRAW, 2026-11-17): take
+   g59 (AREA01 -> AREA06) and take g67 (AREA16 -> AREA06) end in sub 1
+   (decomp build/fork_refs/guided-20261117/s87/route_g16, area bytes 06 01);
+   the capture before g59's load should be take g58's end (g58_area04_area01,
+   by its name AREA04 -> AREA01; area bytes unchecked, not yet a capture
+   folder: `tools/capture_from_take.py --set <set> g58_area04_area01`).
+   AREA16's card g60 (g59's end) needs this export and the module pack's
+   room (0x06, 1) (`tools/export_level_module_pack.py` AREAS). The
+   exporters here are fixed to sub 0 and the route_a06 captures; the
+   generic path the later subs took (export_area08_common's Target / SUBS
+   rows for AREA07 subs 2 and 3, run by export_area08_assets.py) is the
+   pattern: an AREA06 target with SUBS[('area06', 1)] = g59 (and g67 if one
+   load map fits both), previous g58, its FLAG_RULES / CREATURES /
+   EXPLICIT_MODELS from AREA06's sub-1 owners, the place step keeping sub
+   0's side files (it refuses side files that differ), then profile 6 sub
+   1 (world textures, shadow receivers) and the runtime's sub 1.
 2. **Ids 0x71, 0x7C, 0x72, 0x79, 0x73, 0x7A** (0x16A69C0 .. 0x17711C0) are not
    decoded; their bytes are only checked equal to RAM through the load map.
 3. **Hull 28 after the collapse** is accepted by the written-words orphan rule

@@ -589,9 +589,13 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   longer fails the player view (00183010's w-lane adds). g45 leaves the
   rows at 248 from the card's effect timers (the beasts' draws); g47 stops
   at row ~1617 (a hit the original did not take); g48 not reached. g16
-  (card g61) stops on its first frame at 001CAE30, as the card beat did;
-  a start before AREA16 (card g60, AREA06 sub 1) needs AREA06 sub 1
-  exported (assets and the module pack's room (0x06, 1)). AREA16's owners now bind in the live composition too (area 0x10:
+  (card g61): since lane PORT-A16-DRAW (001CAE30, below) it plays to chain
+  frame 11186 of 37219: g61 on the recorded position for all 2788 rows
+  (its three melees break the curtains, so g62's card question is gone in
+  the chain), but rand() differs from row 4 and two hits the original did
+  not take (rows 2345, 2457); g62 stays in sub 0 at row 4336; the player
+  dies in g63. A start before AREA16 (card g60, AREA06 sub 1) needs
+  AREA06 sub 1 exported (assets and the module pack's room (0x06, 1)). AREA16's owners now bind in the live composition too (area 0x10:
   dispatch_second_half, scene bindings, 001B6660's window, op09 callbacks).
 - AREA16 live (lane PORT-LIVE-A16, AREA16_PORT.md "Live"): SUBS rows for
   subs 0 and 1 from the guided run's g60 .. g66 (route_g16), CREATURES
@@ -618,9 +622,13 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   em_area16_overlay_f, proven by test_area16_overlay_reference (2018 cases
   quick, 2193 full) and bound; 001DB480's render callees run live
   (em_rcl_001D6B10 / em_rcl_001D6C90, 001CAAC0's chain insertion). g61 now
-  passes [13]'s effect 4 and the grid's display list and fail-stops on its
-  first frame at 001CAE30, [10]'s +0x4C draw method (model kind 3:
-  001CACC0 and its callees, untranslated).
+  passes [13]'s effect 4 and the grid's display list. Lane PORT-A16-DRAW
+  (AREA16_PORT.md "Lane PORT-A16-DRAW"): [10]'s +0x4C draw method 001CAE30
+  (model kind 3: 001CACC0, 001D39A0 / 001D3DA0, a class-3 unit: set 2
+  class 3, the subtractive blend) translated, proven by
+  test_owner_draw_reference F and test_object_unit_reference K3 (original
+  code and microcode over g60 / g61) and bound; beat g61 runs its whole
+  pad (end position good; D_0081085A differs).
 - Every boot behaviour of the six areas is now in a census ledger or
   defined (section 6 for the six BOOT2 added); those marked only "defined"
   by an earlier lane still need their oracle named before they count. The

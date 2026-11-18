@@ -81,16 +81,21 @@ section "Live".
 ## Open
 
 - g62's card (section "Live"): it respawns the three curtains the guided
-  run broke in g61; choose between a card from a later state and a melee
-  prefix. g66's return to the title (health 25 at pad frame 1000) is not
+  run broke in g61. In the chain (section "Lane PORT-A16-DRAW") the
+  question is gone: g61's three melees break the curtains (state 2 at chain
+  rows 2146, 2285, 2655) and g62 goes on from them with no load. g66's return to the title (health 25 at pad frame 1000) is not
   investigated yet; check it the same way (per-frame progress past the
   last good pad frame, the nodes near the player against the recording's
   source state).
-- The live run (section "Live"): g61's next stop, [10]'s +0x4C draw
-  method 001CAE30 (model kind 3: 001CACC0 with 001CA7B0, 001C7420,
-  001D39A0 / 001D3DA0, all untranslated); a live 001BAD40 worker for sub
-  1's booth (lane PORT-FX's); g62's and g66's returns to the title; then
-  the guided states' live nodes as oracle cases.
+- The live run: the g16 chain's first divergence (section "Lane
+  PORT-A16-DRAW"): g61's rand() word differs from row 4 (the frame before
+  drew a different number of times) and the port takes two hits in g61
+  (rows 2345, 2457) the original did not; then g62 does not leave sub 0
+  (row 4336) and the player dies in g63. A live 001BAD40 worker for sub
+  1's booth (lane PORT-FX's); g66's return to the title; then the guided
+  states' live nodes as oracle cases.
+- A start before the area change (card g60) needs AREA06 sub 1 exported
+  (AREA06_ASSETS.md "Known gaps" 1).
 - 001DB480's packets now run live (section "Effects"), but no capture
   compares them: the water oracle proves the function over g60's context,
   not the live chain the page consumer walks.
@@ -164,8 +169,10 @@ each take; `em_start_at.c`), beats g61 .. g67 in `mid_route_beats.py`.
 - g61 fail-stopped on its first frame at 001DAFA0 (the water grid); since
   lane PORT-WATER (section "Water grid") it passes [10]'s state 0, and
   since lane PORT-A16FX (section "Effects") [13]'s effect 4 and the grid's
-  display list 001DB480; it now fail-stops on its first frame at
-  001CAE30, [10]'s +0x4C draw method (model kind 3, untranslated).
+  display list 001DB480; since lane PORT-A16-DRAW (001CAE30, model kind
+  3's draw) it runs its whole pad with no fault. The beat ends at the
+  recording's end position; the end block differs in one byte, D_0081085A
+  (port 0x48, original 0x5C: the hits of section "Lane PORT-A16-DRAW").
 - g62 (sub 0 after the barrier: [10] in state 2, [13] makes no effect)
   plays in sub 0 to pad frame 3042 with no fault, then returns to the
   title (001AC070 again at engine frame 8105) without reaching sub 1.
@@ -219,6 +226,53 @@ curtains with no load. A start before the area change (card g60: g59's
 end, AREA06 sub 1 in play; built and registered) does not load yet:
 AREA06 sub 1 is not exported (assets/area06 holds sub 0; the module pack
 has no room (0x06, 1), so em_module_loader fails at its first read).
+
+### Lane PORT-A16-DRAW (2026-11-17, branch `a16draw`): model kind 3's draw
+
+[10] 0x825800's +0x4C is 001CAE30 (001CA5F0's kind 3; it is the only owner
+with that method in any of the 438 captures: g60's and g61's [10] at
+0x7A8E10). 001CAE30(owner) = 001CACC0(owner, +0x44), 001CABA0's sibling:
+the radius times 1.2 when +0x02 has bit 0x40; its passes 001D39A0 /
+001D3DA0 send 001D1F80(3, 2, 3) (set 2, class 3, D_00815AB0: ALPHA
+0x8000000062, the subtractive blend Cd - Cs) with skin record D_00816C40
+(the clip pass keeps D_00816E40); with bit 0x40 the unit goes to slot 0
+of the page D_007635C0 through 001CB760 instead of 001CAAC0's depth
+insertion. Translated from the byte-matched decomp C:
+em_owner_services_001CACC0, em_owner_draw_001D39A0 / _001D3DA0; 001CA7B0
+and 001C7420 (NEARMISS in the decomp) reuse their proven translations
+(test_owner_draw_reference A / D). Bound in em_area01_model_draw
+(em_owner_draw_live_001CACC0, which shares 001CABA0's page_draw); the
+class-3 unit is parsed by em_object_unit and drawn by the chain page with
+class 3's state (em_object_unit_gs_state).
+
+**Evidence.** `make test-owner-draw-reference` section F: the ORIGINAL
+001CAE30 over g60 / g61 (as captured, at the camera's point for the clip
+pass, far away, random points and model radii, each with +0x02 bit 0x40
+clear and set) against the native chain: every channel-3 byte, the
+cursor, context +0x5C, the lighting modes, the 001CAAC0 / 001CB760 call
+(28 cases quick, 108 with EM_TEST_FULL=1; a 001D39A0 GS-class mutation
+fails). `make test-object-unit-reference` section K3: the class-3 units
+through the ORIGINAL microcode equal the native parse and run (3 units,
+480 triangles, both passes), and the class-3 GS state bytes of both
+captures equal em_object_unit_gs_state_check_23's set.
+
+**Live.** Beat g61 runs its whole pad (section "Live"). Two host limits
+were raised: the page-unit cache 128 -> 512 per frame (g61's frame where
+[10]'s boot effect 001F4840 breaks into its 001F3E30 mode-2 pieces;
+512 is the chain page's own unit capacity) and EM_START_AT_PAD's rows
+4096 -> 65536 (the g16 chain holds 37220 frames). `guided_chain.py g16`
+(card g61) now plays to chain frame 11186 of 37219:
+- g61: 2788 of 2788 rows on the recorded position; rand() word differs
+  from row 4; the port takes hits at rows 2345 (65 -> 60) and 2457 (-> 55)
+  that the original did not take (the nearest bug 0x12A5D0 in the trace
+  is about 40 units away; not yet explained).
+- g62: on the row for 2754 of 4135 compared rows; two more hits (3159,
+  3256); at row 4336 the area bytes stay 10 00 03 where the original
+  loads sub 1 (10 01 00).
+- g63: off the route from its first row (still in sub 0); health falls
+  by 2 every 240 rows, to 0 at row 3091;
+  the game returns to the title at engine frame 12939 (g64 row 718).
+The curtains question is gone in the chain (section "Open").
 
 ## Water grid (lane PORT-WATER, 2026-11-17)
 
