@@ -16,9 +16,10 @@
  * each function's first instruction.
  * AREA16's own owners (area byte 0x10) are em_area16_overlay's
  * (test_area16_overlay_reference, docs/AREA16_PORT.md): the behaviours its
- * placements and groups name, the two children they spawn and the op09
- * callbacks 0x825630 / 0x826C20; frames from each function's first
- * instruction, widened by the overlay helper an owner calls.
+ * placements and groups name, the two children they spawn, the op09
+ * callbacks 0x825630 / 0x826C20 and the five effect behaviours its effect
+ * ids 0..4 select (0x8237A0 .. 0x824110); frames from each function's
+ * first instruction, widened by the overlay helper an owner calls.
  *
  * AREA20 (0x14, lane PORT-A20, docs/AREA20_PORT.md): 0x825F20 =
  * AREA03's 0x825290 word for word (test_area03_route_reference); the group
@@ -103,7 +104,10 @@ static const struct { uint32_t fn, frame; unsigned na; } a16_owners[] = {
     {0x00825260u, 0x20u, 1}, {0x00825310u, 0xA0u, 1}, {0x00825630u, 0x10u, 3}, {0x00825800u, 0xC0u, 1},
     {0x008261A0u, 0x20u, 1}, {0x008263D0u, 0x90u, 1}, {0x00826C20u, 0x10u, 1}, {0x00826C50u, 0x30u, 1},
     {0x00827030u, 0x20u, 1}, {0x008273F0u, 0x40u, 1}, {0x00827B70u, 0x20u, 1}, {0x00827CE0u, 0x30u, 1},
-    {0x00827FA0u, 0x30u, 1}, {0x00828200u, 0x60u, 1}};
+    {0x00827FA0u, 0x30u, 1}, {0x00828200u, 0x60u, 1},
+    /* the effect behaviours of effect ids 0..4 (em_area16_overlay_f) */
+    {0x008237A0u, 0x50u, 1}, {0x008239B0u, 0xA0u, 1}, {0x00823D20u, 0x70u, 1}, {0x00823F70u, 0x40u, 1},
+    {0x00824110u, 0xA0u, 1}};
 
 static int a16_owner(uint32_t fn)
 {
@@ -382,6 +386,11 @@ static int dispatch_second_half(EmArea01Runtime *r, EmArea01Call *c, int *out)
         case 0x00827B70u: x = em_area16_overlay_00827B70(&h, a0, sp, &f); break;
         case 0x00827CE0u: x = em_area16_overlay_00827CE0(&h, a0, sp, &f); break;
         case 0x00827FA0u: x = em_area16_overlay_00827FA0(&h, a0, sp, &f); break;
+        case 0x008237A0u: x = em_area16_overlay_008237A0(&h, a0, sp, &f); break;
+        case 0x008239B0u: x = em_area16_overlay_008239B0(&h, a0, sp, &f); break;
+        case 0x00823D20u: x = em_area16_overlay_00823D20(&h, a0, sp, &f); break;
+        case 0x00823F70u: x = em_area16_overlay_00823F70(&h, a0, sp, &f); break;
+        case 0x00824110u: x = em_area16_overlay_00824110(&h, a0, sp, &f); break;
         default: x = em_area16_overlay_00828200(&h, a0, sp, &f); break;
         }
         if (x >= 0 && (fn == 0x00825630u || fn == 0x00826C20u)) c->v0 = (uint64_t)(int64_t)result;

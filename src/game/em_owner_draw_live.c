@@ -800,6 +800,22 @@ static int caac0_packet(const uint32_t position[4], uint32_t start, EmObjectUnit
     return 0;
 }
 
+int em_owner_draw_live_001CAAC0_chain(const uint32_t position[4], uint32_t start)
+{
+    const uint32_t *vp=words(SPR_3AC0,64);
+    EmPacketChain *pc=em_rcl_packet_chain();
+    if (!position || !vp || !pc)
+        return report(0x001CAAC0u,"chain depth insertion has missing inputs");
+    EmOwnerServicesScratch scratch={0}; memcpy(scratch.s3AC0,vp,64);
+    EmAnimRest rest={0};
+    rest.world.region[0]=(EmPoseRegion){0x7F000000u,16,(uint8_t *)(uintptr_t)position,0};
+    rest.world.region_count=1; rest.world.scratch=&scratch;
+    rest.workers.ctx=pc; rest.workers.w_001CB760=em_packet_chain_w_001CB760;
+    if (em_anim_rest_001CAAC0(&rest,0x7F000000u,start,NULL)<0)
+        return report(rest.fault.address,"chain depth insertion faulted");
+    return 0;
+}
+
 /* 001CAAC0(owner + 0xB0, node): em_anim_rest_001CAAC0 over the owner's
  * +0xB0 quadword and the scratchpad view-projection, its 001CB760 the
  * render context's packet chain (the page D_007635C0). */

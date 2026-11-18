@@ -120,6 +120,12 @@ int em_owner_draw_live_001CAAC0_sprite(const uint32_t position[4], uint32_t star
                                       EmObjectUnitResolve resolver, void *ctx);
 int em_owner_draw_live_001CAAC0_packet(const uint32_t position[4], uint32_t start,
                                       EmObjectUnitResolve resolver, void *ctx);
+/* 001CAAC0(position, start) for a packet chain that is not an object unit
+ * (the AREA16 water grid's 001DB480: CNT packets of GIF DIRECT strips
+ * ending in RET): only the original's depth insertion into the page
+ * (em_anim_rest_001CAAC0 through the context's 001CB760); the page consumer
+ * walks the chain itself (em_chain_page: CNT, VIF DIRECT, GIF PACKED). */
+int em_owner_draw_live_001CAAC0_chain(const uint32_t position[4], uint32_t start);
 
 /* A draw method of 0x26E310 that builds its own object unit on channel 3:
  * `method` 001CB1F0 (kind 10: 001CB140, light mode 5, 001D42E0), 001CB130 (kind

@@ -34,14 +34,17 @@ typedef struct {
 /* BEGIN GENERATED HOOKS */
     int (*w_001026A0)(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2);
     int (*w_001026D0)(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2);
+    int (*w_00102918)(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2);
     int (*w_00102948)(void *ctx, uint32_t a0, uint32_t a1);
     int (*w_00102958)(void *ctx, uint32_t a0, uint32_t a1);
     int (*w_001029C0)(void *ctx, uint32_t a0);
     int (*w_00102B08)(void *ctx, uint32_t a0, uint32_t a1, float a2);
     int (*w_00102BB0)(void *ctx, uint32_t a0, uint32_t a1, float a2);
+    int (*w_00102C58)(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2);
     int (*w_00103230)(void *ctx, uint32_t a0, uint32_t a1, float a2);
     int (*w_0011E2A8)(void *ctx, float a0, float *result);
     int (*w_00122BB8)(void *ctx, int32_t *result);
+    int (*w_001281C0)(void *ctx, float a0, int32_t *result);
     int (*w_0019C6F0)(void *ctx, int32_t a0, int32_t a1);
     int (*w_001A2370)(void *ctx, uint32_t a0, uint32_t a1);
     int (*w_001AF800)(void *ctx, uint32_t a0);
@@ -74,8 +77,10 @@ typedef struct {
     int (*w_001CA6E0)(void *ctx, uint32_t a0, int32_t a1);
     int (*w_001CB5B0)(void *ctx, int32_t a0);
     int (*w_001CCF70)(void *ctx, uint32_t a0, int32_t *result);
+    int (*w_001CD520)(void *ctx, int32_t a0, int32_t a1, uint32_t a2, uint64_t a3, uint32_t a4, float a5, float a6, float a7);
     int (*w_001CFAE0)(void *ctx, uint32_t a0, int32_t a1, uint32_t a2, float a3, float a4, float a5, float a6);
     int (*w_001CFBE0)(void *ctx, int32_t a0, int32_t a1, uint32_t a2, uint32_t a3, int32_t a4);
+    int (*w_001D04B0)(void *ctx, uint32_t a0, int32_t a1, uint32_t a2, float a3, float a4);
     int (*w_001D7FA0)(void *ctx, uint32_t a0, uint32_t a1, int32_t a2, float a3, float a4, int32_t *result);
     int (*w_001D8060)(void *ctx, int32_t a0, uint32_t *result);
     int (*w_001D80B0)(void *ctx, int32_t a0);
@@ -116,6 +121,15 @@ int em_area16_overlay_00827B70(const EmArea16OverlayHooks *h, uint32_t a0, uint3
 int em_area16_overlay_00827CE0(const EmArea16OverlayHooks *h, uint32_t a0, uint32_t sp, EmArea16OverlayFault *fault);
 int em_area16_overlay_00827FA0(const EmArea16OverlayHooks *h, uint32_t a0, uint32_t sp, EmArea16OverlayFault *fault);
 int em_area16_overlay_00828200(const EmArea16OverlayHooks *h, uint32_t a0, uint32_t sp, EmArea16OverlayFault *fault);
+
+/* The effect behaviours (no AREA16 word names them; effect ids 0..4 of
+ * AREA16's effect table select them through 001EF9D0): one call with the
+ * effect node in a0. */
+int em_area16_overlay_008237A0(const EmArea16OverlayHooks *h, uint32_t a0, uint32_t sp, EmArea16OverlayFault *fault);
+int em_area16_overlay_008239B0(const EmArea16OverlayHooks *h, uint32_t a0, uint32_t sp, EmArea16OverlayFault *fault);
+int em_area16_overlay_00823D20(const EmArea16OverlayHooks *h, uint32_t a0, uint32_t sp, EmArea16OverlayFault *fault);
+int em_area16_overlay_00823F70(const EmArea16OverlayHooks *h, uint32_t a0, uint32_t sp, EmArea16OverlayFault *fault);
+int em_area16_overlay_00824110(const EmArea16OverlayHooks *h, uint32_t a0, uint32_t sp, EmArea16OverlayFault *fault);
 
 /* Script op09 callbacks: (self, the op09 record, the script's work block);
  * *result is the return value (1 = done), left unwritten on -1.

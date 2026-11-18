@@ -956,6 +956,62 @@ static int debris_001F2F90(EmArea01Live *l,EmArea01Call *c)
         return worker_result(l,-1,x.core.fault.detail ? x.core.fault.detail : x.core.fault.address);
     return 0;
 }
+/* 001DB480's render callees (worker below; area 0x10 only). */
+static int water_render(EmArea01Live *l,EmArea01Call *c)
+{
+    int32_t r[15];
+    for(unsigned k=0;k<8;++k)r[k]=(int32_t)c->a[k];
+    const int32_t *a=r;
+    int rc;
+    switch(c->function) {
+    case 0x001D6B10u:
+        if(c->na!=4 || c->nf)return worker_result(l,-1,c->function);
+        rc=em_rcl_001D6B10(a[0],a[1],a[2],a[3]);break;
+    case 0x001D6BA0u:
+        if(c->na!=6 || c->nf)return worker_result(l,-1,c->function);
+        rc=em_rcl_001D6BA0(a[0],a[1],a[2],a[3],a[4],a[5]);break;
+    case 0x001D1FF0u:
+        if(c->na!=2 || c->nf)return worker_result(l,-1,c->function);
+        rc=em_rcl_001D1FF0(a[0],a[1]);break;
+    case 0x001D1F20u:
+        if(c->na!=1 || c->nf)return worker_result(l,-1,c->function);
+        rc=em_rcl_001D1F20(a[0]);break;
+    case 0x001D6C90u: {
+        /* the seven stack words: the low words of the doublewords at the
+         * caller's frame + 0x00..+0x30 */
+        if(c->na!=8 || c->nf)return worker_result(l,-1,c->function);
+        const uint32_t frame=c->sp+EM_AREA01_RUNTIME_NEST;
+        for(unsigned k=0;k<7;++k) {
+            const uint8_t *p=bytes(l,frame+8u*k,4,0);
+            if(!p)return worker_result(l,-1,frame+8u*k);
+            memcpy(&r[8+k],p,4);
+        }
+        rc=em_rcl_001D6C90(r);break;
+    }
+    default: {   /* 001CAAC0(kick, head) */
+        const uint32_t head=(uint32_t)c->a[1];
+        const uint8_t *tag=bytes(l,head,0x20,0),*kick=bytes(l,(uint32_t)c->a[0]&~15u,16,0);
+        uint32_t w3=0,w7=0,position[4];
+        if(!tag || !kick || (c->a[0]&15u)) {
+            fprintf(stderr,"em_area01: 001CAAC0(%08X, %08X): unmapped\n",(unsigned)c->a[0],(unsigned)head);
+            return worker_result(l,-1,c->function);
+        }
+        memcpy(&w3,tag,4);memcpy(&w7,tag+0x1C,4);
+        if(((w3>>28)&7u)!=1u || (w7>>24)!=0x50u) {   /* a CNT tag, a VIF DIRECT */
+            fprintf(stderr,"em_area01: 001CAAC0 chain %08X refused (tag %08X, VIF %08X)\n",(unsigned)head,
+                    (unsigned)w3,(unsigned)w7);
+            return worker_result(l,-1,c->function);
+        }
+        memcpy(position,kick,16);
+        if(em_area01_live_suspend(l)<0)return -1;
+        rc=em_owner_draw_live_001CAAC0_chain(position,head);
+        if(em_area01_live_resume(l)<0)return -1;
+        return worker_result(l,rc,rc<0 ? c->function : 0);
+    }
+    }
+    return worker_result(l,rc,rc<0 ? (em_rcl_fault() ? em_rcl_fault() : c->function) : 0);
+}
+
 static int worker(void *ctx,EmArea01Call *c)
 {
     EmArea01Live *l=ctx;
@@ -1146,6 +1202,16 @@ static int worker(void *ctx,EmArea01Call *c)
         int rc=em_area01_light_call(&host,c,&fault);
         return worker_result(l,rc,fault);
     }
+    /* AREA16's water grid display list 001DB480 (em_area16_water, from [10]
+     * 0x825800's tick): its channel-3 set-up and close over the render
+     * context (001D6B10, 001D6BA0, 001D1FF0, 001D6C90 with its seven stack
+     * words at the caller's frame, 001D1F20) and its 001CAAC0(kick, the
+     * chain head): the depth insertion of a CNT / VIF DIRECT packet chain
+     * (not an object unit), refused for any other shape. */
+    if(area==0x10u && (c->function==0x001D6B10u || c->function==0x001D6BA0u || c->function==0x001D1FF0u ||
+                      c->function==0x001D6C90u || c->function==0x001D1F20u ||
+                      (c->function==0x001CAAC0u && c->na==2)))
+        return water_render(l,c);
     if(c->function==0x001D7FA0u || c->function==0x001D80B0u ||
        c->function==0x001D3990u || c->function==0x001CAAC0u) {
         const EmArea01RuntimeHost host={l,bytes,nested};EmArea01LightService service;

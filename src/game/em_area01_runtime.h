@@ -15,6 +15,12 @@
 #include "game/em_area02_overlay.h"
 #include "game/em_area04_port.h"
 
+/* A nested hook's stack pointer: the shared dispatches hand a callee their
+ * entry's sp less the entry's own frame and this much below it
+ * (em_area01_runtime.c's EIGHTH_NEST), so the caller's frame (where a
+ * callee's stack arguments sit, from +0x00) starts at the call's sp + this. */
+#define EM_AREA01_RUNTIME_NEST 0x400u
+
 typedef struct {
     uint32_t function, sp;
     uint64_t a[8];

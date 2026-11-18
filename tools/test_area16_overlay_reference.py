@@ -5,8 +5,9 @@ ORIGINAL instructions: every behaviour its placements and groups name
 0x8263D0, 0x826C50, 0x827030, 0x8273F0, 0x827B70, 0x827CE0, 0x827FA0), the
 two children they spawn (0x825260, 0x828200), the scripts' op09 callbacks
 (0x825630, 0x826C20) and the overlay helpers the owners call (0x824540,
-0x825660, 0x825670, 0x8256E0, 0x825730, 0x825780, 0x826A50).
-docs/AREA16_PORT.md.
+0x825660, 0x825670, 0x8256E0, 0x825730, 0x825780, 0x826A50) and the five
+effect behaviours AREA16's effect ids 0..4 select (0x8237A0, 0x8239B0,
+0x823D20, 0x823F70, 0x824110). docs/AREA16_PORT.md.
 
 The harness is tools/test_level14_port_reference.py (`O`), configured as
 test_level17_boot_reference.py configures it for AREA21's twins: no AREA16
@@ -61,12 +62,12 @@ WORK = FREE + 0x3100                # a script work block
 SPAWN = FREE + 0x4000               # nodes a spawn hook returns (0x400 apart)
 CALLBACK = 0x1CAA00                 # a +0x4C method word (stubbed and logged)
 BSS = 0x82C500                      # AREA16's BSS (runtime); its first 0x1000 bytes are zeroed
-GROUPS = ('a', 'b', 'c', 'd', 'e')
+GROUPS = ('a', 'b', 'c', 'd', 'e', 'f')
 # the pure helpers run as original code (their writes replayed): vector
 # copies, differences and scales, the matrix identity / product /
-# translation / rotation, the sine
-MATH = frozenset((0x1026A0, 0x1026D0, 0x102948, 0x102958, 0x1029C0, 0x102B08, 0x102BB0,
-                  0x103230, 0x11E2A8))
+# translation / rotation, the sine, the colour byte 001281C0
+MATH = frozenset((0x1026A0, 0x1026D0, 0x102918, 0x102948, 0x102958, 0x1029C0, 0x102B08, 0x102BB0,
+                  0x102C58, 0x103230, 0x11E2A8, 0x1281C0))
 
 
 def spec(args):

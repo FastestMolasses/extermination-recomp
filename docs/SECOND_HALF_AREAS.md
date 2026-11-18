@@ -313,9 +313,9 @@ translated by lane PORT-A16 (`em_area16_overlay*.c`,
 capture's arena with designed states, every reachable word) and bound in
 `dispatch_second_half` for area byte 0x10. The effect functions 0x8237A0 ..
 0x824110 have no static reference, but they are reached at run time: an
-effect node's behaviour comes from its effect id (001EFD20 -> 001EF9D0),
-and in the live run [13] 0x8263D0's 001EFD20(4, ..) makes a node whose
-behaviour is 0x824110 (lane PORT-WATER, g61). The water grid [10] calls
+effect node's behaviour comes from its effect id (001EFD20 -> 001EF9D0;
+AREA16's ids 0..4 are the five in order); lane PORT-A16FX translated and
+bound them (em_area16_overlay_f, AREA16_PORT.md "Effects"). The water grid [10] calls
 (001DAFA0 .. 001DB480) is translated in `em_area16_water` (section 6).
 AREA16_PORT.md.
 
@@ -569,10 +569,17 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
 - AREA16's water grid (lane PORT-WATER, AREA16_PORT.md "Water grid"):
   001DAFA0, 001DB240, 001DB250, 001DB040, 001DB480 (with 001DAE10 /
   001DAC90) in `em_area16_water`, bound through the fallback dispatch, the
-  grid block 0x818000 .. 0x81C03F mapped live. g61 now passes [10]'s state
-  0 and fail-stops on the same frame at 0x824110 (effect 4 of [13]
-  0x8263D0, untranslated); g62 plays in sub 0 to pad frame 3000 with no
-  fault, then returns to the title (engine frame 8105) before sub 1.
+  grid block 0x818000 .. 0x81C03F mapped live. g62 plays in sub 0 to pad
+  frame 3000 with no fault, then returns to the title (engine frame 8105)
+  before sub 1.
+- AREA16's effects (lane PORT-A16FX, AREA16_PORT.md "Effects"): the five
+  effect behaviours of ids 0..4 (0x8237A0 .. 0x824110) in
+  em_area16_overlay_f, proven by test_area16_overlay_reference (2018 cases
+  quick, 2193 full) and bound; 001DB480's render callees run live
+  (em_rcl_001D6B10 / em_rcl_001D6C90, 001CAAC0's chain insertion). g61 now
+  passes [13]'s effect 4 and the grid's display list and fail-stops on its
+  first frame at 001CAE30, [10]'s +0x4C draw method (model kind 3:
+  001CACC0 and its callees, untranslated).
 - Every boot behaviour of the six areas is now in a census ledger or
   defined (section 6 for the six BOOT2 added); those marked only "defined"
   by an earlier lane still need their oracle named before they count. The

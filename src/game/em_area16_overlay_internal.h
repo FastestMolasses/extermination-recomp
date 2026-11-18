@@ -155,6 +155,14 @@ static inline int a16_c_001026D0(A16 *o, uint32_t a0, uint32_t a1, uint32_t a2)
     return 0;
 }
 
+static inline int a16_c_00102918(A16 *o, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    if (a16_failed(o)) return -1;
+    if (!o->h->w_00102918) return a16_latch(o, 0x00102918u, EM_AREA16_OVERLAY_FAULT_NULL_WORKER);
+    if (o->h->w_00102918(o->h->ctx, a0, a1, a2) < 0) return a16_latch(o, 0x00102918u, EM_AREA16_OVERLAY_FAULT_WORKER_FAILED);
+    return 0;
+}
+
 static inline int a16_c_00102948(A16 *o, uint32_t a0, uint32_t a1)
 {
     if (a16_failed(o)) return -1;
@@ -195,6 +203,14 @@ static inline int a16_c_00102BB0(A16 *o, uint32_t a0, uint32_t a1, uint32_t a2)
     return 0;
 }
 
+static inline int a16_c_00102C58(A16 *o, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    if (a16_failed(o)) return -1;
+    if (!o->h->w_00102C58) return a16_latch(o, 0x00102C58u, EM_AREA16_OVERLAY_FAULT_NULL_WORKER);
+    if (o->h->w_00102C58(o->h->ctx, a0, a1, a2) < 0) return a16_latch(o, 0x00102C58u, EM_AREA16_OVERLAY_FAULT_WORKER_FAILED);
+    return 0;
+}
+
 static inline int a16_c_00103230(A16 *o, uint32_t a0, uint32_t a1, uint32_t a2)
 {
     if (a16_failed(o)) return -1;
@@ -218,6 +234,14 @@ static inline int a16_c_00122BB8(A16 *o, int32_t *out)
     if (a16_failed(o)) return -1;
     if (!o->h->w_00122BB8) return a16_latch(o, 0x00122BB8u, EM_AREA16_OVERLAY_FAULT_NULL_WORKER);
     if (o->h->w_00122BB8(o->h->ctx, out) < 0) return a16_latch(o, 0x00122BB8u, EM_AREA16_OVERLAY_FAULT_WORKER_FAILED);
+    return 0;
+}
+
+static inline int a16_c_001281C0(A16 *o, uint32_t a0, int32_t *out)
+{
+    if (a16_failed(o)) return -1;
+    if (!o->h->w_001281C0) return a16_latch(o, 0x001281C0u, EM_AREA16_OVERLAY_FAULT_NULL_WORKER);
+    if (o->h->w_001281C0(o->h->ctx, a16_float(a0), out) < 0) return a16_latch(o, 0x001281C0u, EM_AREA16_OVERLAY_FAULT_WORKER_FAILED);
     return 0;
 }
 
@@ -477,6 +501,14 @@ static inline int a16_c_001CCF70(A16 *o, uint32_t a0, int32_t *out)
     return 0;
 }
 
+static inline int a16_c_001CD520(A16 *o, int32_t a0, int32_t a1, uint32_t a2, uint64_t a3, uint32_t a4, uint32_t a5, uint32_t a6, uint32_t a7)
+{
+    if (a16_failed(o)) return -1;
+    if (!o->h->w_001CD520) return a16_latch(o, 0x001CD520u, EM_AREA16_OVERLAY_FAULT_NULL_WORKER);
+    if (o->h->w_001CD520(o->h->ctx, a0, a1, a2, a3, a4, a16_float(a5), a16_float(a6), a16_float(a7)) < 0) return a16_latch(o, 0x001CD520u, EM_AREA16_OVERLAY_FAULT_WORKER_FAILED);
+    return 0;
+}
+
 static inline int a16_c_001CFAE0(A16 *o, uint32_t a0, int32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5, uint32_t a6)
 {
     if (a16_failed(o)) return -1;
@@ -490,6 +522,14 @@ static inline int a16_c_001CFBE0(A16 *o, int32_t a0, int32_t a1, uint32_t a2, ui
     if (a16_failed(o)) return -1;
     if (!o->h->w_001CFBE0) return a16_latch(o, 0x001CFBE0u, EM_AREA16_OVERLAY_FAULT_NULL_WORKER);
     if (o->h->w_001CFBE0(o->h->ctx, a0, a1, a2, a3, a4) < 0) return a16_latch(o, 0x001CFBE0u, EM_AREA16_OVERLAY_FAULT_WORKER_FAILED);
+    return 0;
+}
+
+static inline int a16_c_001D04B0(A16 *o, uint32_t a0, int32_t a1, uint32_t a2, uint32_t a3, uint32_t a4)
+{
+    if (a16_failed(o)) return -1;
+    if (!o->h->w_001D04B0) return a16_latch(o, 0x001D04B0u, EM_AREA16_OVERLAY_FAULT_NULL_WORKER);
+    if (o->h->w_001D04B0(o->h->ctx, a0, a1, a2, a16_float(a3), a16_float(a4)) < 0) return a16_latch(o, 0x001D04B0u, EM_AREA16_OVERLAY_FAULT_WORKER_FAILED);
     return 0;
 }
 
