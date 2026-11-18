@@ -19,6 +19,14 @@ int em_coll_segment_0019AA80(EmCollProbeState *state, EmCollSegmentFaceScratch *
                              const EmCollHullWorld *player, const float from[3], const float to[3],
                              uint32_t mask, const void *hit_entity)
 { (void)state; (void)face; (void)player; (void)from; (void)to; (void)mask; (void)hit_entity; return -1; }
+/* 0019A440 (00133CD0's sight rays, em_coll_segment_walkers) and the binding's
+ * host (em_aim_fire_world_live_hulls' player, em_aim_fire_binding) are
+ * outside this fixture as well: no case here reaches them, and reaching one
+ * is a refusal. */
+int em_coll_segment_0019A440(const EmCollSegment *seg, const float from[3], const float to[3], unsigned mask)
+{ (void)seg; (void)from; (void)to; (void)mask; return -1; }
+EmAimFireLive *em_aim_fire_binding_host(void);
+EmAimFireLive *em_aim_fire_binding_host(void) { return NULL; }
 
 static EmAimFireWorldLive world;
 static EmCollProbeState probe;
