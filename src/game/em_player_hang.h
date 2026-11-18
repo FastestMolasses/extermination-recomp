@@ -129,4 +129,15 @@ int em_player_hang_vadd(void *context, float out[4], const float a[4], const flo
  * original would read neighbouring data; the native refuses). */
 int em_player_hang_state(void *context, EmPlayerLiveActor *actor);
 
+/* 001645D0, state +5 = 0x0A (the climb up from a hang), over the live actor.
+ * context is a const EmPlayerHangWorkers *; only .request (001749A0) and
+ * .sound (001FBD50) are called, and only they are required. Its +6: 0 clip
+ * 0x70, +7 = 0, +25F = 1; 1 waits for +200 bit 0x1000; 2 clip 0x71, +28 = 12
+ * and the steps +2E0..+2E8 = (+290.. - +B0..) / 12; 3 steps +B0..+B8 until
+ * +28 runs out, then the target, clip 0x7A and sound 0xFE; 4 on +200 bit
+ * 0x1000 clip 0x7B, +5 = 9, +6 = 0, +1F0 = 0x10, +D = 1. Returns 0, or -1
+ * when a required worker is missing (nothing written) or a worker faults.
+ * Oracle: tools/test_player_hang_up_reference.py. */
+int em_player_hang_up_state(void *context, EmPlayerLiveActor *actor);
+
 #endif

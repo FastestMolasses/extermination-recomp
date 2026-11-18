@@ -850,6 +850,11 @@ test-player-reaction-reference:
 test-player-hang-reference:
 	python3 tools/test_player_hang_reference.py
 
+# 001645D0 (state 0x0A, the climb up from a hang) against em_player_hang_up_state.
+.PHONY: test-player-hang-up-reference
+test-player-hang-up-reference:
+	python3 tools/test_player_hang_up_reference.py
+
 .PHONY: test-player-recovery-reference
 test-player-recovery-reference:
 	python3 tools/test_player_recovery_reference.py
@@ -2128,6 +2133,12 @@ test-area01-model-live-reference:
 	python3 tools/test_area01_model_live_reference.py
 test-area01-model-draw-reference:
 	python3 tools/test_area01_model_draw_reference.py
+
+# 001CB130 -> 001CB070 (kind 9, the AREA19 worms) run in full against the
+# production em_area01_model_draw_call path over captured AREA19 RAM.
+.PHONY: test-area19-kind9-draw-reference
+test-area19-kind9-draw-reference:
+	python3 tools/test_area19_kind9_draw_reference.py
 test-area01-runtime-reference:
 	python3 tools/test_area01_runtime_reference.py
 .PHONY: test-area01-revisit-runtime-reference

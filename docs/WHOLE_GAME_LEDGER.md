@@ -117,10 +117,10 @@ em_camera_live's aim_call does not serve, so they fault).
 | 0x0017DC80 | boot | 404 | actor_anim | live | em_player_climb.c vault_setup form 2 | the same |
 | 0x0017DE20 | boot | 140 | actor_anim | live | em_player_climb.c vault_step | the same |
 | 0x00162A40 | boot | 876 | actor_anim | live | em_player_recovery.c em_player_recovery_hang_entry (em_player_recovery_state4, set1 0x04) | test-player-recovery-reference: 00162A40 (HANG) executed and compared; state4 equals the direct routine on the record |
-| 0x001645D0 | boot | 508 | actor_anim | unverified | em_player_closure_ledge.inc hang_up_state (set1 0x0A) | Read from the byte-matched C; no original-instruction run. The user's run1 reaches it at vsync 120001 and plays to its end in the port (watch_takes), positions compared per tick |
+| 0x001645D0 | boot | 508 | actor_anim | live | em_player_hang.c em_player_hang_up_state (set1 0x0A, over the hang workers) | test-player-hang-up-reference executes 001645D0 (its two callees 001749A0 / 001FBD50 scripted and recorded) over designed states from the captured player record (no kept capture holds +5 = 0x0A): all 0x320 bytes, every call, every branch outcome. The user's run1 reaches it at vsync 120001 |
 | 0x00180004 | boot | 60 | actor_anim | live | em_player_closure_0e_18.c em_player_closure_00180000 (00180000's body) | test-player-closure-0e-18-reference executes 00180000/00180004 |
 | 0x00187EA0 | boot | 20 | frame_update | live | em_player_floor.c em_player_first_contact case 0x5C; bound in em_player.c (live_contact_001FB9F0) | test-player-floor-reference: the first-contact one-shots 00187DC0 / 00187EA0 executed |
-| 0x001CB070 | boot | 184 | anim_runtime | unverified | em_area01_model_draw.c (method 0x001CB130: +0x80..+0x88 = 1.0) then em_owner_draw_live_method (mode 4, 001C7420, the 001D40E0 list, RET, 001CAAC0) | The kind-9 unit's VU1 program is checked against the original microcode (test-object-method-reference); the EE packet build has no original-instruction run. Live in AREA19 (g11) |
+| 0x001CB070 | boot | 184 | anim_runtime | live | em_area01_model_draw.c (method 0x001CB130: +0x80..+0x88 = 1.0) then em_owner_draw_live_method (mode 4, 001C7420, the 001D40E0 list, RET, 001CAAC0) | test-area19-kind9-draw-reference runs 001CB130 -> 001CB070 and every callee unhooked over captured AREA19 RAM (a19c; the freed worm record and live records, designed bytes named in the test): whole EE RAM and scratchpad equal to em_area01_model_draw_call's. It found 001D40E0's store of D_00251BE0..E8 missing (fixed 2026-11-18). The VU1 program: test-object-method-reference. Live in AREA19 (g11) |
 | 0x00825040 | AREA04 | 376 | overlay AREA04 | live | em_level16_boot.c a04_825040, called by a04_824EF0 (em_level16_boot_a04_00824EF0, bound for D_00810700 == 4 in em_scene_bindings) | test-level16-boot-reference runs 0x825040 inside its caller 0x824EF0 |
 | 0x008251C0 | AREA04 | 180 | overlay AREA04 | live | em_level16_boot.c a04_8251C0 (the same caller) | the same |
 | 0x00825280 | AREA04 | 656 | overlay AREA04 | live | em_level16_boot.c a04_825280 and a04_825310 (the slot holds two functions; em_level16_boot_a04_00825310 bound for area 4) | test-level16-boot-reference runs 0x825280 inside 0x825310 |
@@ -177,4 +177,5 @@ em_camera_live's aim_call does not serve, so they fault).
 3. Effects and prototypes never seen in a recording: 001ECE70, 001EE830,
    001F1AA0, AREA07 0x823590, 001E3630 (with 001E3620), and the script
    commands 001B9FF0 / 001B73A0. Each faults where it would be reached.
-4. 001645D0 and 001CB070 are translated but have no original-instruction run.
+4. 001645D0 and 001CB070 have original-instruction runs since 2026-11-18 (GAP-3:
+   test-player-hang-up-reference, test-area19-kind9-draw-reference).
