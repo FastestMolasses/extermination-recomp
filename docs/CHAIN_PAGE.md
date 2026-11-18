@@ -737,6 +737,20 @@ a19_01, a19b_01, a19c_00..03: kind 10 in a19c_03 only). **Pixels were not compar
 with an original frame**: no capture holds a frame with one of these units' page
 and its GS memory before the draw.
 
+Kind 9's EE side (2026-11-18): `make test-area19-kind9-draw-reference`
+(tools/test_area19_kind9_draw_reference.py) runs the original 001CB130 ->
+001CB070 with every callee unhooked (001D8C20, 001C7420 with 001D89D0, 001D40E0
+and its builders, the RET tag, 001CAAC0 and 001CB760) over captured AREA19 RAM
+(the a19c beats: the freed worm record given live bones, and live records
+given the worm model; the changed bytes are named in the test) and compares
+the whole EE RAM and scratchpad with the production em_area01_model_draw_call.
+It found that 001D40E0 / 001D4440 store their three float_to_int(128 * rgb)
+words into D_00251BE0..E8 / D_00251C20..28 before 001D6580 reads the row; the
+port computed them into a copy. em_load_veil_particles_001D40E0 now stores
+them into the render context's storage of those bytes and reads the row from
+there (only these two routines name the rows, so the drawn packets were
+already equal; the stored words were not).
+
 ## 7. Binding (live)
 
 - **001D1EA0's kick.** em_render_context_live wraps the frame close's 001CB800

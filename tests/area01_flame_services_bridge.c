@@ -36,6 +36,8 @@ const uint8_t *em_rcl_bytes(uint32_t a,uint32_t n)
 uint8_t *em_rcl_bytes_mut(uint32_t a,uint32_t n)
 { return (uint8_t *)(uintptr_t)em_rcl_bytes(a,n); }
 EmPacketChain *em_rcl_packet_chain(void){return &pc;}
+/* The fog setter (em_effect_001EB440's 001EB440) is outside this oracle. */
+int em_rcl_0021B9A0(int32_t mode,uint32_t scale,uint32_t bias){(void)mode;(void)scale;(void)bias;return 0;}
 int fs_load(void) { memset(&S,0,sizeof S);return em_effects_live_load(); }
 int fs_overflow(void)
 {

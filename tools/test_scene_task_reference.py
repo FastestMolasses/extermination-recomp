@@ -64,10 +64,10 @@ M64 = (1 << 64) - 1
 # Executed original functions: start -> size (splat .s headers).
 FUNCS = {0x1ACEC0: 0x148, 0x1AD010: 0x12C, 0x1AD140: 0x60, 0x1AD250: 0x108,
          0x1AD360: 0x16C, 0x1AD4E0: 0x258, 0x1AD740: 0x7C0, 0x1ADF00: 0x4C, 0x1ADF50: 0xEC,
-         0x1AFCF0: 0x78, 0x121A28: 0xC0}
+         0x1AFCF0: 0x78, 0x121A28: 0xC0, 0x1ACA20: 0x450, 0x1ACE70: 0x50}
 ENTRIES = [0x1ACEC0, 0x1AD250, 0x1AD360, 0x1ADF50, 0x1AD4E0, 0x1AD740, 0x1ADF00, 0x1AD010,
-           0x1AD140, 0x1AFCF0]
-RETURNS_VALUE = {0x1AD360, 0x1ADF50}
+           0x1AD140, 0x1AFCF0, 0x1ACA20]
+RETURNS_VALUE = {0x1AD360, 0x1ADF50, 0x1ACA20}
 
 # Owned state layout (address, size); the native shim uses the same order.
 LAYOUT = [(TASK+8, 24), (0x8106B0, 0x48), (0x810700, 3), (0x810730, 0x20),
@@ -77,7 +77,12 @@ LAYOUT = [(TASK+8, 24), (0x8106B0, 0x48), (0x810700, 3), (0x810730, 0x20),
           (0x810E70, 2), (0x810E50, 1),
           # 001AD740: the continue counter, the knife flag and the dog tags
           # D_00810C90..9F, D_00810CA6..CB1 (CA8 / CAA / CAC / CB0 halfwords)
-          (0x81070A, 1), (0x810C90, 0x10), (0x810CA6, 12)]
+          (0x81070A, 1), (0x810C90, 0x10), (0x810CA6, 12),
+          # 001ACA20 (the attract demo): the demo counter D_00275BD4 (read
+          # only; the native core's argument) and its seeds D_00810C61, C65,
+          # C68, C7E, 774, 7F4, 79A (CA6 / CA8 / CAC above)
+          (0x275BD4, 4), (0x810C61, 1), (0x810C65, 1), (0x810C68, 1), (0x810C7E, 1),
+          (0x810774, 1), (0x8107F4, 1), (0x81079A, 1)]
 SNAP = sum(size for _, size in LAYOUT)
 OFFSET = {}
 _o = 0
@@ -87,14 +92,15 @@ for _a, _n in LAYOUT:
     _o += _n
 OWNED = set(OFFSET)
 
-READERS = {0x28A9A0: 2, 0x282157: 1}
-STORES = {0x821058: 1, 0x275C78: 1, 0x810D38: 4}
+READERS = {0x28A9A0: 2, 0x282157: 1, 0x28A564: 4}
+STORES = {0x821058: 1, 0x275C78: 1, 0x810D38: 4, 0x70003B64: 4}
 OOB = range(0x810750, 0x810830)   # D_00810730[0x20..0xFF]
 RESULT_CALLEES = (0x1AD1A0, 0x1AD230, 0x21B550, 0x22D380, 0x225AC0)
 # Argument registers each callee declares (decomp C); compared on events and trace.
 ARGS = {0x1D2830: 2, 0x1AEDB0: 1, 0x1AED80: 1, 0x1FF080: 2, 0x1AEE10: 2, 0x1FA790: 2,
         0x1ABF90: 4, 0x1AEDE0: 2, 0x1AEBA0: 1, 0x1AB790: 1, 0x121A28: 3,
-        0x1B0C00: 1, 0x1C40B0: 2, 0x1D1EA0: 1, 0x225AC0: 1}
+        0x1B0C00: 1, 0x1C40B0: 2, 0x1D1EA0: 1, 0x225AC0: 1,
+        0x200830: 1, 0x122BA8: 1, 0x1B5BC0: 1, 0x1B07C0: 1}
 # Trace-only arguments: registers the call site sets up for a void callee.
 TRACE_ARGS = {(0x1AD010, 0x1FBC50): 2}
 KIND = {'call': 1, 'store': 2, 'read': 3}
@@ -283,6 +289,7 @@ def run_original(elf, entry, snap, config):
     o.save(SLOT, TASK)
     o.save(0x28A9A0, config['fade'] & 0xFFFF, 2)
     o.save(0x282157, config['busy'], 1)
+    o.save(0x28A564, config.get('chain', 0) & 0xFFFFFFFF, 4)
     o.config = config
     ret = o.execute(entry)
     return {'ret': ret, 'events': o.events, 'trace': o.trace, 'final': o.snapshot(), 'oob': o.oob}
@@ -303,7 +310,7 @@ typedef struct { uint32_t caller, callee, a[4]; } Tr;
 typedef struct {
     int32_t entry, fail_at, perturb, clear_bd8, r_1AD1A0, r_1AD230, r_21B550, fade, busy;
     uint32_t null_address;
-    int32_t prefault, null_user, no_table, r_22D380, r_225AC0;
+    int32_t prefault, null_user, no_table, r_22D380, r_225AC0, chain;
 } Cfg;
 typedef struct {
     int32_t ret, nev, ntr, fault_code, overflow;
@@ -314,6 +321,7 @@ typedef struct {
 } Out;
 
 typedef struct { EmSceneState *s; uint8_t *user; const Cfg *cfg; Out *out; } Ctx;
+static int32_t demo_counter; /* D_00275BD4 (001ACA20's argument) */
 
 /* Layout, in order: see LAYOUT in the Python test. */
 static void io(EmSceneState *s, uint8_t *user, uint8_t *b, int write)
@@ -337,6 +345,14 @@ static void io(EmSceneState *s, uint8_t *user, uint8_t *b, int write)
     BYTES(em_scene_progress_at(s, 0x0081070Au, 1), 1);
     BYTES(em_scene_progress_at(s, 0x00810C90u, 0x10), 0x10);
     BYTES(em_scene_progress_at(s, 0x00810CA6u, 12), 12);
+    LE(demo_counter, 4);
+    BYTES(em_scene_progress_at(s, 0x00810C61u, 1), 1);
+    BYTES(em_scene_progress_at(s, 0x00810C65u, 1), 1);
+    BYTES(em_scene_progress_at(s, 0x00810C68u, 1), 1);
+    BYTES(em_scene_progress_at(s, 0x00810C7Eu, 1), 1);
+    BYTES(em_scene_progress_at(s, 0x00810774u, 1), 1);
+    BYTES(em_scene_progress_at(s, 0x008107F4u, 1), 1);
+    BYTES(em_scene_progress_at(s, 0x0081079Au, 1), 1);
 #undef BYTES
 #undef LE
     (void)o;
@@ -372,6 +388,14 @@ static int hit(void *ctx, uint32_t kind, uint32_t address, uint64_t a0, uint64_t
 CALL0(001AD4D0) CALL0(001AD740) CALL0(001D1EF0) CALL0(001FABB0) CALL0(001FBC50)
 CALL0(001FC9B0) CALL0(0021B180) CALL0(0021B840) CALL0(001D2880) CALL0(001FAB50)
 CALL0(0022D360) CALL0(001AF2C0) CALL0(00225A00) CALL0(001D1C50)
+CALL0(001D19D0) CALL0(001AFCA0) CALL0(001B6990) CALL0(001D19E0) CALL0(001C1DC0)
+CALL0(00199C50) CALL0(001C5C50) CALL0(001AE5E0) CALL0(001AE6B0)
+static int w_001B07C0(void *c, int a) { return hit(c, 1, 0x1B07C0u, U(a), 0, 0, 0, 0); }
+static int w_00122BA8(void *c, uint32_t a) { return hit(c, 1, 0x122BA8u, a, 0, 0, 0, 0); }
+static int w_00200830(void *c, int32_t a) { return hit(c, 1, 0x200830u, U(a), 0, 0, 0, 0); }
+static int w_001B5BC0(void *c, int a) { return hit(c, 1, 0x1B5BC0u, U(a), 0, 0, 0, 0); }
+static int32_t r_0028A564(void *c) { hit(c, 3, 0x28A564u, 0, 0, 0, 0, 0); return ((Ctx *)c)->cfg->chain; }
+static int s_70003B64(void *c, int32_t v) { return hit(c, 2, 0x70003B64u, (uint32_t)v, 0, 0, 0, 0); }
 static int w_0022D380(void *c) { return hit(c, 1, 0x22D380u, 0, 0, 0, 0, ((Ctx *)c)->cfg->r_22D380); }
 static int w_00225AC0(void *c, int a) { return hit(c, 1, 0x225AC0u, U(a), 0, 0, 0, ((Ctx *)c)->cfg->r_225AC0); }
 static int w_001B0C00(void *c, int a) { return hit(c, 1, 0x1B0C00u, U(a), 0, 0, 0, 0); }
@@ -435,6 +459,11 @@ int scene_task_shim(const Cfg *cfg, const uint8_t *snap_in, Out *out)
     w.w_0022D360 = w_0022D360; w.w_0022D380 = w_0022D380; w.w_001AF2C0 = w_001AF2C0;
     w.w_00225A00 = w_00225A00; w.w_00225AC0 = w_00225AC0; w.w_001B0C00 = w_001B0C00;
     w.w_001C40B0 = w_001C40B0; w.w_001D1C50 = w_001D1C50; w.w_001D1EA0 = w_001D1EA0;
+    w.w_001D19D0 = w_001D19D0; w.w_001AFCA0 = w_001AFCA0; w.w_001B6990 = w_001B6990;
+    w.w_001D19E0 = w_001D19E0; w.w_001C1DC0 = w_001C1DC0; w.w_00199C50 = w_00199C50;
+    w.w_001C5C50 = w_001C5C50; w.w_001AE5E0 = w_001AE5E0; w.w_001AE6B0 = w_001AE6B0;
+    w.w_001B07C0 = w_001B07C0; w.w_00122BA8 = w_00122BA8; w.w_00200830 = w_00200830;
+    w.w_001B5BC0 = w_001B5BC0; w.r_0028A564 = r_0028A564; w.s_70003B64 = s_70003B64;
     switch (cfg->null_address) {
 #define NUL(addr, field) case 0x##addr##u: w.field = NULL; break;
     NUL(28A9A0, r_0028A9A0) NUL(282157, r_00282157) NUL(821058, s_00821058)
@@ -449,7 +478,12 @@ int scene_task_shim(const Cfg *cfg, const uint8_t *snap_in, Out *out)
     NUL(1ABF90, w_001ABF90) NUL(22D360, w_0022D360) NUL(22D380, w_0022D380)
     NUL(1AF2C0, w_001AF2C0) NUL(225A00, w_00225A00) NUL(225AC0, w_00225AC0)
     NUL(1B0C00, w_001B0C00) NUL(1C40B0, w_001C40B0) NUL(1D1C50, w_001D1C50)
-    NUL(1D1EA0, w_001D1EA0)
+    NUL(1D1EA0, w_001D1EA0) NUL(1D19D0, w_001D19D0) NUL(1AFCA0, w_001AFCA0)
+    NUL(1B6990, w_001B6990) NUL(1D19E0, w_001D19E0) NUL(1C1DC0, w_001C1DC0)
+    NUL(199C50, w_00199C50) NUL(1C5C50, w_001C5C50) NUL(1AE5E0, w_001AE5E0)
+    NUL(1AE6B0, w_001AE6B0) NUL(1B07C0, w_001B07C0) NUL(122BA8, w_00122BA8)
+    NUL(200830, w_00200830) NUL(1B5BC0, w_001B5BC0) NUL(28A564, r_0028A564)
+    NUL(70003B64, s_70003B64)
 #undef NUL
     default: break;
     }
@@ -467,6 +501,7 @@ int scene_task_shim(const Cfg *cfg, const uint8_t *snap_in, Out *out)
     case 0x1AD140: r = em_sf_001AD140(&s, u, wp); break;
     case 0x1ADF00: r = em_sf_001ADF00(&s, wp); break;
     case 0x1AFCF0: r = em_sf_001AFCF0(&s, wp); break;
+    case 0x1ACA20: r = em_sf_001ACA20(&s, u, wp, demo_counter); break;
     default: r = -100; break;
     }
     out->ret = r;
@@ -491,7 +526,8 @@ class Cfg(C.Structure):
     _fields_ = [(n, C.c_int32) for n in ('entry', 'fail_at', 'perturb', 'clear_bd8', 'r_1AD1A0',
                                          'r_1AD230', 'r_21B550', 'fade', 'busy')] + \
                [('null_address', C.c_uint32)] + \
-               [(n, C.c_int32) for n in ('prefault', 'null_user', 'no_table', 'r_22D380', 'r_225AC0')]
+               [(n, C.c_int32) for n in ('prefault', 'null_user', 'no_table', 'r_22D380', 'r_225AC0',
+                                         'chain')]
 
 
 class Out(C.Structure):
@@ -524,7 +560,7 @@ class Native:
                   config['results'][0x1AD1A0], config['results'][0x1AD230],
                   config['results'][0x21B550], config['fade'], config['busy'], null_address,
                   prefault, null_user, no_table, config['results'][0x22D380],
-                  config['results'][0x225AC0])
+                  config['results'][0x225AC0], config.get('chain', 0))
         out = self.out
         self.lib.scene_task_shim(C.byref(cfg), bytes(snap), C.byref(out))
         assert not out.overflow
@@ -749,6 +785,50 @@ def cases():
         put(snap, 0x8106B5, b5); put(snap, 0x8106B7, b7)
         yield 0x1AD010, snap, random_config(rng), \
             f'1AD010 B8={b8:X} 3B93={st:X} B6={b6:X} B5={b5:X} B7={b7:X}'
+    # 001ACA20 (the attract demo): +9 x +B x the held word's 0x9F0 gate, with
+    # BD8, the demo counter, the record counter +0x16, 3B8D, the requests
+    # 001ACE70 and the fade arm read, and 001ADF50's arms at +9 = 2.
+    for t9, tB in itertools.product((0, 1, 2, 3, 4, 5, 0xFF), (0, 1, 2, 0xFF)):
+        if t9 != 4 and tB != 0 and rng.randrange(3):
+            continue
+        for sample in range(14 if t9 in (1, 2, 4) else 6):
+            snap = background(rng, sample % 2)
+            put(snap, TASK+9, t9); put(snap, TASK+0xB, tB)
+            put(snap, TASK+0xA, rng.choice((0, 1, 2, 3)))
+            put(snap, 0x810E70, rng.choice((0, 0x10, 0x9F0, 0x800, 0x40, 0xF60F, 0x8000, 0x200)), 2)
+            put(snap, 0x275BD8, rng.choice((0, 0, 1)))
+            put(snap, 0x275BD4, rng.choice((0, 1, 2, 2, 3, 0xFFFFFFFF)), 4)
+            put(snap, TASK+0x16, rng.choice((0, 1, 0x3F, 0xE0F, 0xE10, 0xE11, 0xFFFF)), 2)
+            put(snap, 0x70003B8D, rng.choice((0, 0, 1, 0x80)))
+            for a in (0x8106B0, 0x8106C5, 0x8106CE, 0x8106B8, 0x8106B9):
+                put(snap, a, rng.choice((0, 0, 0, 1, 2)))
+            config = random_config(rng)
+            config['fade'] = rng.choice((0, 2, 2, 1))
+            config['chain'] = rng.choice((0, 0x00B319C0, -1))
+            yield 0x1ACA20, snap, config, f'1ACA20 +9={t9:X} +B={tB:X} s{sample}'
+    # 001ACA20's playing arms: state 0 / 1 / 3 / sub 0 with the gate open,
+    # and sub 1's frame over 3B8D x the requests (001ACE70, the B9 / B8 fade
+    # arms) x the fade x the record counter.
+    reqs = ({}, {0x8106B9: 1}, {0x8106B8: 1}, {0x8106B9: 1, 0x8106B8: 1}, {0x8106B8: 2},
+            {0x8106CE: 1}, {0x8106C5: 1}, {0x8106B0: 1}, {0x8106CE: 2, 0x8106B0: 1})
+    for t9, tB in ((0, 0), (1, 0), (3, 0), (4, 0)):
+        for bd8, bd4 in itertools.product((0, 1), (0, 1, 2, 7)):
+            snap = background(rng, rng.randrange(2))
+            put(snap, TASK+9, t9); put(snap, TASK+0xB, tB); put(snap, 0x275BD8, bd8)
+            put(snap, 0x275BD4, bd4, 4); put(snap, 0x810E70, rng.choice((0, 0x8000, 0x200, 0xF60F)), 2)
+            config = random_config(rng)
+            config['chain'] = 0x00B319C0
+            yield 0x1ACA20, snap, config, f'1ACA20 +9={t9:X} open BD8={bd8} BD4={bd4}'
+    for spad, req, fade, n in itertools.product((0, 1), reqs, (0, 2), (0, 0x3F, 0xE0F)):
+        snap = background(rng, rng.randrange(2))
+        put(snap, TASK+9, 4); put(snap, TASK+0xB, 1); put(snap, TASK+0x16, n, 2)
+        put(snap, 0x810E70, rng.choice((0, 0x8000, 0x200, 0xF60F)), 2)
+        put(snap, 0x70003B8D, spad)
+        for a in (0x8106B0, 0x8106C5, 0x8106CE, 0x8106B8, 0x8106B9):
+            put(snap, a, req.get(a, 0))
+        config = random_config(rng)
+        config['fade'] = fade
+        yield 0x1ACA20, snap, config, f'1ACA20 sub1 3B8D={spad} req={req} fade={fade} n={n:X}'
     # 001AD140, 001ADF00, 001AFCF0 over backgrounds.
     for entry in (0x1AD140, 0x1ADF00, 0x1AFCF0):
         for sample in range(24):

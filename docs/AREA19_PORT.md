@@ -144,7 +144,9 @@ behaviour defects until a row comparison says so.
    creature (001CB060). Their units are walked on the page (CHAIN_PAGE.md section 6.6;
    `make test-object-method-reference`). Evidence: the VU1 programs and the page walk
    equal the original microcode; kind 10's units are captured ones, kinds 9, 12 and 8's
-   the executed original builders'. Pixels are not compared with an original frame, and
+   the executed original builders'; the worms' EE side (001CB130 -> 001CB070, every
+   callee unhooked) is `make test-area19-kind9-draw-reference` (CHAIN_PAGE.md 6.6).
+   Pixels are not compared with an original frame, and
    no beat of this file was seen to draw a worm or kind 8.
 3. **a19b_00**, the arrival by the hatch [63], is the AREA13 side's.
 

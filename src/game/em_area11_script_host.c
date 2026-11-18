@@ -596,7 +596,7 @@ static int w_001C63E0(void *ctx, uint32_t actor, int16_t clip)
     return area_after(H.area.bone(H.area.ctx, actor, clip));
 }
 
-/* The owner's 001C64F0 (op0B subs 2 / 3): the area binding's
+/* The owner's 001C64F0 (op0B subs 2 / 3, op19's tail): the area binding's
  * anim_advance_time. The first level's scripts never reach these subs, so
  * AREA11 has no binding (fail-stop). */
 static int w_001C64F0(void *ctx, uint32_t actor, float dt, int32_t *result)

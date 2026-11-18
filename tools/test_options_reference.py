@@ -35,7 +35,9 @@ that act on them, the list over every row and setting, the text with and
 without its token, the card screen's states, the poll results the SDK
 returns and the slot choice with one, two or no cards. Every conditional
 branch of the lane must be taken both ways (EM_TEST_FULL=1) except the ones
-UNREACHED lists.
+UNREACHED lists. The group `title` runs the title's OPTIONS 00200A40 and its
+list 00201290 (every state, crafted row tables, every row and value) over
+the same images.
 
 EM_TEST_FULL=1 runs every case; the default a covering sample. Up to four
 worker processes (EM_TEST_JOBS=1: serial). Commands: `debug <group>[:i,..]`.
@@ -77,7 +79,7 @@ LANE = {
     0x202BA0: 0x168, 0x202D10: 0x5AC, 0x22B420: 0x2D8, 0x1AF6F0: 0x14, 0x1AF1C0: 0x5C, 0x1AF150: 0x64,
     0x1AF470: 0x148, 0x1FCBD0: 0x260, 0x1FCE30: 0xE0, 0x225AC0: 0x200, 0x225720: 0x2DC, 0x225D20: 0x2E8,
     0x226070: 0x730, 0x225A20: 0x9C, 0x225CF0: 0x30, 0x2256E0: 0x20, 0x225700: 0x20, 0x226010: 0x58,
-    0x1FE9A0: 0x38, 0x1FECB0: 0x84, 0x1FE920: 0x80, 0x1FE8D0: 0x40,
+    0x1FE9A0: 0x38, 0x1FECB0: 0x84, 0x1FE920: 0x80, 0x1FE8D0: 0x40, 0x200A40: 0x5C0, 0x201290: 0x484,
 }
 TRPC = frozenset(pc for a, n in LANE.items() for pc in range(a, a + n, 4))
 
@@ -109,7 +111,8 @@ ENTRIES = {  # native entry -> (argument ctypes, has a v0 result)
     0x225D20: ([U32], True), 0x226070: ([U32], True), 0x225A20: ([], False),
     0x225CF0: ([U32, U32, U32], False), 0x2256E0: ([], False), 0x225700: ([], False),
     0x226010: ([U32], True), 0x1FE9A0: ([U64] * 3, True), 0x1FECB0: ([U64] * 5, True),
-    0x1FE920: ([U64] * 2, True), 0x1FE8D0: ([], False),
+    0x1FE920: ([U64] * 2, True), 0x1FE8D0: ([], False), 0x200A40: ([], True),
+    0x201290: ([U32, I32, I32], False),
 }
 SOURCES = ['src/game/em_options_original.c', 'src/game/em_startup_load_gaps.c']
 CFLAGS = ['-std=c11', '-O2', '-Wall', '-Wextra', '-Werror', '-Wpedantic', '-ffp-contract=off', '-shared', '-fPIC',
@@ -462,6 +465,70 @@ def row_items():
     return out
 
 
+def title_case(item):
+    group, beat, knobs = item
+    ram, spad = make(item)
+    global SCRIPT
+    SCRIPT = knobs.get('script', {})
+    if 'fn' in knobs:
+        steps = [('call', knobs['fn'], tuple(knobs['args']))]
+    else:
+        steps = [('call', 0x200A40, ())] * knobs.get('frames', 1)
+    return run_both(item, bytes(spad), steps)
+
+
+def title_items():
+    """The title's OPTIONS 00200A40 (every state, the pad edges and repeats
+    that act on them, crafted row tables D_00264EC0) and its list 00201290
+    (every row, open or not, every value). The image is the in-game
+    options' (its D_00264EC0 is 0..6 and *0x70003B6C the game task's
+    record; 00200A40 reads only the record it points at)."""
+    out = []
+    beat = 'o0'
+    for st, b in ((0, []), (1, [(0x282157, 0, 1)]), (1, [(0x282157, 1, 1)]), (2, [(0x275BD8, 1, 1)]),
+                  (2, [(0x275BD8, 0, 1)]), (3, []), (11, []), (0xFF, [])):
+        out.append(('title', beat, {'slot': slot(st, 3, 4), 'b': b, 'pads': (0, 0, DOWN)}))
+    for e6a in (7, 0):
+        for cursor in range(8):
+            for pads in ((0, 0, 0), (0, 0, DOWN), (0, 0, UP), (0, CROSS, 0), (0, CIRCLE, 0), (0, TRIANGLE, 0)):
+                out.append(('title', beat, {'slot': slot(4, 2, cursor), 'pads': pads, 'b': [(0x810E6A, e6a, 2)],
+                                            'set': (2, 1, 0, 1, 1)}))
+    out.append(('title', beat, {'slot': slot(4, 0, 0xFFFF), 'pads': (0, 0, DOWN)}))
+    out.append(('title', beat, {'slot': slot(4, 0, 0x100), 'pads': (0, 0, UP)}))
+    # crafted action tables: the vibration action at either end and twice
+    # in a row, and actions past the jump table (7, -1)
+    for table in ((1, 2, 3, 4, 5, 6, 0), (0, 0, 1, 2, 3, 4, 6), (1, 7, 2, 3, 4, 5, 6), (0xFFFFFFFF, 1, 2, 3, 4, 5, 6)):
+        for cursor in (0, 1, 5, 6):
+            for pads in ((0, 0, DOWN), (0, 0, UP), (0, CROSS, 0), (0, 0, 0)):
+                for e6a in (7, 0):
+                    out.append(('title', beat, {'slot': slot(4, 0, cursor), 'pads': pads,
+                                                'b': [(0x810E6A, e6a, 2)] +
+                                                     [(0x264EC0 + 4 * i, v, 4) for i, v in enumerate(table)]}))
+    for st, cursor in ((5, 0), (5, 1), (6, 5)):
+        for sub in (0, 1, 2):
+            for pads in ((0, 0, 0), (0, RIGHT, 0), (0, CROSS, 0), (0, CIRCLE, 0), (0, TRIANGLE, 0)):
+                out.append(('title', beat, {'slot': slot(st, sub, cursor, 1, 1), 'pads': pads,
+                                            'set': (0, 1, 0, 1, 0)}))
+    for st, cursor in ((7, 2), (8, 3), (9, 4)):
+        for sub in (0, 1):
+            for pads in ((0, 0, 0), (0, CROSS, 0), (0, CIRCLE, 0), (0, TRIANGLE, 0)):
+                out.append(('title', beat, {'slot': slot(st, sub, cursor, 1), 'pads': pads}))
+    for e6a in (7, 0):
+        for cursor in (0, 3):
+            for fade in (0, 1, 2):
+                out.append(('title', beat, {'slot': slot(10, 0, cursor), 'b': [(0x810E6A, e6a, 2),
+                                                                             (0x28A9A0, fade, 2)]}))
+    # a few frames in a row: the entry through the module load to the menu
+    out.append(('title', beat, {'slot': slot(0), 'frames': 4, 'b': [(0x282157, 0, 1), (0x275BD8, 0, 1)]}))
+    for row in range(8):
+        for opened in (0, 1):
+            for sets in ((0, 1, 0, 0, 0), (1, 0, 0, 1, 1), (2, 1, 0, 0, 0)):
+                for e6a in (7, 3):
+                    out.append(('title', beat, {'fn': 0x201290, 'args': (W_SET, row, opened), 'set': sets,
+                                                'b': [(0x810E6A, e6a, 2)]}))
+    return out
+
+
 def text_items():
     """001FCBD0 / 001FCE30 over the help container's groups 7 and 8 (every
     line of group 8 the options draw), and crafted lines in a free area of
@@ -650,7 +717,7 @@ GROUPS = None
 def case_groups():
     return [('screen', screen_items(), screen_case), ('rows', list_items() + row_items(), row_case),
             ('text', text_items(), text_case), ('craft', craft_items(), craft_case),
-            ('card', card_items(), card_case)]
+            ('card', card_items(), card_case), ('title', title_items(), title_case)]
 
 
 def pmap(fn, items):
@@ -696,6 +763,7 @@ QUICK = {
                155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 345, 359, 371, 385,
                450],
     'text': [46],
+    'title': [2, 4, 6, 10, 11, 15, 31, 47, 58, 64, 75, 90, 93, 101, 109, 123, 135, 234, 238, 251, 315, 382, 384],
 }
 
 

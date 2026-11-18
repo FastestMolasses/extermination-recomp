@@ -377,12 +377,18 @@ static void title_tick(EmStartup *s, const EmStartupInput *in)
             s->screen = EM_STARTUP_SCREEN_NONE;
         }
         break;
-    case 6:
+    case 6:                         /* 001AC070 state 6: 00200A40 */
         if (s->sub == 0) {
             s->sub = 1;
             s->screen = EM_STARTUP_SCREEN_EXTERNAL;
             request(s, EM_STARTUP_OPTIONS, 0);
-        } else if (poll(s)) {
+        }
+        /* From the state's first tick, one call per tick; its nonzero
+         * result completes the request inside notify and the flow is back
+         * in state 2 in the same tick, as 001AC070's GS[8] = 2. */
+        if (s->pending_serial && s->pending_kind == EM_STARTUP_OPTIONS && s->pending_result == 0)
+            emit(s, EM_STARTUP_OPTIONS_FRAME, 0, 0);
+        if (poll(s)) {
             s->major = 2;
             s->sub = s->aux = 0;
             s->screen = EM_STARTUP_SCREEN_NONE;

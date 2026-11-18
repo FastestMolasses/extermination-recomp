@@ -251,6 +251,20 @@ it translates.
   0x25. So no original capture of the hang in AREA11 exists yet. The
   evidence is the instruction oracle above.
 
+### 001645D0 (state +5 = 0x0A, the climb up from a hang)
+
+`em_player_hang_up_state` (em_player_hang.c, bound as set1 0x0A over the same
+EmPlayerHangWorkers; only `request` and `sound` are required).
+`make test-player-hang-up-reference` (tools/test_player_hang_up_reference.py)
+executes the original 001645D0 from `playable_ee.bin` (code checked against the
+ELF) with its two callees 001749A0 / 001FBD50 scripted and recorded. No kept
+capture holds +5 = 0x0A (475 full-RAM images scanned), so the states are
+designed from the captured player record (the changed bytes are listed in the
+test). All 0x320 actor bytes after the call and at every callee entry, every
+call with its arguments, every conditional branch outcome, worker faults and
+refusals are compared; it confirms the original re-reads +6 after the clip
+request of sub-state 2.
+
 ## 6. Limits
 
 - **Spad temporaries.** The spad temporaries are not published: 0x70003A20,

@@ -830,11 +830,11 @@ void em_options_live_free(EmOptionsLive *l)
     free(l);
 }
 
-typedef enum { RUN_0022A650, RUN_00225AC0, RUN_001AF1C0, RUN_001AF150 } Run;
+typedef enum { RUN_0022A650, RUN_00225AC0, RUN_001AF1C0, RUN_001AF150, RUN_00200A40 } Run;
 
 static int run(EmOptionsLive *l, const EmOptionsFrame *f, Run which, uint32_t mode, uint32_t *result)
 {
-    static const uint32_t names[4] = {0x0022A650u, 0x00225AC0u, 0x001AF1C0u, 0x001AF150u};
+    static const uint32_t names[5] = {0x0022A650u, 0x00225AC0u, 0x001AF1C0u, 0x001AF150u, 0x00200A40u};
     if (!l || !f || !f->settings || !f->task || !f->mc || !f->progress || !f->message || !f->busy ||
         !f->masks || !f->offset)
         return -1;
@@ -862,7 +862,7 @@ static int run(EmOptionsLive *l, const EmOptionsFrame *f, Run which, uint32_t mo
         fprintf(stderr, "options: more views than the binding holds\n");
         return -1;
     }
-    if (which == RUN_0022A650 || which == RUN_00225AC0) em_page_draw_begin(l->draw);
+    if (which == RUN_0022A650 || which == RUN_00225AC0 || which == RUN_00200A40) em_page_draw_begin(l->draw);
     memset(&l->s.core.fault, 0, sizeof l->s.core.fault);
     l->s.core.function = 0;
     l->s.call = dispatch;
@@ -875,6 +875,7 @@ static int run(EmOptionsLive *l, const EmOptionsFrame *f, Run which, uint32_t mo
     case RUN_0022A650: rc = em_options_0022A650(&l->s, &r); break;
     case RUN_00225AC0: rc = em_options_00225AC0(&l->s, mode, &r); break;
     case RUN_001AF1C0: rc = em_options_001AF1C0(&l->s); break;
+    case RUN_00200A40: rc = em_options_00200A40(&l->s, &r); break;
     default: rc = em_options_001AF150(&l->s); break;
     }
     if (rc >= 0 && check_readonly(l, f) < 0) rc = -1;
@@ -908,6 +909,25 @@ int em_options_live_00225AC0(EmOptionsLive *l, const EmOptionsFrame *f, uint32_t
         }
     }
     return run(l, f, RUN_00225AC0, mode, result);
+}
+
+int em_options_live_00200A40(EmOptionsLive *l, const EmOptionsFrame *f, uint32_t *result)
+{
+    if (l) {
+        /* Its row tables D_00264EA0 / D_00264EC0: an EMSP from before that
+         * window says so here, not as a fault inside the screen. */
+        const EmGsDataWindow *w;
+        const unsigned n = em_gs_texture_windows(l->gs, &w);
+        unsigned found = 0;
+        for (unsigned i = 0; i < n; ++i)
+            found += w[i].address <= 0x00264EA0u && w[i].address + w[i].size >= 0x00264EDCu;
+        if (!found) {
+            fprintf(stderr, "options: the EMSP has no window of the title options' row tables, 00200A40 "
+                            "cannot run (python3 tools/export_status_pages.py)\n");
+            return -1;
+        }
+    }
+    return run(l, f, RUN_00200A40, 0, result);
 }
 
 int em_options_live_001AF1C0(EmOptionsLive *l, const EmOptionsFrame *f) { return run(l, f, RUN_001AF1C0, 0, NULL); }

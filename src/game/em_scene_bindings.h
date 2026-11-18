@@ -69,6 +69,12 @@ int em_scene_bindings_terminal_reset(void);
 
 /* The slot-0 game task (EmTaskFn): one tick of the original 001ACEC0. */
 void em_scene_task_001ACEC0(void);
+/* The attract demo: one 001ACA20 call (em_sf_001ACA20) over the current
+ * task's record (the title's, 001AC070 state 3), `d275BD4` the demo counter;
+ * `begin` on the first call (+8 = 3, +9 = +A = 0, as 001AC070 state 2
+ * leaves them). Returns 0, 2 or 3 (001AC070 leaves state 3 on 2 or 3), or
+ * -1 with the scene fault latched. docs/ATTRACT_DEMO.md. */
+int em_scene_attract_001ACA20(int32_t d275BD4, int begin);
 
 /* S12a: New Game and Continue register em_scene_task_001ACEC0 with a
  * cleared record and the chain runs the original load arms (001AD1A0,

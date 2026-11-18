@@ -299,62 +299,8 @@ static int ledge_state(void *c, EmPlayerLiveActor *a)
     EmLevel12PortFault f = {0, 0};
     return em_level12_port_0016EF50(&h, 0x008102B0u, &f) < 0 ? ledge_report("0016EF50", &f) : 0;
 }
-/* +5 0x0A: 001645D0 (byte-matched C), the pull up from a hang: clip 0x70 and
- * +25F = 1; once it ends clip 0x71 and twelve steps of +B0..+B8 toward the
- * target +290..+298 (the deltas at +2E0..+2E8), then the target itself, clip 0x7A
- * and sound 0xFE; once that ends clip 0x7B, +5 = 9, +6 = 0, +1F0 = 0x10, +D = 1. */
-static int hang_up_state(void *c, EmPlayerLiveActor *a)
-{
-    (void)c;
-    const uint8_t st = em_live_u8(a, 6);
-    switch (st) {
-    case 0:
-        em_live_set_u8(a, 6, (uint8_t)(st + 1));
-        em_live_set_u8(a, 7, 0);
-        if (w_request(NULL, a, 0x70, 0, 1.0f) < 0) return -1;
-        em_live_set_u8(a, 0x25F, 1);
-        break;
-    case 1:
-        if (em_live_u32(a, 0x200) & 0x1000) em_live_set_u8(a, 6, (uint8_t)(st + 1));
-        break;
-    case 2:
-        if (w_request(NULL, a, 0x71, 0, 1.0f) < 0) return -1;
-        em_live_set_u8(a, 6, (uint8_t)(em_live_u8(a, 6) + 1));
-        em_live_set_u16(a, 0x28, 0xC);
-        for (unsigned k = 0; k < 3; ++k)
-            em_live_set_u32(a, 0x2E0 + 4 * k, em_ee_div_bits(em_ee_sub_bits(em_live_u32(a, 0x290 + 4 * k),
-                                                                            em_live_u32(a, 0xB0 + 4 * k)),
-                                                             0x41400000u));
-        break;
-    case 3: {
-        const uint16_t t = em_live_u16(a, 0x28);
-        em_live_set_u16(a, 0x28, (uint16_t)(t - 1));
-        if (t == 0) {
-            em_live_set_u8(a, 6, (uint8_t)(em_live_u8(a, 6) + 1));
-            for (unsigned k = 0; k < 3; ++k) em_live_set_u32(a, 0xB0 + 4 * k, em_live_u32(a, 0x290 + 4 * k));
-            if (w_request(NULL, a, 0x7A, 0, 1.0f) < 0) return -1;
-            if (w_sound_full(NULL, a, 0xFE, 0, 300.0f) < 0) return -1;
-        } else {
-            for (unsigned k = 0; k < 3; ++k)
-                em_live_set_u32(a, 0xB0 + 4 * k,
-                                em_ee_add_bits(em_live_u32(a, 0xB0 + 4 * k), em_live_u32(a, 0x2E0 + 4 * k)));
-        }
-        break;
-    }
-    case 4:
-        if (em_live_u32(a, 0x200) & 0x1000) {
-            if (w_request(NULL, a, 0x7B, 0, 1.0f) < 0) return -1;
-            em_live_set_u8(a, 5, 9);
-            em_live_set_u8(a, 6, 0);
-            em_live_set_u8(a, 0x1F0, 0x10);
-            em_live_set_u8(a, 0xD, 1);
-        }
-        break;
-    default:
-        break;
-    }
-    return 0;
-}
+/* +5 0x0A (001645D0) is em_player_hang.c's em_player_hang_up_state, bound
+ * over the hang workers (its oracle: tools/test_player_hang_up_reference.py). */
 /* +5 0x0F (00169250, em_area06_port's: the walk onto a bar) and 0x11
  * (0016AC50, em_level14_port's: the walk under a ceiling hang), over the same
  * record; 00194240 is em_level13_port's. */

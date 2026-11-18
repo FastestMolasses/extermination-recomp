@@ -99,6 +99,7 @@
 #include "game/em_area01_collision_view.h"
 #include "game/em_aim_fire_world_live.h"
 #include "game/em_area02_misc.h"
+#include "game/em_effect_001E3630.h"
 #include "game/em_area01_terminal_status.h"
 
 #include <stddef.h>
@@ -289,6 +290,18 @@ static int s_player_init_pending;
  * several states use it to refuse, or to tell apart, a call (status state
  * 3/5 versus the world variants; state 0 versus state 5). */
 static int s_entry_state = -1;
+/* The attract demo (001AC070 state 3's 001ACA20, em_scene_attract_001ACA20):
+ * 1 while its core runs over the title task's record; D_00275BD4, the
+ * demo counter the title owns, for 001B5BC0. */
+static int s_demo;
+static int32_t s_demo_bd4;
+static int demo_in(int s09);
+static int w_00122BA8(void *ctx, uint32_t a0);
+static int32_t r_0028A564(void *ctx);
+static int w_00200830(void *ctx, int32_t a0);
+static int w_001D19D0(void *ctx);
+static int w_001B5BC0(void *ctx, int a0);
+static int s_70003B64(void *ctx, int32_t value);
 
 /* 001FC280's ambient loop (see em_scene_bindings_001FC280): D_00282160, the
  * loop's id (-1: none), D_00282164 its 001FB9F0 handle, D_00282168..70 its
@@ -4360,6 +4373,11 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
      * 0021C190's when the player turns) in any area the runtime runs. */
     if ((s_state.d810700 == 6 || s_state.d810700 == 0x0D || s_state.d810700 == 0x13) && fn == 0x00219870u)
         goto bind;
+    /* AREA06 sub 0: the crawl node 0016BAE0 spawns (behaviour 00188340,
+     * em_level9_port through em_area01_runtime_later), reached by the
+     * attract demo 0's crawl (docs/ATTRACT_DEMO.md). */
+    if (s_state.d810700 == 6 && fn == 0x00188340u)
+        goto bind;
     if (fn == 0x001F8350u)
         goto bind;
     /* The muzzle node 001F4F40 allocates (the AREA01 revisit's 0x826010 ->
@@ -4698,6 +4716,9 @@ static int area01_contact(void *ctx, uint32_t function, uint32_t entry, uint32_t
     /* The ring 001E4610's: 001E4600, an empty function (byte-matched C). */
     if (function == 0x001E4600u && player == EM_AREA01_PLAYER_BASE && player_b0 == player + 0xB0u)
         return 0;
+    /* The flamethrower burst 001E3630's: 001E3620, empty (byte-matched C). */
+    if (function == EM_EFFECT_001E3620_CONTACT && player == EM_AREA01_PLAYER_BASE && player_b0 == player + 0xB0u)
+        return em_effect_001E3620();
     /* 0x823B10: AREA06's contact word (0x823B50's record +0x34; another
      * overlay's code at the address never reaches here: only AREA06
      * records hold it). */
@@ -5713,6 +5734,19 @@ static int in_game_over(void)
 static int w_001FF080(void *ctx, int a0, int a1)
 {
     (void)ctx;
+    if (s_demo) {
+        /* 001ACA20: module 3 at its state 0 (as 001AD1A0's), 001ADF50's area
+         * read at state 2 (+A = 1) and the recorded pads, module 0x36, when
+         * 001ADF50 is done (state 2 has stepped +9 to 3). */
+        EmModuleLoader *ml = em_module_loader_live();
+        const int ok = (a0 == 0 && a1 == 3 && demo_in(1)) || (a0 == 1 && a1 == 0 && in_task_step(2, 1)) ||
+                       (a0 == 0 && a1 == 0x36 && demo_in(3));
+        if (!ok)
+            return -1;
+        if (!ml || em_module_loader_request_001FF080(ml, (uint8_t)a0, (uint8_t)a1) != 0)
+            return em_scene_fault(&s_state, 0x001FF080u, EM_SCENE_FAULT_NULL_WORKER);
+        return 0;
+    }
     if (a0 == 1 && a1 == 0 && in_task_step(5, 1)) {
         /* The area load through the loader task (001FFCD0); D_00275BD8,
          * which 001ADF50 set, clears at the task's 0x63 step. */
@@ -5841,7 +5875,7 @@ static int w_001B0C00(void *ctx, int a0)
 static int w_001AF2C0(void *ctx)
 {
     (void)ctx;
-    if (!in_ending(3))
+    if (!in_ending(3) && !demo_in(1))
         return -1;
     em_game_new_game_reset_001AF2C0();
     return 0;
@@ -6068,6 +6102,12 @@ static void bindings_init(void)
     w->trace = em_frame_trace_env() || log_file() ? bindings_trace : NULL;
     w->r_0028A9A0 = r_0028A9A0;
     w->r_00282157 = r_00282157;
+    w->w_00122BA8 = w_00122BA8;
+    w->r_0028A564 = r_0028A564;
+    w->w_00200830 = w_00200830;
+    w->w_001D19D0 = w_001D19D0;
+    w->w_001B5BC0 = w_001B5BC0;
+    w->s_70003B64 = s_70003B64;
     w->r_00275B44 = r_00275B44;
     w->r_008102B9 = r_008102B9;
 
@@ -6348,6 +6388,122 @@ void em_scene_bindings_log_tail(void)
     }
     fputs("}}\n", f);
     fflush(f);
+}
+
+/* ------------------------------------------------- the attract demo
+ *
+ * 001AC070 state 3 runs 001ACA20 (em_sf_001ACA20) every tick over the title
+ * task's record (+8 = 3); docs/ATTRACT_DEMO.md. Its world calls are the
+ * same workers as 0x1AE040's: sub 0's rebuild is state 0's (s_entry_state
+ * 0), sub 1's frame is state 1's (s_entry_state 1). */
+static int demo_in(int s09)
+{
+    const uint8_t *b9 = em_scene_task_byte(s_user, EM_SCENE_TASK_09);
+    return s_demo && b9 && *b9 == s09;
+}
+
+static int w_00122BA8(void *ctx, uint32_t a0)
+{
+    (void)ctx;
+    if (!s_demo)
+        return -1;
+    em_random_seed(a0);
+    return 0;
+}
+
+static int32_t r_0028A564(void *ctx)
+{
+    (void)ctx;
+    EmModuleLoader *ml = em_module_loader_live();
+    return ml ? (int32_t)em_module_loader_state(ml)->d28A490[0x35] : 0;
+}
+
+/* 00200830(D_0028A564[0]) and 001D19D0 at 001ACA20 state 1: as at
+ * 001AD1A0 +9 = 1 (w_001AD1A0). */
+static int w_00200830(void *ctx, int32_t a0)
+{
+    (void)ctx;
+    (void)a0;
+    if (!demo_in(1))
+        return -1;
+    return unmirrored(UM_00200830);
+}
+
+static int w_001D19D0(void *ctx)
+{
+    (void)ctx;
+    if (!demo_in(1))
+        return -1;
+    uint32_t address = 0, size = 0, digest = 0;
+    if (em_area11_roger_001D19D0(&address, &size, &digest) < 0)
+        return em_scene_fault(&s_state, 0x001D19D0u, EM_SCENE_FAULT_WORKER_FAILED);
+    return 0;
+}
+
+/* 001B5BC0(a0): record a0 of demo D_00275BD4 in the table D_0028A6AC (the
+ * loader's slot 0x87, module 0x36's), 0x4800 bytes per demo, 5 per record;
+ * em_frame_pad_record_001B5BC0 stores it, then the scene state's copies of
+ * D_00810E70 / E74 follow the one storage. */
+static int w_001B5BC0(void *ctx, int a0)
+{
+    (void)ctx;
+    EmModuleLoader *ml = em_module_loader_live();
+    if (!demo_in(4) || !ml || a0 < 0)
+        return -1;
+    const uint32_t base = em_module_loader_state(ml)->d28A490[0x87];
+    const uint32_t at = base + (uint32_t)s_demo_bd4 * 9u * 2048u + (uint32_t)a0 * 5u;
+    const uint8_t *rec = em_module_loader_memory(ml, at, 5);
+    const uint8_t *prev = a0 ? em_module_loader_memory(ml, at - 5u, 5) : NULL;
+    if (!base || !rec || (a0 && !prev)) {
+        fprintf(stderr, "em_scene: 001B5BC0(%d): demo %d's record at %08X is not loaded\n", a0, (int)s_demo_bd4,
+                (unsigned)at);
+        return em_scene_fault(&s_state, 0x001B5BC0u, EM_SCENE_FAULT_BAD_INDEX);
+    }
+    em_frame_pad_record_001B5BC0(rec, prev);
+    s_state.d810E70 = em_frame_pad_block()->held;
+    s_state.d810E74 = em_frame_pad_block()->pressed;
+    return 0;
+}
+
+static int s_70003B64(void *ctx, int32_t value)
+{
+    (void)ctx;
+    if (!demo_in(4))
+        return -1;
+    em_frame_store_counter_70003B64((uint32_t)value);
+    return 0;
+}
+
+int em_scene_attract_001ACA20(int32_t d275BD4, int begin)
+{
+    bindings_init();
+    if (em_scene_faulted(&s_state))
+        return -1;
+    EmTask *self = em_task_current();
+    s_user = self ? self->user : NULL;
+    if (!s_user)
+        return -1;
+    if (begin) {
+        /* 001AC070 state 2's move to state 3: +8 = 3, +9 = +A = 0. */
+        s_user[0] = 3;
+        s_user[1] = 0;
+        s_user[2] = 0;
+    }
+    s_demo = 1;
+    s_demo_bd4 = d275BD4;
+    s_entry_state = demo_in(4) ? (s_user[EM_SCENE_TASK_0B - EM_SCENE_TASK_FIRST] == 0 ? 0 : 1) : -1;
+    s_fade_at_start = em_frame_transition()->substate;
+    int rc = em_sf_001ACA20(&s_state, s_user, &s_workers, d275BD4);
+    s_entry_state = -1;
+    s_demo = 0;
+    report_unmirrored();
+    s_user = NULL;
+    if (rc < 0 && !s_fault_reported) {
+        s_fault_reported = 1;
+        fprintf(stderr, "em_scene: FAULT at %08X (code %d) in the attract demo; stopped (fail-stop)\n",
+                (unsigned)s_state.fault.address, (int)s_state.fault.code);
+    }
+    return rc;
 }
 
 /* ------------------------------------------------------------ the task */

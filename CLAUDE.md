@@ -121,7 +121,8 @@ built from one codebase (full rules: `docs/PORT_PROFILES.md`).
   translates or binds it; its list (B) is the hidden-gap list (reachable, never
   recorded, unported). Regenerate with the decomp's `tools/game_census.py`.
   The per-level censuses (FIRST/SECOND/THIRD_LEVEL_CENSUS, CENSUS_STANDINS,
-  CENSUS_UNVERIFIED) are its reviewed ledgers.
+  CENSUS_UNVERIFIED) are its reviewed ledgers; `docs/WHOLE_GAME_LEDGER.md` holds
+  the reviewed rows for (B) functions outside the level routes.
 - The decomp's `docs/HANDOFF.md` is the cross-repo entry point; its `docs/INDEX.md`
   says which doc answers what. Coordination: the decomp's project skill
   `orchestrator` (`../Extermination/.claude/skills/orchestrator/SKILL.md`).
