@@ -680,7 +680,7 @@ python3 tools/build_start_saves.py g45 g49 g50 g51 g52 g53 g54 g55 g56 g57 g58 g
 python3 tools/guided_chain.py --list
 python3 tools/guided_chain.py g17 --steer g45      # card g45: g45 .. g58 (AREA14 -> AREA17 -> AREA11 -> ...)
 python3 tools/guided_chain.py g11                  # card g49 (g48's end, AREA11 entry 3): g49 .. g58
-python3 tools/guided_chain.py g16                  # card g59: g59 .. g67 (AREA01 sub 1 -> AREA06 sub 1 -> AREA16)
+python3 tools/guided_chain.py g16                  # card g59: g59 .. g68 (AREA01 sub 1 -> AREA06 sub 1 -> AREA16 -> AREA06 -> AREA01)
 python3 tools/guided_chain.py g11 --until g50      # stop after a take
 ```
 

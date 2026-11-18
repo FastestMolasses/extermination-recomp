@@ -98,7 +98,7 @@ K01_ROUTE = 'levels-recordings-20261102-1/s87/route_k01'
 # AREA17 from Claude's guided run (lane PORT-LIVE2): the kept takes g45 .. g48 as a route set
 # (tools/capture_from_take.py; each beat's end is its take's end.p2s, its rows and pad the take's).
 G17_ROUTE = 'guided-20261117/s87/route_g17'
-# AREA16 from the same run (lane PORT-LIVE-A16): the kept takes g59 .. g67 as a route set
+# AREA16 from the same run (lane PORT-LIVE-A16): the kept takes g59 .. g68 as a route set
 G16_ROUTE = 'guided-20261117/s87/route_g16'
 # beat: (start card, route recording, beat folder). A group's first beat
 # starts from the group's arrival card; a01u_s1 starts where a01u_00 does.

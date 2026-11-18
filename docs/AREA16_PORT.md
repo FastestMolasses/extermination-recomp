@@ -420,6 +420,16 @@ same with EM_PS2_DISC_DRIVE_TIMING=1, so not the stream's host speed.
 rand() also differs from g67 row 5645 (inside the scene) with no position
 change. Not yet traced to an op.
 
+**g68 (AREA06 sub 1 -> AREA01).** route_g16 now holds g68_area06_area01
+(capture_from_take, takes g59 .. g68; the folders of g59 .. g67
+unchanged) and chain g16 plays it: 675 of 2805 compared rows on the row,
+no fault, the run reaches g68's last row. First divergences: rand() from
+row 8 (the draw count of the frame before), position 0.05 away in z at row
+675 (port -674.013, row -674.063, the pit's east side), heading pi/8 off
+from row 701; the port then misses the area change into AREA01 entry 7
+(row 2958: bytes 06 01 03 where the original has 01 01 07) and takes a hit
+at 2981 the original did not. Not investigated yet.
+
 ### Lane PORT-A16-DRAW (2026-11-17, branch `a16draw`): model kind 3's draw
 
 [10] 0x825800's +0x4C is 001CAE30 (001CA5F0's kind 3; it is the only owner
