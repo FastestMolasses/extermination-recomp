@@ -2862,6 +2862,8 @@ static int rcl_bind(void)
     const EmRclExternal views[] = {
         {0x00810610u, 0x40u, em_camera_live_bytes(0x00810610u, 0x40u)},
         {0x008105E0u, 0x10u, em_camera_live_bytes(0x008105E0u, 0x10u)},
+        /* the eye D_008105D0 (001E1AD0's 001E0E80 reads D_008105D4) */
+        {0x008105D0u, 0x10u, em_camera_live_bytes(0x008105D0u, 0x10u)},
         {EM_SCENE_REQ_BASE, EM_SCENE_REQ_SIZE, s_state.req},
         {0x00810700u, 3u, &s_state.d810700},
         {0x008101E4u, 1u, &g.cam.top_mode},   /* the camera block's +0x04 */

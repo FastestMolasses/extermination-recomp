@@ -801,10 +801,11 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   lift scene skipped by EM_START_AT_SCENE_WAIT). g73 is on the row for 4191
   of 4192 compared rows with the real area change into AREA20, g74 for all
   3736 with the original's three hits, g75 for all 1858 to row 2240 (script
-  0x8270B0, the movie, the real load of AREA21). AREA21's first frame then
-  faults in 001E1E60's flag-0x23 branch (00122BB8, 001D73A0, 001D72D0,
-  001D75E0, 001CEFD0 unbound in the static world composition): the next
-  blocker.
+  0x8270B0, the movie, the real load of AREA21). Lane PORT-A21-RENDER
+  (branch a21render): 001E1E60's flag-0x23 branch is translated and bound
+  (em_far_light, AREA21_PORT.md "Far light"); AREA21's first frame now
+  stops in 001E1AD0's flag-0x22 grid (D_00275C0C and 001E1760 / 001E17E0):
+  the next blocker.
 
 - AREA18 live and the chain g18 (lane PORT-A18A14, AREA18_PORT.md "Live",
   AREA14_PORT.md "Lane PORT-A18A14"): route_g18 (capture_from_take g39 ..

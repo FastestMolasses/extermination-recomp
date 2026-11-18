@@ -95,7 +95,7 @@ SOURCES = ['em_render_context_live', 'em_gs_blocks_original', 'em_frame_kick', '
            'em_status_ui_leftovers', 'em_load_veil_particles', 'em_actor_light_001D89D0',
            'em_owner_services_original', 'em_effect_original', 'em_player_equipment',
            'em_player_stage_workers', 'em_render_verify_rest', 'em_sdk_math_original', 'em_sdk_soft_float',
-           'em_census_standins', 'em_message_draw_original', 'em_static_world', 'em_static_world_compose',
+           'em_census_standins', 'em_message_draw_original', 'em_static_world', 'em_static_world_compose', 'em_far_light', 'em_grid_water',
            'em_owner_draw_original', 'em_camera_commit_original', 'em_stream_lanes_original',
            'em_area01_render_vif', 'em_anim_runtime_rest', 'em_pose_host_workers',
            'em_player_floor', 'em_player_reaction', 'em_player_fall', 'em_point_light',

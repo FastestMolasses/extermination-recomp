@@ -115,7 +115,9 @@ int em_rcl_loaded(void);
  * must cover D_00810610 (64), D_008105E0 (16), D_008106B0 (0x48),
  * D_00810700 (3), D_008101E4 (1), 0x70003B8D (1), D_008102B0 (0x320) and
  * the bank address word D_0028A5A0 (4: the screen-module loader's slot
- * 0x44, em_module_loader). The bind also performs 001AF690's zeroing of
+ * 0x44, em_module_loader); optionally the camera eye D_008105D0 (16: only
+ * 001E1AD0's 001E0E80, render flag 0x22, reads it; without it that path
+ * faults). The bind also performs 001AF690's zeroing of
  * D_008101D0..DF (001C1D00's state block, owned here): the binder binds at
  * 0x1AE040 state 0, where 001AF690 runs. 0, or -1 (a view is missing). */
 int em_rcl_bind(const EmRclExternal *views, unsigned count, const EmRclWorkers *workers);
