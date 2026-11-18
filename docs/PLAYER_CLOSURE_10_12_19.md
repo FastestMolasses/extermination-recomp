@@ -389,8 +389,13 @@ before the call and written back after:
   zone);
 - D_008106BE, D_008106C8, D_008106A0 (the camera yaw);
 - D_00810E57 / E64 / E65 (the gait byte and the raw stick);
-- D_00810730[2], D_008106B5..B8 and 0x700031E4 (the ledge heading, as
-  em_player_recovery.h's `EmPlayerRecoveryLedge.heading`);
+- D_00810730[2], D_008106B5..B8 and 0x700031E4. The live adapter (c10_pre)
+  copies 0x700031E4 from its one storage, `EmSceneState.spad31E4`. Only two
+  routines write that word: 00177510 (the ledge frame's heading) and the slope
+  branch of 00175CF0. Every port translation of them stores there too (lane
+  PORT-A19-HANG, 2026-11-18). Before that the copy was never filled and stayed
+  0, so the ceiling hang's phase 0 picked the wrong step clip (0xC3 for 0xBC);
+  see AREA19_PORT.md;
 - D_00275B10, D_00275B00[3] and D_00281B64[0].
 
 The routines write only zone, d8106BE, d8106B5..B8 and the three saved

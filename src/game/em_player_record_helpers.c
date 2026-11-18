@@ -162,6 +162,7 @@ int em_player_helper_00177510(const EmPlayerHelperCalls *c, const float point[3]
     FAULT(c->atan2(c->context, em_ee_neg_bits(fbits(normal[2])), fbits(normal[0]), &angle));
     FAULT(em_player_helper_wrap(em_ee_add_bits(F_THREE_HALF_PI, angle), &heading));
     l->heading = bfloat(heading);                               /* 0x700031E4 */
+    if (c->spad31E4) *c->spad31E4 = heading;
     FAULT(yaw_matrix(heading, m));                              /* 0x70003070 */
     to_floats(l->matrix, m, 16);
     return 0;
@@ -398,6 +399,7 @@ static EmPlayerHelperCalls record_calls(RecordCalls *r)
     c.sweep = r->h->sweep ? record_sweep : NULL;
     c.atan2 = r->h->atan2 ? record_atan2 : NULL;
     c.cosine = r->h->cosine ? record_cosine : NULL;
+    c.spad31E4 = r->h->spad31E4;
     return c;
 }
 

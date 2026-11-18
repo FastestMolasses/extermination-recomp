@@ -180,7 +180,7 @@ MATH1_FN = C.CFUNCTYPE(FLT, VP, FLT)
 class Helpers(C.Structure):
     _fields_ = [('context', VP), ('sweep', SWEEP_FN), ('atan2', MATH2_FN), ('cosine', MATH1_FN),
                 ('spad3B8D', P(U8)), ('d810E57', P(U8)), ('d810E64', P(U8)), ('d810E65', P(U8)),
-                ('d8106A0', P(U32)), ('scratch', P(Scratch))]
+                ('d8106A0', P(U32)), ('scratch', P(Scratch)), ('spad31E4', P(U32))]
 
 
 class Ledge(C.Structure):
@@ -685,8 +685,10 @@ def capture_run(job):
         cells = {k: U8(world.load(a, 1)) for k, a in (('3B8D', 0x70003B8D), ('57', 0x810E57),
                                                       ('64', 0x810E64), ('65', 0x810E65))}
         yaw = U32(world.load(0x8106A0))
+        heading = U32(world.load(0x700031E4))      # 0x700031E4's one storage (the scene's)
         helpers = Helpers(None, fns[0], fns[1], fns[2], C.pointer(cells['3B8D']), C.pointer(cells['57']),
-                          C.pointer(cells['64']), C.pointer(cells['65']), C.pointer(yaw), C.pointer(rw.scratch))
+                          C.pointer(cells['64']), C.pointer(cells['65']), C.pointer(yaw), C.pointer(rw.scratch),
+                          C.pointer(heading))
         ledge = Ledge()
         for i in range(3):
             ledge.point[i] = number(world.load(0x70003050 + 4 * i))
@@ -717,6 +719,8 @@ def capture_run(job):
             (where, 'scratch')
         if want['v0'] is not None:
             assert out.value == want['v0'], (where, 'result', out.value, want['v0'])
+        assert heading.value == original.load(0x700031E4), (where, '0x700031E4', hex(heading.value),
+                                                            hex(original.load(0x700031E4)))
         if entry == '00177510':
             frame = ([fb(got_ledge.point[i]) for i in range(3)] + [fb(got_ledge.normal[i]) for i in range(3)] +
                      [fb(got_ledge.heading)] + [fb(got_ledge.matrix[i]) for i in range(16)])

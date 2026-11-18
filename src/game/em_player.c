@@ -788,7 +788,8 @@ int player_states_floor_service(void *context, EmPlayerLiveActor *actor, int sea
     LiveFloorContext floor_context = { &f, actor };
     const EmPlayerFloorWorkers workers = {
         &floor_context, live_ground, live_head, live_object, live_link, live_surface39,
-        live_first_contact, live_atan2, live_tangent, live_atan, live_sqrt
+        live_first_contact, live_atan2, live_tangent, live_atan, live_sqrt,
+        &em_scene_state()->spad31E4
     };
     /* sp50: the probe point of the floor hit; the service overwrites it on
      * every hit, and the object probe runs only after a hit this stage. */

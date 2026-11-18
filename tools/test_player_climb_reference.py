@@ -115,7 +115,7 @@ class Workers(C.Structure):
                 ('skeleton', SKELETON_FN), ('translate', ARG_FN), ('floor', FLOOR_FN),
                 ('probes', ACTOR_FN), ('heading', ARG_FN), ('reentry', ARG_FN),
                 ('handoff', ACTOR_FN), ('fall', ACTOR_FN), ('land', ACTOR_FN),
-                ('scratch', C.POINTER(Scratch))]
+                ('scratch', C.POINTER(Scratch)), ('spad31E4', C.POINTER(C.c_uint32))]
 
 
 # (name, offset, size, kind)
@@ -171,6 +171,7 @@ class Oracle:
         self.script, self.log = script, []
         for i in range(4): ee.save(0x700038A0 + 4 * i, spad[i])
         ee.save(0x70003A20, spad[4])
+        ee.save(0x700031E4, spad[4] ^ 0x5A5A5A5A)     # 0x700031E4: 00177510's heading word
         ee.save(0x8106BE, scene.flags, 1)
         ee.save(0x810700, scene.area, 1)
         ee.save(0x275B40, NODES); ee.save(NODES + 4, NODES + 0x200)
@@ -292,6 +293,7 @@ class Oracle:
             for i in range(count): out['%s%d' % (name, i)] = e.load(ACTOR + offset + 4 * i)
         out['ledge_normal0'] = e.load(ACTOR + 0x290); out['ledge_normal1'] = e.load(ACTOR + 0x298)
         out['scratch'] = tuple(e.load(0x700038A0 + 4 * i) for i in range(4)) + (e.load(0x70003A20),)
+        out['spad31E4'] = e.load(0x700031E4)
         return out
 
 
@@ -301,6 +303,7 @@ class Native:
         self.scratch = Scratch()
         for i in range(4): self.scratch.s38A0[i] = spad[i]
         self.scratch.s3A20 = spad[4]
+        self.word31E4 = C.c_uint32(spad[4] ^ 0x5A5A5A5A)   # 0x700031E4's one storage
         self.workers = Workers(
             None, MOVE_FN(lambda _, pos, t, m, out: self.probe('move', out, fvec(t, 4), m)),
             SWEEP_FN(lambda _, a, b, m, out: self.probe('sweep', out, fvec(a, 4), fvec(b, 4), m)),
@@ -319,7 +322,7 @@ class Native:
             ACTOR_FN(lambda _, a: self.rec('handoff', a.contents.tier)),
             ACTOR_FN(lambda _, a: self.rec('fall', fvec(a.contents.position, 3))),
             ACTOR_FN(lambda _, a: self.rec('land', fvec(a.contents.position, 3))),
-            C.pointer(self.scratch))
+            C.pointer(self.scratch), C.pointer(self.word31E4))
 
     def frames(self, _, clip, out):
         self.log.append(('frames', clip)); out[0] = clip_length(BANK, clip); return 0
@@ -370,6 +373,7 @@ class Native:
 def native_fields(a, native):
     out = {name: raw_of(getattr(a, name), size, kind) for name, _, size, kind in FIELDS}
     out['scratch'] = tuple(native.scratch.s38A0) + (native.scratch.s3A20,)
+    out["spad31E4"] = native.word31E4.value
     for name, _, count in VECTORS:
         for i in range(count): out['%s%d' % (name, i)] = bits(getattr(a, name)[i])
     out['ledge_normal0'] = bits(a.ledge_normal[0]); out['ledge_normal1'] = bits(a.ledge_normal[1])

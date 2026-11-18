@@ -171,14 +171,37 @@ recording; 163,194 of 165,990 compared ticks in all. Two gaps were closed:
    main-loop step of 641 vblanks, vsync 3177 -> 3818, less E46S4's 22), derived, not
    probed. Without the export the request failed and 001BA1F0 faulted.
 
-**Next divergence** (segment 341, g12_area19_area15, AREA19 sub 1, original counter
-168,017; 0.01 away at 168,035). The player has climbed onto the ceiling hang (0016AC50,
-then +5 0x12 0016AE40) at (936.2, 426, 928.0) and steps with the stick held: +6 0x14,
-phase 2 (clip 0xBC requested at blend 8.0 in phase 0; 00182090 turns +C4 4 degrees a
-tick). 00178B90 is called with no collision push, so each step is exactly +38 along +C4,
-and +38 is the root node's +8 delta. The port's +38 is 0.0696111 every tick; the
-recording's steps are 0.07014 (ratio 1.0076) for the whole phase, which ends on the same
-tick on both sides. Phase 4's steps (00181430's clip) are equal (0.0860238). So the root
-node's +8 track during clip 0xBC after its blend-8 start differs: the transition's start
-cursor or that clip's translation track. Not established; the next lane reads 001C67E0 /
-the transition and clip 0xBC's root track against the original.
+**The ceiling hang's step (lane PORT-A19-HANG, 2026-11-18), closed.** In segment 341
+(g12, original counter 168,017) the port stepped 0.0696111 a tick where the original
+stepped 0.07018. The cause was neither the clip data nor the transition: the port played
+the wrong clip. 0016AE40 +6 0x14 phase 0 picks clip 0xBC (+2F1 = 1) or 0xC3 (+2F1 = 2)
+from the sign of wrap(0x700031E4 - +C4). Its live adapter's copy of 0x700031E4 was never
+filled, so it read 0 and played 0xC3. Clip 0xC3's root track runs at 0.0696111 a frame and
+0xBC's at 0.0701818; the bank bytes equal the original RAM's. Only two routines write
+0x700031E4: 00177510 (the ledge frame's heading) and 00175CF0's slope branch.
+Each port translation of them now also stores into one storage, `EmSceneState.spad31E4`:
+em_player_helper_00177510 (record helpers and the climb's live trampolines) and
+em_player_floor_apply. c10_pre copies that storage into the closure's scene.
+
+Evidence:
+- A hidden fork replay of g12 from its start state, with a per-tick table of the player
+  record, 0x700031E4 and node 0, shows the original's word at 1.568941 (stored at counter
+  167,770 by the ledge climb 00161790's 0015DF10 / 00177510) and clip 0xBC with +38 =
+  0.07018185.
+- The port now has the same word, clip and step.
+- Oracles: test_player_record_helpers_reference, test_player_climb_reference and
+  test_player_floor_reference compare the original's 0x700031E4 after every case with the
+  bound storage. The floor case counts its stores, 1,121 in the quick run. Removing either
+  publication fails its oracle.
+
+Chain now: segments 0 .. 360 exact (171,489 ticks, through AREA19 sub 1, the hang, back to
+sub 0), then 1,122 ticks of segment 361 (g12, AREA19 sub 0) on the recording; 172,611 of
+174,453 compared ticks; the playback overruns at counter 179,634.
+
+**Next divergence** (segment 361, g12, AREA19 sub 0, original counter 177,811). After
+Cross, 001662D0 (+5 0xC) goes +6 0x50 -> 0x51: clip 0xBA at blend 12 and a 12-tick move
+toward +290 (the original's +290 = (804.2250, 240.9756, 921.9996)). The compared position
+(0x810350) steps (-0.4397, -0.0855, 1.6218) a tick on the original. The port steps the
+same y and z, but its x step is -0.8147. Not established: is it the +290 target's x, or
+how the compared position follows the record during the clip-0xBA transition? The next
+lane reads 001662D0 0x50 / 0x51 and what writes +290 before them.

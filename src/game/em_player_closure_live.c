@@ -1529,6 +1529,7 @@ static int c10_pre(void)
     FAULT(req_byte(0x008106B8u, &s->d8106B8));
     s->d8106C8 = em_scene_req_u32(st, EM_SCENE_REQ_C8);
     s->camera_yaw = P.d8106A0;
+    s->spad31E4 = st->spad31E4;              /* the last 00177510 / 00175CF0 store */
     s->d275B10 = L.d275B10;
     s->d275B0C = L.d275B0C;
     s->d281B64 = L.d281B64;
@@ -2518,6 +2519,7 @@ static void bind_helpers(void)
     h->d810E65 = &P.ly;
     h->d8106A0 = &P.d8106A0;
     h->scratch = &L.land;
+    h->spad31E4 = &scene()->spad31E4;
 }
 
 static void bind_hang(void)
@@ -2813,6 +2815,7 @@ static void bind_climb(void)
     w->move = cw_move; w->sweep = cw_sweep; w->segment = cw_segment; w->column = cw_column;
     w->table = w_table; w->atan2 = w_atan2; w->sqrt = w_sqrt; w->effect = w_effect;
     w->scratch = &L.land;
+    w->spad31E4 = &scene()->spad31E4;
     l->floor = w_floor; l->probes = w_probes; l->fall = w_fall_check;
     l->scene = climb_scene;
     l->link_kind = climb_link_kind;

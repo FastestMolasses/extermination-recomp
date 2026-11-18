@@ -108,7 +108,7 @@ class FloorWorkers(C.Structure):
     _fields_ = [('context', C.c_void_p), ('ground', GROUND_FN), ('head', PROBE2_FN),
                 ('object', GROUND_FN), ('link_test', LINK_FN), ('surface39', HANDLER_FN),
                 ('first_contact', CONTACT_FN), ('atan2', MATH2_FN), ('tangent', MATH1_FN),
-                ('atan', MATH1_FN), ('sqrt', MATH1_FN)]
+                ('atan', MATH1_FN), ('sqrt', MATH1_FN), ('spad31E4', C.POINTER(C.c_uint32))]
 
 
 # (field, offset, size, float) for 00175900/00175CF0; +214 is a pointer.
@@ -411,6 +411,9 @@ def random_fall_actor(rng):
 
 # ---------------------------------------------------------------- 00175900
 
+HEADING_STORES = [0]     # cases where 00175CF0's slope branch stored 0x700031E4
+
+
 def floor_case(elf, native, actor, search, probes, links, at_seed, ram=None, base=ACTOR):
     # Each entity hit names its 0x700031D4 owner: one address per probe slot,
     # so the +214 store and the 00175640 argument are compared by identity.
@@ -428,6 +431,10 @@ def floor_case(elf, native, actor, search, probes, links, at_seed, ram=None, bas
     oracle.save(base + 0xA, actor.contact, 1)
     oracle.save(LINK + 2, actor.link_flags, 1); oracle.save(LINK + 3, actor.link_type, 1)
     oracle.probes = list(probes); oracle.links = list(links)
+    # 0x700031E4 (00175CF0's slope-branch heading): a sentinel both sides
+    # start from; the native side stores it in the bound one storage.
+    heading = C.c_uint32(0x7FC0DEAD)
+    oracle.save(0x700031E4, heading.value)
     oracle.call(FLOOR_SERVICE, base, search)
     returned = oracle.r[2] & 0xFF
 
@@ -456,7 +463,7 @@ def floor_case(elf, native, actor, search, probes, links, at_seed, ram=None, bas
                            LINK_FN(link_test), HANDLER_FN(surface39), CONTACT_FN(first_contact),
                            MATH2_FN(lambda _, y, x: LIBC.atan2f(y, x)),
                            MATH1_FN(lambda _, x: LIBC.tanf(x)), MATH1_FN(lambda _, x: LIBC.atanf(x)),
-                           MATH1_FN(lambda _, x: LIBC.sqrtf(x)))
+                           MATH1_FN(lambda _, x: LIBC.sqrtf(x)), C.pointer(heading))
     at = (C.c_float * 3)(*at_seed)
     result = native.em_player_floor_service(C.byref(actor), search, at, C.byref(workers))
     assert result == returned, ('returned', result, returned)
@@ -476,6 +483,10 @@ def floor_case(elf, native, actor, search, probes, links, at_seed, ram=None, bas
         assert bits(actor.position[i]) == oracle.load(base + 0xB0 + 4 * i), ('position', i)
     assert (actor.link_owner or 0) == oracle.load(base + 0x214), \
         ('link owner', hex(actor.link_owner or 0), hex(oracle.load(base + 0x214)))
+    assert heading.value == oracle.load(0x700031E4), ('0x700031E4', hex(heading.value),
+                                                      hex(oracle.load(0x700031E4)))
+    if heading.value != 0x7FC0DEAD:
+        HEADING_STORES[0] += 1
     return oracle, log
 
 
@@ -1669,7 +1680,7 @@ int floorbridge_service(Bridge *b, uint8_t cls, EmPlayerFloorActor *a, int searc
 {
     FloorCtx ctx = { { &b->world, { &b->stranger, cls, NULL }, NULL } };
     EmPlayerFloorWorkers w = { &ctx, fb_ground, fb_head, fb_object, fb_link, fb_s39, fb_contact,
-                               fb_atan2, fb_cos, fb_atan, fb_sqrt };
+                               fb_atan2, fb_cos, fb_atan, fb_sqrt, NULL };
     int r = em_player_floor_service(a, search, at, &w);
     *link_addr = addr_of(b, a->link_owner);
     return r;
@@ -1989,6 +2000,8 @@ def main():
 
     # 4. 00175900 / 00175CF0.
     floor_section(elf, native, rng, result)
+    assert HEADING_STORES[0] > 0, 'no case reached the 0x700031E4 store of 00175CF0'
+    result['heading_store_cases'] = HEADING_STORES[0]
 
     # 4b. 00175640 itself (byte-matched in the decomp), executed, against
     # em_player_link_00175640: every type byte with the three behaviour

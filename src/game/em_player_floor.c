@@ -457,6 +457,7 @@ int em_player_floor_apply(EmPlayerFloorActor *a, const EmPlayerProbeHit *hit, in
         if (!(a->slope < 0.017453292f) && a->slope <= 3.1241393f) {
             float angle = w->atan2(w->context, -hit->normal[2], hit->normal[0]);
             float yaw = em_player_sdk_wrap(ee_add(1.57079637050628662f, angle));
+            if (w->spad31E4) memcpy(w->spad31E4, &yaw, 4);           /* 0x700031E4 */
             a->position[1] = ee_sub(a->position[1], hit->delta[1]);
             float t = w->tangent(w->context, a->slope);
             const float local[4] = { 0.0f, 0.0f,

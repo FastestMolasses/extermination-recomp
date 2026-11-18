@@ -122,6 +122,7 @@ static EmPlayerHelperCalls helper_calls(const EmPlayerClimbWorkers *w)
     c.sweep = w->sweep ? calls_sweep : NULL;
     c.atan2 = w->atan2 ? calls_atan2 : NULL;
     c.cosine = NULL;
+    c.spad31E4 = w->spad31E4;
     return c;
 }
 
@@ -1279,6 +1280,7 @@ static int climb_live_begin(const EmPlayerClimbLive *b, EmPlayerLiveActor *live,
     workers->fall = t_fall;
     workers->land = t_land;
     workers->scratch = b->scratch;
+    workers->spad31E4 = w->spad31E4;   /* 0x700031E4's one storage (00177510) */
     climb_call.binding = b;
     climb_call.live = live;
     climb_call.mirror = actor;

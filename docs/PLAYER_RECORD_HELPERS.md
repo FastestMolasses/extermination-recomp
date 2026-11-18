@@ -80,7 +80,11 @@ the steer angle in 0017F5F0) and 0x70003A28 (the vault tick count). That
 nothing reads them before writing them is observed, not proven: in every
 world replay below the frames stay identical with them unmodelled.
 00177510's ledge frame (0x70003050, 0x70003060, 0x700031E4, 0x70003070)
-is the caller's `EmPlayerRecoveryLedge`.
+is the caller's `EmPlayerRecoveryLedge`. The heading is also stored in
+0x700031E4's one storage (`EmPlayerHelperCalls.spad31E4`, which the live
+adapters bind to `EmSceneState.spad31E4`), because 0016AE40 reads that word
+later without calling 00177510. The oracle compares the original's
+0x700031E4 after every entry with that storage.
 
 ## 2. The climb and the slide on the measured float model
 

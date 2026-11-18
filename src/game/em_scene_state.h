@@ -392,6 +392,11 @@ typedef struct {
     uint8_t spad3B93;  /* 001AD010 routes to +9=3 when nonzero */
     uint32_t spad3258; /* cleared by 001AFCF0 */
     uint32_t spad31F4; /* cleared by 001AFCA0 */
+    /* 0x700031E4, raw bits: the heading 00177510 stores (the ledge frame,
+     * wrap(3pi/2 + atan2(-n.z, n.x))) and 00175CF0's slope branch stores
+     * (wrap(pi/2 + atan2(-n.z, n.x))); no other routine writes it. Its one
+     * storage: 0016AE40 +6 0x14 phase 0 reads whatever the last writer left. */
+    uint32_t spad31E4;
 
     /* Flags. */
     uint8_t d275BD8; /* 001ADF50/001AD4E0 set 1 and wait for 0; 0x1AE040 states 1, 6 test it */

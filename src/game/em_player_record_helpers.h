@@ -80,6 +80,10 @@ typedef struct EmPlayerHelperCalls {
     /* 0011E620(y, x) and 0011DE90(x): 0, or -1 on a fault. */
     int (*atan2)(void *context, uint32_t y, uint32_t x, uint32_t *out);
     int (*cosine)(void *context, uint32_t x, uint32_t *out);
+    /* 0x700031E4's one storage (EmSceneState.spad31E4): 00177510 stores its
+     * heading there as well as in the ledge frame. NULL (the unit oracles)
+     * keeps it in the frame alone. */
+    uint32_t *spad31E4;
 } EmPlayerHelperCalls;
 
 /* 001B1470 through its owner, bounded: -1 for |x| >= 4096.0. */
@@ -153,6 +157,8 @@ typedef struct EmPlayerRecordHelpers {
     /* 0x700038A0..AC and 0x70003A20: the SAME scratch every other writer
      * and reader is bound to (the fall's EmPlayerLandScratch). */
     EmPlayerLandScratch *scratch;
+    /* 0x700031E4's one storage (EmPlayerHelperCalls.spad31E4). */
+    uint32_t *spad31E4;
 } EmPlayerRecordHelpers;
 
 /* 001755B0(p): EmPlayerLandWorkers.test_001755B0. Reads +24C (a float), +C4

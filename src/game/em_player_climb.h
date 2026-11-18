@@ -161,6 +161,9 @@ typedef struct EmPlayerClimbWorkers {
      * other writer and reader is bound to. NULL keeps the writes in a local
      * (the unit oracles); the live adapter requires it. */
     EmPlayerLandScratch *scratch;
+    /* Optional: 0x700031E4's one storage, where 00177510 also stores its
+     * heading (EmPlayerHelperCalls.spad31E4); the live adapter binds it. */
+    uint32_t *spad31E4;
 } EmPlayerClimbWorkers;
 
 /* build_trs_matrix(+D0, +B0, +C0, +60). 0, or -1 when a form is refused. */

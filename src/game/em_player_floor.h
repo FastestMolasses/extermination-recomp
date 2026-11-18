@@ -244,6 +244,9 @@ typedef struct EmPlayerFloorWorkers {
     float (*tangent)(void *context, float x);
     float (*atan)(void *context, float x);
     float (*sqrt)(void *context, float x);
+    /* Optional: 0x700031E4's one storage; the slope branch of 00175CF0
+     * stores its heading there (the unit oracles leave it NULL). */
+    uint32_t *spad31E4;
 } EmPlayerFloorWorkers;
 
 /* 00175640(owner) over the owner bytes it reads: 1 when `present` and the
