@@ -181,6 +181,7 @@
 #include "game/em_anim_runtime_rest.h"
 #include "game/em_world_textures_live.h"
 #include "game/em_script_host_workers.h"
+#include "game/em_credits_live.h"
 #include "em_settings.h"
 
 /* ------------------------------------------------------------ storage */
@@ -1142,6 +1143,9 @@ void em_scene_creature_trace(FILE *f, int t, const float pos[3], const float *he
     fprintf(f, "\"c\": %u, \"tb\": %u, \"bd8\": %u, \"s8d\": %u, ", (unsigned)em_frame_counter(),
             t0 ? (unsigned)t0->user[0x0B - EM_SCENE_TASK_FIRST] : 0u, (unsigned)s_state.d275BD8,
             s8d >= 0 ? (unsigned)s8d : (unsigned)s_state.spad3B8D);
+    if (t0) /* task 0's +9 / +A (take.rec's task0 bytes 9, 10) */
+        fprintf(f, "\"t9\": %u, \"ta\": %u, ", (unsigned)t0->user[0x09 - EM_SCENE_TASK_FIRST],
+                (unsigned)t0->user[0x0A - EM_SCENE_TASK_FIRST]);
     fprintf(f, "\"area\": \"%02x%02x%02x\", \"n\": [", s_state.d810700, s_state.d810701, s_state.d810702);
     /* EM_START_AT_TRACE_KINDS=<hex>,<hex>,...: the behaviours listed
      * (default the bugs 0012A5D0 and the creatures 0013D2D0, 00147390). */
@@ -4561,9 +4565,9 @@ static int area01_player_0015C700(EmArea01Call *call)
     const uint8_t *c8 = em_scene_req_at(&s_state, 0x008106C8u);
     const uint32_t word = (uint32_t)c8[0] | (uint32_t)c8[1] << 8 | (uint32_t)c8[2] << 16 |
                           (uint32_t)c8[3] << 24;
-    /* Inside the composition's player view the record is the live one: the
-     * view's commit publishes +0x220 to the vitals' owners (no publish of
-     * the owners into the record here, which would stale the view). */
+    /* The composition's views are committed around this call
+     * (area01_missing_worker): the record is in the stage's layout, its
+     * +0x220 the vitals' owner D_00810858 (vitals_load / vitals_store). */
     return player_pose_0015C700(s_state.d810858, word, area01_table16, NULL) ? 0 : -1;
 }
 
@@ -4586,9 +4590,18 @@ static int area01_missing_worker(void *ctx, EmArea01Call *call)
 {
     (void)ctx;
     if (call->function == 0x0015C700u || call->function == 0x0015C750u || call->function == 0x001B81D0u) {
+        /* Native owners of the record (the pose host's clip request
+         * 001749A0 under 0015C7C0, the record's +0x220 / +0x235): commit
+         * the composition's views before them and reacquire after, as
+         * every native worker inside it (em_area01_player_view.h). */
+        const int open = s_area01_live.active;
+        if (open && em_area01_live_suspend(&s_area01_live) < 0)
+            return -1;
         int rc = call->function == 0x0015C700u ? area01_player_0015C700(call) :
                  call->function == 0x0015C750u ? area01_player_0015C750(call) :
                  call->na >= 1 && !call->nf ? em_area11_script_host_001B81D0((uint32_t)call->a[0]) : -1;
+        if (open && em_area01_live_resume(&s_area01_live) < 0)
+            return -1;
         if (rc < 0)
             fprintf(stderr, "em_area01: %08X on the player record faulted\n", call->function);
         return rc;
@@ -5092,10 +5105,11 @@ static int in_status_frame(void)
     return s_entry_state == 3;
 }
 
+static int in_ending(int s0A);
 static int w_001D1C50(void *ctx)
 {
     (void)ctx;
-    if (!in_variant() && !in_status_frame())
+    if (!in_variant() && !in_status_frame() && !in_ending(1) && !in_ending(5))
         return -1;
     /* The first level: the translation on the render context (census L32);
      * its 001D7C30 is the point-light tick. */
@@ -5302,7 +5316,10 @@ static int w_001AAD00(void *ctx)
 static int w_001D1EA0(void *ctx, int a0)
 {
     (void)ctx;
-    if (!(in_variant() && a0 == 1) && !(in_status_frame() && a0 == 0))
+    /* The ending: state 1's frames, and state 5's (+A already 6 in the
+     * frame whose 00225AC0 reported). */
+    if (!(in_variant() && a0 == 1) &&
+        !((in_status_frame() || in_ending(1) || in_ending(5) || in_ending(6)) && a0 == 0))
         return -1;
     /* The first level: the translation on the render context (its world
      * flush pair and the kick 001CB800), then the renderer's presentation. */
@@ -5680,6 +5697,7 @@ static int w_0018D7B0(void *ctx, uint32_t a0, int a1)
  * reads D_00275BDC: from a death it opens the title menu (state 2) with the
  * cursor on its second entry. */
 
+static int in_ending(int s0A);
 static int in_game_over(void)
 {
     const uint8_t *sub = em_scene_task_byte(s_user, EM_SCENE_TASK_09);
@@ -5700,12 +5718,13 @@ static int w_001FF080(void *ctx, int a0, int a1)
             return em_scene_fault(&s_state, 0x001FF080u, EM_SCENE_FAULT_NULL_WORKER);
         return 0;
     }
-    if (a0 != 0 || a1 != 0x27 || !in_game_over())
+    if (a0 != 0 || !((a1 == 0x27 && in_game_over()) || (a1 == 0x37 && in_ending(3))))
         return -1;
-    /* 001AD4E0 step 1: the screen module through the loader task; the busy
+    /* 001AD4E0 step 1 (module 0x27) or 001AD740 state 3 sub 0 (the ending's
+     * module 0x37): the screen module through the loader task; the busy
      * byte D_00275BD8 the core set stays until the task's 0x63 step. */
     EmModuleLoader *ml = em_module_loader_live();
-    if (!ml || em_module_loader_request_001FF080(ml, 0, 0x27) != 0)
+    if (!ml || em_module_loader_request_001FF080(ml, 0, (uint32_t)a1) != 0)
         return em_scene_fault(&s_state, 0x001FF080u, EM_SCENE_FAULT_NULL_WORKER);
     return 0;
 }
@@ -5761,9 +5780,77 @@ static int w_001ABF90(void *ctx, uint64_t a0, uint64_t a1, uint64_t a2, uint64_t
 {
     (void)ctx;
     const uint64_t packet[4] = {a0, a1, a2, a3};
-    if (!in_game_over() || em_render_001ABF90(packet) < 0)
+    if (!(in_game_over() || in_ending(3)) || em_render_001ABF90(packet) < 0)
         return em_scene_fault(&s_state, 0x001ABF90u, EM_SCENE_FAULT_WORKER_FAILED);
     return 0;
+}
+
+/* The ending (001AD740, +9 = 3): the credits 0022D360 at its state 0 and
+ * 0022D380 at state 1's subs 1 and 2 (em_credits_live). */
+static int in_ending(int s0A)
+{
+    const uint8_t *b9 = em_scene_task_byte(s_user, EM_SCENE_TASK_09);
+    const uint8_t *bA = em_scene_task_byte(s_user, EM_SCENE_TASK_0A);
+    return b9 && bA && *b9 == 3 && *bA == s0A;
+}
+
+static int w_0022D360(void *ctx)
+{
+    (void)ctx;
+    if (!in_ending(0) || em_credits_live_0022D360() < 0)
+        return em_scene_fault(&s_state, 0x0022D360u, EM_SCENE_FAULT_WORKER_FAILED);
+    return 0;
+}
+
+static int w_0022D380(void *ctx)
+{
+    (void)ctx;
+    int32_t r = 0;
+    if (!in_ending(1) || em_credits_live_0022D380(&r) < 0)
+        return em_scene_fault(&s_state, 0x0022D380u, EM_SCENE_FAULT_WORKER_FAILED);
+    return r;
+}
+
+/* 001B0C00(4) at state 1's end (the credits over or START): the one
+ * translation em_script_host_001B0C00 with the area-change request's
+ * workers (001AEDE0's fade-out, 001FAD70 on the three lanes). */
+static int ac_001AEDE0(void *ctx, int32_t a0, int32_t a1);
+static int ac_001FAD70(void *ctx, int32_t channel, int32_t a1, int32_t a2);
+static int w_001B0C00(void *ctx, int a0)
+{
+    (void)ctx;
+    if (!in_ending(1))
+        return -1;
+    EmScriptHostWorkers h;
+    memset(&h, 0, sizeof h);
+    h.callees.w_001AEDE0 = ac_001AEDE0;
+    h.callees.w_001FAD70 = ac_001FAD70;
+    if (em_script_host_001B0C00(&h, a0) < 0)
+        return em_scene_fault(&s_state, h.fault_address ? h.fault_address : 0x001B0C00u,
+                              EM_SCENE_FAULT_WORKER_FAILED);
+    return 0;
+}
+
+/* State 2's rebuild (which has already stepped +A to 3): 001AF2C0
+ * (em_game_new_game_reset_001AF2C0, the New Game's reset,
+ * test-continue-reset-reference) and the gifts 001C40B0
+ * (em_pickup_inventory_001C40B0 over the item block). */
+static int w_001AF2C0(void *ctx)
+{
+    (void)ctx;
+    if (!in_ending(3))
+        return -1;
+    em_game_new_game_reset_001AF2C0();
+    return 0;
+}
+
+static int w_001C40B0(void *ctx, int a0, int a1)
+{
+    (void)ctx;
+    if (!in_ending(3))
+        return -1;
+    const int r = em_pickup_inventory_001C40B0(a0, a1);
+    return r < 0 ? -1 : r;
 }
 
 static int w_001AEE10(void *ctx, int16_t a0, uint8_t a1)
@@ -5852,6 +5939,37 @@ static int w_0022A650(void *ctx)
     EmGfx *gfx = em_frame_gfx();
     if (gfx && em_options_live_render(options, gfx) != 1)
         return em_scene_fault(&s_state, 0x0022A650u, EM_SCENE_FAULT_WORKER_FAILED);
+    return (int)r;
+}
+
+/* The ending's clear save (001AD740 states 4 and 5): 00225A00, the card
+ * record D_00810040 cleared (em_area01_terminal_reset, as the title's load
+ * verdict), then 00225AC0(1) every tick on the options binding, the save
+ * terminal's card screen (docs/SAVE_GAME.md section 6.5), drawn after the
+ * call as the options screen's; the screen is released once it reports. */
+static int w_00225A00(void *ctx)
+{
+    (void)ctx;
+    if (!in_ending(4) || em_area01_terminal_reset(&s_state) != 0)
+        return em_scene_fault(&s_state, 0x00225A00u, EM_SCENE_FAULT_WORKER_FAILED);
+    return 0;
+}
+
+static int w_00225AC0(void *ctx, int a0)
+{
+    (void)ctx;
+    EmOptionsLive *options = em_area11_interaction_host_options();
+    EmOptionsFrame f;
+    uint32_t r = 0;
+    if (!in_ending(5) || a0 != 1 || !options || options_frame(&f) < 0)
+        return em_scene_fault(&s_state, 0x00225AC0u, EM_SCENE_FAULT_NULL_WORKER);
+    if (em_options_live_00225AC0(options, &f, 1, &r) < 0)
+        return em_scene_fault(&s_state, 0x00225AC0u, EM_SCENE_FAULT_WORKER_FAILED);
+    EmGfx *gfx = em_frame_gfx();
+    if (gfx && em_options_live_render(options, gfx) != 1)
+        return em_scene_fault(&s_state, 0x00225AC0u, EM_SCENE_FAULT_WORKER_FAILED);
+    if (r != 0)
+        em_options_live_deactivate(options);
     return (int)r;
 }
 
@@ -6009,6 +6127,14 @@ static void bindings_init(void)
     w->s_00810D38 = s_00810D38;
     w->w_001AEBA0 = w_001AEBA0;
     w->w_001AB790 = w_001AB790;
+    /* The ending (001AD740). */
+    w->w_0022D360 = w_0022D360;
+    w->w_0022D380 = w_0022D380;
+    w->w_001B0C00 = w_001B0C00;
+    w->w_001AF2C0 = w_001AF2C0;
+    w->w_001C40B0 = w_001C40B0;
+    w->w_00225A00 = w_00225A00;
+    w->w_00225AC0 = w_00225AC0;
 
     /* The options screen (0x1AE040 state 2, chain step OPTIONS), with its
      * r == 2 arm's 001D2610 (a LOAD GAME through 00227300). */

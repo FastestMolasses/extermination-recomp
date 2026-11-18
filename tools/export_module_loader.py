@@ -84,8 +84,9 @@ PAGE_MODULES = (0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x2C, 0x2D
 # 001AD4E0 step 1's 001FF080(0, 0x27): the game-over screen (the player's
 # death; port docs/DAMAGE.md section 5); the options screen's row screens
 # 0x2B (0022A590's 001FF080(0, 0x2B)) and its memory-card screen 0x2A
-# (00225AC0's 001FF080(0, 0x2A); port docs/OPTIONS.md).
-SCREEN_MODULES = (0x27, 0x2A, 0x2B)
+# (00225AC0's 001FF080(0, 0x2A); port docs/OPTIONS.md); the ending's
+# pictures 0x37 (001AD740 state 3's 001FF080(0, 0x37); docs/AREA21_PORT.md).
+SCREEN_MODULES = (0x27, 0x2A, 0x2B, 0x37)
 # 001FF030's 001FF080(0, 0x1D): the sub-area request's module (0x1AE040
 # state 6; AREA00's switch, a00_08, docs/THIRD_LEVEL_ROUTE.md): 001FF830
 # kind 2, delivered at D_0028A5A0.

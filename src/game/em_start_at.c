@@ -1,5 +1,6 @@
 /* EM_START_AT=<name> (em_start_at.h; docs/STARTUP.md "Developer switches"). */
 #define _POSIX_C_SOURCE 200809L
+#include "game/em_memcard.h"
 #include "game/em_start_at.h"
 #include "game/em_status_background.h"
 #include "game/em_frame.h"
@@ -1004,6 +1005,24 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
             frame_start.set = 0;
             em_random_seed(pad.rand_state);
             printf("startup: EM_START_AT_RAND: rand() state %08x (comparison only)\n", pad.rand_state);
+        }
+    }
+    /* EM_START_AT_CARD_SWAP=<script frame>:<folder> (comparison only): from
+     * that frame on the host card is the folder (read-write), as the fork's
+     * card re-seat put the take's own card in the slot (chain g21: the
+     * guided run's clear save went to an empty formatted card, the take's
+     * card_start.ps2, not the start-point card the LOAD GAME read). */
+    {
+        static int swapped;
+        const char *swap = getenv("EM_START_AT_CARD_SWAP");
+        char *rest = NULL;
+        const long at = swap && !swapped ? strtol(swap, &rest, 10) : -1;
+        if (at >= 0 && rest && *rest == ':' && rest[1] && pad.t >= at) {
+            swapped = 1;
+            em_memcard_set_root(rest + 1);
+            em_memcard_set_read_only(0);
+            printf("startup: EM_START_AT_CARD_SWAP: the host card is %s from script frame %d (comparison only)\n",
+                   rest + 1, pad.t);
         }
     }
     /* With EM_START_AT_SYNC the script's clock is the recording's: the two

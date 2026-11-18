@@ -84,7 +84,22 @@ int em_area01_player_view_commit(EmArea01PlayerView *v)
         v->active=0;return 0;
     }
     memset(&now,0,sizeof now);
-    if(v->snapshot(v->ctx,&now)<0 || memcmp(&now,&v->owners,sizeof now) ||
+    if(v->snapshot(v->ctx,&now)<0)return fail(v,2,EM_AREA01_PLAYER_BASE);
+    /* A store the original makes to a vitals owner while the view is open
+     * (AREA21's ending callback 0x827250: D_00810858 = D_008104D0 = 100,
+     * D_0081085C = D_008104D8 = 0, then 0015C700 copies D_00810858 to
+     * +0x220). The original's owner word and record field are separate
+     * words that 0015CF90 / 0015C700 / 001B07C0 copy between; the view
+     * projects one into the other. When the record field holds the
+     * owner's new value the two agree, which the publish below reproduces
+     * exactly; any other owner store is still a stale owner. */
+    for(unsigned i=0;i<4;i++)
+        if(now.vitals[i]!=v->owners.vitals[i]) {
+            uint32_t r;memcpy(&r,v->actor->bytes+0x220+4*i,4);
+            if(r!=now.vitals[i])return fail(v,2,EM_AREA01_PLAYER_BASE+0x220+4*i);
+            v->owners.vitals[i]=now.vitals[i];
+        }
+    if(memcmp(&now,&v->owners,sizeof now) ||
        v->actor->link_owner!=v->link_owner || v->actor->link_prev!=v->link_prev ||
        v->actor->link_flags!=v->link_flags || v->actor->link_type!=v->link_type)
         return fail(v,2,EM_AREA01_PLAYER_BASE);
