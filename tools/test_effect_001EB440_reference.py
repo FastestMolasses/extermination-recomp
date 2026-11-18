@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Execute the original effect handlers 001EB440 and 001EB250 and compare
+"""Execute the original effect handlers 001EB440, 001EB250 and 001EB600 and compare
 em_effect_001EB440.c (docs/AREA21_PORT.md "Use and the effect 001EB440").
 
 The user's pinned ELF supplies every instruction. 001EB440 runs unmodified;
@@ -13,7 +13,9 @@ its integer and float-bit arguments, RAM and scratchpad after the call
 stops the native with -1 and memory as the original had it at that call).
 001EB250 also lowers a0 + 0x38 by 2 unless +0x54 <= 0.8: its scale is
 drawn at 0.8, one ulp past it and away from it, and a0 points at a
-designed matrix. Coverage: every word of both runs.
+designed matrix. 001EB600 (lane PORT-A21-BOSS) lowers it by 3 unless
++0x54 <= 0 (drawn at +0, -0 and the least positive float) and stores 20 at
+a0 + 0x34. Coverage: every word of the three.
 """
 import ctypes as C
 import random
@@ -29,7 +31,7 @@ from test_player_slide_reference import EE, read_elf  # noqa: E402
 from test_area21_use_reference import CoverEE  # noqa: E402
 
 OUT = ROOT / 'build' / 'effect_001EB440_reference'
-ENTRIES = {0x1EB440: 0x1B8, 0x1EB250: 0x1F0}
+ENTRIES = {0x1EB440: 0x1B8, 0x1EB250: 0x1F0, 0x1EB600: 0x1F0}
 HOOKS = {0x21B9A0: 'fog', 0x1CFB50: 'xform', 0x1CFBE0: 'queue'}
 WORK = 0x275C34
 LOW = 0x800000
@@ -62,7 +64,7 @@ def build_native():
                     '-shared', '-fPIC', '-Isrc', 'src/game/em_effect_001EB440.c', '-o', str(lib)],
                    cwd=ROOT, check=True)
     native = C.CDLL(str(lib))
-    for name in ('em_effect_001EB440', 'em_effect_001EB250'):
+    for name in ('em_effect_001EB440', 'em_effect_001EB250', 'em_effect_001EB600'):
         getattr(native, name).argtypes = [C.POINTER(Hooks), C.c_uint32, C.c_int32, C.POINTER(Fault)]
     return native
 
@@ -72,8 +74,8 @@ def make_case(seed):
     work = 0x6B0000 + rng.randrange(0, 0x100) * 0x10
     s = rng.choice([0, 1, 0x7FFF0000, 0x7FFFFFFF, 0x80000000, 0xFFFF0000, 0xFFFFFFFF, 0x00010000,
                     rng.randrange(1 << 32), rng.randrange(1 << 32)])
-    return {'seed': seed, 'entry': sorted(ENTRIES)[seed % 2], 'work': work, 'rng': s,
-            'scale': rng.choice([F(rng.uniform(-50, 50)), F(0.8), F(0.8) + 1, F(0.5), F(3.0)]),
+    return {'seed': seed, 'entry': sorted(ENTRIES)[seed % 3], 'work': work, 'rng': s,
+            'scale': rng.choice([F(rng.uniform(-50, 50)), F(0.8), F(0.8) + 1, F(0.5), F(3.0), 0, 1, 0x80000000]),
             'a0': 0x6C0000 + rng.randrange(0x100) * 0x40, 'z': F(rng.uniform(-500, 500)), 'a1': rng.randrange(-5, 1 << 16),
             'fail': rng.choice([None] * 14 + list(range(7)))}
 
@@ -155,7 +157,7 @@ def main():
         assert targets == set(HOOKS), sorted(map(hex, targets))
     native = build_native()
     cases = [make_case(s) for s in range(1200)]
-    chosen = reference_mode.select(cases, 100, 7, axes=(lambda c: c['entry'], lambda c: c['scale'] in (F(0.8), F(0.8) + 1), lambda c: c['fail']))
+    chosen = reference_mode.select(cases, 100, 7, axes=(lambda c: c['entry'], lambda c: c['scale'] in (F(0.8), F(0.8) + 1, 0, 1, 0x80000000), lambda c: c['fail']))
     seen, faults = set(), 0
     for case in chosen:
         base = EE(elf)
@@ -182,7 +184,7 @@ def main():
     assert not missing, ('words never executed', missing)
     reference_mode.banner(reference_mode.part(len(chosen), len(cases), 'cases'), f'{faults} worker faults',
                           f'{len(words)} of {len(words)} words')
-    print('PASS: em_effect_001EB440 matches the original 001EB440 and 001EB250')
+    print('PASS: em_effect_001EB440 matches the original 001EB440, 001EB250 and 001EB600')
 
 
 if __name__ == '__main__':

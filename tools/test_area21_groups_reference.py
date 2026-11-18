@@ -3,9 +3,11 @@
 ORIGINAL instructions: the members of the groups 0x82B500 / 0x82BA70 that
 the scripts 0x82B5E0 / 0x82C5C0 place, 0x823580 (its effect position a
 frame local, compared at its original stack address), 0x8237B0, 0x823860,
-0x8238E0 and the empty 0x823AA0, and the unreached 0x824CF0 (no static
-reference; its packet a frame local), and the sub 0 placement [52]
-0x8243B0 (its packet a frame local). Decomp docs/AREA21_OVERLAY.md.
+0x8238E0 and the empty 0x823AA0, the effect nodes 0x824CF0 and 0x824FE0
+(no static reference, but reached in the boss fight: lane PORT-A21-BOSS;
+their packets frame locals; 0x824FE0's parent node and its 32 child
+objects are designed at PAR), and the sub 0 placement [52] 0x8243B0 (its
+packet a frame local). Decomp docs/AREA21_OVERLAY.md.
 
 The harness is tools/test_level14_port_reference.py (`O`), configured as
 tools/test_area21_doors_reference.py configures it. No AREA21 recording
@@ -50,6 +52,7 @@ FUNCS = {
     0x823AA0: ('em_area21_groups_00823AA0', 0x8, [U], None),
     0x824CF0: ('em_area21_groups_00824CF0', 0x2F0, [U, S], None),
     0x8243B0: ('em_area21_groups_008243B0', 0x93C, [U, S], None),
+    0x824FE0: ('em_area21_groups_00824FE0', 0xB18, [U, S], None),
 }
 OVERLAY_ID = 0x12
 AREA21 = ROOT.parent / 'Extermination/extract/OVERLAY/AREA21.BIN'
@@ -61,9 +64,13 @@ A = FREE + 0x1000            # the designed node (0x2F0 bytes)
 # the pure helpers run as original code (their writes replayed): the
 # vector copy, the sine, the matrix identity, rotation and translation and
 # the float -> unsigned helper 001281C0 (0x8243B0's casts)
-MATH = frozenset((0x102948, 0x11DE90, 0x1029C0, 0x102C58, 0x102918, 0x1281C0))
+MATH = frozenset((0x102948, 0x11DE90, 0x1029C0, 0x102C58, 0x102918, 0x1281C0, 0x1026A0, 0x102BB0))
 # Words the static walk reaches that no input can reach, and why.
-DEAD = {}
+DEAD = {
+    # 0x824FE0's mode 10 picks k by a switch on its loop index j, which is
+    # only 0 or 1: the switch's no-case path (a delay slot) never runs
+    0x825544: 'mode 10: the switch on j (0 or 1) has no third path',
+}
 D_70003B68 = 0x70003B68     # the frame counter
 D_700038A0 = 0x700038A0     # 0x8238E0's scratchpad vector
 
@@ -168,6 +175,147 @@ def fields(rng):
     ]
 
 
+# 0x824FE0's parent node and its child objects (32 slots)
+PAR = FREE + 0x2000
+EFFECT = FREE + 0x6000      # a node 001EFD20 returns
+
+
+def child(s):
+    return FREE + 0x3000 + 0x100 * s
+
+
+def fe0_world(ys=None, xs=None):
+    """par (state 1) and its 32 children: each a matrix at +0x90 (a
+    rotation and a translation) and a position at +0xC0."""
+    out = [(A + 0x24, w(PAR)), (PAR + 4, b(1))]
+    for s_ in range(32):
+        c_ = child(s_)
+        y = ys[s_] if ys and s_ in ys else 30. + s_
+        x = xs[s_] if xs and s_ in xs else -5. + 2 * s_
+        out += [(PAR + 0x110 + 4 * s_, w(c_)),
+                (c_ + 0x90, fw(0., 0., -1., 0., 0., 1., 0., 0., 1., 0., 0., 0., 7. + s_, 3., -2. * s_, 1.)),
+                (c_ + 0xC0, fw(x, 0., 50. - s_, 1.))]
+        out.append((c_ + 0xC4, f(y) if isinstance(y, float) else y))
+    return out
+
+
+TBL7, TBL12 = 0x82B090, 0x82B0B0
+
+
+def slots(table, n):
+    """The child slot indices of a table, read from the user's AREA21.BIN
+    (the 7-entry table is read on into the next: mode 10 reads entry 9)."""
+    data = AREA21.read_bytes()
+    return struct.unpack_from('<%di' % n, data, table - O.ARENA)
+
+
+def fe0_cases(add, st, ulp):
+    W = A + 0x1F0
+
+    def node(state, mode=0, kind=6, prev=None, f0=1., tbl=TBL7, n=7, seed=0x12345678, saved=None, ph=None,
+             ys=None, xs=None, frame=24):
+        out = fe0_world(ys, xs) + st(state) + [
+            (A + 5, b(mode)), (A + 6, b(mode if prev is None else prev)), (A + 0xD, b(kind)),
+            (W + 0xF0, f(f0) if isinstance(f0, float) else f0), (W + 0xF4, w(tbl)), (W + 0xF8, s32(n)),
+            (W + 0xFC, s32(seed)), (D_70003B68, s32(frame))]
+        for k in range(12):
+            y = saved[k] if saved and k in saved else 0.
+            out.append((W + 16 * k, fw(1. + k, 0., 3. * k, 1.)))
+            out.append((W + 16 * k + 4, f(y) if isinstance(y, float) else y))
+            p = ph[k] if ph and k in ph else 0.1 * k
+            out.append((W + 0xC0 + 4 * k, f(p) if isinstance(p, float) else p))
+        return out
+
+    s7, s12 = slots(TBL7, 10), slots(TBL12, 12)
+
+    def slot(n, k):
+        return (s7 if n == 7 else s12)[k]
+
+    for state in (2, 3, 4, 0x80, 0xFF):
+        add(f'4fe0/{state:x}', 0x824FE0, node(state))
+    for kind in (6, 7, 0, 5, 0x86):
+        for r in (0x12345678, -1, 0, 0x7FFF0000):
+            add(f'4fe0/0/{kind}/{r & 0xFFFFFFFF:x}', 0x824FE0, node(0, mode=1, kind=kind, n=3),
+                {0x122BB8: [r], 0x1CCF70: [4] * 12})
+    add('4fe0/0/par3', 0x824FE0, node(0, kind=7) + [(PAR + 4, b(3))], {0x122BB8: [9]})
+    for ps in (3, 0, 2, 4):
+        add(f'4fe0/1/par{ps}', 0x824FE0, node(1, mode=0x63) + [(PAR + 4, b(ps))])
+    for mode in (0, 4, 5, 9, 13, 0x62, 0x63, 0x64, 0xFF):
+        for f0 in (0., 1., -0.):
+            add(f'4fe0/1/mode{mode:x}/{f0}', 0x824FE0, node(1, mode=mode, f0=f0), {0x1CCF70: [6] * 12})
+    # mode 1: saved y below -40, object y above -40
+    for n, tbl in ((7, TBL7), (12, TBL12)):
+        for sv in (-40., ulp(-40., 1), -41., -39., 0.):
+            for oy in (-40., ulp(-40., -1), ulp(-40., 1), -39., -41., 100.):
+                k = 3
+                add(f'4fe0/1/1/{n}/{sv}/{oy}', 0x824FE0,
+                    node(1, mode=1, tbl=tbl, n=n, saved={k: sv, 0: sv, n - 1: sv},
+                         ys={slot(n, k): oy, slot(n, 0): oy, slot(n, n - 1): oy}), {0x1CCF70: [5] * 12})
+    # mode 2: the strength and the downward crossings of 50
+    for prev in (2, 1, 3):
+        for f0 in (1., 1. / 60, ulp(1. / 60, 1), ulp(1. / 60, -1), 0., 0.5, -1.):
+            add(f'4fe0/1/2/{prev}/{f0}', 0x824FE0, node(1, mode=2, prev=prev, f0=f0), {0x1CCF70: [5] * 12})
+    for n, tbl in ((7, TBL7), (12, TBL12)):
+        for sv in (50., ulp(50., 1), 51., 49.):
+            for oy in (50., ulp(50., -1), 49., 51.):
+                add(f'4fe0/1/2/{n}/{sv}/{oy}', 0x824FE0,
+                    node(1, mode=2, tbl=tbl, n=n, saved={k: sv for k in range(12)},
+                         ys={slot(n, k): oy for k in range(n)}), {0x1CCF70: [5] * 12})
+    # mode 3: objects inside (-10, 20) on frames % 12
+    for frame in (24, 25, 0, -12, -13, 0x7FFFFFFF):
+        for oy in (-10., ulp(-10., 1), 0., ulp(20., -1), 20., 25., -11.):
+            add(f'4fe0/1/3/{frame}/{oy}', 0x824FE0,
+                node(1, mode=3, kind=7, tbl=TBL12, n=12, frame=frame, ys={slot(12, k): oy for k in (0, 5, 11)}),
+                {0x1CCF70: [5] * 12})
+    # mode 10: entries 6 and 9 crossing 46, the every-12th effect
+    for n, tbl in ((7, TBL7), (12, TBL12)):
+        for sv in (46., ulp(46., 1), 50.):
+            for oy in (46., ulp(46., -1), 30.):
+                add(f'4fe0/1/10/{n}/{sv}/{oy}', 0x824FE0,
+                    node(1, mode=10, tbl=tbl, n=n, frame=25, saved={6: sv, 9: sv},
+                         ys={slot(n, 6): oy, slot(n, 9): oy}))
+    for frame in (24, 25, -12):
+        for r in (0, 1, -1, 2):
+            for res in (0, EFFECT):
+                add(f'4fe0/1/10/fire/{frame}/{r}/{res:x}', 0x824FE0,
+                    node(1, mode=10, frame=frame, saved={6: 50., 9: 0.}, ys={slot(7, 6): 30.}),
+                    {0x122BB8: [r], 0x1EFD20: [0, 0, 0, res]})
+    for mode in (11, 12):
+        for n, tbl in ((7, TBL7), (12, TBL12)):
+            add(f'4fe0/1/{mode}/{n}', 0x824FE0, node(1, mode=mode, tbl=tbl, n=n, f0=0.))
+    # the packets: y above 10, the phases' wrap, seeds
+    for oy in (10., ulp(10., 1), ulp(10., -1), -50.):
+        add(f'4fe0/1/pkt/y/{oy}', 0x824FE0, node(1, mode=1, ys={s_: oy for s_ in range(32)}), {0x1CCF70: [7] * 12})
+    import numpy as np
+    edge = float(np.float32(2.0) - np.float32(0.015))
+    for d in (-2, -1, 0, 1, 2):
+        add(f'4fe0/1/pkt/ph/{d}', 0x824FE0, node(1, mode=1, ph={k: ulp(edge, d) for k in range(7)}),
+            {0x1CCF70: [7] * 12})
+    for p in (2., 3., -1., 100.):
+        add(f'4fe0/1/pkt/ph/{p}', 0x824FE0, node(1, mode=1, ph={k: p for k in range(7)}), {0x1CCF70: [7] * 12})
+    for seed in (0, 1, -1, 0x7FFFFFFF, -0x80000000, 0xFFFF0000 - 0x100000000, 0x0000FFFF, 0x7FFF8000):
+        add(f'4fe0/1/pkt/seed/{seed & 0xFFFFFFFF:x}', 0x824FE0, node(1, mode=1, kind=7, tbl=TBL12, n=12, seed=seed),
+            {0x1CCF70: [3] * 12})
+    for n in (0, 1, -1):
+        for mode in (1, 2, 3, 10):
+            add(f'4fe0/1/n/{n}/{mode}', 0x824FE0, node(1, mode=mode, n=n, prev=0, frame=0,
+                                                       saved={k: 60. for k in range(12)}, ys={s_: 0. for s_ in range(32)}))
+        add(f'4fe0/0/n/{n}', 0x824FE0, node(0, mode=1, kind=0, n=n))
+    # callees that rewrite what the original reads after them
+    add('4fe0/1/scribble/fx', 0x824FE0, node(1, mode=2, saved={k: 60. for k in range(12)},
+                                             ys={slot(7, k): 40. for k in range(7)}),
+        {0x1EFD20: [O.Scribble(0, [(W + 0xF8, s32(3)), (W + 0xF0, f(0.25)), (child(slot(7, 1)) + 0xC4, f(-80.))])]})
+    add('4fe0/1/scribble/pkt', 0x824FE0, node(1, mode=1),
+        {0x1CFBE0: [O.Scribble(None, [(W + 0xC0 + 4, f(1.99)), (W + 0xF0, f(0.)), (W + 0xF8, s32(2)),
+                                      (0x70003A20, f(5.))])],
+         0x1CCF70: [O.Scribble(9, [(0x700036D4, f(-3.)), (W + 0xC4, f(1.996))])] * 12})
+    add('4fe0/1/scribble/fog', 0x824FE0, node(1, mode=1),
+        {0x21B9A0: [O.Scribble(None, [(W + 0xF0, f(0.)), (A + 5, b(2))]), O.Scribble(None, [(W + 0xFC, s32(77))])]})
+    add('4fe0/1/scribble/fire', 0x824FE0, node(1, mode=10, frame=12, saved={6: 50.}, ys={slot(7, 6): 30.}),
+        {0x122BB8: [O.Scribble(1, [(PAR + 0x110 + 4 * 7, w(child(8)))])],
+         0x1EFD20: [O.Scribble(0, [(D_70003B68, s32(13)), (A + 0x24, w(PAR + 4))])] * 3 + [EFFECT]})
+
+
 def hook_values(rng):
     def ints(*values, n=4): return [rng.choice(values) for _ in range(n)]
     return {0x122BB8: ints(*RANDS), 0x1C6190: ints(*DISTANCES), 0x1CCF70: ints(0, 7, -1, 0xFFFFFF, n=14)}
@@ -245,7 +393,7 @@ def cases():
         {0x1CD520: [O.Scribble(None, [(A + 0x28, s16(-9)), (A + 0x2A, s16(4)), (D_700038A0, f(2.))])]})
     # ---- 0x823AA0
     add('3aa0', 0x823AA0)
-    # ---- 0x824CF0 (unreached in the original)
+    # ---- 0x824CF0 (no static reference; reached in g77)
     for state in (2, 3, 4, 0x80, 0x81, 0x82, 0x83, 0xFF):
         add(f'4cf0/{state:x}', 0x824CF0, st(state))
     for kind in (0, 3, 4, 5, 6, 0x83, 0x84, 0x85, 0xFF):
@@ -329,6 +477,8 @@ def cases():
         0x21B9A0: [O.Scribble(None, [(W + 0x10, w(0x5A5A5A5A))])]})
     add('43b0/1/scribble/matrix', 0x8243B0, st(1) + detail(0, 0) + work(), handles(*[5] * 14) | {
         0x1CCF70: [O.Scribble(5, [(W + 8, f(1.995)), (W + 12, f(1.995))])]})
+    # ---- 0x824FE0, the node of [43] / [44]'s deferred spawn
+    fe0_cases(add, st, ulp)
     # ---- a seeded random sample over every entry
     rng = random.Random(0xA21B)
     for entry in FUNCS:

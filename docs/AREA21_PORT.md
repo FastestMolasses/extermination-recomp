@@ -28,7 +28,7 @@ reads).
 | `em_area21_overlay` (+ `_cannon.c`) | the Gatling [62] 0x8297C0 with 0x8260A0, 0x829310 (the rate-limited step on the table 0x82DB10, shared with the cannon), 0x8294C0, 0x829590, 0x829F10, 0x829F40; the cannon [61] 0x828700 with 0x828410, 0x828E80 and the projectile 0x828F30 (the code pointer 0x828E80 installs) | 0x8297C0 takes the entry sp: 0x829F40 keeps a matrix and a packet in its frame |
 | `em_area21_owners` | [42] 0x8261A0; [43] / [44] 0x8262D0 with 0x826310 and 0x8264D0; [45] 0x8266F0 with 0x826840 and 0x8268F0; script 0x82BEC0's op09 callbacks 0x8269A0 and 0x8269F0; [53] 0x827040 (the ending request) with script 0x82CBD0's op09 callback 0x827250; [58] 0x827CD0 | none |
 | `em_area21_doors` | the doors [30] 0x826BB0 and [27] / [33] 0x826E60; [54] / [55] 0x82A1D0; the rounds 0x825C70 with its code pointer 0x825C60; [47] 0x8272C0, [49] / [50] 0x8273C0, [51] 0x827640, [56] 0x827880, [57] 0x827A30, [59] / [60] 0x827E70, the deferred group's 0x828350 | none; the four jump-table dispatchers (tables 0x82DC00, 0x82DC20, 0x82DC40, 0x82DC60) are switches |
-| `em_area21_groups` | the members of groups 0x82B500 / 0x82BA70: 0x823580, 0x8237B0, 0x823860, 0x8238E0, 0x823AA0; the sub 0 placement [52] 0x8243B0 (lane PORT-A21-52); and 0x824CF0 (no static reference in the original: tested, not bound) | 0x823580 (a position at sp - 0x10), 0x8243B0 and 0x824CF0 (a packet at sp - 0x60) take the entry sp |
+| `em_area21_groups` | the members of groups 0x82B500 / 0x82BA70: 0x823580, 0x8237B0, 0x823860, 0x8238E0, 0x823AA0; the sub 0 placement [52] 0x8243B0 (lane PORT-A21-52); the boss fight's effect nodes 0x824CF0 and 0x824FE0 (no static reference, reached in g77: lane PORT-A21-BOSS) | 0x823580 (a position at sp - 0x10), 0x8243B0, 0x824CF0 and 0x824FE0 (a packet at sp - 0x60) take the entry sp |
 
 [52] 0x8243B0 (decomp func_overlay_AREA21_00824370, NEARMISS C at 99.48%:
 two loop-label padding nops and integer temporaries two argument registers
@@ -37,8 +37,8 @@ compiler's float -> unsigned helper 001281C0 (hook, run as original code in
 the oracle); the packet lives at sp - 0x60 (frame 0x120), the tables and
 groups it names are at their runtime addresses (data is not shifted by the
 0x40 of the decomp's code names: the oracle caught a first try that did).
-Not translated: the unreached 0x823B40, 0x824FE0 (no C) and 0x825B00
-(byte-identical C, no static reference).
+Not translated: 0x823B40 and 0x825B00 (no static reference, not reached
+so far). 0x824FE0 is translated since lane PORT-A21-BOSS (below).
 
 ## Evidence
 
@@ -65,7 +65,7 @@ the callee inventory and the fail-stop contract.
 | test_area21_overlay_reference | 518 / 617 cases | every reachable word of the 11 entries (1643) |
 | test_area21_owners_reference | 329 / 581 | every word of the 12 entries (635) |
 | test_area21_doors_reference | 860 / 1112 | every word but three dead delay slots named in the test (0x82744C: 0x8273C0's table bound after `& 7` never fails; 0x827B70 / 0x827F8C: an effect loop index only 0..2) |
-| test_area21_groups_reference | 894 / 1041 | every word of the 7 entries (895: 0x8243B0's 513) |
+| test_area21_groups_reference | 1195 / 1342 | every word of the 8 entries but one dead delay slot named in the test (0x825544: 0x824FE0's mode 10 switch on its loop index, only 0 or 1); 0x8243B0's 513, 0x824FE0's 609 |
 
 Lane PORT-A21-52 ran five mutants of 0x8243B0 (the 0.75 scale, a step list, a phase increment, the handle compare, the fourth random's source): all were caught. Each sub-lane also ran a few mutants (load order, limits off by one ulp,
 frame offsets, constants): each was caught but equivalent rewrites (a
@@ -286,13 +286,88 @@ point), then from about row 1450 y rises (35.01 to 39.80): a climb.
   word difference at row 6386 (the frame before drew differently; positions
   stay on the row).
 
+## The boss fight (lane PORT-A21-BOSS, 2026-11-18, branch `a21boss`)
+
+- **0x824FE0** (decomp func_overlay_AREA21_00824FA0, byte-identical C) in
+  `em_area21_groups` (its comment says what every mode does): the effect
+  node 0014EC00's 001EFD20 starts when [43] / [44]'s deferred spawn runs.
+  It watches 7 or 12 of its parent's child objects (+0x24's +0x110 slots
+  through the tables 0x82B090 / 0x82B0B0), spawns 001EFD20 effects by its
+  mode byte +5 when an object crosses a height, and queues one 001CFB50 /
+  001CFBE0 packet per object (group 0x82B000). Its 001EFD20 result (the
+  new node, whose +0x38 mode 10 clears) made the groups hook return a
+  value (gen_area21_groups.py: 001EFD20 'u'; the other members ignore
+  it); 001026A0 and 00102BB0 joined the hooks (run as original code in
+  the oracle). Bound in dispatch_area21 (frame 0xF0, `sp` for the packet
+  at sp - 0x60) and em_scene_bindings' AREA21 list.
+- **0x824CF0** (translated and tested by lane PORT-A21 as "unreached"):
+  also a 001EFD20 effect node of the fight, reached at g77 row 3024; bound
+  the same way (frame 0xA0). A label is not evidence: "no static
+  reference" never meant unreached.
+- **001EB600** (byte-identical C; an effect handler of the fight, g77 row
+  3622) in `em_effect_001EB440`: unless the work block's +0x54 is at most
+  0, the node matrix's translation z (+0x38) falls by 3; the two fog
+  calls; translation y (+0x34) = 20; the two passes with the sources
+  D_00255D70 / D_00255E00 (export_area00_runtime_tables.py
+  AREA21_EFFECT_WINDOWS widened to 0x360 bytes). Bound in em_effects_live
+  beside 001EB440 / 001EB250.
+- **Music cue 0xC** (export_streams.py MUSIC_EXTRA): [43] / [44]'s
+  0x826310 calls 001FB0B0(0xC) at the end of script 0x82B5E0 (the fight's
+  start); its sectors were not exported, so step H (001FB100) faulted at
+  00112610 code 8 one frame after 0x824FE0 was bound. The stream fault
+  was this separate gap, not a consequence of the 0x824FE0 stop.
+- **Evidence**: `make test-area21-overlay-reference` (the groups oracle
+  now runs 0x824FE0's original instructions over designed parent nodes
+  with 32 child objects: every mode 0..4, 10, 11, 12, 0x63 and others,
+  states 0..3 and above, both tables and the 7-entry table's mode 10
+  reading past its end, the -40 / 50 / -10 / 20 / 46 / 10 bounds at and
+  one ulp past, frames around multiples of 12, the 2.0 phase wrap one ulp
+  either side, seeds, n 0 / 1 / -1, the 001EFD20 result 0 or a node,
+  Scribbles from 001EFD20 / 001CFBE0 / 001CCF70 / 0021B9A0 / 00122BB8;
+  memory accesses compared one for one; 609 of 609 reachable words) and
+  `make test-area21-use-reference` (test_effect_001EB440_reference now
+  covers 001EB600: +0x54 at +0, -0 and the least positive float; 358 of
+  358 words). Mutants of 0x824FE0 caught: the 0.015 phase step (one ulp),
+  mode 1's `<` as `<=`, mode 2's 0x80000059 entry, the 46 bound (one
+  ulp), the seed step, the fire slot choice 7 / 19, the +20 on z instead
+  of y.
+- **Chain g20** (card g73): g73 4191 / 4192, g74 3736 / 3736, g75 3864 /
+  3864, g76 6383 / 6383 (rand() word at row 6386 as before), **g77 4355 /
+  4355 to row 4354**, the original's hit at row 3533 (95.0) matched by
+  the port. At row 4354 the player enters +5 0x23 with +1F0 0x38 (the
+  Gatling mount: the guided run's g77 mounts [62]) and 0015B130's
+  state[0x23], **001741D0**, is unbound (fail-stop; the scene's fault
+  address reads 00198AF0, the camera action of that frame, but the
+  failing worker is the state callback). g78 .. g80 not reached.
+- **g76's rand() word at row 6386** (diagnosed, not fixed): the port's
+  word is the original's advanced by exactly one LCG step, so the port
+  drew once more in row 6385. EM_RAND_TRACE over the chain names the
+  extra call: the status pages' background step 0020A7A0
+  (em_status_background_step, from the page render) drawing from the
+  original row 6386 word itself, i.e. one draw after the original's frame
+  ended. The page is open there (the take uses the status screen before
+  the fight); 0020A7A0 draws only on some frames (its own timer in
+  D_002655A0), so the port's background timer or the page's open / close
+  frame is one frame off from the original's there. Positions stay on the
+  row (the chain reseeds each row). Next: compare D_002655A0 with the
+  take's rows around that page (EM_START_AT_STATUS_BG restores it only at
+  the card).
+
 ## Next
 
 1. (done) 001E1E60's flag-0x23 workers (Far light); (done) 001E1AD0's
    flag-0x22 path (Grid); (done) 001AAC00 with its tests, 001EB440 /
-   001EB250 (Use and the boss effects). Next: 0x824FE0 (the node [43] /
-   [44] spawn, g77 row 2858) and the rand() draw at g76 row 6385, then
-   chain g20 on through g78 .. g80; 001741D0 when a take reaches +5 0x23.
+   001EB250 (Use and the boss effects); (done) 0x824FE0, 0x824CF0,
+   001EB600 and cue 0xC (The boss fight). Next: **001741D0** (+5 0x23,
+   byte-identical C; g77 row 4354 takes its +1F0 0x38 Gatling branch, a
+   six-step table switch; the other branch is the 0x4A placement), most
+   naturally in em_player_running_jump beside 001747F0 (its workers
+   already cover 001749A0, 00178B90, 00175900, sin / cos / atan2 / sqrt
+   and *(*D_00275B40 + 8)); new: 00174A50, *(*D_00275B40 + 0), the pad
+   test D_00810E74 & 0x70003B76, 001028D0 / 00102760 / 001026A0 /
+   00103200 into 0x700038A0..DC, 001B12B0, 001B1470. Then the extra
+   0020A7A0 draw at g76 row 6385 (The boss fight, last item), then chain
+   g20 on through g78 .. g80.
 1b. 001D7410's Z read-back (Far light, "Not modelled").
 2. Run the live owners of that recording through these oracles (as
    test_area14_overlay_reference's `live/` cases).

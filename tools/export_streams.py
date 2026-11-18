@@ -119,7 +119,9 @@ MUSIC_EXTRA = {25: '001FAE70 AREA11 selection (captured D_00282178[0] = 25)',
                0x12: 'AREA13 overlay 0x824520 ([44] step 3), +5 3: 001FA790(0, 0x12)',
                0xB: 'AREA17 overlay 0x823BA0 ([30]): 001FB0B0(0xB) at the arrival script 0x826A20\'s end or its skip',
                0x15: 'AREA06 overlay 0x825E20 (sub 1 entry 3, out of AREA16: g67), after its script 0x8276C0: '
-                     '001FB0B0(0x15)'}
+                     '001FB0B0(0x15)',
+               0xC: 'AREA21 overlay 0x826310 ([43] / [44], +3 0), at the end of script 0x82B5E0: 001FB0B0(0xC) '
+                    '(g77: the Origin fight\'s start)'}
 VOICE_CUES = {c: 'director / Roger voiced lines (docs/STREAM_LANES.md item 6)'
               for c in range(143, 152)}
 VOICE_CUES[1] = ('line 0x13: Roger\'s talk after the encounter (script 0x828810, BRANCH br_14); '
