@@ -1011,3 +1011,13 @@ int em_level10_port_00825530(const EmLevel10PortHooks *h, uint32_t self, uint32_
 {
     return probe_entry(h, self, matrix, sp, 0x00828100u, result, fault);
 }
+
+/* AREA20's 0x8259B0 (called by its 0x824440): the same instructions with
+ * the tint record at AREA20's 0x827E90 (the words differ from AREA14's
+ * 0x825530 in that address only; test_level10_port_reference runs every
+ * 0x829370 case again on AREA20's overlay, lane PORT-A20). */
+int em_level10_port_008259B0(const EmLevel10PortHooks *h, uint32_t self, uint32_t matrix, uint32_t sp,
+                             int32_t *result, EmLevel10PortFault *fault)
+{
+    return probe_entry(h, self, matrix, sp, 0x00827E90u, result, fault);
+}

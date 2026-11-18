@@ -170,6 +170,9 @@ int em_level10_port_00829370(const EmLevel10PortHooks *h, uint32_t self, uint32_
 /* AREA14's twin of 0x829370 (OVERLAY/AREA14.BIN, id 11): its tint record */
 int em_level10_port_00825530(const EmLevel10PortHooks *h, uint32_t self, uint32_t matrix, uint32_t sp,
                              int32_t *result, EmLevel10PortFault *fault);
+/* AREA20's twin (OVERLAY/AREA20.BIN, id 0x11): its tint record 0x827E90 */
+int em_level10_port_008259B0(const EmLevel10PortHooks *h, uint32_t self, uint32_t matrix, uint32_t sp,
+                             int32_t *result, EmLevel10PortFault *fault);
 
 /* ---- AREA13 overlay (runtime address; OVERLAY/AREA13.BIN, id 10) ---- */
 int em_level10_port_008236E0(const EmLevel10PortHooks *h, EmLevel10PortFault *fault);

@@ -185,6 +185,8 @@ int em_level13_port_00827B60(const H13 *h, uint32_t self, F13 *fault);
 int em_level13_port_00829840(const H13 *h, uint32_t src, uint32_t sp, F13 *fault);
 /* AREA14's twin of 0x829840 (OVERLAY/AREA14.BIN, id 11): its colour */
 int em_level13_port_00825A10(const H13 *h, uint32_t src, uint32_t sp, F13 *fault);
+/* AREA20's 0x825E90 (lane PORT-A20): the same with the colour at 0x827EA0 */
+int em_level13_port_00825E90(const H13 *h, uint32_t src, uint32_t sp, F13 *fault);
 int em_level13_port_00829A70(const H13 *h, uint32_t self, F13 *fault);
 
 /* ---- boot: 001386E0's behaviours 2 / 3 / 4 (ent = self + 0x1F0) and the

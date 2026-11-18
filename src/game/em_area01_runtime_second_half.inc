@@ -14,12 +14,27 @@
  * (test_area14_overlay_reference): 0x823580, 0x823760, 0x8238E0, 0x823B30,
  * 0x823E30, 0x825FD0 and the op09 callbacks 0x8238C0 / 0x825C40; frames from
  * each function's first instruction.
+ * AREA20 (0x14, lane PORT-A20, docs/AREA20_PORT.md): 0x825F20 =
+ * AREA03's 0x825290 word for word (test_area03_route_reference); the group
+ * owner 0x824440 = AREA14's 0x823FC0 but its two callees and the miss
+ * effect (kind 8: 0x80000067; em_area19_route, test_area19_route_reference),
+ * its probe 0x8259B0 and spawner 0x825E90 = AREA14's 0x825530 / 0x825A10
+ * but the overlay data address (em_level10_port / em_level13_port); its own
+ * owners are em_area20_overlay's (test_area20_overlay_reference): [32]
+ * 0x8239B0, the breakables 0x823D30 and the effect objects 0x823580,
+ * 0x823600, 0x823660, 0x823780, 0x823840.
  * Any other overlay address of these areas reaches the host's workers
  * (fail-stop) as before. */
 static int a14_owner(uint32_t fn)
 {
     return fn == 0x00823580u || fn == 0x00823760u || fn == 0x008238C0u || fn == 0x008238E0u || fn == 0x00823B30u ||
            fn == 0x00823E30u || fn == 0x00825C40u || fn == 0x00825FD0u;
+}
+
+static int a20_owner(uint32_t fn)
+{
+    return fn == 0x00823580u || fn == 0x00823600u || fn == 0x00823660u || fn == 0x00823780u || fn == 0x00823840u ||
+           fn == 0x008239B0u || fn == 0x00823D30u;
 }
 
 static int dispatch_second_half(EmArea01Runtime *r, EmArea01Call *c, int *out)
@@ -90,6 +105,66 @@ static int dispatch_second_half(EmArea01Runtime *r, EmArea01Call *c, int *out)
         default: x = em_area14_overlay_00825FD0(&h, a0, &f); break;
         }
         if (x >= 0 && (fn == 0x008238C0u || fn == 0x00825C40u)) c->v0 = (uint64_t)(int64_t)result;
+        where = f.address;
+        code = f.code;
+    } else if (r->area == 0x14 && fn == 0x00825F20u) {
+        if (area_frame(r, c, 1, 0x20u, out) < 0) return 1;
+        EmArea03RouteHooks h;
+        r03_hooks(r, &h);
+        EmArea03RouteFault f = {0, 0};
+        x = em_area03_route_00825290(&h, a0, &f);
+        where = f.address;
+        code = f.code;
+    } else if (r->area == 0x14 && fn == 0x00824440u) {
+        if (area_frame(r, c, 1, 0x60u, out) < 0) return 1;
+        EmArea19RouteHooks h;
+        m19_hooks(r, &h);
+        EmArea19RouteFault f = {0, 0};
+        x = em_area19_route_00824440(&h, a0, &f);
+        where = f.address;
+        code = f.code;
+    } else if (r->area == 0x14 && fn == 0x008259B0u) {
+        const uint32_t sp = c->sp;
+        int32_t i = 0;
+        if (area_frame(r, c, 2, 0x80u, out) < 0) return 1;
+        EmLevel10PortHooks h;
+        m10_hooks(r, &h);
+        EmLevel10PortFault f = {0, 0};
+        x = em_level10_port_008259B0(&h, a0, (uint32_t)c->a[1], sp, &i, &f);
+        if (x >= 0) c->v0 = (uint64_t)(int64_t)i;
+        where = f.address;
+        code = f.code;
+    } else if (r->area == 0x14 && fn == 0x00825E90u) {
+        const uint32_t sp = c->sp;
+        if (area_frame(r, c, 1, 0x40u, out) < 0) return 1;
+        EmLevel13PortHooks h;
+        m13_hooks(r, &h);
+        EmLevel13PortFault f = {0, 0};
+        x = em_level13_port_00825E90(&h, a0, sp, &f);
+        where = f.address;
+        code = f.code;
+    } else if (r->area == 0x14 && a20_owner(fn)) {
+        /* frames from each function's first instruction; 0x8239B0's
+         * nested 0x823BE0 adds 0x70 to its 0x20 */
+        static const struct { uint32_t fn, frame; } owners[] = {
+            {0x00823580u, 0x20u}, {0x00823600u, 0x10u}, {0x00823660u, 0x30u}, {0x00823780u, 0x20u},
+            {0x00823840u, 0x30u}, {0x008239B0u, 0x90u}, {0x00823D30u, 0x30u}};
+        unsigned k = 0;
+        while (owners[k].fn != fn) ++k;
+        const uint32_t sp = c->sp;
+        if (area_frame(r, c, 1, owners[k].frame, out) < 0) return 1;
+        EmArea20OverlayHooks h;
+        a20o_hooks(r, &h);
+        EmArea20OverlayFault f = {0, 0};
+        switch (fn) {
+        case 0x00823580u: x = em_area20_overlay_00823580(&h, a0, &f); break;
+        case 0x00823600u: x = em_area20_overlay_00823600(&h, a0, &f); break;
+        case 0x00823660u: x = em_area20_overlay_00823660(&h, a0, &f); break;
+        case 0x00823780u: x = em_area20_overlay_00823780(&h, a0, &f); break;
+        case 0x00823840u: x = em_area20_overlay_00823840(&h, a0, &f); break;
+        case 0x008239B0u: x = em_area20_overlay_008239B0(&h, a0, sp, &f); break;
+        default: x = em_area20_overlay_00823D30(&h, a0, &f); break;
+        }
         where = f.address;
         code = f.code;
     } else if (r->area == 0x15 && (fn == 0x00823A10u || fn == 0x00823AB0u)) {

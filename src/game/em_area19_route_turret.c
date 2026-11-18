@@ -8,7 +8,12 @@
  * the instruction streams align word for word elsewhere): its probe is
  * 0x825530, its spawner 0x825A10, and a missed probe gives 0x8000002C when
  * the earlier hit record's +0x1A was 5, else 0x80000003. The same test runs
- * it over AREA14's own overlay (o->area14). */
+ * it over AREA14's own overlay (o->area14).
+ *
+ * AREA20's 0x824440 is AREA14's code but its probe 0x8259B0, its spawner
+ * 0x825E90 and the missed-probe effect: 0x80000067 when the earlier hit
+ * record's +0x1A was 8, else 0x80000003 (o->area20; the words differ from
+ * AREA14's in those six fields only, test_area19_route_reference). */
 #include "em_area19_route_internal.h"
 
 #define D_00275B40 0x00275B40u /* gp - 0x7830 */
@@ -130,7 +135,8 @@ static void a19r_companion_matrix(A19R *o, uint32_t self)
 /* The group's probe: AREA19 0x829370, AREA14 0x825530. */
 static void a19r_probe(A19R *o, uint32_t self, uint32_t matrix, int32_t *result)
 {
-    if (o->area14) (void)a19r_c_00825530(o, self, matrix, result);
+    if (o->area20) (void)a19r_c_008259B0(o, self, matrix, result);
+    else if (o->area14) (void)a19r_c_00825530(o, self, matrix, result);
     else (void)a19r_c_00829370(o, self, matrix, result);
 }
 
@@ -339,7 +345,8 @@ static void a19r_period_effect(A19R *o, uint32_t self)
     int32_t r = 0;
     uint32_t hit, kind, t;
     (void)a19r_c_001FBD50(o, self, 0x425, 0, fv(K_300), &r);
-    if (o->area14) (void)a19r_c_00825A10(o, a19r_rec_b(o) + 0x90);
+    if (o->area20) (void)a19r_c_00825E90(o, a19r_rec_b(o) + 0x90);
+    else if (o->area14) (void)a19r_c_00825A10(o, a19r_rec_b(o) + 0x90);
     else (void)a19r_c_00829840(o, a19r_rec_b(o) + 0x90);
     (void)a19r_c_00102948(o, S_38A0, S_31B0);
     hit = a19r_u32(o, S_31D0);
@@ -369,7 +376,8 @@ static void a19r_period_effect(A19R *o, uint32_t self)
         r = 0;
         (void)a19r_c_0019B6C0(o, S_3190, S_31A0, hit, &r);
         if (r == 0) {
-            uint32_t id = o->area14 ? (old_kind == 5 ? 0x8000002Cu : 0x80000003u)
+            uint32_t id = o->area20 ? (old_kind == 8 ? 0x80000067u : 0x80000003u)
+                        : o->area14 ? (old_kind == 5 ? 0x8000002Cu : 0x80000003u)
                         : old_kind == 6 ? 0x80000026u : old_kind == 8 ? 0x80000067u : 0x80000003u;
             (void)a19r_c_001EFD90(o, (int32_t)id, S_38A0, S_38B0, &r);
         } else {
@@ -615,5 +623,12 @@ int em_area19_route_00823FC0(const EmArea19RouteHooks *h, uint32_t self, EmArea1
 {
     A19R o; if (a19r_begin(&o, h, fault)) return -1;
     o.area14 = 1;
+    return turret_00827DD0(&o, self);
+}
+
+int em_area19_route_00824440(const EmArea19RouteHooks *h, uint32_t self, EmArea19RouteFault *fault)
+{
+    A19R o; if (a19r_begin(&o, h, fault)) return -1;
+    o.area20 = 1;
     return turret_00827DD0(&o, self);
 }

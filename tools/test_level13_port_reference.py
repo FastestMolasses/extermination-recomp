@@ -77,11 +77,15 @@ import reference_root as refs  # noqa: E402  (EM_REFERENCE: fork by default)
 
 DECOMP = ROOT.parent / 'Extermination'
 OVERLAY_FILES = {16: DECOMP / 'extract/OVERLAY/AREA19.BIN',
-                 0x0B: DECOMP / 'extract/OVERLAY/AREA14.BIN'}
+                 0x0B: DECOMP / 'extract/OVERLAY/AREA14.BIN',
+                 0x11: DECOMP / 'extract/OVERLAY/AREA20.BIN'}
 # AREA14's spawner 0x825A10 (0x829840 but for its colour's address): the
 # 0x829840 cases run again on images holding AREA14's whole overlay file in
 # place of AREA19's (A14_PREFIX)
 A14_PREFIX = 'a14/'
+# AREA20's spawner 0x825E90 (lane PORT-A20): the same with AREA20's colour
+# 0x827EA0, on images holding AREA20's overlay file (A20_PREFIX)
+A20_PREFIX = 'a20/'
 OUT = ROOT / 'build/level13/port'
 MASK = 0xFFFFFFFF
 MASK64 = 0xFFFFFFFFFFFFFFFF
@@ -133,6 +137,7 @@ FUNCS = {
     0x827B60: ('em_level13_port_00827B60', 0x264, [U], None),
     0x829840: ('em_level13_port_00829840', 0x84, [U, S], None),
     0x825A10: ('em_level13_port_00825A10', 0x84, [U, S], None),   # AREA14
+    0x825E90: ('em_level13_port_00825E90', 0x84, [U, S], None),   # AREA20
     0x829A70: ('em_level13_port_00829A70', 0x320, [U], None),
     # boot: 001386E0's behaviours 2 / 3 / 4 and the tendrils
     0x139240: ('em_level13_port_00139240', 0x7A8, [U, U], None),
@@ -154,7 +159,8 @@ FUNCS = {
     0x1F6AC0: ('em_level13_port_001F6AC0', 0x10, [U], I),
     0x1F6B90: ('em_level13_port_001F6B90', 0xC, [], None),
 }
-OVERLAY_OF = {entry: (0x0B if entry == 0x825A10 else 16) for entry in FUNCS if entry >= ARENA}
+OVERLAY_OF = {entry: (0x0B if entry == 0x825A10 else 0x11 if entry == 0x825E90 else 16)
+              for entry in FUNCS if entry >= ARENA}
 # The entries whose passing cases are all contract sites (they return from
 # their own body): the default run and EM_TEST_FULL=1.
 RETURN_SITES = tuple(e for e, (_, _, _, r) in FUNCS.items() if r is not None)
@@ -1649,6 +1655,8 @@ def case_list(elf):
         if entry == 0x829840:
             cases.append(('a14 ' + label, A14_PREFIX + beat, 0x825A10, args, list(patches), list(spad),
                           Script({a: list(v) for a, v in script.queues.items()}, dict(script.default)), run_set))
+            cases.append(('a20 ' + label, A20_PREFIX + beat, 0x825E90, args, list(patches), list(spad),
+                          Script({a: list(v) for a, v in script.queues.items()}, dict(script.default)), run_set))
     return cases, captured, len(cases) - captured
 
 
@@ -1661,6 +1669,13 @@ def a14_images():
         image = bytearray(ram)
         image[ARENA:ARENA + len(data)] = data
         CAPTURES[A14_PREFIX + beat] = (bytes(image), spad)
+    data = OVERLAY_FILES[0x11].read_bytes()
+    assert data[4] == 0x11
+    for beat in BEATS:
+        ram, spad = CAPTURES[beat]
+        image = bytearray(ram)
+        image[ARENA:ARENA + len(data)] = data
+        CAPTURES[A20_PREFIX + beat] = (bytes(image), spad)
 
 
 def live(ram, node, callback):
@@ -2898,7 +2913,7 @@ def select_cases(elf):
     total = len(cases)
     if not reference_mode.FULL and not os.environ.get('EM_LEVEL13_PORT_ALL'):
         kept = cases[:captured] + [c for c in cases[captured:]
-                                   if c[0] in DEFAULT_KEEP or c[0].startswith(SURVIVORS + ('a14 ',))]
+                                   if c[0] in DEFAULT_KEEP or c[0].startswith(SURVIVORS + ('a14 ', 'a20 '))]
         # every entry keeps at least one case of its own (the hook
         # contract's `bytes` target): the first designed one
         have = {c[2] for c in kept}
@@ -2915,6 +2930,8 @@ def image_for(entry):
     boot text is the same in all)."""
     if entry == 0x825A10:
         return CAPTURES[A14_PREFIX + B6][0]
+    if entry == 0x825E90:
+        return CAPTURES[A20_PREFIX + B6][0]
     return CAPTURES[B6][0]
 
 

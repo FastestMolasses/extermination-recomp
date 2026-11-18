@@ -713,6 +713,8 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
         return dispatch_area19(r, c);
     if ((r->area == 0x0E || r->area == 0x15) && dispatch_second_half(r, c, &rc))
         return rc;
+    if (r->area == 0x14 && dispatch_second_half(r, c, &rc)) /* AREA20 (lane PORT-A20) */
+        return rc;
     /* The creature family's boot entries and the script actors serve AREA13,
      * AREA15, AREA03, AREA19, AREA08 and AREA07 too (their overlay addresses went
      * to their own dispatch or reach the host's fail-stop below). */

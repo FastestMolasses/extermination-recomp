@@ -1039,6 +1039,15 @@ int em_level13_port_00825A10(const H13 *h, uint32_t src, uint32_t sp, F13 *fault
     return spawner(h, src, sp, 0x00828110u, fault);
 }
 
+/* AREA20's 0x825E90 (called by its 0x824440): 0x829840 word for word but
+ * the colour quadword's address, AREA20's 0x827EA0
+ * (test_level13_port_reference runs the 0x829840 cases on AREA20's
+ * overlay, lane PORT-A20). */
+int em_level13_port_00825E90(const H13 *h, uint32_t src, uint32_t sp, F13 *fault)
+{
+    return spawner(h, src, sp, 0x00827EA0u, fault);
+}
+
 /* The two turns 0x829A70 applies: 0019C6F0(5, 0), then the +0x74 floats
  * of the objects *(D_00275B40 + 8) / *(D_00275B40 + 0xC) = -pi/2 / pi/2
  * (the word D_00275B40 read for each). */

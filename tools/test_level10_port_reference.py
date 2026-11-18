@@ -84,6 +84,11 @@ OVERLAY_FILES = {5: DECOMP / 'extract/OVERLAY/AREA04.BIN', 10: DECOMP / 'extract
 # so outside BEATS and load_captures' zero-window check)
 A14_FILE = DECOMP / 'extract/OVERLAY/AREA14.BIN'
 A14_PREFIX = 'a14/'
+# AREA20's probe 0x8259B0 (lane PORT-A20): the same with AREA20's tint
+# record 0x827E90; every 0x829370 case again on images holding AREA20's
+# whole overlay file (A20_PREFIX; no capture holds AREA20 here)
+A20_FILE = DECOMP / 'extract/OVERLAY/AREA20.BIN'
+A20_PREFIX = 'a20/'
 K01_BEATS = ('k01_02_item26', 'k01_03_item19', 'k01_04_face', 'k01_05_plateau')
 K01_DIR = refs.capture('levels-recordings-20261102-1/s87/route_k01')
 OUT = ROOT / 'build/level10/port'
@@ -139,6 +144,7 @@ FUNCS = {
     0x827790: ('em_level10_port_00827790', 0x250, [U, S], None),
     0x829370: ('em_level10_port_00829370', 0x4D0, [U, U, S], I),
     0x825530: ('em_level10_port_00825530', 0x4D4, [U, U, S], I),   # AREA14
+    0x8259B0: ('em_level10_port_008259B0', 0x4D4, [U, U, S], I),   # AREA20
     # AREA13 overlay
     0x8236E0: ('em_level10_port_008236E0', 0x20, [], None),
     # boot
@@ -150,11 +156,11 @@ FUNCS = {
     0x1885F0: ('em_level10_port_001885F0', 0x1C, [U], I),
     0x1E6F60: ('em_level10_port_001E6F60', 0xEC, [I, I, I, I, I, I, I], None),
 }
-OVERLAY_OF = {entry: (10 if entry == 0x8236E0 else 0x0B if entry == 0x825530 else 16)
+OVERLAY_OF = {entry: (10 if entry == 0x8236E0 else 0x0B if entry == 0x825530 else 0x11 if entry == 0x8259B0 else 16)
               for entry in FUNCS if entry >= ARENA}
 # The entries whose passing cases are all contract sites (they return from
 # their own body): the default run and EM_TEST_FULL=1.
-RETURN_SITES = (0x118790, 0x1885F0, 0x829370, 0x825530)
+RETURN_SITES = (0x118790, 0x1885F0, 0x829370, 0x825530, 0x8259B0)
 RETURN_SITES_FULL = RETURN_SITES
 
 
@@ -605,7 +611,7 @@ class Oracle:
         for address in BY_ADDRESS:
             if address == entry:   # a hook of its callers: here it is the entry
                 continue
-            if entry == 0x825530 and address >= ARENA:
+            if entry in (0x825530, 0x8259B0) and address >= ARENA:
                 # AREA19's overlay hooks (0x825930 lies inside AREA14's
                 # probe body); the AREA14 probe calls no overlay function
                 continue
@@ -1530,7 +1536,7 @@ def load_captures(elf):
 # translated callee)
 SELF_ENTRIES = {0x8250F0, 0x825240, 0x8255D0, 0x8257C0, 0x825C70, 0x825EE0, 0x826100}
 SCRIBBLED_CALLBACKS = set()
-HEAVY = {0x829370, 0x825530, 0x1305B0}
+HEAVY = {0x829370, 0x825530, 0x8259B0, 0x1305B0}
 
 
 def callbacks_of(entry, native_args, ram):
@@ -1605,6 +1611,7 @@ def case_list(elf):
     boot_cases(add, rng)
     survivor_cases(add)
     a14_probe_cases(cases)
+    a20_probe_cases(cases)
     return cases, captured, len(cases) - captured
 
 
@@ -1647,6 +1654,27 @@ def a14_probe_cases(cases):
             cases.append(('a14 capture %s 825530 @%X' % (beat, node), beat, 0x825530,
                           (node, rec_b + 0x90, STACK_TOP), [(0x275B40, w32(node + 0x110))], [],
                           Script(), frozenset(RUN)))
+
+
+def a20_images():
+    """AREA20's whole overlay file over every AREA19 image (A20_PREFIX)."""
+    data = A20_FILE.read_bytes()
+    assert data[4] == 0x11
+    for beat in A19_BEATS:
+        ram, spad = CAPTURES[beat]
+        image = bytearray(ram)
+        image[ARENA:ARENA + len(data)] = data
+        CAPTURES[A20_PREFIX + beat] = (bytes(image), spad)
+
+
+def a20_probe_cases(cases):
+    """Every 0x829370 case again as AREA20's 0x8259B0 on the A20_PREFIX
+    image of its beat (labels 'a20 ...', all kept by the default run)."""
+    for label, beat, entry, args, patches, spad, script, run_set in list(cases):
+        if entry == 0x829370:
+            queues = {a: list(v) for a, v in script.queues.items()}
+            cases.append(('a20 ' + label, A20_PREFIX + beat, 0x8259B0, args, list(patches), list(spad),
+                          Script(queues, dict(script.default)), run_set))
 
 
 BEHAVIOUR_ENTRY = {0x823580: 0x823580, 0x8250F0: 0x8250F0, 0x8255D0: 0x8255D0, 0x8257C0: 0x8257C0,
@@ -2478,7 +2506,7 @@ def select_cases(elf):
     total = len(cases)
     if not reference_mode.FULL and not os.environ.get('EM_LEVEL10_PORT_ALL'):
         cases = cases[:captured] + [c for c in cases[captured:]
-                                    if c[0] in DEFAULT_KEEP or c[0].startswith(SURVIVORS + ('a14 ',))]
+                                    if c[0] in DEFAULT_KEEP or c[0].startswith(SURVIVORS + ('a14 ', 'a20 '))]
         return cases, captured, len(cases) - captured, total
     return cases, captured, targeted, total
 
@@ -2487,6 +2515,8 @@ def image_for(entry):
     """An image holding the entry's code (boot text is the same in all)."""
     if entry == 0x8236E0:
         return CAPTURES[A13_BEATS[0]][0]
+    if entry == 0x8259B0:
+        return CAPTURES[A20_PREFIX + A19_BEATS[0]][0]
     if entry == 0x825530:
         return CAPTURES[K01_BEATS[0]][0]
     return CAPTURES[A19_BEATS[0]][0]
@@ -2497,6 +2527,7 @@ def main():
     elf = read_elf()
     CAPTURES.update(load_captures(elf))
     a14_images()
+    a20_images()
     NATIVE = build(os.environ.get('EM_LEVEL10_PORT_SOURCE'))
     selected, captured, targeted, total = select_cases(elf)
     CASES[:] = selected

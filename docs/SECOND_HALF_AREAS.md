@@ -424,6 +424,18 @@ Boot functions reachable from this area's owners and not in the first-level cens
 Overlay functions: 15 (AI 1, C 14; decomp status at the census commit); none has a port translation.
 <!-- second_half:area20 end -->
 
+AREA20's overlay owners are all translated (lane PORT-A20,
+docs/AREA20_PORT.md; the generated rows above still say "missing", as the
+generator marks every overlay row so): 0x8239B0 (with 0x823B00 / 0x823BE0)
+and 0x823D30 in `em_area20_overlay` (test_area20_overlay_reference, every
+reachable word), plus the effect objects 0x823580, 0x823600, 0x823660,
+0x823780, 0x823840; 0x824440 = AREA14's 0x823FC0 with AREA20's callees and
+miss effect (`em_area19_route_00824440`), its probe 0x8259B0 and spawner
+0x825E90 (`em_level10_port_008259B0`, `em_level13_port_00825E90`), and
+0x825F20 = AREA03's 0x825290 word for word (`em_area03_route_00825290`).
+All bound in `dispatch_second_half` for area 0x14; the area does not load
+yet.
+
 ### AREA21
 
 <!-- second_half:area21 begin -->
@@ -496,7 +508,8 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
 
 - Every overlay owner of the six areas (66 behaviours, their op09 callbacks
   and helpers) but AREA14's (section 6's twins and em_area14_overlay,
-  AREA14_PORT.md) and AREA21's two twins is untranslated; the area lanes
+  AREA14_PORT.md), AREA20's (all: em_area20_overlay and four twins,
+  AREA20_PORT.md) and AREA21's two twins is untranslated; the area lanes
   translate them against captures. The twins are bound only in the
   shared composition's dispatch; none of these areas runs there yet.
 - Every boot behaviour of the six areas is now in a census ledger or
@@ -517,7 +530,10 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   camera arm 00230230 (em_area14_overlay, test_area14_overlay_reference) and
   the beats k01_02 .. k01_05 pass from their cards (AREA14_PORT.md). The capture
   kinds of AREA18 and AREA17 wait for their recordings (the next guided
-  run); AREA16, AREA20 and AREA21 have no recording planned yet.
+  run); AREA16, AREA20 and AREA21 have no recording planned yet. AREA20's
+  owners (lane PORT-A20) are proven by their oracles only: the guided
+  run's g73 .. g75 AREA20 tries are not kept recordings (the chain was
+  forked at g69), so its SUBS row still waits.
 - No other of these areas has loaded live: their module pack rows, state and
   script windows are checked only by the oracle and the static export.
 
