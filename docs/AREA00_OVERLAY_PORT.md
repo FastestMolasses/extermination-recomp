@@ -35,7 +35,8 @@ store that is compared with the original's.
   0x8241B0, 0x8247C0, 0x8247D0, 0x824BB0, 0x824E00, 0x824E40, 0x825D70,
   0x825E80, 0x825FC0, 0x8260B0, 0x8260F0, 0x826790, 0x826BE0, 0x826CB0,
   0x826CC0) are not translated by this lane (later lanes translated sub 2's;
-  0x823C50 and 0x823E10: "Script 0x82ABC0's op14 callbacks" below).
+  0x823C50 and 0x823E10: "Script 0x82ABC0's op14 callbacks" below; 0x8247C0,
+  0x8247D0, 0x824BB0, 0x8260B0: "The arc, the shot and 0x8260B0" below).
 - No existing port translation covers any of the 13: a grep of the port for
   each address finds only the AREA11/AREA01 functions that share the address in
   their own overlays (em_area01_overlay.c's 0x823580 is AREA01's shaft door,
@@ -284,10 +285,58 @@ bodies and the hook contract). The runtime binds them in `dispatch_overlay00`
 plain owners; 001EFD90, 00102C58 and 001D04B0 go to the host's workers, and the
 scene's rebind admits 0x823CF0 as a pool behaviour in sub 2.
 
-**Next gap: 0x824BB0** (`func_overlay_AREA00_00824B70`, a 21-sprite arc effect:
-00102BB0, 001CFB50 and a packet local in its frame). In g33 the original runs it
-on node 0x7A64F0 from take tick 2602 (69 calls), after the cutscene's player
-move; not translated.
+## The arc, the shot and 0x8260B0 (lane PORT-A00-BOSS2, 2026-11-18)
+
+Four more AREA00 entries, translated from their byte-identical decomp C (the
+order of loads and stores between calls read from the original instructions,
+locally) and compared with the original instructions by `make
+test-area00-overlay-reference`:
+
+- **0x824BB0** (`func_overlay_AREA00_00824B70`), the 21-sprite arc on g33's
+  node 0x7A64F0 (from take tick 2602). Block +0x1F0: scale, a zero word, seed.
+  State 0: scale 0.2, the zero word (stored before the call), seed =
+  00122BB8(), state 1, and on into state 1. State 1: the seed is read once;
+  per sprite i = 0..20 (positions 0x828B80, 16 bytes apart): D_70003A20 = 180 -
+  180 * (i / 21) (stored before 001029C0(0x700036A0)), 00102BB0(0x700036A0,
+  0x700036A0, pi * D_70003A20 (re-read) / 180), 00102918(.., the position), h =
+  001CCF70(0x700036D0), r = ((seed >> 16) & 0xFFFF) / 65535 + 0.0001, seed =
+  seed * 37 + 11 (not stored back), 001CFB50(packet, 0, 0x700036A0; scale
+  (re-read), r, 1.0, 1e-6, 12.0), 001CFBE0(h, 1, 0x828CD0, packet, 0); then
+  scale += 0.012, state 3 once it is not at most 2.0. States 2 / 3: 001AFC10.
+  Frame 0xD0, the packet at sp - 0x60.
+- **0x8247D0** (`func_overlay_AREA00_00824790`), a shot node (census (A), g34):
+  the link L = +0x14 is read at entry. State 0 builds +0xD0 (identity, turned by
+  +0xC0, moved to +0xB0), +0x00 = 1, +0x30 = L + 0x1F0, +0x34 = 0x8247C0, the
+  velocity (0, 0, 2/9, 1) through +0xD0 plus +0xB0, the last position, a matrix
+  copy, seed, t = t2 = 0, state 1, and on. States 1 / 2: +0x100 = the position,
+  scale 8 * min(t, 1) through D_70003A20, a packet (001CFAE0 + 001CFBE0, table
+  0x828A60), t += 0.006666667 (state 2 past 1.2), the wall test 0019A570(B +
+  0x30, +0xB0, 6, 0) (nonzero: state 2), the last position, the step by the
+  velocity, 001B17A0 while the state byte is 1, and while t2 < 1.5 a second
+  packet (table 0x828AF0, the stepped seed) with t2 += 0.015, else state 3 once
+  the state byte is 2. State 3: 001AFC10. Frame 0xB0, the packet at sp - 0x60.
+- **0x8247C0** (`func_overlay_AREA00_00824780`): empty (the shot's +0x34).
+- **0x8260B0** (`func_overlay_AREA00_00826070`): 001EFD20(0x8000005D,
+  0x82B780), 001EFD20(0x80000004, 0xAC2D40), returns 1; it reads no argument
+  register (the runtime takes any call shape).
+
+New hooks `w_00102BB0` (runs as original code in the oracle), `w_001CFB50`,
+`w_001CFAE0`, `w_0019A570` (stubs). Cases: every state of each entry; the arc's
+scale around the 2.0 end with four seeds and five random words; the shot's t
+around the 1.0 cap and the 1.2 end, t2 around 1.5 in states 1 and 2, the wall
+test's result (0, 1, -1, 0x100), four seeds and three random words. Coverage
+2,830 / 2,830 reachable words; the hook contract covers all 31 entries (an
+entry with no memory access, 0x8247C0 / 0x8260B0, is checked never to call
+`bytes`). The runtime binds them in `dispatch_overlay00` (0x824BB0 with its
+0xD0 frame, 0x8247D0 with its 0xB0 frame, 0x8247C0 as a plain owner, 0x8260B0
+with the op09 callbacks), and the scene's rebind admits 0x824BB0 and 0x8247D0
+as pool behaviours in sub 2.
+
+**001F00A0 in the live composition.** 0x823E10's 001F00A0 (and any other
+AREA00 caller through the runtime) goes to `em_area01_effects_services`:
+001EF9D0(id, pos, dir +0xC) through em_effects_live, then the node's +0xB0 =
+pos, +0xC0 = dir, +0xBC = 1.0 and +0x38 = the owner (the decomp C, which
+em_area00_fx_001F00A0 translates and test_area00_fx_reference checks).
 
 ## Known gaps
 

@@ -341,6 +341,7 @@ static int dispatch_overlay00(EmArea01Runtime *r, EmArea01Call *c)
     OVERLAY00(00824130);
     OVERLAY00(00823E10);   /* script 0x82ABC0's op14 nodes' 001C7EB0 callback */
     OVERLAY00(00823CF0);   /* effect 1's node (0x823C50's 001EFD90) */
+    OVERLAY00(008247C0);   /* the shot node's empty +0x34 routine */
 #undef OVERLAY00
     case 0x00823C50u:   /* the same nodes' other callback; frame 0x20: its vector */
         if (c->na < 1 || c->nf || c->sp < 0x20u) return fail(r, c->function);
@@ -361,6 +362,14 @@ static int dispatch_overlay00(EmArea01Runtime *r, EmArea01Call *c)
         if (c->na < 1 || c->nf || c->sp < 0xF0u) return fail(r, c->function);
         r->sp = c->sp - 0xF0u;
         return em_area00_ovl_00823EB0(&r->overlay00, (uint32_t)c->a[0], c->sp, &r->overlay00_fault);
+    case 0x008247D0u:   /* the shot node; frame 0xB0, its packet at sp - 0x60 */
+        if (c->na < 1 || c->nf || c->sp < 0xB0u) return fail(r, c->function);
+        r->sp = c->sp - 0xB0u;
+        return em_area00_ovl_008247D0(&r->overlay00, (uint32_t)c->a[0], c->sp, &r->overlay00_fault);
+    case 0x00824BB0u:   /* the arc effect node; frame 0xD0, its packet at sp - 0x60 */
+        if (c->na < 1 || c->nf || c->sp < 0xD0u) return fail(r, c->function);
+        r->sp = c->sp - 0xD0u;
+        return em_area00_ovl_00824BB0(&r->overlay00, (uint32_t)c->a[0], c->sp, &r->overlay00_fault);
     case 0x00826CC0u:
         if (c->na < 1 || c->nf || c->sp < 0x30u) return fail(r, c->function);
         r->sp = c->sp - 0x30u;
@@ -373,10 +382,13 @@ static int dispatch_overlay00(EmArea01Runtime *r, EmArea01Call *c)
         if (c->na < 1 || c->nf || c->sp < 0x50u) return fail(r, c->function);
         r->sp = c->sp - 0x50u;
         return em_area00_ovl_00825600(&r->overlay00, (uint32_t)c->a[0], c->sp, &r->overlay00_fault);
-    case 0x008253E0u: case 0x00826CB0u: {
-        if (c->na < 3 || c->nf) return fail(r, c->function);
+    case 0x008253E0u: case 0x00826CB0u: case 0x008260B0u: {
+        /* 0x8260B0 reads no argument register: any caller's shape */
+        if ((c->na < 3 && c->function != 0x008260B0u) || c->nf) return fail(r, c->function);
         int32_t result = 0;
-        int rc = (c->function == 0x008253E0u ? em_area00_ovl_008253E0 : em_area00_ovl_00826CB0)(
+        int rc = (c->function == 0x008253E0u   ? em_area00_ovl_008253E0
+                  : c->function == 0x008260B0u ? em_area00_ovl_008260B0
+                                               : em_area00_ovl_00826CB0)(
             &r->overlay00, (uint32_t)c->a[0], (uint32_t)c->a[1], (uint32_t)c->a[2], &result, &r->overlay00_fault);
         if (rc == 0) c->v0 = (uint64_t)(int64_t)result;
         return rc;

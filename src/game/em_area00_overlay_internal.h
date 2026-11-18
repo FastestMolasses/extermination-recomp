@@ -541,6 +541,39 @@ static inline int a00_c_001EFD90(A00Ovl *o, int32_t id, uint32_t point, uint32_t
     return o->h->w_001EFD90(o->h->ctx, id, point, vector) < 0 ? a00_latch(o, 0x001EFD90u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
 }
 
+static inline int a00_c_00102BB0(A00Ovl *o, uint32_t dst, uint32_t src, float angle)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_00102BB0) return a00_latch(o, 0x00102BB0u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_00102BB0(o->h->ctx, dst, src, angle) < 0 ? a00_latch(o, 0x00102BB0u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_001CFB50(A00Ovl *o, uint32_t dst, int32_t a1, uint32_t matrix, float f12, float f13,
+                                 float f14, float f15, float f16)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_001CFB50) return a00_latch(o, 0x001CFB50u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_001CFB50(o->h->ctx, dst, a1, matrix, f12, f13, f14, f15, f16) < 0
+               ? a00_latch(o, 0x001CFB50u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_001CFAE0(A00Ovl *o, uint32_t dst, int32_t a1, uint32_t matrix, float f12, float f13,
+                                 float f14, float f15)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_001CFAE0) return a00_latch(o, 0x001CFAE0u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_001CFAE0(o->h->ctx, dst, a1, matrix, f12, f13, f14, f15) < 0
+               ? a00_latch(o, 0x001CFAE0u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_0019A570(A00Ovl *o, uint32_t a0, uint32_t a1, int32_t a2, int32_t a3, int32_t *result)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_0019A570) return a00_latch(o, 0x0019A570u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_0019A570(o->h->ctx, a0, a1, a2, a3, result) < 0
+               ? a00_latch(o, 0x0019A570u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
 /* The actor's own callback: the function at self +0x4C, called with self. */
 static inline void a00_callback(A00Ovl *o, uint32_t self)
 {

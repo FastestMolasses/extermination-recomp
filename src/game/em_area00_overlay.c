@@ -1820,3 +1820,227 @@ int em_area00_ovl_00823CF0(const EmArea00OvlHooks *h, uint32_t self, EmArea00Ovl
     }
     return a00_end(&o);
 }
+
+/* ----------------------------------------------------------------------
+ * 0x824BB0 (func_overlay_AREA00_00824B70) — the 21-sprite arc. Block
+ * +0x1F0: +0x00 scale, +0x04 a zero word, +0x08 the seed.
+ * State 0: scale = 0.2, the zero word (stored before the call), seed =
+ * 00122BB8(), state 1, and on into state 1 the same call.
+ * State 1: the seed is read once; for i = 0..20, with the position table
+ * 0x828B80 stepping 16 bytes: D_70003A20 = 180 - 180 * (i / 21.0) (stored
+ * before 001029C0(0x700036A0)); 00102BB0(0x700036A0, 0x700036A0, pi *
+ * D_70003A20 (re-read) / 180); 00102918(0x700036A0, 0x700036A0, entry);
+ * h = 001CCF70(0x700036D0); r = ((seed >> 16) & 0xFFFF) / 65535.0 + 0.0001,
+ * seed = seed * 37 + 11; 001CFB50(packet, 0, 0x700036A0; scale (re-read), r,
+ * 1.0, 1e-6, 12.0); 001CFBE0(h, 1, 0x828CD0, packet, 0). Then scale +=
+ * 0.012 (stored), and state 3 once it is not at most 2.0.
+ * States 2 / 3: 001AFC10. The packet is a local of the 0xD0-byte frame at
+ * sp - 0x60; only the callees touch it.
+ * ---------------------------------------------------------------------- */
+#define A00_ARC_POINTS_828B80 0x00828B80u
+#define A00_ARC_TABLE_828CD0 0x00828CD0u
+#define F_0_2 0x3E4CCCCDu
+#define F_180 0x43340000u
+#define F_21 0x41A80000u
+#define F_PI 0x40490FDBu
+#define F_1E_6 0x358637BDu
+#define F_0_012 0x3C449BA6u
+
+int em_area00_ovl_00824BB0(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    const uint32_t fx = self + 0x1F0;
+    uint32_t state = a00_u8(&o, self + 4);
+    if (state == 2 || state == 3) {
+        (void)a00_c_001AFC10(&o, self);
+        return a00_end(&o);
+    }
+    if (state == 0) {
+        int32_t seed0 = 0;
+        a00_w32(&o, fx + 0, F_0_2);
+        a00_w32(&o, fx + 4, 0);
+        (void)a00_c_00122BB8(&o, &seed0);
+        a00_w32(&o, fx + 8, (uint32_t)seed0);
+        a00_w8(&o, self + 4, 1);
+    } else if (state != 1) {
+        return a00_end(&o);
+    }
+    const uint32_t packet = sp - 0x60u;
+    uint32_t seed = a00_u32(&o, fx + 8);
+    uint32_t point = A00_ARC_POINTS_828B80;
+    for (uint32_t i = 0; i < 21 && !a00_failed(&o); ++i) {
+        const uint32_t q = em_ee_div_bits(em_ee_cvt_s_w_bits(i), F_21);
+        a00_w32(&o, S_70003A20, em_ee_sub_bits(F_180, em_ee_mul_bits(F_180, q)));
+        (void)a00_c_001029C0(&o, S_700036A0);
+        const uint32_t angle = em_ee_div_bits(em_ee_mul_bits(F_PI, a00_u32(&o, S_70003A20)), F_180);
+        (void)a00_c_00102BB0(&o, S_700036A0, S_700036A0, fb(angle));
+        (void)a00_c_00102918(&o, S_700036A0, S_700036A0, point);
+        int32_t handle = 0;
+        (void)a00_c_001CCF70(&o, S_700036D0, &handle);
+        uint32_t r = em_ee_cvt_s_w_bits((seed >> 16) & 0xFFFFu);
+        r = em_ee_add_bits(em_ee_div_bits(r, F_65535), F_0_0001);
+        seed = seed * 37u + 11u;
+        (void)a00_c_001CFB50(&o, packet, 0, S_700036A0, fb(a00_u32(&o, fx + 0)), fb(r), fb(F_ONE), fb(F_1E_6),
+                             fb(F_12));
+        (void)a00_c_001CFBE0(&o, handle, 1, A00_ARC_TABLE_828CD0, packet, 0);
+        point += 0x10u;
+    }
+    const uint32_t scale = em_ee_add_bits(a00_u32(&o, fx + 0), F_0_012);
+    a00_w32(&o, fx + 0, scale);
+    if (!em_ee_c_le_bits(scale, F_2)) a00_w8(&o, self + 4, 3);
+    return a00_end(&o);
+}
+
+/* ----------------------------------------------------------------------
+ * 0x8247C0 (func_overlay_AREA00_00824780): an empty routine; 0x8247D0
+ * stores its address at a shot's +0x34.
+ * ---------------------------------------------------------------------- */
+int em_area00_ovl_008247C0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    (void)self;
+    if (a00_begin(&o, h, fault)) return -1;
+    return a00_end(&o);
+}
+
+/* ----------------------------------------------------------------------
+ * 0x8247D0 (func_overlay_AREA00_00824790) — the shot node. L = word +0x14
+ * (read at entry, before the state byte); block B = +0x1F0: +0x00 three
+ * scale words, +0x14 seed, +0x18 t, +0x1C t2, +0x20 velocity, +0x30 the
+ * last position, +0x40 a matrix copy, +0x70 the second draw's point.
+ * State 0: +0xD0 = identity (001029C0) turned by +0xC0 (00102C58) and moved
+ * to +0xB0 (00102918); +0x00 = 1, +0x30 = L + 0x1F0, +0x34 = 0x8247C0;
+ * velocity = (0, 0, 0.22222222, 1.0) through +0xD0 (001026A0) plus +0xB0
+ * (001028D0); 00102948(B + 0x30, +0xB0); 00102958(B + 0x40, +0xD0); seed =
+ * 00122BB8(); t = t2 = 0; state 1; on into states 1 / 2 the same call.
+ * States 1 / 2: +0x100..+0x108 = +0xB0..+0xB8; D_70003A20 = t; d = t
+ * (re-read), 1.0 when not at most 1.0; D_70003A20 = d; scale[0] = 8 d, and
+ * scale[1], scale[2] = 8 * D_70003A20 (re-read each); the seed is read once;
+ * h = 001CCF70(+0x100); r = ((seed >> 16) & 0xFFFF) / 65535 + 0.0001, seed
+ * = seed * 37 + 11; 001CFAE0(packet, 0, +0xD0; t, r, 1.0, 1e-6);
+ * 001CFBE0(h, 6, 0x828A60, packet, 0); t += 0.006666667, state 2 once it
+ * is not at most 1.2; 0019A570(B + 0x30, +0xB0, 6, 0) nonzero: state 2;
+ * 00102948(B + 0x30, +0xB0); +0xB0..+0xB8 += the velocity; 001B17A0 when the
+ * state byte (re-read) is 1. Then, while t2 < 1.5: h = 001CCF70(B + 0x70),
+ * r from the stepped seed (the seed word is not stored back), 001CFAE0(
+ * packet, 0, B + 0x40; t2, r, 1.0, 1e-6), 001CFBE0(h, 1, 0x828AF0, packet,
+ * 0), t2 += 0.015; otherwise state 3 when the state byte is 2.
+ * State 3: 001AFC10. The packet is the frame's local at sp - 0x60.
+ * ---------------------------------------------------------------------- */
+#define A00_SHOT_EMPTY_8247C0 0x008247C0u
+#define A00_SHOT_TABLE_828A60 0x00828A60u
+#define A00_SHOT_TABLE_828AF0 0x00828AF0u
+#define F_2_9 0x3E638E39u       /* 0.22222222 */
+#define F_8 0x41000000u
+#define F_0_0066667 0x3BDA740Eu /* 0.006666667 */
+#define F_1_2 0x3F99999Au
+#define F_0_015 0x3C75C28Fu
+
+static uint32_t a00_seed_fraction(uint32_t seed)
+{
+    return em_ee_add_bits(em_ee_div_bits(em_ee_cvt_s_w_bits((seed >> 16) & 0xFFFFu), F_65535), F_0_0001);
+}
+
+int em_area00_ovl_008247D0(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    const uint32_t link = a00_u32(&o, self + 0x14) + 0x1F0u;
+    const uint32_t b = self + 0x1F0;
+    const uint32_t packet = sp - 0x60u;
+    uint32_t state = a00_u8(&o, self + 4);
+    if (state == 3) {
+        (void)a00_c_001AFC10(&o, self);
+        return a00_end(&o);
+    }
+    if (state == 0) {
+        int32_t seed0 = 0;
+        (void)a00_c_001029C0(&o, self + 0xD0);
+        (void)a00_c_00102C58(&o, self + 0xD0, self + 0xD0, self + 0xC0);
+        (void)a00_c_00102918(&o, self + 0xD0, self + 0xD0, self + 0xB0);
+        a00_w8(&o, self + 0, 1);
+        a00_w32(&o, self + 0x30, link);
+        a00_w32(&o, self + 0x34, A00_SHOT_EMPTY_8247C0);
+        a00_w32(&o, b + 0x20, F_ZERO);
+        a00_w32(&o, b + 0x24, F_ZERO);
+        a00_w32(&o, b + 0x28, F_2_9);
+        a00_w32(&o, b + 0x2C, F_ONE);
+        (void)a00_c_001026A0(&o, b + 0x20, self + 0xD0, b + 0x20);
+        (void)a00_c_001028D0(&o, b + 0x20, b + 0x20, self + 0xB0);
+        (void)a00_c_00102948(&o, b + 0x30, self + 0xB0);
+        (void)a00_c_00102958(&o, b + 0x40, self + 0xD0);
+        (void)a00_c_00122BB8(&o, &seed0);
+        a00_w32(&o, b + 0x14, (uint32_t)seed0);
+        a00_w32(&o, b + 0x18, F_ZERO);
+        a00_w32(&o, b + 0x1C, F_ZERO);
+        a00_w8(&o, self + 4, 1);
+    } else if (state != 1 && state != 2) {
+        return a00_end(&o);
+    }
+    a00_w32(&o, self + 0x100, a00_u32(&o, self + 0xB0));
+    a00_w32(&o, self + 0x104, a00_u32(&o, self + 0xB4));
+    a00_w32(&o, self + 0x108, a00_u32(&o, self + 0xB8));
+    a00_w32(&o, S_70003A20, a00_u32(&o, b + 0x18));
+    uint32_t d = a00_u32(&o, b + 0x18);
+    if (!em_ee_c_le_bits(d, F_ONE)) d = F_ONE;
+    a00_w32(&o, S_70003A20, d);
+    a00_w32(&o, b + 0x00, em_ee_mul_bits(F_8, d));
+    a00_w32(&o, b + 0x04, em_ee_mul_bits(F_8, a00_u32(&o, S_70003A20)));
+    a00_w32(&o, b + 0x08, em_ee_mul_bits(F_8, a00_u32(&o, S_70003A20)));
+    uint32_t seed = a00_u32(&o, b + 0x14);
+    int32_t handle = 0;
+    (void)a00_c_001CCF70(&o, self + 0x100, &handle);
+    uint32_t r = a00_seed_fraction(seed);
+    seed = seed * 37u + 11u;
+    (void)a00_c_001CFAE0(&o, packet, 0, self + 0xD0, fb(a00_u32(&o, b + 0x18)), fb(r), fb(F_ONE), fb(F_1E_6));
+    (void)a00_c_001CFBE0(&o, handle, 6, A00_SHOT_TABLE_828A60, packet, 0);
+    const uint32_t t = em_ee_add_bits(a00_u32(&o, b + 0x18), F_0_0066667);
+    a00_w32(&o, b + 0x18, t);
+    if (!em_ee_c_le_bits(t, F_1_2)) a00_w8(&o, self + 4, 2);
+    int32_t hit = 0;
+    (void)a00_c_0019A570(&o, b + 0x30, self + 0xB0, 6, 0, &hit);
+    if (!a00_failed(&o) && hit != 0) a00_w8(&o, self + 4, 2);
+    (void)a00_c_00102948(&o, b + 0x30, self + 0xB0);
+    for (uint32_t k = 0; k < 3; ++k) {
+        const uint32_t v = a00_u32(&o, b + 0x20 + 4 * k);
+        a00_w32(&o, self + 0xB0 + 4 * k, em_ee_add_bits(a00_u32(&o, self + 0xB0 + 4 * k), v));
+    }
+    if (a00_u8(&o, self + 4) == 1) {
+        int32_t ignored = 0;
+        (void)a00_c_001B17A0(&o, self, &ignored);
+    }
+    if (em_ee_c_lt_bits(a00_u32(&o, b + 0x1C), F_1_5)) {
+        int32_t h2 = 0;
+        (void)a00_c_001CCF70(&o, b + 0x70, &h2);
+        const uint32_t r2 = a00_seed_fraction(seed);
+        (void)a00_c_001CFAE0(&o, packet, 0, b + 0x40, fb(a00_u32(&o, b + 0x1C)), fb(r2), fb(F_ONE), fb(F_1E_6));
+        (void)a00_c_001CFBE0(&o, h2, 1, A00_SHOT_TABLE_828AF0, packet, 0);
+        a00_w32(&o, b + 0x1C, em_ee_add_bits(a00_u32(&o, b + 0x1C), F_0_015));
+    } else if (a00_u8(&o, self + 4) == 2) {
+        a00_w8(&o, self + 4, 3);
+    }
+    return a00_end(&o);
+}
+
+/* ----------------------------------------------------------------------
+ * 0x8260B0 (func_overlay_AREA00_00826070): 001EFD20(0x8000005D, 0x82B780),
+ * then 001EFD20(0x80000004, 0xAC2D40); returns 1.
+ * ---------------------------------------------------------------------- */
+#define A00_POINT_82B780 0x0082B780u
+#define A00_POINT_AC2D40 0x00AC2D40u
+
+int em_area00_ovl_008260B0(const EmArea00OvlHooks *h, uint32_t a0, uint32_t a1, uint32_t a2, int32_t *result,
+                           EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    (void)a0;
+    (void)a1;
+    (void)a2;
+    if (!result || a00_begin(&o, h, fault)) return -1;
+    (void)a00_c_001EFD20(&o, (int32_t)0x8000005Du, A00_POINT_82B780);
+    (void)a00_c_001EFD20(&o, (int32_t)0x80000004u, A00_POINT_AC2D40);
+    if (a00_failed(&o)) return a00_end(&o);
+    *result = 1;
+    return a00_end(&o);
+}

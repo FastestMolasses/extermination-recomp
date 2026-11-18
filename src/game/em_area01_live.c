@@ -1322,7 +1322,7 @@ static int worker(void *ctx,EmArea01Call *c)
     if(em_area01_door_handles(c->function))return em_area01_door_call(&l->door,c);
     if(em_area01_pickup_handles(c->function))return em_area01_pickup_call(&l->pickups,c);
     if(c->function==0x001EFD90u || c->function==0x001EFD20u || c->function==0x001EF9D0u ||
-       c->function==0x001EFEB0u) {
+       c->function==0x001EFEB0u || c->function==0x001F00A0u) {
         EmArea01EffectsSpawn spawn;
         const EmArea01RuntimeHost host={l,bytes,worker};
         if(em_area01_effects_services_prepare(&host,c,&spawn)<0 || em_area01_live_suspend(l)<0)return -1;
