@@ -19,7 +19,8 @@ its oracle is named in that module's doc, not here. Owners bound through
 macro tables (e.g. em_area02_math.c's VOID1 rows) and not named in a ledger
 show as missing: an area lane confirms each one. Overlay addresses mean another
 function in every area, so an overlay behaviour of these areas counts as
-translated only through a port file of its own area (none exists yet).
+translated only through a port file of its own area: a body of
+em_areaNN_overlay_<address> in src/game/em_areaNN_overlay*.c (own_overlay).
 
 Usage (port root): python3 tools/second_half_inventory.py [--overviews DIR] [--doc docs/SECOND_HALF_AREAS.md | --check ...]
 """
@@ -58,6 +59,16 @@ def port_index():
         if key.startswith('boot:'):
             ledgers[int(key[5:], 16)] += [(r['level'], r['status'], r['document']) for r in rows]
     return defs, ledgers
+
+
+def own_overlay(n):
+    """{address: file} of the overlay functions the area's own module
+    defines (a body `int em_areaNN_overlay_XXXXXXXX(` at a line start)."""
+    out = {}
+    for path in sorted((ROOT / 'src/game').glob(f'em_area{n:02d}_overlay*.c')):
+        for m in re.finditer(rf'^int em_area{n:02d}_overlay_([0-9A-F]{{8}})\(', path.read_text(), re.M):
+            out[int(m.group(1), 16)] = path.name
+    return out
 
 
 def port_cell(a, defs, ledgers, overlay):
@@ -165,12 +176,15 @@ def area_blocks(n, ov, st, defs, cases):
                 users[r['behavior']].append(f'{g["label"].replace("deferred group", "g")} [{r["index"]}]'
                                             if 'deferred' in g['label'] else f'{g["label"]} [{r["index"]}]')
     rows = ['| Behaviour | Kind | Used by | Port |', '|---|---|---|---|']
+    own = own_overlay(n)
     for b in sorted(users):
         ovl = ARENA_LO <= b < ARENA_HI
         where = users[b]
         shown = ', '.join(where[:6]) + (f' (+{len(where) - 6})' if len(where) > 6 else '')
         cell = port_cell(b, defs, cases, ovl)
-        if ovl:
+        if ovl and b in own:
+            cell = f'`{own[b]}`'
+        elif ovl:
             tw = twin_cell(n, b, OVERVIEWS[0], TWINS[0])
             cell = f'missing; twin of {tw}' if tw else 'missing'
         rows.append(f'| {hx(b)} | {"overlay" if ovl else "boot"} | {shown} | {cell} |')
@@ -219,8 +233,11 @@ def area_blocks(n, ov, st, defs, cases):
     stats = defaultdict(int)
     for f in ov['overlay_functions']:
         stats[f['status']] += 1
+    done = sorted(a for a in own if a in {f['addr'] for f in ov['overlay_functions']})
     out.append(f'Overlay functions: {len(overlay_fns)} ({", ".join(f"{k} {v}" for k, v in sorted(stats.items()))}; '
-               'decomp status at the census commit); none has a port translation.')
+               'decomp status at the census commit); '
+               + (f'{len(done)} have a translation in the area\'s own module ('
+                  + ', '.join(sorted({own[a] for a in done})) + ').' if done else 'none has a port translation.'))
     return out
 
 
