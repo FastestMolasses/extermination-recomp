@@ -13,6 +13,7 @@ typedef struct {
     EmArea19RouteFault *fault;
     uint8_t sink[16]; /* reads/writes after a fault land here */
     int area14;       /* the turret runs as AREA14's 0x823FC0 */
+    int area20;       /* the turret runs as AREA20's 0x824440 */
 } A19R;
 
 static inline int a19r_latch(A19R *o, uint32_t address, int32_t code)
@@ -136,6 +137,7 @@ static inline int a19r_begin(A19R *o, const EmArea19RouteHooks *h, EmArea19Route
     o->fault = fault;
     memset(o->sink, 0, sizeof o->sink);
     o->area14 = 0;
+    o->area20 = 0;
     return a19r_failed(o) ? -1 : 0;
 }
 
@@ -464,6 +466,24 @@ static inline int a19r_c_00825A10(A19R *o, uint32_t a0)
     if (a19r_failed(o)) return -1;
     if (!o->h->w_00825A10) return a19r_latch(o, 0x00825A10u, EM_AREA19_ROUTE_FAULT_NULL_WORKER);
     if (o->h->w_00825A10(o->h->ctx, a0) < 0) return a19r_latch(o, 0x00825A10u, EM_AREA19_ROUTE_FAULT_WORKER_FAILED);
+    return 0;
+}
+
+static inline int a19r_c_008259B0(A19R *o, uint32_t a0, uint32_t a1, int32_t *result)
+{
+    if (a19r_failed(o)) return -1;
+    if (!o->h->w_008259B0) return a19r_latch(o, 0x008259B0u, EM_AREA19_ROUTE_FAULT_NULL_WORKER);
+    int32_t out = 0;
+    if (o->h->w_008259B0(o->h->ctx, a0, a1, &out) < 0) return a19r_latch(o, 0x008259B0u, EM_AREA19_ROUTE_FAULT_WORKER_FAILED);
+    *result = out;
+    return 0;
+}
+
+static inline int a19r_c_00825E90(A19R *o, uint32_t a0)
+{
+    if (a19r_failed(o)) return -1;
+    if (!o->h->w_00825E90) return a19r_latch(o, 0x00825E90u, EM_AREA19_ROUTE_FAULT_NULL_WORKER);
+    if (o->h->w_00825E90(o->h->ctx, a0) < 0) return a19r_latch(o, 0x00825E90u, EM_AREA19_ROUTE_FAULT_WORKER_FAILED);
     return 0;
 }
 

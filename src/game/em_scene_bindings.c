@@ -4028,6 +4028,21 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
     }
     if (s_state.d810700 == 0x0E && fn < 0x00823500u && fn && fn != 0x001F5040u)
         goto bind;
+    /* AREA20's overlay owners (lane PORT-A20, docs/AREA20_PORT.md): every
+     * placement's and group's overlay behaviour (decomp
+     * tools/area_overview.py --area 20) and the effect objects its arrival
+     * script places run through the runtime's dispatch_second_half
+     * (0x824440 and 0x825F20 as twins, the rest em_area20_overlay's). Its
+     * boot owners wait for the area's load (no capture yet). */
+    if (s_state.d810700 == 0x14 && fn >= 0x00823500u) {
+        switch (fn) {
+        case 0x00823580u: case 0x00823600u: case 0x00823660u: case 0x00823780u: case 0x00823840u:
+        case 0x008239B0u: case 0x00823D30u: case 0x00824440u: case 0x00825F20u:
+            goto bind;
+        default:
+            return -1;
+        }
+    }
     /* AREA00 sub 2's boot owners (its placements', groups' and spawns'), as
      * the later areas' below: the runtime's owners or its fallback
      * (em_area01_runtime_later); an untranslated one faults at its address

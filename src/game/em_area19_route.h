@@ -50,6 +50,8 @@ typedef struct {
     int (*w_00829840)(void *ctx, uint32_t a0);
     int (*w_00825530)(void *ctx, uint32_t a0, uint32_t a1, int32_t *result);
     int (*w_00825A10)(void *ctx, uint32_t a0);
+    int (*w_008259B0)(void *ctx, uint32_t a0, uint32_t a1, int32_t *result);
+    int (*w_00825E90)(void *ctx, uint32_t a0);
 /* END GENERATED HOOKS */
     int (*w_callback)(void *ctx, uint32_t function, uint32_t self);
 } EmArea19RouteHooks;
@@ -60,6 +62,10 @@ int em_area19_route_00827DD0(const EmArea19RouteHooks *, uint32_t self, EmArea19
  * the spawner 0x825A10) and the missed-probe effect (0x8000002C when the
  * earlier hit record's +0x1A was 5, else 0x80000003). Same oracle. */
 int em_area19_route_00823FC0(const EmArea19RouteHooks *, uint32_t self, EmArea19RouteFault *);
+/* AREA20's 0x824440 (lane PORT-A20): AREA14's 0x823FC0 but its callees
+ * 0x8259B0 / 0x825E90 and a missed probe's effect 0x80000067 when the
+ * earlier hit record's +0x1A was 8 (test_area19_route_reference). */
+int em_area19_route_00824440(const EmArea19RouteHooks *, uint32_t self, EmArea19RouteFault *);
 #ifdef __cplusplus
 }
 #endif
