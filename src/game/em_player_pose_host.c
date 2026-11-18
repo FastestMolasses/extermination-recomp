@@ -551,9 +551,21 @@ int player_pose_stage(void)
 int player_pose_stage_hook(void)
 {
     /* 0 (no owner) or 2 (an owner's takeover, which 0015B130's prelude
-     * performs). A source still held at the +4 = 1 stage has no takeover to
-     * consume it: every hold ends at 0015B530's 00182DF0 or 001B07C0's
-     * re-statement. */
+     * performs). A hold ends at 0015B530's 00182DF0, at 001B07C0's
+     * re-statement, or inside the takeover stage itself: its state
+     * routines end through 0017C540 (+4 = 1, +5 / +6 / +1F0 the idle's or
+     * the walk's; byte-matched decomp C), e.g. the landing 00163B40 ->
+     * 00163C10 when a script's walk drops off a ledge (the guided run's
+     * g42, AREA14 entry 1: [4]'s script 0x827490 walks the player down the
+     * cargo ramp, the fall (+5 = 5) and landing (+5 = 8, +6 = 5) end with
+     * +4 = 1 and 0015B130's prelude admits the player again on the next
+     * stage while the script still runs). No 00182DF0 runs there, so the
+     * port's hold ends with no release and no end hook (the owner's token
+     * stays: the prelude takes the player again for it). */
+    if (source.started && source.acquired && source.record.actor && source.record.actor->bytes[4] == 1) {
+        source.acquired = 0;
+        reset_default_state();
+    }
     int consumed = source.stage_hook ? source.stage_hook(source.stage_context) : 0;
     if (consumed < 0 || consumed == 1 || consumed > 2 || player_pose_owned()) {
         fprintf(stderr, "player pose: shared player-stage worker failed at frame %d\n", g.frame_no);

@@ -304,6 +304,12 @@ START_POINTS = {
     # entry 0 with the load still ahead), g47 (g46's end, the ramp) and g48 (g47's end, after Roger);
     # g45 (g44's end, AREA14 entry 1 in play: lane PORT-CHAIN's chained start, tools/guided_chain.py)
     'g45': {'route': 'guided-20261117/s87/route_g17', 'first': 'g45_', 'area': 0x0E},
+    # AREA14 / AREA18 (lane PORT-A18A14): route_g18 (tools/capture_from_take.py g39 .. g44); the
+    # source state of g40 (g39's end) and g41 (g40's end), AREA14 in play (tools/guided_chain.py
+    # g18's start), g42 / g44 (g41's / g43's end: AREA18 entry 0 at its arrival), g43 (g42's end,
+    # AREA14 entry 1)
+    **{f'g4{k}': {'route': 'guided-20261117/s87/route_g18', 'first': f'g4{k}_', 'area': a}
+       for k, a in ((0, 0x0E), (1, 0x0E), (2, 0x12), (3, 0x0E), (4, 0x12))},
     **{f'g4{k}': {'route': 'guided-20261117/s87/route_g17', 'first': f'g4{k}_', 'area': 0x11} for k in (6, 7, 8)},
     # AREA16 (lane PORT-LIVE-A16): the same for route_g16; the source state of g61 (g60's end: AREA16
     # sub 0 entry 0 at control after the load from AREA06 sub 1), g62 (g61's end, sub 0) and g63 ..

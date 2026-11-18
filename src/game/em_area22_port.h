@@ -17,6 +17,10 @@
  *   0012D940  sub-state of the 0012A5D0 bug nodes (their +5 = 10 / 11)
  *   00183010  moves an actor by a vector: +0xA0, +0xB0, 0x70003B40, then
  *             0x70003B50 = +0xC0
+ *   00183160  D_008104EF = index, D_008104F0 = D_00248870[index], the
+ *             player's heading D_00810374 = 001B1470(it + delta), and the
+ *             player's +5 / +6 = 1 / 0 for a nonzero index while +5 is 0
+ *             (not a census row: AREA14's [4] calls it, lane PORT-A18A14)
  *   0018C850  chases a vector's y toward a target by a capped step
  *   0018C920  chases a vector's x and z toward another's by a capped step
  *   001963A0  camera action 12 (the camera block 0x8101E0, the player)
@@ -86,6 +90,7 @@ extern "C" {
 #define EM_AREA22_PORT_1028E8 0x001028E8u /* out = a * b, four lanes (VU0) */
 #define EM_AREA22_PORT_12D940 0x0012D940u /* 0012A5D0 bug node, +5 = 10 / 11 */
 #define EM_AREA22_PORT_183010 0x00183010u /* move an actor by a vector */
+#define EM_AREA22_PORT_183160 0x00183160u /* input index, turn rate, heading += delta */
 #define EM_AREA22_PORT_18C850 0x0018C850u /* y chase, returns 4 on a snap */
 #define EM_AREA22_PORT_18C920 0x0018C920u /* x / z chase, returns bits 1 / 2 on a snap */
 #define EM_AREA22_PORT_1963A0 0x001963A0u /* camera action 12 */
@@ -138,6 +143,8 @@ int em_area22_port_001028E8(const EmArea22PortHooks *h, uint32_t out, uint32_t a
                             EmArea22PortFault *fault);
 int em_area22_port_0012D940(const EmArea22PortHooks *h, uint32_t self, uint32_t sub, EmArea22PortFault *fault);
 int em_area22_port_00183010(const EmArea22PortHooks *h, uint32_t actor, uint32_t delta, EmArea22PortFault *fault);
+/* 00183160 (lane PORT-A18A14: AREA14's [4] 0x823E30 calls it on entry 1) */
+int em_area22_port_00183160(const EmArea22PortHooks *h, int32_t index, float delta, EmArea22PortFault *fault);
 int em_area22_port_001963A0(const EmArea22PortHooks *h, uint32_t cam, uint32_t player, EmArea22PortFault *fault);
 int em_area22_port_00823580(const EmArea22PortHooks *h, EmArea22PortFault *fault);
 

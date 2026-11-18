@@ -296,6 +296,32 @@ int em_area22_port_00183010(const EmArea22PortHooks *h, uint32_t actor, uint32_t
 }
 
 /* ------------------------------------------------------------------------
+ * 00183160 (boot, C byte-identical: decomp src/func_00183160.c): the byte
+ * D_008104EF = index; D_008104F0 = D_00248870[index] (the word, stored
+ * before the heading is read); D_00810374 (the player record's +0xC4) =
+ * 001B1470(D_00810374 + delta); then, when D_008104EF (read again after
+ * the heading's store) is nonzero and the
+ * player's +5 (D_008102B5) is 0 it becomes 1 and +6 becomes 0.
+ * ---------------------------------------------------------------------- */
+int em_area22_port_00183160(const EmArea22PortHooks *h, int32_t index, float delta, EmArea22PortFault *fault)
+{
+    A22 o;
+    float wrapped = 0.0f;
+    if (a22_begin(&o, h, fault)) return -1;
+    a22_w8(&o, 0x008104EFu, (uint32_t)index);
+    a22_w32(&o, 0x008104F0u, a22_u32(&o, 0x00248870u + 4u * (uint32_t)index));
+    const uint32_t heading = a22_u32(&o, 0x00810374u);
+    if (a22_failed(&o)) return -1;
+    if (a22_c_001B1470(&o, fb(em_ee_add_bits(heading, a22_bits(delta))), &wrapped)) return -1;
+    a22_w32(&o, 0x00810374u, a22_bits(wrapped));
+    if (a22_u8(&o, 0x008104EFu) != 0 && a22_u8(&o, 0x008102B5u) == 0) {   /* the byte read again */
+        a22_w8(&o, 0x008102B5u, 1);
+        a22_w8(&o, 0x008102B6u, 0);
+    }
+    return a22_end(&o);
+}
+
+/* ------------------------------------------------------------------------
  * The chase step shared by 0018C850 (axis +4) and 0018C920 (axes +0 and
  * +8): d = goal - cur, a = 0011DF78(d) (fabs). a <= step: the axis takes
  * the goal (the caller stores it) and the step reports a snap. Else

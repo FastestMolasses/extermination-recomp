@@ -537,9 +537,8 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   dispatch_second_half for area 0x11, with script 0x8270A0's callbacks and
   001B6660's data window. AREA18's overlay holds only the init
   (em_area01_state) and the pad: `make test-area18-overlay-reference`
-  proves there is nothing else. Neither area has a SUBS row, asset export,
-  start card or live run yet; the guided run's takes g41 .. g48 are their
-  recordings. section 4's generator names an own-area overlay module
+  proves there is nothing else. Both now have SUBS rows, exports, cards
+  and live runs (the AREA17 and AREA18 bullets below). section 4's generator names an own-area overlay module
   (tools/second_half_inventory.py own_overlay); all blocks are regenerated.
 - AREA17 live (lane PORT-LIVE2, AREA17_PORT.md "Live"): its SUBS row holds
   the guided run's g46 / g47 end states (tools/capture_from_take.py turns
@@ -665,8 +664,8 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   section 6); lane P14c translated the rest of AREA14's owners and the
   camera arm 00230230 (em_area14_overlay, test_area14_overlay_reference) and
   the beats k01_02 .. k01_05 pass from their cards (AREA14_PORT.md). The capture
-  kinds of AREA18 and AREA17 wait for their SUBS rows: the guided run
-  recorded both (g41 .. g48); AREA16's takes g59 .. g67 are its recording
+  kinds of AREA18 and AREA17 are exported from the guided run's takes
+  (g41; g46 / g47); AREA16's takes g59 .. g67 are its recording
   (its bullet above); AREA21 has none yet. AREA20's owners (lane PORT-A20) are proven by their oracles; since
   lane PORT-LIVE-A2021 (last bullet) AREA20 and AREA21 have SUBS rows from
   the re-recorded kept takes g73 .. g79.
@@ -806,6 +805,20 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   faults in 001E1E60's flag-0x23 branch (00122BB8, 001D73A0, 001D72D0,
   001D75E0, 001CEFD0 unbound in the static world composition): the next
   blocker.
+
+- AREA18 live and the chain g18 (lane PORT-A18A14, AREA18_PORT.md "Live",
+  AREA14_PORT.md "Lane PORT-A18A14"): route_g18 (capture_from_take g39 ..
+  g44); SUBS[('area18', 0)] = g41 (an arrival capture with no frame drawn:
+  export_area13_level.UNDRAWN; no area message bank or table:
+  GLOBAL_ONLY_MESSAGES; no script chain); profile 18, sfx scope (0x12, 0),
+  its spawn music; cards g40 .. g44. Chain g18 (card g41, AREA14) enters
+  AREA18 by a real area change and plays g42 .. g48 on the row (g42 8821,
+  g43 1302, g44 5295, g45 1819 of 1819: g45 no longer starts from card
+  g45), then stops in the AREA11 entry-3 load (static world fault at
+  450A20DC; g17 passes it). It needed 00183160 (em_area22_port), the pose
+  host's hold ending at 0017C540's +4 = 1 and the boot script workers in
+  AREA14; g41 itself is a steered card stretch (camera and beasts after
+  the LOAD GAME; the vitals are restored at g42's row 0, comparison only).
 
 ## 6. Boot translations (lane BOOT2)
 

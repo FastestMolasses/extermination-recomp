@@ -27,11 +27,62 @@ overlay holds only the entry pad and the area init.
   pool node's behaviour lies in the overlay text (68 / 69 live nodes, 21 boot
   behaviours).
 
-## Not done
+## Live (lane PORT-A18A14, 2026-11-17, branch `a18a14`)
 
-AREA18's boot behaviours (section 4: 0012A5D0, 00147390, 001551B0, 00159210,
-00159970, 00159B90, 0015AFA0, 001BB860, 001C4820, 001E3D90, 00219550) are
-each in a census ledger or defined by an earlier lane; none has run in
-AREA18. AREA18 has no `SUBS` row, asset export, start card or live binding
-(no script chain, no message table). The guided run's takes g41 .. g44
-(AREA14 -> AREA18 -> AREA14, twice) are the recordings to bind it from.
+AREA18 loads and plays live in the shared composition, entered by a real
+area change from AREA14 (the cargo ramp's 00190F20) in the guided chain
+`g18`, and left the same way by its room move [18] (001BB860) to AREA14
+entry 1. Its boot behaviours (section 4 of SECOND_HALF_AREAS.md) run
+through the later areas' dispatch; nothing new was translated for AREA18
+itself.
+
+**Capture source.** `tools/capture_from_take.py --set
+guided-20261117/s87/route_g18 g39_area14_face g40_area14_booster
+g41_area14_area18 g42_area18_area14 g43_area14_area18 g44_area18_area14`
+(decomp `build/fork_refs/`, ignored). g41's and g43's ends are AREA18's
+arrivals (area bytes 12 00 00, overlay id 0x0F resident); no kept take
+ends inside AREA18 later.
+
+**Exports** (`export_second_half_common`): `SUBS[('area18', 0)]` = g41
+(previous g40). g43 is another load (its load map differs), so one SUBS
+row holds g41 only. Three cases new to the second-half exporters, each
+from the captures:
+- **No frame drawn.** Both arrival captures were taken before the first
+  frame after the load was drawn: one display-list buffer walks to an empty
+  list, the other is AREA14's stale chain. `export_area13_level.UNDRAWN`
+  (and `export_level_world_textures.UNDRAWN`) report the level-kick and
+  GS-state checks as not shown, and refuse a capture that draws anything.
+  Every other check runs: the load map against RAM, the 155 level texture
+  decodes against the GS freeze, the cells, the render-context rebuild.
+- **No area message bank or table.** The load relocates no id 0x41
+  (D_0028A594 keeps g40's AREA14 word) and D_00264DD0[0x13] is 0:
+  `export_area13_tables.GLOBAL_ONLY_MESSAGES` writes AREA22's EMMD layout
+  (global records and bank, compared with the capture's RAM; 54 global
+  records, no area records).
+- **No script chain.** No `scripts.emsc` (export_area13_tables skips the
+  window when the C starts no chain).
+`--kind all` passes: level (766 objects in one zone EMDL), collision (305
+polys), cells (35 uids, moved 26 / 27), roster (32 placements, group
+0x823600 x 12), spawn (3 records), door row 0x275608, world models (18),
+sound (1000 ids; group 3 bank 0 is the fitted attachment's, the
+attachment scope's). Profile 18 (`level_asset_profiles`; 478 world
+textures, the receivers, the player variants: `RESIDENT_OVERLAY` 0x0F);
+001D5370 has no 0x1200 arm, so no dynamic list. sfx scope (0x12, 0);
+`export_streams` adds AREA18's spawn records' music (no D_0026EC60 row
+names area 0x12). The module pack already held (0x12, 0).
+
+**Runtime.** A mid area (`assets/area18/sub0`), a later area for the boot
+dispatch (`em_area01_runtime_bind_area`), its placements' and group's
+boot behaviours bind in `em_scene_bindings` (an overlay address is
+refused), the muzzle node 001F5040 binds for the gunners 00147390, world
+textures and shadow receivers of profile 18; the boot script workers
+(001B7670, 001B7700, 001B8AB0, 001B6AE0) serve AREA14 and AREA18 too.
+
+**Start cards** g40 .. g44 (`build_start_saves.py`, route_g18;
+`em_start_at.c`): g40 / g41 / g43 AREA14, g42 / g44 AREA18 at its arrival.
+
+**Where it stands** (`python3 tools/guided_chain.py g18 --steer g41`):
+g42 (all of AREA18 and the walk-out on AREA14's ramp) is on the row for
+8821 of 8821 compared rows, its three hits at the original's rows;
+g44 (AREA18 again, the rifle refill) 5295 of 5295. See AREA14_PORT.md
+"Lane PORT-A18A14" for the chain and what it needed in AREA14.

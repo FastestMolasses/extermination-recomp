@@ -79,6 +79,13 @@ D_0028A594, D_0028A598, D_0028A59C, D_0028A5A0, D_0028A5A4, D_0028A5A8 = \
 PICKUP, DRUM = 0x219550, 0x156620
 # the outdoor creatures (twins of AREA01 0x826D40): *(node + 0x11C) + 0x90
 CREATURES = {'area13': 0x824BB0, 'area19': 0x827DD0}
+# Targets whose every capture is taken at the arrival, before the first frame after the load is
+# drawn (AREA18: the guided run's g41 / g43 end on the tick 00190F20's load completes, and no kept
+# take ends inside AREA18 later). Their display-list buffers hold no level kick (one walks to an
+# empty list, the other is the previous area's stale chain, which may not walk), so the kick and
+# GS-state checks have nothing to compare: they are reported as not shown, never as passed
+# (undrawn_kicks). Every other check runs as for any target.
+UNDRAWN = set()
 SCALED_OWNER, SCALED_CALLER = E06.SCALED_OWNER, E06.SCALED_CALLER        # 0x219870, 0x219F50
 # the 0019C6F0 caller of each target's sub 0, from its byte-identical C
 FLAG_OWNERS = {'area13': 0x8293A0, 'area19': 0x825C70}
@@ -382,6 +389,27 @@ def export_background(el, caps, out):
                 log=[x for x in log.splitlines() if x.startswith('background:') and 'manifest' not in x])
 
 
+def undrawn_kicks(caps):
+    """check_kicks' report for captures with no frame drawn since the load
+    (UNDRAWN): every capture must have one display-list buffer that walks to
+    its end with no kick at all; the other may be the stale chain. Refuses a
+    capture that draws anything (then check_kicks applies)."""
+    from test_level_material_reference import Frame, LIST_HEADS
+    report = []
+    for cap in caps:
+        walked = []
+        for head in LIST_HEADS:
+            try:
+                walked.append((head, len(Frame(cap.ram, head).kicks)))
+            except SystemExit as e:
+                walked.append((head, str(e)))
+        if not any(n == 0 for _h, n in walked) or any(isinstance(n, int) and n for _h, n in walked):
+            raise SystemExit(f'{cap.name}: display lists {walked}: not an undrawn arrival capture')
+        report.append(dict(capture=cap.name, level_kicks=0, dynamic_kicks=0, undrawn=True,
+                           lists={hex(h): n for h, n in walked}))
+    return report, {}, 0
+
+
 def export_target(target, el, elf, out_root, iso, skip_collision):
     """Level, static bank, collision, cells, background and ctx block of one
     target. Returns (image, caps, lmap)."""
@@ -440,12 +468,13 @@ def export_target(target, el, elf, out_root, iso, skip_collision):
     if previous is not None and previous != dyn_base:
         raise SystemExit(f'D_0028A5A4 {dyn_base:#x} is not the previous capture\'s {previous:#x}')
     objects = L.bank_objects(image.read, bank)
-    kicks, states, touched = L.check_kicks(caps, objects, [])
+    kicks, states, touched = (undrawn_kicks(caps) if target in UNDRAWN
+                              else L.check_kicks(caps, objects, []))
     if any(k['dynamic_kicks'] for k in kicks):
         raise SystemExit('a capture draws a dynamic-list kick')
     prim = el.level_template_prim(el.BootElf(C.ELF_PATH))
     want_state = (prim, el.GS_CLASS0_TEST, el.GS_CLASS0_ALPHA, el.GS_CLASS0_TEX1, el.GS_CLASS0_CLAMP)
-    if set(states) != {want_state}:
+    if set(states) != {want_state} and not (target in UNDRAWN and not states):
         raise SystemExit(f'level kick GS state {states} != class 0 {want_state}')
     ctx = C.u32(caps[0].ram, L.CTX_PTR) & 0x1FFFFFF
     grid = C.u32(caps[0].ram, ctx + 0x140)

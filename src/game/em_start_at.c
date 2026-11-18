@@ -196,6 +196,15 @@ static const struct {
      * source state of g46 (g45's end: entry 0), g47 and g48; g45 (g44's end, AREA14 entry 1:
      * lane PORT-CHAIN's chained start, the area change into AREA17 then a real one) */
     {"g45", 0x0E},
+    /* AREA14 / AREA18 from the guided run's takes (lane PORT-A18A14, route_g18): the source state
+     * of g40 (g39's end) and g41 (g40's end), AREA14 in play: tools/guided_chain.py g18's start;
+     * g42 (g41's end: AREA18 entry 0 at its arrival), g43 (g42's end: AREA14 entry 1), g44 (g43's
+     * end: AREA18 entry 0) */
+    {"g40", 0x0E},
+    {"g41", 0x0E},
+    {"g42", 0x12},
+    {"g43", 0x0E},
+    {"g44", 0x12},
     {"g46", 0x11},
     {"g47", 0x11},
     {"g48", 0x11},
@@ -684,7 +693,7 @@ int em_start_at_check(void)
                              "a22_02, a01u, a01u_01, a01u_02, a01u_s0, area06, a06_01 .. a06_05, a06b, "
                              "a06b_01, a01v, a01v_01, a01v_02, a22b, a22b_01, a04_00 .. a04_05, a04b_00 .. "
                              "a04b_04, boss, area13, a13_01 .. a13_05, a13b_01 .. a13b_05, "
-                             "a13c_00 .. a13c_06, a13d_00 .. a13d_07, k01_01 .. k01_05, area14k, g45 .. g48, g49 .. g58, g59 .. g67, g72 .. g80)", NULL);
+                             "a13c_00 .. a13c_06, a13d_00 .. a13d_07, k01_01 .. k01_05, area14k, g40 .. g48, g49 .. g58, g59 .. g67, g72 .. g80)", NULL);
     }
     const char *ng = getenv("EM_NEW_GAME");
     if (ng && ng[0] && strcmp(ng, "0") != 0)

@@ -66,6 +66,7 @@ FORK_ROUTES = {'06': ('s87/route_a06', 's87/route_a06b'), '22': ('s87/route_a22'
                '16': ('guided-20261117/s87/route_g16',),
                '20': ('guided-20261117/s87/route_g20',),     # g73's and g74's ends (AREA20)
                '21': ('guided-20261117/s87/route_g20',),     # g75 .. g79's ends (AREA21)
+               '18': ('guided-20261117/s87/route_g18',),     # g41 / g43: AREA18's arrivals
                '06s1': ('guided-20261117/s87/route_g16',),   # g59's and g67's ends (AREA06 sub 1)
                '01s1': ('guided-20261117/s87/route_g49',),   # g49's and g58's ends (AREA01 sub 1)
                # a04e_01's and a02c_00's ends, k00_s0's load (AREA02 sub 2; area bytes filter a04e_00 out)
@@ -74,7 +75,7 @@ FORK_ROUTES = {'06': ('s87/route_a06', 's87/route_a06b'), '22': ('s87/route_a22'
 # Sets that hold a capture taken before the area's load with its area bytes already set (the
 # guided g45 end: AREA14's overlay and textures still resident): only a capture with the area's
 # own overlay resident (MWo3 id at 0x823504) is a recording of the area.
-RESIDENT_OVERLAY = {'17': 0x0E, '16': 0x0D, '06s1': 0x06, '01s1': 0x02, '02s2': 0x03, '20': 0x11, '21': 0x12}
+RESIDENT_OVERLAY = {'17': 0x0E, '16': 0x0D, '06s1': 0x06, '01s1': 0x02, '02s2': 0x03, '20': 0x11, '21': 0x12, '18': 0x0F}
 MODEL_FILES = {0x3D: 'chunk28/f02_id3d.bin', 0x3E: 'chunk28/f03_id3e.bin', 0x3F: 'chunk28/f04_id3f.bin', 0x40: 'chunk28/f05_id40.bin'}
 
 

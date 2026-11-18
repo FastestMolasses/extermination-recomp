@@ -288,11 +288,11 @@ int em_area01_runtime_bind(EmArea01Runtime *r, const EmArea01RuntimeHost *host)
 int em_area01_runtime_bind_area(EmArea01Runtime *r, const EmArea01RuntimeHost *host, unsigned area)
 {
     /* the areas em_area01_state binds: AREA00..02, AREA04, AREA06, AREA13, AREA15, AREA03, AREA19, AREA22,
-     * AREA08, AREA07, AREA14, AREA17, AREA16, AREA20 and AREA21 */
+     * AREA08, AREA07, AREA14, AREA17, AREA16, AREA20, AREA21 and AREA18 */
     if (!r || !host || !host->bytes || !host->worker || !(area <= 2 || area == 4 || area == 6 || area == 0x0D ||
                                                      area == 0x16 || area == 0x0F || area == 3 || area == 0x13 ||
                                                      area == 8 || area == 7 || area == 0x0E || area == 0x11 ||
-                                                     area == 0x10 || area == 0x14 || area == 0x15))
+                                                     area == 0x10 || area == 0x14 || area == 0x15 || area == 0x12))
         return -1;
     memset(r, 0, sizeof *r);
     r->host = *host;
@@ -675,7 +675,7 @@ int em_area01_runtime_later(EmArea01Runtime *r, EmArea01Call *c, int *rc)
 static int mid_host(unsigned area)
 {
     return area == 0x16 || area == 6 || area == 0x0D || area == 0x0F || area == 3 || area == 0x13 || area == 8 ||
-           area == 7 || area == 0x0E || area == 0x11 || area == 0x10 || area == 0x14 || area == 0x15;
+           area == 7 || area == 0x0E || area == 0x11 || area == 0x10 || area == 0x14 || area == 0x15 || area == 0x12;
 }
 
 /* AREA00 sub 2 (D_00810701 == 2: chunk04.n2, the constructed start k01's
@@ -769,7 +769,7 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
     const int a02s2 = area02_sub2(r);
     const int later = (r->area == 0x0D || r->area == 0x0F || r->area == 3 || r->area == 0x13 || r->area == 8 ||
                        r->area == 7 || r->area == 0x0E || r->area == 0x11 || r->area == 0x10 || r->area == 0x14 ||
-                       r->area == 0x15 || sub2 || a06s1 ||
+                       r->area == 0x15 || r->area == 0x12 || sub2 || a06s1 ||
                        a01s1 || a02s2) &&
                       c->function < 0x00823500u;
     const int creatures = r->area == 4 || later;

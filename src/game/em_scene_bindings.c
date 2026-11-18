@@ -239,7 +239,7 @@ static int mid_area(unsigned area, unsigned sub)
      * AREA01_ASSETS.md, its section on sub 1) assets/area01/sub1. */
     return (area == 0u && sub == 2u) || (area == 6u && sub == 1u) || (area == 1u && sub == 1u) ||
            ((area == 0x16u || area == 6u || area == 0x0Du || area == 0x0Eu || area == 0x11u || area == 0x14u ||
-             area == 0x15u) && sub == 0) ||
+             area == 0x15u || area == 0x12u) && sub == 0) ||
            ((area == 0x0Fu || area == 0x13u || area == 0x10u) && sub <= 1) || (area == 3u && sub <= 2) || (area == 4u && sub == 1) ||
            ((area == 8u || area == 7u) && (sub == 0 || sub == 2 || sub == 3));
 }
@@ -1190,11 +1190,13 @@ int em_scene_restore_bugs(const uint8_t *ram)
     /* AREA08's and AREA07's creatures and nests too: the bugs they spawn run
      * on their timers (lane P1's beats from cards); the two creatures of the
      * sixteenth level in AREA03 and AREA04 as the bugs (lane N1's). */
+    /* AREA14's beasts 00141D20 (lane PORT-A18A14: the guided chain g18's card in AREA14 respawns
+     * them at their placements, the recording had them roaming). */
     static const uint32_t kinds[] = {0x0012A5D0u, 0x0015AFA0u, 0x001581A0u, 0x00824320u, 0x0012E3A0u, 0x001383C0u,
-                                     0x0013D2D0u, 0x00147390u};
+                                     0x0013D2D0u, 0x00147390u, 0x00141D20u};
     const int a87 = s_state.d810700 == 8 || s_state.d810700 == 7, a34 = s_state.d810700 == 3 || s_state.d810700 == 4;
     for (unsigned k = 0; k < sizeof kinds / sizeof kinds[0]; ++k) {
-        if ((k >= 4 && k < 6 && !a87) || (k >= 6 && !a34)) continue;
+        if ((k >= 4 && k < 6 && !a87) || (k >= 6 && k < 8 && !a34) || (k == 8 && s_state.d810700 != 0x0E)) continue;
         uint32_t from = EM_ACTOR_POOL_BASE;
         for (uint32_t i = 0; i < EM_ACTOR_POOL_CAPACITY; ++i) {
             const EmActor *a = &s_pool.records[i];
@@ -2943,6 +2945,7 @@ static int arrival_scene(void)
            strcmp(g.scene_dir, "assets/area00/sub2") == 0 ||
            strcmp(g.scene_dir, "assets/area14/sub0") == 0 ||
            strcmp(g.scene_dir, "assets/area17/sub0") == 0 ||
+           strcmp(g.scene_dir, "assets/area18/sub0") == 0 ||
            strcmp(g.scene_dir, "assets/area16/sub0") == 0 ||
            strcmp(g.scene_dir, "assets/area16/sub1") == 0 ||
            strcmp(g.scene_dir, "assets/area20/sub0") == 0 ||
@@ -4083,6 +4086,14 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
     }
     if (s_state.d810700 == 0x0E && fn < 0x00823500u && fn && fn != 0x001F5040u)
         goto bind;
+    /* AREA18 (lane PORT-A18A14, docs/AREA18_PORT.md): every placement's and
+     * group's behaviour is a boot function (decomp tools/area_overview.py
+     * --area 18; the overlay holds only its init), bound as the later
+     * areas' are; an overlay address there is refused. */
+    if (s_state.d810700 == 0x12 && fn >= 0x00823500u)
+        return -1;
+    if (s_state.d810700 == 0x12 && fn && fn != 0x001F5040u)
+        goto bind;
     /* AREA20's overlay owners (lane PORT-A20, docs/AREA20_PORT.md): every
      * placement's and group's overlay behaviour (decomp
      * tools/area_overview.py --area 20) and the effect objects its arrival
@@ -4340,6 +4351,8 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
          s_state.d810700 == 8 || s_state.d810700 == 7 || s_state.d810700 == 0x0D || s_state.d810700 == 0x0E ||
          /* AREA17: the creature's beam 001B3C30 (00133E30's 001348E0) */
          s_state.d810700 == 0x11 ||
+         /* AREA18: the gunners 00147390 (group 0x823600 [5] / [6]) and their beam 001B3C30 */
+         s_state.d810700 == 0x12 ||
          /* AREA06 sub 1: the creature 00147390's beam 001B3C30 (group 0x8265E0) */
          (s_state.d810700 == 6 && s_state.d810701 == 1) ||
          /* AREA02 sub 2: the same creature's beam (group 0x826080 [7] .. [9]) */
