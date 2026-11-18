@@ -2008,6 +2008,28 @@ int em_area01_live_find_device(EmArea01Live *l,EmPlayerLiveActor *p,int32_t item
     if(rc>=0)*owner=(uint32_t)c.v0;
     return rc;
 }
+/* 001AAC00(player, player + 0x290, player + 0x218), area 0x15's Use
+ * classifier (em_area21_use), inside the player stage. The player record
+ * is borrowed read-only, so the two outputs land in call locals and are
+ * copied to the record after the call. The original stores them only on a
+ * non-zero result (every word of both then: 001AA8D0's four and the angle,
+ * or 001AAA90's quadword and the angle), and nothing in the call reads
+ * them back, so the record ends as the original's. */
+int em_area01_live_classify(EmArea01Live *l,EmPlayerLiveActor *p,int *result)
+{
+    if(!result || !p)return -1;
+    *result=0;
+    const uint32_t point=LOCAL_BASE+0x10u,angle=LOCAL_BASE+0x20u;
+    EmArea01Call c={.function=0x001AAC00u,.a={EM_AREA01_PLAYER_BASE,point,angle},.na=3};
+    int rc=em_area01_live_player_call(l,p,&c);
+    if(rc<0)return rc;
+    *result=(int32_t)c.v0;
+    if(*result){
+        memcpy(p->bytes+0x290,l->locals+(point-LOCAL_BASE),16);
+        memcpy(p->bytes+0x218,l->locals+(angle-LOCAL_BASE),4);
+    }
+    return 0;
+}
 int em_area01_live_scan(EmArea01Live *l,EmPlayerLiveActor *p,int *result)
 {
     if(!result)return -1;

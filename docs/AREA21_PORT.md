@@ -229,11 +229,70 @@ starts. In the take the press was a placement: at row 1374 x goes from
 134.00 to 133.50 (an object at x 146.1 or 120.9, 12.6 off: 001AA8D0's
 point), then from about row 1450 y rises (35.01 to 39.80): a climb.
 
+## Use and the boss effects (lane PORT-A21-USE, 2026-11-18, branch `a21use`)
+
+- **001AAC00** (area 0x15's Use classifier) with **001AA8D0** (the 0x4A
+  placement) and **001AAA90** (the 0x4B mount), all byte-identical C, in
+  `em_area21_use` (header: every function's behaviour). The two distance
+  sums are MULA then MADD (em_ee_madd_bits). Bound in the runtime's AREA21
+  dispatch (`em_area01_runtime_second_half.inc`, the four callees re-enter
+  it by address) and reached through `em_area01_live_classify`: the Use
+  dispatcher's player record is borrowed read-only in the player stage, so
+  the outputs (+0x290..+0x29F, +0x218) land in call locals and are copied
+  to the record after the call (the original stores them only on a
+  non-zero result, every word, and nothing in the call reads them back).
+  `em_player_closure_live_set_classify` (em_scene_bindings: the later
+  areas' binding) replaces the fail-stop.
+- **The g76 press was not a placement.** With the classifier bound, both
+  Use presses of g76 return 0 (no 0x4A / 0x4B object in range) and the
+  dispatcher goes on to its ledge path: the port climbs exactly as the take
+  (g76 6383 / 6383 rows on the row). The earlier "x 134.00 -> 133.50 at
+  001AA8D0's point" reading was a coincidence of numbers (a label is not
+  evidence). 001741D0 (+5 0x23, the placement / mount state) is still not
+  translated: no take reaches it so far.
+- **001EB440 / 001EB250** (two effect handlers of the boss fight, g77):
+  byte-identical C, one translation `em_effect_001EB440` (001EB250 also
+  lowers the node matrix's translation z by 2 while the work block's +0x54
+  is above 0.8), bound in em_effects_live's handler switch over the node's
+  work block views. Their 001CFBE0 sources D_00255B30..D_00255CE0 are
+  exported by export_area00_runtime_tables.py AREA21_EFFECT_WINDOWS.
+- **001B6660 in AREA21** (the deferred spawn of [43] / [44] 0x8262D0):
+  em_scene_bindings' area_spawn_deferred with module id 0x12 over the data
+  window 0x82A380..0x82DC80.
+- **Evidence**: `make test-area21-use-reference` runs
+  tools/test_area21_use_reference.py (the original instructions of the
+  three Use functions over designed lists: gate values, counts 0..4, tags,
+  kinds 0x4A / 0x4B / others, fabs and sqrt results at and one ulp past
+  3.0 / 3.5 / 4.0 / 8.0, far players; hooks 0011DF78 / 0011E748 / 001B1470
+  / 001026A0 scripted on both sides; compared: result, hook calls with
+  argument bits and 001026A0's vector bytes, low 8 MB of RAM and the
+  scratchpad, the fault contract at every hook; quick 300 / full 4000
+  cases, 258 of 258 reachable words, two dead argument moves named) and
+  tools/test_effect_001EB440_reference.py (both handlers: seeds over the
+  16-bit range, +0x54 at 0.8 and one ulp past, fault contract; quick 100 /
+  full 1200, 234 of 234 words). Mutants caught: 12.6 one ulp, the 4.0
+  compare (< for <=), the tag test, the scratch seed 8.0, the fraction bias
+  one ulp, the seed step, the fraction shift, the second source, the 0.8
+  limit (one ulp and < for <=), the lowered word. Equivalent: MADD written
+  as MUL then ADD (both products are squares, so a saturated sum is the
+  same).
+- **Chain g20** (card g73): g73 4191 / 4192, g74 3736 / 3736, g75 3864 /
+  3864, g76 6383 / 6383 (to its last row 6499), **g77 2859 / 2859 to row
+  2858**, where [43] / [44]'s spawn starts a node whose behaviour is
+  **0x824FE0** (decomp func_overlay_AREA21_00824FA0, 0xB18 bytes,
+  byte-identical C since lane MATCH-OVL2): untranslated, fail-stop. So
+  0x824FE0 is reached (AREA21_OVERLAY.md's "unreached" is wrong for it:
+  its only reference is spawn data, not code). g76 also shows a rand()
+  word difference at row 6386 (the frame before drew differently; positions
+  stay on the row).
+
 ## Next
 
 1. (done) 001E1E60's flag-0x23 workers (Far light); (done) 001E1AD0's
-   flag-0x22 path (Grid). Next: 001AAC00 and its callees (Grid, last
-   paragraph), then chain g20 on through g76 .. g80.
+   flag-0x22 path (Grid); (done) 001AAC00 with its tests, 001EB440 /
+   001EB250 (Use and the boss effects). Next: 0x824FE0 (the node [43] /
+   [44] spawn, g77 row 2858) and the rand() draw at g76 row 6385, then
+   chain g20 on through g78 .. g80; 001741D0 when a take reaches +5 0x23.
 1b. 001D7410's Z read-back (Far light, "Not modelled").
 2. Run the live owners of that recording through these oracles (as
    test_area14_overlay_reference's `live/` cases).

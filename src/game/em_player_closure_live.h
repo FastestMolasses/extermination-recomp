@@ -61,6 +61,11 @@ void em_player_closure_live_set_spawn_read(const uint8_t *(*read)(uint32_t addre
 void em_player_closure_live_set_scan(int (*scan)(void *context, EmPlayerLiveActor *actor,
                                                  int *result),
                                      void *context);
+/* 00160220's 001AAC00 (area 0x15's Use classifier; em_area01_live_classify
+ * in the later areas); NULL detaches, and a Use press that reaches it faults. */
+void em_player_closure_live_set_classify(int (*classify)(void *context, EmPlayerLiveActor *actor,
+                                                         int *result),
+                                         void *context);
 
 /* One Use press: 00160220 over the live record (the scene words refreshed
  * first; an SDK worker's recorded fault fails it). *result is its return

@@ -115,6 +115,10 @@ int em_area01_live_call_active(EmArea01Live *, EmArea01Call *);
 /* The Use dispatch's scan inside the existing player stage. Its actual
  * in-stage record is borrowed read-only, without post-stage projections. */
 int em_area01_live_scan(EmArea01Live *,EmPlayerLiveActor *,int *result);
+/* 001AAC00 (area 0x15's Use classifier) inside the existing player stage:
+ * the result in *result, and on a non-zero one the record's +0x290..+0x29F
+ * and +0x218 as the original leaves them. */
+int em_area01_live_classify(EmArea01Live *,EmPlayerLiveActor *,int *result);
 /* 00185420(item): the device record the status pages' BATTERY page talks
  * to (*owner 0 for none). */
 int em_area01_live_find_device(EmArea01Live *l,EmPlayerLiveActor *p,int32_t item,uint32_t *owner);
