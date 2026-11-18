@@ -188,9 +188,21 @@ each take; `em_start_at.c`), beats g61 .. g67 in `mid_route_beats.py`.
 - g64 passes 001BAD40 (lane PORT-FX: 0x824E10, decomp
   func_overlay_AREA16_00824DD0, calls it directly with its +0x20 entry;
   em_area01_runtime's rv_001BAD40 runs em_sdf_001BAD40 over the node with
-  the workers 001BB0E0's 001BAD40 uses) and now runs to pad frame ~2900,
-  then fail-stops at 001D8060 (0x824E10's render-slot lookup through
-  0x825740; em_frh_001D8060 exists, no live worker binds it).
+  the workers 001BB0E0's 001BAD40 uses) and runs to pad frame ~2900.
+  Lane PORT-WORKERS: 001D8060 (0x825780's light-slot lookup) is live
+  (em_rcl_001D8060 over em_frh_001D8060, the byte-matched function's one
+  translation, dispatched by em_area01_rcl_workers); 0x824E10's state 0
+  then spawns its three attachments through 001C5570, and the 0xB one's
+  001C5760 child binds a world model of 9 bones, past the indicator
+  bind's old 4-slot capacity (em_indicator_bind_live now holds
+  EM_OWNER_SERVICES_MAX_BONES). It now fail-stops on the same frame at
+  0x824E10's attachment follow (00102958 into the child's +0x12C slot +
+  0x90, read as address 0x90): the indicator child's +0x110.. slot words
+  and node matrices live in em_indicator_bind_live and are not part of
+  the record view the overlay reads, nor writable by a raw 00102958.
+  Exposing them (record view projection of the held slot words, and the
+  slot node bytes for 00102958 through em_indicator_bind_live_set_node)
+  is the next step.
 - g66 diverges: at pad frame 1000 the player has health 25, then the game
   returns to the title (001AC070 again, engine frame 3950) and the beat
   times out (900 s). Not investigated.

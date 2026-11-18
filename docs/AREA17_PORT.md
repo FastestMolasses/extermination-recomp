@@ -252,11 +252,66 @@ e.g. the skip's frame and the walk at frames 172..176); EM_START_AT_CLOCK
   001BAD40), then the player closure 0016BC40 faults (code 5 at
   0x810835).
 
+### Lane PORT-WORKERS (2026-11-17, branch `workers`)
+
+- **001D6B10 and the haze's channel-3 calls.** 00133E30's haze 001E04E0
+  (decomp src/func_001E04E0.c) calls 001D6B10, 001D1F80, 001D6BA0,
+  001D1FF0, 001D1F20 and 001CAAC0 directly. em_area01_rcl_workers now
+  serves the first five over the render context's one translations
+  (em_rcl_001D6B10 = em_render_context_001D6B10, byte-matched decomp C;
+  the rest are the em_rcl entries the aim/fire runtime already used).
+  001CAAC0 takes the two-argument form in the light service; a list that
+  does not open with the object unit's colour CNT (the haze's does not) is
+  filed on the page by depth (em_anim_rest_001CAAC0, the same 001CB760)
+  without an object-unit parse. **Drawing it is not modelled:** with
+  rendering on (EM_MID_ROUTE_RENDER=1) the chain page refuses the list's
+  first GIF packet ("GIF packet fault", the frame-copy packet of 001D6B10)
+  and the page stops at that frame, where the run stopped before; beats
+  (EM_NO_RENDER) go on.
+- **D_00810835.** 0016BC40 (the rise to the overhead grip, decomp
+  func_0016BC40) state 0 sets D_00810835 = 1 in area 0x11 (AREA17's
+  0x8284F0 waits for it); the player closure's ledge view
+  (em_player_closure_ledge.inc) now maps that byte to the progress block:
+  g48's code 5 at 0x810835 is gone.
+- **g46's hits** (item 4). The take records no health per row; its
+  threats.json has every hit (row by its counter, health after, loss,
+  infection, position) and end.json the end checkpoint, so
+  capture_from_take now writes them as trace.json `vitals` (the route_g17
+  set is not regenerated yet). The original took three hits in g46, at
+  rows 765, 1509, 1857 (pad frames 453, 1197, 1545; health 25, 15, 5) and
+  healed (recovery A in the take's timeline) after them, at
+  row ~2120 (pad frame ~1808), ending at 35. The port (per-frame trace:
+  EM_MID_ROUTE_TRACE, new) takes the first hit at pad frame 441 (12 frames
+  early, position within 0.13), a second at 502 (none in the original),
+  a third at 1085 and dies at 1179, before the heal's frame: the heal is
+  never reached, so whether the item use replays is not shown by g46. The
+  first difference is earlier: the per-frame rand() word (reseeded every
+  frame from the rows) first differs at script frame 128 and on most
+  frames after it, which is the known card difference (PORT-LIVE-A17: the
+  arrival script's op07 sub 0xC waits ~17 frames less from a card, so the
+  [4]..[7] group nodes and their draws start earlier); the creature's
+  spit schedule moves with it. Not a translation fault found; aligning
+  that wait is the next step for g46.
+- **g47**: no fault through all 6619 pad frames. Its end state differs
+  because its card (a LOAD GAME of g46's end) runs [30]'s arrival script
+  again: the player stands at the load pose until a START reaches the
+  skip near pad frame 2600 and [30] places it at (156.5, 220, 300), while
+  the take continued from g46 with no load (its heal at pad frame ~233 is
+  pressed into the intro, so health stays 35, not 65). The pad does not
+  fit a card start; the beat needs a different alignment (not verified
+  that the original's LOAD GAME also runs the intro there).
+- **g48**: past 0x810835 (pad ~18800); it now runs to pad frame ~19590
+  and fail-stops in 001BB0E0 (script actor, record 51) touching record
+  39, which the port has freed (actor view code 2 at 0x7AC8D0). Not
+  investigated.
+
 ## Not done
 
 - **The live area** (section "Live"; 001F1F60 and 001BAD40 done by
-  PORT-FX): g46's spit hits (compare with a capture that records health),
-  g47's 001D6B10 live worker, g48's 0016BC40 fault at 0x810835.
+  PORT-FX; 001D6B10 and 0x810835 by PORT-WORKERS): g46's card wait
+  (op07 sub 0xC) that moves the creature's spits, g47's card alignment
+  (its LOAD GAME runs [30]'s intro), g48's freed record 39 at pad ~19590,
+  drawing the haze list on the chain page.
 - The other live-only bindings AREA14 needed (AREA14_PORT.md "Pieces the
   live run needed") but the muzzle node 001F5040 are not checked for AREA17.
 - 0x8235E0 and 0x823860, and the group holding 0x823580 / 0x8236F0 /

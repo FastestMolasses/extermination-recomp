@@ -19,7 +19,10 @@ typedef uint32_t u32;
 
 #define FN_2360 0x001C2360u        /* 001C5680's bind: D_0028A56C */
 #define FN_22A0 0x001C22A0u        /* 001C5760's bind: D_0028A59C */
-#define BONES_MAX 4u               /* models 0x73 (3), 0x74 / 0x75 / 0x10 (1), 0x7A (4) */
+/* The owner view's slot capacity (+0x110.., EM_OWNER_SERVICES_MAX_BONES): AREA11's
+ * children hold 1 .. 4 (models 0x73, 0x74 / 0x75 / 0x10, 0x7A); AREA16 sub 1's
+ * 001C5760 child (param 0xB, g64) binds a world model of 9 bones. */
+#define BONES_MAX EM_OWNER_SERVICES_MAX_BONES
 #define SELF_SIZE (0x110u + 4u * BONES_MAX)
 
 typedef struct {

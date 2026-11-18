@@ -771,6 +771,24 @@ int em_owner_draw_live_page_register(uint32_t start, uint32_t end,
 
 static int caac0_packet(const uint32_t position[4], uint32_t start, EmObjectUnitResolve resolver, void *ctx,
                         int light);
+/* 1 when the list at start opens as an object unit does (001C7420 /
+ * 001C7900's colour CNT: a CNT tag of 5 quadwords), 0 when it does not, -1
+ * (reported) when it cannot be read. A list that does not is not an object
+ * unit: 001CAAC0 files it on the page as it is (its depth key and 001CB760
+ * are the same), and the page walk follows it as the original's DMA does
+ * (em_chain_page; an unknown tag there is its own fault). AREA17's creature
+ * haze 001E04E0 (decomp src/func_001E04E0.c) is one: its list begins with
+ * what its 001D6B10, 001D1F80, 001D6BA0 and 001D1FF0 (channel 3) put at the
+ * cursor, then 15 CNT rows of one VIF DIRECT each, 001D1F20 / 001D1FF0's
+ * packets and the closing RET. */
+static int object_unit_start(uint32_t start)
+{
+    const uint8_t *u=em_rcl_bytes(start,16);
+    if (!u) return report(start,"001CAAC0's list is outside the render context");
+    uint32_t tag;
+    memcpy(&tag,u,4);
+    return ((tag>>28)&7u)==1u && (tag&0xFFFFu)==5u;
+}
 int em_owner_draw_live_001CAAC0_packet(const uint32_t position[4], uint32_t start,
                                       EmObjectUnitResolve resolver, void *ctx)
 {
@@ -788,7 +806,9 @@ static int caac0_packet(const uint32_t position[4], uint32_t start, EmObjectUnit
     EmPacketChain *pc=em_rcl_packet_chain();
     if (!position || !cursor || !vp || !pc)
         return report(0x001CAAC0u,"raw-model page insertion has missing inputs");
-    if (page_parse(start,*cursor,resolver,ctx,light)<0) return -1;
+    const int unit=object_unit_start(start);
+    if (unit<0) return -1;
+    if (unit && page_parse(start,*cursor,resolver,ctx,light)<0) return -1;
     EmOwnerServicesScratch scratch={0}; memcpy(scratch.s3AC0,vp,64);
     EmAnimRest rest={0};
     rest.world.region[0]=(EmPoseRegion){0x7F000000u,16,(uint8_t *)(const void *)position,0};
@@ -796,7 +816,7 @@ static int caac0_packet(const uint32_t position[4], uint32_t start, EmObjectUnit
     rest.workers.ctx=pc; rest.workers.w_001CB760=em_packet_chain_w_001CB760;
     if (em_anim_rest_001CAAC0(&rest,0x7F000000u,start,NULL)<0)
         return report(rest.fault.address,"raw-model depth insertion faulted");
-    L.page_address[L.page_count++]=start;
+    if (unit) L.page_address[L.page_count++]=start;
     return 0;
 }
 

@@ -34,7 +34,9 @@ them unchanged:
         take.rec says a tick read, at f = tick - 2: route_capture's rule, a
         command set at row f reaches the game's pad block two frames later,
         which EM_START_AT_PAD reproduces), first_counter, frames,
-        source_state, no teleports;
+        source_state, no teleports; vitals (when the take has them): the
+        player's health and infection, which take.rec does not record per
+        row: threats.json's hits at their rows and end.json's checkpoint;
   <set>/manifest.json
         the beats in order with their source states.
 
@@ -139,6 +141,28 @@ def write(path: Path, data: bytes) -> None:
         path.write_bytes(data)
 
 
+def take_vitals(src: Path, rows: list, end: dict) -> dict | None:
+    """The player's health and infection as the take records them: take.rec
+    and rows.tbl have no health column, so these are threats.json's hit
+    events (each at the row whose counter is the event's `c`: health after
+    the hit, the loss, infection, the position) and end.json's checkpoint
+    (health and infection at the take's end). None when the take has
+    neither."""
+    at = {r['counter']: r['f'] for r in rows}
+    hits = []
+    threats = src / 'threats.json'
+    if threats.exists():
+        for e in json.loads(threats.read_text()).get('events', []):
+            if e.get('kind') == 'hit' and e.get('c') in at:
+                hits.append({'f': at[e['c']], 'hp': e.get('hp'), 'lost': e.get('lost'), 'inf': e.get('inf'),
+                             'at': e.get('at')})
+    check = end.get('checkpoint') or {}
+    if not hits and 'hp' not in check:
+        return None
+    return {'from': 'threats.json hit events (row by counter), end.json checkpoint', 'hits': hits,
+            'end': {'hp': check.get('hp'), 'inf': check.get('inf')}}
+
+
 def beat(take: str, folder: Path, source_state: str, source_ram: bytes) -> dict:
     src = GUIDED / take
     end = json.loads((src / 'end.json').read_text())
@@ -184,6 +208,9 @@ def beat(take: str, folder: Path, source_state: str, source_ram: bytes) -> dict:
              'emulator': 'fork', 'source_state': source_state, 'first_counter': rows[0]['counter'],
              'last_counter': rows[-1]['counter'], 'frames': len(rows) - 1, 'inputs': inputs, 'teleports': [],
              'snapshot': snap, 'rows': rows}
+    vitals = take_vitals(src, rows, end)
+    if vitals:
+        trace['vitals'] = vitals
     write(folder / 'trace.json', (json.dumps(trace) + '\n').encode())
     return {'folder': str(folder.relative_to(DECOMP)), 'take': take, 'source_state': source_state,
             'state_sha256': snap['end_p2s_sha256'], 'frames': trace['frames'],

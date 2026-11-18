@@ -32,6 +32,9 @@ const uint8_t *em_aim_fire_tables_bytes(uint32_t a,uint32_t n)
 {
     return a>=0x266930 && n<=sizeof cable_sources && a-0x266930<=sizeof cable_sources-n ? cable_sources+(a-0x266930):NULL;
 }
+/* The exported tables file is not loaded here: the window above is the
+ * fixture's table, so a load request finds nothing more. */
+int em_aim_fire_tables_load(void) { return -1; }
 static void write32(uint8_t *p,uint32_t v) { memcpy(p,&v,4); }
 static int binder(EmActor *a) { assert(a->allocated);bound++;return 0; }
 static int abs_worker(void *c,uint32_t in,uint32_t *out) { (void)c;*out=in&0x7FFFFFFF;return 0; }
@@ -147,7 +150,9 @@ static void transforms(void)
     int32_t key=-1;float point[4]={0,0,.5f,1};
     assert(em_effects_live_001CCF70(point,&key)==0 && key==8);
     assert(em_effects_live_window(0x266930,0x90)==cable_sources);
-    assert(em_effects_live_001CFBE0(0x8000,1,0x260000,block,0)==-1 && S.fault==0x260000);
+    /* A source no window, table or boot constant covers (0x900000 is past
+     * the boot image; 0x260000 is now a boot-constant run) is refused. */
+    assert(em_effects_live_001CFBE0(0x8000,1,0x900000,block,0)==-1 && S.fault==0x900000);
     assert(em_effects_live_001CFA60(block,matrix,0,0)==-1);
     em_effects_live_detach();assert(S.other_tick==NULL && S.other_context==NULL);
     setup();memset(block,0xA5,sizeof block);S.hworkers.w_001CD370=NULL;

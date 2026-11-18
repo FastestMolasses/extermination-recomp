@@ -573,6 +573,10 @@ def run(name, card, beats, timeout):
     env.update(EM_START_AT=card, EM_START_AT_PAD=str(pad), EM_START_AT_PATH=str(path),
                EM_START_AT_RAND=f'{source_rand(beats[0]):08x}',
                EM_START_AT_FADE=str(row0_fade(beats[0])))
+    # EM_MID_ROUTE_TRACE=<file>: the run's per-script-frame position, health,
+    # infection and rand() word (EM_START_AT_TRACE, em_scene_creature_trace).
+    if os.environ.get('EM_MID_ROUTE_TRACE'):
+        env['EM_START_AT_TRACE'] = str(Path(os.environ['EM_MID_ROUTE_TRACE']).resolve())
     if marks:
         env['EM_START_AT_MARKS'] = ','.join(map(str, marks))
     if beats[0].startswith(('a13b_', 'a13c_', 'a13d_')) or beats[-1].startswith(('a13b_', 'a13c_', 'a13d_')):

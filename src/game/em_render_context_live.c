@@ -2215,6 +2215,28 @@ int em_rcl_001D80B0(int32_t id)
     return done(em_frh_001D80B0(&R.frh, id), 0x001D80B0u);
 }
 
+/* 001D8060(id) (byte-matched): the point-light slot lookup over this
+ * context's slots (em_frh_001D8060, the one translation): *slot = the first
+ * of the 32 slots at +0x220 whose +0xC equals id, or 0 (id -1: 0). An
+ * overlay owner's direct call reaches it (AREA16's 0x825780, from 0x824E10;
+ * em_area01_rcl_workers). */
+int em_rcl_001D8060(int32_t id, uint32_t *slot)
+{
+    READY(0);
+    return done(em_frh_001D8060(&R.frh, id, slot), 0x001D8060u);
+}
+
+/* 001D6B10(chan, a1, a2, a3) (byte-matched): 001D6930(a0..a3, D_0026E510)
+ * then 001D1F20(chan) over this context (em_render_context_001D6B10, the
+ * one translation, with the workers 001DE920's call uses); *result =
+ * 001D6930's. AREA17's creature haze 001E04E0 (00133E30) calls it
+ * directly (em_area01_rcl_workers). */
+int em_rcl_001D6B10(int32_t chan, int32_t a1, int32_t a2, int32_t a3, uint32_t *result)
+{
+    READY(1);
+    return done(em_render_context_001D6B10(&R.rc, chan, a1, a2, a3, result), 0x001D6B10u);
+}
+
 /* The point-light slots (001D7BB0 / 001D7C30 / 001D7FA0): the words
  * +0x210 / +0x214, the active slots +0x220 and the staged slots +0x1220 of
  * this context, as the pool's layout (em_point_light.h). */
