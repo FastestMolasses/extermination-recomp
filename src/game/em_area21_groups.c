@@ -8,6 +8,7 @@
 #define A21P_GROUP_82AE50 0x0082AE50u   /* 0x824CF0's packet groups (+0xD 3 / 5) */
 #define A21P_GROUP_82AEE0 0x0082AEE0u
 #define A21P_GROUP_82AF70 0x0082AF70u   /* 0x824CF0's packet group (+0xD 4) */
+#define A21P_GROUP_82B0E0 0x0082B0E0u   /* 0x825B00's packet group */
 
 /* globals */
 #define D_700038A0 0x700038A0u   /* a scratchpad vector (0x8238E0's quad position) */
@@ -56,6 +57,8 @@
 #define F_0_03 0x3CF5C28Fu
 #define F_1_2 0x3F99999Au
 #define F_1_60 0x3C888889u        /* 0.016666668 */
+#define F_1_120 0x3C088889u       /* 0.008333334 */
+#define F_1_5 0x3FC00000u
 
 /* ----------------------------------------------------------------------
  * 0x823580 (decomp overlay_AREA21_func_00823540) — group 0x82B500 (x2).
@@ -466,6 +469,59 @@ int em_area21_groups_00824CF0(const EmArea21GroupsHooks *h, uint32_t a0, uint32_
 }
 
 /* ----------------------------------------------------------------------
+ * 0x825B00 (decomp func_overlay_AREA21_00825AC0, byte-identical C) — no
+ * static reference; the behaviour of an effect node 0014EC00's 001EFD90
+ * starts (g77 row 5893). The AREA19 0x824A90's shape with another packet
+ * builder. Work block +0x1F0: [0] a phase, [1] a seed fraction. State 0:
+ * the +0xD0 matrix from 001029C0 / 00102C58 (+0xC0) / 00102918 (+0xB0),
+ * phase 0, [1] = 00122BB8() / 2^31, state 1, and on into state 1: h =
+ * 001CCF70(+0x100); the packet in the frame (sp - 0x60) from
+ * 001CFAE0(packet, 0, +0xD0, phase, [1], 1.0, 0.1), queued by
+ * 001CFBE0(h, 0, group 0x82B0E0, packet, 0); phase += 1/120 and state 3
+ * unless it is at most 1.5. States 2 / 3: 001AFC10. Others: nothing.
+ * ---------------------------------------------------------------------- */
+static void a21p_825B00(A21P *o, uint32_t self, uint32_t sp)
+{
+    const uint32_t packet = sp - 0x60u;
+    const uint32_t w = self + 0x1F0;
+    const uint32_t state = a21p_u8(o, self + 4);
+
+    if (state == 3 || state == 2) {
+        (void)a21p_c_001AFC10(o, self);
+        return;
+    }
+    if (state == 0) {
+        (void)a21p_c_001029C0(o, self + 0xD0);
+        (void)a21p_c_00102C58(o, self + 0xD0, self + 0xD0, self + 0xC0);
+        (void)a21p_c_00102918(o, self + 0xD0, self + 0xD0, self + 0xB0);
+        a21p_w32(o, w, F_ZERO);
+        int32_t r = 0;
+        (void)a21p_c_00122BB8(o, &r);
+        a21p_w32(o, w + 4, A21P_DIV(A21P_CVT_S_W((uint32_t)r), F_2_31));
+        a21p_w8(o, self + 4, 1);
+    } else if (state != 1) {
+        return;
+    }
+    int32_t handle = 0;
+    (void)a21p_c_001CCF70(o, self + 0x100, &handle);
+    const uint32_t phase = a21p_u32(o, w);
+    const uint32_t seed = a21p_u32(o, w + 4);
+    (void)a21p_c_001CFAE0(o, packet, 0, self + 0xD0, phase, seed, F_ONE, F_0_1);
+    (void)a21p_c_001CFBE0(o, handle, 0, A21P_GROUP_82B0E0, packet, 0);
+    const uint32_t next = A21P_ADD(a21p_u32(o, w), F_1_120);
+    a21p_w32(o, w, next);
+    if (!A21P_LE(next, F_1_5)) a21p_w8(o, self + 4, 3);
+}
+
+int em_area21_groups_00825B00(const EmArea21GroupsHooks *h, uint32_t a0, uint32_t sp, EmArea21GroupsFault *fault)
+{
+    A21P o;
+    if (a21p_begin(&o, h, fault)) return -1;
+    a21p_825B00(&o, a0, sp);
+    return a21p_end(&o);
+}
+
+/* ----------------------------------------------------------------------
  * 0x824FE0 (decomp func_overlay_AREA21_00824FA0, byte-identical C) — the
  * node [43] / [44]'s deferred spawn starts (001B6660 from 0x8262D0; the
  * 001EFD20 effect node 0014EC00 creates, behaviour named only in spawn
@@ -713,5 +769,265 @@ int em_area21_groups_00824FE0(const EmArea21GroupsHooks *h, uint32_t a0, uint32_
     A21P o;
     if (a21p_begin(&o, h, fault)) return -1;
     a21p_824FE0(&o, a0, sp);
+    return a21p_end(&o);
+}
+
+/* ----------------------------------------------------------------------
+ * 0x823B40 (decomp func_overlay_AREA21_00823B00, NEARMISS 99.33%: only
+ * register choices around the 001281C0 call differ) — no static
+ * reference; the behaviour of the effect node 0x824FE0's 001EFD20 starts
+ * (g77 row 12708). Work block +0x1F0: [0] a phase, [1] a seed fraction,
+ * [2] a seed. State 0: the +0xD0 matrix from 001029C0 / 00102C58 (+0xC0) /
+ * 00102918 (+0xB0), phase 0, [1] = 00122BB8() / 2^31, [2] = 00122BB8(),
+ * state 1, and on into state 1, by +0xD:
+ *  0: h = 001CCF70(+0x100); the packet in the frame (sp - 0x70) from
+ *     001CFB50(packet, 0, +0xD0, phase, [1], 1.0, 0.1, 5.0), queued by
+ *     001CFBE0(h, 1, group 0x82A660, packet, 0); phase += 0.01, state 3
+ *     unless it is at most 2.0.
+ *  1: ten particles from the seed [2] (read once; each random is bits
+ *     16..31 / 65535 + 0.0001, then seed = seed * 37 + 11; the seed is not
+ *     stored back). Spread (5, 0.2, 5, 1) at 0x700038A0, the size rows
+ *     (2, 2.5, 3.5, 1) / (0, 0, 0, 1) at 0x700036A0. Per particle: life =
+ *     phase - 0.5 * r0, -1 outside 0..1, else less its 001281C0 (float to
+ *     unsigned) part; roll 0x70003A24 = pi * (360 * r1 - 180) / 180; a =
+ *     2pi * r2 - pi, 0x70003A20 = life, b = 0.5 * (pi * r3); 0x700038B0 =
+ *     (5 * 0011DE90(a), 0.2 * 0011DE90(b), 5 * 0011E2A8(a), 1) scaled by
+ *     life and moved through the +0xD0 matrix (VU0 inline: the y term gets
+ *     0 * life^2 added); the size 0x700038C0 = the first row (00102948) up
+ *     to life 0.5, after that the rows blended by (life - 0.5) / 0.5 and
+ *     clamped to 0..255 (VU0 inline; the blend pair lives at sp - 0x10:
+ *     [0] the weight, [1] 255.0, [2..3] never written but read with the
+ *     quadword). A particle with life below 0 stops there; else the draw
+ *     matrix 0x700036E0 = identity, roll, translate by 0x700038B0, its rows
+ *     scaled by the size (00102900); h = 001CA7B0(0x70003710, 10.0); when
+ *     h >= 0 the colour +0x80..+0x8C times (1 - life) at 0x700038D0 goes
+ *     to 001C7900(0x700036E0, 0x700038D0, 0x3F5, 0) and 001CA940(h,
+ *     001C6120(D_0028A56C, 6)). Then phase += 0.015, state 3 unless it is
+ *     at most 1.5.
+ *  2: as 0 with (1.0, 1e-6, 3.0): group 0x82A6F0 and phase += 0.025 when
+ *     +0x38 is 1, else group 0x82A780 and += 0.015; state 3 unless the
+ *     phase is at most 1.2.
+ *  Other kinds: nothing more. States 2 / 3: 001AFC10. Others: nothing.
+ * The VU0 registers (vf1..vf3, vf28..vf31, ACC) are this function's
+ * scratch: each sequence loads what it reads, so they are locals here;
+ * the module keeps no VU state between calls.
+ * ---------------------------------------------------------------------- */
+#define A21P_GROUP_82A660 0x0082A660u   /* 0x823B40's packet groups (+0xD 0 / 2) */
+#define A21P_GROUP_82A6F0 0x0082A6F0u
+#define A21P_GROUP_82A780 0x0082A780u
+#define D_0028A56C 0x0028A56Cu         /* 001C6120's first argument */
+#define D_700036E0 0x700036E0u         /* the particle draw matrix (four rows) */
+#define D_700038B0 0x700038B0u         /* the particle position */
+#define D_700038C0 0x700038C0u         /* the particle size */
+#define D_700038D0 0x700038D0u         /* the particle colour */
+#define F_M1 0xBF800000u
+#define F_0_2 0x3E4CCCCDu
+#define F_2_5 0x40200000u
+#define F_3 0x40400000u
+#define F_3_5 0x40600000u
+#define F_0_025 0x3CCCCCCDu
+#define F_180 0x43340000u
+#define F_255 0x437F0000u
+#define F_360 0x43B40000u
+
+static const uint32_t A21P_VF0[4] = {F_ZERO, F_ZERO, F_ZERO, F_ONE};
+
+/* One VU0 macro instruction; every form here is a measured one, so a
+ * refusal is a fail-stop fault at 0x823B40, never a guess. */
+static void a21p_823B40_vu(A21P *o, em_vu_op op, unsigned dest, int bc, const uint32_t fs[4],
+                           const uint32_t ft[4], const uint32_t acc[4], uint32_t dst[4])
+{
+    if (a21p_failed(o)) return;
+    if (em_vu_vec_bits(op, dest, bc, fs, ft, 0, acc, dst) != EM_EE_FLOAT_OK)
+        (void)a21p_latch(o, 0x00823B40u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
+}
+
+static void a21p_823B40_lq(A21P *o, uint32_t a, uint32_t v[4])
+{
+    for (unsigned k = 0; k < 4; k++) v[k] = a21p_u32(o, a + 4 * k);
+}
+
+static void a21p_823B40_sq(A21P *o, uint32_t a, const uint32_t v[4])
+{
+    for (unsigned k = 0; k < 4; k++) a21p_w32(o, a + 4 * k, v[k]);
+}
+
+/* the random of a seed: bits 16..31 / 65535 + 0.0001 */
+static uint32_t a21p_823B40_rand(uint32_t seed)
+{
+    return A21P_ADD(A21P_DIV(A21P_CVT_S_W((seed >> 16) & 0xFFFFu), F_65535), F_0_0001);
+}
+
+/* +0xD 0 and 2: one packet for a group */
+static void a21p_823B40_packet(A21P *o, uint32_t self, uint32_t packet, uint32_t group, uint32_t k1,
+                               uint32_t k2, uint32_t step, uint32_t bound)
+{
+    const uint32_t w = self + 0x1F0;
+    int32_t handle = 0;
+    (void)a21p_c_001CCF70(o, self + 0x100, &handle);
+    const uint32_t phase = a21p_u32(o, w);
+    const uint32_t seed = a21p_u32(o, w + 4);
+    (void)a21p_c_001CFB50(o, packet, 0, self + 0xD0, phase, seed, F_ONE, k1, k2);
+    (void)a21p_c_001CFBE0(o, handle, 1, group, packet, 0);
+    const uint32_t next = A21P_ADD(a21p_u32(o, w), step);
+    a21p_w32(o, w, next);
+    if (!A21P_LE(next, bound)) a21p_w8(o, self + 4, 3);
+}
+
+static void a21p_823B40_particles(A21P *o, uint32_t self, uint32_t pair)
+{
+    const uint32_t w = self + 0x1F0;
+    a21p_w32(o, D_700038A0, F_5);
+    a21p_w32(o, D_700038A0 + 4, F_0_2);
+    a21p_w32(o, D_700038A0 + 8, F_5);
+    a21p_w32(o, D_700038A0 + 12, F_ONE);
+    a21p_w32(o, D_700036A0, F_TWO);
+    a21p_w32(o, D_700036A0 + 4, F_2_5);
+    a21p_w32(o, D_700036A0 + 8, F_3_5);
+    a21p_w32(o, D_700036A0 + 12, F_ONE);
+    a21p_w32(o, D_700036A0 + 16, F_ZERO);
+    a21p_w32(o, D_700036A0 + 20, F_ZERO);
+    a21p_w32(o, D_700036A0 + 24, F_ZERO);
+    a21p_w32(o, D_700036A0 + 28, F_ONE);
+    uint32_t seed = a21p_u32(o, w + 8);
+    for (int i = 0; i < 10 && !a21p_failed(o); i++) {
+        const uint32_t r0 = a21p_823B40_rand(seed);
+        seed = seed * 37u + 11u;
+        uint32_t life = A21P_SUB(a21p_u32(o, w), A21P_MUL(F_0_5, r0));
+        if (A21P_LT(life, F_ZERO) || A21P_LT(F_ONE, life)) {
+            life = F_M1;
+        } else {
+            int32_t whole = 0;
+            (void)a21p_c_001281C0(o, life, &whole);
+            life = A21P_SUB(life, A21P_CVT_S_W(whole));
+        }
+        const uint32_t r1 = a21p_823B40_rand(seed);
+        seed = seed * 37u + 11u;
+        const uint32_t roll = A21P_DIV(A21P_MUL(F_PI, A21P_SUB(A21P_MUL(F_360, r1), F_180)), F_180);
+        const uint32_t r2 = a21p_823B40_rand(seed);
+        seed = seed * 37u + 11u;
+        const uint32_t a = A21P_SUB(A21P_MUL(F_2PI, r2), F_PI);
+        a21p_w32(o, D_70003A20, life);
+        a21p_w32(o, D_70003A24, roll);
+        const uint32_t r3 = a21p_823B40_rand(seed);
+        seed = seed * 37u + 11u;
+        const uint32_t b = A21P_MUL(F_0_5, A21P_MUL(F_PI, r3));
+        uint32_t c = 0;
+        (void)a21p_c_0011DE90(o, a, &c);
+        a21p_w32(o, D_700038B0, A21P_MUL(a21p_u32(o, D_700038A0), c));
+        (void)a21p_c_0011DE90(o, b, &c);
+        a21p_w32(o, D_700038B0 + 4, A21P_MUL(a21p_u32(o, D_700038A0 + 4), c));
+        (void)a21p_c_0011E2A8(o, a, &c);
+        const uint32_t spread_z = a21p_u32(o, D_700038A0 + 8);
+        const uint32_t s = a21p_u32(o, D_70003A20);
+        a21p_w32(o, D_700038B0 + 8, A21P_MUL(spread_z, c));
+        a21p_w32(o, D_700038B0 + 12, F_ONE);
+        {
+            /* the position: m * (v.xyz * s, v.w), then y += 0 * s * s */
+            uint32_t v1[4], m28[4], m29[4], m30[4], m31[4], acc[4];
+            uint32_t v2[4] = {s, F_ZERO, F_ZERO, F_ZERO}, v3[4] = {F_ZERO, F_ZERO, F_ZERO, F_ZERO};
+            a21p_823B40_lq(o, D_700038B0, v1);
+            a21p_823B40_lq(o, self + 0xD0, m28);
+            a21p_823B40_lq(o, self + 0xE0, m29);
+            a21p_823B40_lq(o, self + 0xF0, m30);
+            a21p_823B40_lq(o, self + 0x100, m31);
+            a21p_823B40_vu(o, EM_VU_MULBC, 14, 0, v1, v2, NULL, v1);
+            a21p_823B40_vu(o, EM_VU_MULBC, 8, 0, v2, v2, NULL, v2);
+            a21p_823B40_vu(o, EM_VU_MULBC, 8, 0, v3, v2, NULL, v3);
+            a21p_823B40_vu(o, EM_VU_MULABC, 15, 0, m28, v1, NULL, acc);
+            a21p_823B40_vu(o, EM_VU_MADDABC, 15, 1, m29, v1, acc, acc);
+            a21p_823B40_vu(o, EM_VU_MADDABC, 15, 2, m30, v1, acc, acc);
+            a21p_823B40_vu(o, EM_VU_MADDBC, 15, 3, m31, A21P_VF0, acc, v1);
+            a21p_823B40_vu(o, EM_VU_ADDBC, 4, 0, v1, v3, NULL, v1);
+            a21p_823B40_sq(o, D_700038B0, v1);
+        }
+        const uint32_t now = a21p_u32(o, D_70003A20);
+        if (A21P_LT(F_0_5, now)) {
+            a21p_w32(o, pair, A21P_DIV(A21P_SUB(now, F_0_5), F_0_5));
+            a21p_w32(o, pair + 4, F_255);
+            /* the size: clamp(row0 + (row1 - row0) * pair.x, 0, pair.y) */
+            uint32_t v1[4], m28[4], m29[4], k[4];
+            a21p_823B40_lq(o, D_700036A0, m28);
+            a21p_823B40_lq(o, D_700036A0 + 16, m29);
+            a21p_823B40_lq(o, pair, k);
+            a21p_823B40_vu(o, EM_VU_SUB, 15, EM_VU_NO_BC, m29, m28, NULL, v1);
+            a21p_823B40_vu(o, EM_VU_MULBC, 15, 0, v1, k, NULL, v1);
+            a21p_823B40_vu(o, EM_VU_ADD, 15, EM_VU_NO_BC, v1, m28, NULL, v1);
+            for (unsigned n = 0; n < 4; n++) v1[n] = em_vu_max_bits(v1[n], A21P_VF0[0]);
+            for (unsigned n = 0; n < 4; n++) v1[n] = em_vu_min_bits(v1[n], k[1]);
+            a21p_823B40_sq(o, D_700038C0, v1);
+        } else {
+            (void)a21p_c_00102948(o, D_700038C0, D_700036A0);
+        }
+        if (A21P_LT(a21p_u32(o, D_70003A20), F_ZERO)) continue;
+        (void)a21p_c_001029C0(o, D_700036E0);
+        (void)a21p_c_00102BB0(o, D_700036E0, D_700036E0, a21p_u32(o, D_70003A24));
+        (void)a21p_c_00102918(o, D_700036E0, D_700036E0, D_700038B0);
+        (void)a21p_c_00102900(o, D_700036E0, D_700036E0, a21p_u32(o, D_700038C0));
+        (void)a21p_c_00102900(o, D_700036E0 + 0x10, D_700036E0 + 0x10, a21p_u32(o, D_700038C0 + 4));
+        (void)a21p_c_00102900(o, D_700036E0 + 0x20, D_700036E0 + 0x20, a21p_u32(o, D_700038C0 + 8));
+        int32_t h = 0;
+        (void)a21p_c_001CA7B0(o, D_700036E0 + 0x30, F_10, &h);
+        if (h < 0) continue;
+        const uint32_t q = A21P_SUB(F_ONE, a21p_u32(o, D_70003A20));
+        for (unsigned n = 0; n < 4; n++)
+            a21p_w32(o, D_700038D0 + 4 * n, A21P_MUL(a21p_u32(o, self + 0x80 + 4 * n), q));
+        (void)a21p_c_001C7900(o, D_700036E0, D_700038D0, 0x3F5, 0);
+        int32_t v = 0;
+        (void)a21p_c_001C6120(o, a21p_s32(o, D_0028A56C), 6, &v);
+        (void)a21p_c_001CA940(o, h, v);
+    }
+    const uint32_t next = A21P_ADD(a21p_u32(o, w), F_0_015);
+    a21p_w32(o, w, next);
+    if (!A21P_LE(next, F_1_5)) a21p_w8(o, self + 4, 3);
+}
+
+static void a21p_823B40(A21P *o, uint32_t self, uint32_t sp)
+{
+    const uint32_t packet = sp - 0x70u;
+    const uint32_t w = self + 0x1F0;
+    const uint32_t state = a21p_u8(o, self + 4);
+
+    if (state == 3 || state == 2) {
+        (void)a21p_c_001AFC10(o, self);
+        return;
+    }
+    if (state == 0) {
+        (void)a21p_c_001029C0(o, self + 0xD0);
+        (void)a21p_c_00102C58(o, self + 0xD0, self + 0xD0, self + 0xC0);
+        (void)a21p_c_00102918(o, self + 0xD0, self + 0xD0, self + 0xB0);
+        a21p_w32(o, w, F_ZERO);
+        int32_t r = 0;
+        (void)a21p_c_00122BB8(o, &r);
+        a21p_w32(o, w + 4, A21P_DIV(A21P_CVT_S_W((uint32_t)r), F_2_31));
+        (void)a21p_c_00122BB8(o, &r);
+        a21p_w32(o, w + 8, (uint32_t)r);
+        a21p_w8(o, self + 4, 1);
+    } else if (state != 1) {
+        return;
+    }
+    switch (a21p_u8(o, self + 0xD)) {
+    case 0:
+        a21p_823B40_packet(o, self, packet, A21P_GROUP_82A660, F_0_1, F_5, F_0_01, F_TWO);
+        break;
+    case 1:
+        a21p_823B40_particles(o, self, sp - 0x10u);
+        break;
+    case 2:
+        if (a21p_s32(o, self + 0x38) == 1)
+            a21p_823B40_packet(o, self, packet, A21P_GROUP_82A6F0, F_1E_6, F_3, F_0_025, F_1_2);
+        else
+            a21p_823B40_packet(o, self, packet, A21P_GROUP_82A780, F_1E_6, F_3, F_0_015, F_1_2);
+        break;
+    default:
+        break;
+    }
+}
+
+int em_area21_groups_00823B40(const EmArea21GroupsHooks *h, uint32_t a0, uint32_t sp, EmArea21GroupsFault *fault)
+{
+    A21P o;
+    if (a21p_begin(&o, h, fault)) return -1;
+    a21p_823B40(&o, a0, sp);
     return a21p_end(&o);
 }

@@ -28,7 +28,7 @@ reads).
 | `em_area21_overlay` (+ `_cannon.c`) | the Gatling [62] 0x8297C0 with 0x8260A0, 0x829310 (the rate-limited step on the table 0x82DB10, shared with the cannon), 0x8294C0, 0x829590, 0x829F10, 0x829F40; the cannon [61] 0x828700 with 0x828410, 0x828E80 and the projectile 0x828F30 (the code pointer 0x828E80 installs) | 0x8297C0 takes the entry sp: 0x829F40 keeps a matrix and a packet in its frame |
 | `em_area21_owners` | [42] 0x8261A0; [43] / [44] 0x8262D0 with 0x826310 and 0x8264D0; [45] 0x8266F0 with 0x826840 and 0x8268F0; script 0x82BEC0's op09 callbacks 0x8269A0 and 0x8269F0; [53] 0x827040 (the ending request) with script 0x82CBD0's op09 callback 0x827250; [58] 0x827CD0 | none |
 | `em_area21_doors` | the doors [30] 0x826BB0 and [27] / [33] 0x826E60; [54] / [55] 0x82A1D0; the rounds 0x825C70 with its code pointer 0x825C60; [47] 0x8272C0, [49] / [50] 0x8273C0, [51] 0x827640, [56] 0x827880, [57] 0x827A30, [59] / [60] 0x827E70, the deferred group's 0x828350 | none; the four jump-table dispatchers (tables 0x82DC00, 0x82DC20, 0x82DC40, 0x82DC60) are switches |
-| `em_area21_groups` | the members of groups 0x82B500 / 0x82BA70: 0x823580, 0x8237B0, 0x823860, 0x8238E0, 0x823AA0; the sub 0 placement [52] 0x8243B0 (lane PORT-A21-52); the boss fight's effect nodes 0x824CF0 and 0x824FE0 (no static reference, reached in g77: lane PORT-A21-BOSS) | 0x823580 (a position at sp - 0x10), 0x8243B0, 0x824CF0 and 0x824FE0 (a packet at sp - 0x60) take the entry sp |
+| `em_area21_groups` | the members of groups 0x82B500 / 0x82BA70: 0x823580, 0x8237B0, 0x823860, 0x8238E0, 0x823AA0; the sub 0 placement [52] 0x8243B0 (lane PORT-A21-52); the boss fight's effect nodes 0x824CF0 and 0x824FE0 (no static reference, reached in g77: lane PORT-A21-BOSS), 0x825B00 (lane PORT-A21-PHASES) and 0x823B40 (lane PORT-A21-3B40) | 0x823580 (a position at sp - 0x10), 0x8243B0, 0x824CF0, 0x824FE0 and 0x825B00 (a packet at sp - 0x60) and 0x823B40 (a packet at sp - 0x70, a blend pair at sp - 0x10) take the entry sp |
 
 [52] 0x8243B0 (decomp func_overlay_AREA21_00824370, NEARMISS C at 99.48%:
 two loop-label padding nops and integer temporaries two argument registers
@@ -37,8 +37,37 @@ compiler's float -> unsigned helper 001281C0 (hook, run as original code in
 the oracle); the packet lives at sp - 0x60 (frame 0x120), the tables and
 groups it names are at their runtime addresses (data is not shifted by the
 0x40 of the decomp's code names: the oracle caught a first try that did).
-Not translated: 0x823B40 and 0x825B00 (no static reference, not reached
-so far). 0x824FE0 is translated since lane PORT-A21-BOSS (below).
+0x824FE0 is translated since lane PORT-A21-BOSS, 0x825B00 since lane
+PORT-A21-PHASES and 0x823B40 since lane PORT-A21-3B40 (below): no table
+names them statically, the boss fight's effect nodes run them.
+
+**0x823B40** (decomp func_overlay_AREA21_00823B00, NEARMISS 99.33%: only
+register choices around the 001281C0 call) is the behaviour of the effect
+node 0x824FE0's 001EFD20 starts (g77 row 12708). Its three kinds by +0xD:
+0 and 2 queue one 001CFB50 packet a frame (groups 0x82A660; 0x82A6F0 when
++0x38 is 1, else 0x82A780) until the phase passes 2.0 / 1.2; 1 draws ten
+particles a frame from a seed read once (never stored back), each placed
+through the node's +0xD0 matrix and sized by a blend of two scratchpad rows
+(both VU0 inline sequences computed with em_vu_vec_bits / em_vu_max_bits /
+em_vu_min_bits on bit patterns; the VU registers are locals of each
+sequence) and drawn by 001CA7B0 / 001C7900 / 001C6120 / 001CA940, until
+the phase passes 1.5. Frame 0xE0: the packet at sp - 0x70, the blend pair
+at sp - 0x10 (its last two words are read with the quadword, never
+written). The oracle (groups test, 260 of its cases) runs the original
+words with sinf 0011E2A8 and the row scale 00102900 as original code:
+states 0..3 and others, kinds 0 / 1 / 2 and others, +0x38 1 and not, each
+phase bound one ulp either side, the first particle's life at exactly 0,
+0.5 and 1 with phases one and two ulps either side, lives below 0, in 0..1
+and above 1, 001CA7B0 negative / zero / positive, a matrix with a -0 y
+column (the zero gravity term), saturating colours and matrices, and
+Scribbles (the phase, life, colour, size rows, matrix and D_0028A56C
+rewritten by draw callees; the seed is not reread). 474 of 474 reachable
+words. Mutants (20 of 20 caught): the steps 0.015 / 0.025 / 0.01 (one ulp,
+each kind), 1/65535 and 0.0001 (one ulp), the seed step 37 / 11, 0x3F5,
+the 255 clamp (one ulp), the 0 clamp dropped, the zero gravity term
+dropped, the 0.5 / 0 / 1 life compares with <= for <, h < 0 as <= 0, the
+cull radius 10.0, the seed stored back, the fptoui part dropped, +0x38 == 1
+as != 0.
 
 ## Evidence
 
@@ -65,7 +94,7 @@ the callee inventory and the fail-stop contract.
 | test_area21_overlay_reference | 518 / 617 cases | every reachable word of the 11 entries (1643) |
 | test_area21_owners_reference | 329 / 581 | every word of the 12 entries (635) |
 | test_area21_doors_reference | 860 / 1112 | every word but three dead delay slots named in the test (0x82744C: 0x8273C0's table bound after `& 7` never fails; 0x827B70 / 0x827F8C: an effect loop index only 0..2) |
-| test_area21_groups_reference | 1195 / 1342 | every word of the 8 entries but one dead delay slot named in the test (0x825544: 0x824FE0's mode 10 switch on its loop index, only 0 or 1); 0x8243B0's 513, 0x824FE0's 609 |
+| test_area21_groups_reference | 1511 / 1721 | every word of the 10 entries but one dead delay slot named in the test (0x825544: 0x824FE0's mode 10 switch on its loop index, only 0 or 1); 0x8243B0's 513, 0x824FE0's 609, 0x823B40's 474 |
 
 Lane PORT-A21-52 ran five mutants of 0x8243B0 (the 0.75 scale, a step list, a phase increment, the handle compare, the fourth random's source): all were caught. Each sub-lane also ran a few mutants (load order, limits off by one ulp,
 frame offsets, constants): each was caught but equivalent rewrites (a
@@ -401,25 +430,134 @@ point), then from about row 1450 y rises (35.01 to 39.80): a climb.
   func_overlay_AREA21_00825AC0; listed above as "not translated, no static
   reference"): untranslated, fail-stop. g78 .. g80 not reached.
 
+## Haze ring (lane PORT-A21-RING, 2026-11-18, branch `a21ring`)
+
+The effect node behaviour **001E76A0** (a word of 001EF9D0's kind table;
+the boss fight starts one at g77 row 5922, node 0x7BCB50) is translated in
+`em_haze_ring` (header: every function's behaviour) from the decomp C:
+001E76A0 and its ring **001E0AC0** (byte-identical C) and the sprite
+**001E0750** (NEARMISS 99.75%, VU0; register choices only, the original
+instructions were followed: x and y are scaled by Q, then w loses vf3.x
+(the GPR the zero float went into), Q is taken again and only then z is
+scaled). The node runs 300 frames (+0x20 from 300, state 3 at <= 0, then
+001AFC10); each frame 001028B8 moves its point by +0xC0 and 001E0AC0 draws
+64 screen-sampling sprites on an ellipse (75 by 30) around it on channel 3
+(001D1F80 / 001D7510 / 001D1FF0 first, a closing tag, then 001CAAC0). Each
+drawn sprite takes two rand() words (00122BB8) per vertex, 12 in all.
+
+- **Binding**: `em_haze_ring_live` over the area runtime, from
+  dispatch_area21 (em_area01_runtime_second_half.inc). Every hook re-enters
+  em_area01_runtime_call by address; 001D7510 is newly exported
+  (em_rcl_001D7510) and routed with 001D1F80 / 001D1FF0 in
+  em_area01_rcl_workers; D_0026E9A0 and D_00253530 come from the boot
+  constants; rand is the shared em_random.
+- **Evidence**: `make test-haze-ring-reference`
+  (tools/test_haze_ring_reference.py): the original instructions of the
+  three functions (001E0AC0 running 001E0750, 001E76A0 running both;
+  001CD370 and float_to_int as original code) over designed states (node
+  states 0..3 and others, the timer at 1.0, one ulp either side, 0, -0;
+  points inside, across and outside the clip volume and behind the camera;
+  the ELF's corner pairs or designed ones; fog ramps over both bounds; rand
+  words and sin / cos results true or extreme). Hooks scripted on both
+  sides with arguments and stack pointers compared. Compared: every byte of
+  the windows (no original store outside them), the calls, vf1, vf2,
+  vf3.x / .y, vf23..vf31, ACC, Q, CLIP. Quick 154 cases (~4 s),
+  EM_TEST_FULL=1 744; 363 of 363 words executed. EM_HAZE_RING_MUTANTS=1:
+  12 of 12 caught (300 one ulp, the s jitter span one ulp, the t jitter
+  base one ulp, the jitter scale, a corner offset index, the closing tag
+  0x60, the ring's fy, the step count 64, the w reduction's lane, the timer
+  compare < for <=, the fog max bound, the scale factor 8 one ulp).
+- **vf23 (open item)**: 001E0750 reads it as the logic walk left it.
+  Measured in the original (fork, hidden replay of g77's pad log from its
+  start state, a watch table at every 001E0750 entry over rows
+  5922..6281: 57600 calls, all from 001E0AC0, 900 rings, up to three rings
+  a frame): constant within a ring; equal to the fog quadword ctx +0xA0 in
+  676 rings, another owner's leftover (it looks like a matrix row, 184
+  distinct values) in 224, in no fixed position within the frame. The port
+  starts every ring from ctx +0xA0. vf23 shapes only the fog lane: ACC.w,
+  vf2.w and the scratch word 0x7000360C (the packets take x, y, z only).
+  Exact values need the last vf23 writer of the logic walk modelled.
+- vf3.z / .w (the upper half of that GPR, never set by 001E0750) are left
+  as they were.
+
+Chain g20 (card g73): g77 now 12090 / 12090 compared rows on the row
+(rand() word included) to row 12089, where 0x8266F0's 001BA1F0 faults at
+0x8269F0 (record 0x82C340; em_area11 script host). g73..g76 as before.
+
+Chain g20 after 0x823B40 (lane PORT-A21-3B40): g77 12864 / 12864 compared
+rows on the row (to its end); g78 stopped at row 12749, where [45]
+0x8266F0's script (record 0x82C740) runs the boot worker 001B7670 (the
+0x70003B91 latch, em_area00_low's oracle-checked translation): the boot
+script workers now serve AREA21 too (em_area01_script_workers' area gate).
+Then g78 15530 / 15530 on the row; g79 578 compared, 429 on the row: the
+rand() word differs at row 418, the position leaves at row 519 (0.8 away)
+and the port stops at row 667, where 001869A0 (player equipment,
+em_equipment_live) faults at address 0x7A6DE4. g80 not reached.
+
+## Phases (lane PORT-A21-PHASES, 2026-11-18, branch `a21phases`)
+
+- **0x825B00** (decomp func_overlay_AREA21_00825AC0, byte-identical C) in
+  `em_area21_groups`: the effect node 0014EC00's 001EFD90 starts (g77 row
+  5893). The AREA19 0x824A90's shape: state 0 builds the +0xD0 matrix
+  (001029C0 / 00102C58 +0xC0 / 00102918 +0xB0), phase 0, +0x1F4 = rand /
+  2^31; state 1 queues 001CFAE0(packet at sp - 0x60, 0, +0xD0, phase,
+  +0x1F4, 1.0, 0.1) through 001CFBE0(001CCF70(+0x100), 0, group 0x82B0E0,
+  packet, 0), phase += 1/120, state 3 above 1.5; states 2 / 3 001AFC10. New
+  hook 001CFAE0. Bound in dispatch_area21 (frame 0xA0) and
+  em_scene_bindings. Oracle (test_area21_groups_reference): 71 of 71 words;
+  mutants caught: the 1/120 step (one ulp), 001CFBE0's mode 0, the 1.0 /
+  0.1 order, the seed store; equivalent: `!(x <= 1.5)` as `1.5 < x` (no
+  NaN on the EE).
+- **AREA21's op09 callbacks** 0x8269A0 / 0x8269F0 (script 0x82BEC0) and
+  0x827250 (script 0x82CBD0) were translated and bound in dispatch_area21
+  but em_area01_script_live's record allow list refused them (g77 row
+  12089); area 0x15 now passes them.
+- **D_00275C48** (001F3620's splash count, .bss; a shell casing landing in
+  water bumps it and spawns 0xDB on odd counts; g77 row 12323): a view in
+  em_aim_fire_runtime, zero at boot. It is never reset; the card sources
+  g72 end and g76 end hold 0 (g77 end 24), so chain g20 starts it exactly.
+- Sub-lanes: Haze ring (above) and 0x823B40 (PORT-A21-3B40, in this
+  doc's Modules / Evidence), which also opened the boot script workers to
+  AREA21 (001B7670, g78 row 12749).
+- **Chain g20** (card g73): g73 4191 / 4192, g74 3736 / 3736 (hits equal),
+  g75 3864 / 3864, g76 6383 / 6383 (rand() word at row 6386 as before),
+  **g77 12864 / 12864 to its end** (hit at row 3533, 95.0, equal), **g78
+  15530 / 15530 to its end** (the original's hit at row 1875, 80.0, is
+  matched), g79 578 compared, 429 on the row, stop at row 667, g80 not
+  reached.
+- **g79 divergence** (not diagnosed): the rand() word differs first at
+  row 418 (the frame before drew a different number of times; positions
+  still on the row), the position leaves at row 519 (0.801 away), the
+  heading at row 603; the port's first hit lands at row 520 (65.0) against
+  the original's 519 (65.0), one frame late. At row 667 001869A0 (player
+  equipment, em_equipment_live) faults at 0x7A6DE4. g79 is not in SUBS
+  (its background asset differs, Live above); whether that or another
+  drawer explains the extra or missing draw at row 417 needs an
+  EM_RAND_TRACE run against the take's rows (tools/rand_order.py).
+- **g80** (the ending, the credits and the clear save): not reached. The
+  take's movie table (the word 0x821058) stays 0 for all 28268 rows: the
+  ending plays no PSS movie, so no movie export is needed. The ending
+  pictures are a screen module (001AD740 state 3 calls 001FF080(0, 0x37):
+  a DATA.DAT module / chunk 0x37 through frame-task slot 2); the credits'
+  music and the card write (00225A00 / 00225AC0) are to be checked when
+  the chain gets there.
+- Not done: g76's extra 0020A7A0 draw at row 6385 (The boss fight, last
+  item).
+
 ## Next
 
-0. Next: **0x825B00** (g77 row 5893, the effect node 0014EC00 starts),
-   then chain g20 on through g78 .. g80; the rand() word at g76 row 6386.
-1. (done) 001741D0 and the seated frame's workers (The Gatling seat).
-   (done) 001E1E60's flag-0x23 workers (Far light); (done) 001E1AD0's
-   flag-0x22 path (Grid); (done) 001AAC00 with its tests, 001EB440 /
-   001EB250 (Use and the boss effects); (done) 0x824FE0, 0x824CF0,
-   001EB600 and cue 0xC (The boss fight). Next: **001741D0** (+5 0x23,
-   byte-identical C; g77 row 4354 takes its +1F0 0x38 Gatling branch, a
-   six-step table switch; the other branch is the 0x4A placement), most
-   naturally in em_player_running_jump beside 001747F0 (its workers
-   already cover 001749A0, 00178B90, 00175900, sin / cos / atan2 / sqrt
-   and *(*D_00275B40 + 8)); new: 00174A50, *(*D_00275B40 + 0), the pad
-   test D_00810E74 & 0x70003B76, 001028D0 / 00102760 / 001026A0 /
-   00103200 into 0x700038A0..DC, 001B12B0, 001B1470. Then the extra
-   0020A7A0 draw at g76 row 6385 (The boss fight, last item), then chain
-   g20 on through g78 .. g80.
+0. Next: g79's first rand() difference at row 418 and the 001869A0
+   fault at row 667 (Phases), then g80 (the ending module 0x37, the
+   credits, the clear save); the rand() word at g76 row 6386.
+1. (done) 0x825B00, the AREA21 op09 callbacks, D_00275C48 (Phases);
+   001E76A0 (Haze ring); 0x823B40 and 001B7670's gate (lane
+   PORT-A21-3B40); 001741D0 and the seated frame's workers (The Gatling
+   seat); 001E1E60's flag-0x23 workers (Far light); 001E1AD0's flag-0x22
+   path (Grid); 001AAC00, 001EB440 / 001EB250 (Use and the boss effects);
+   0x824FE0, 0x824CF0, 001EB600 and cue 0xC (The boss fight).
 1b. 001D7410's Z read-back (Far light, "Not modelled").
+1c. The haze ring's vf23 (Haze ring, open item): the logic walk's last
+    vf23 writer before each ring.
 2. Run the live owners of that recording through these oracles (as
    test_area14_overlay_reference's `live/` cases).
 3. (done) 0x8243B0, [52], lane PORT-A21-52.

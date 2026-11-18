@@ -2080,6 +2080,13 @@ int em_rcl_001D1FF0(int32_t chan, int32_t a1)
     READY(1);
     return done(em_load_veil_particles_001D1FF0(&R.veil, chan, a1), 0x001D1FF0u);
 }
+/* 001D7510(chan, a1, a2) for an owner's direct call (AREA21's ring 001E0AC0,
+ * em_haze_ring): rcl_001D7510 over this storage. */
+int em_rcl_001D7510(int32_t chan, int32_t a1, int32_t a2)
+{
+    READY(1);
+    return rcl_001D7510(chan, a1, a2) < 0 ? -1 : 0;
+}
 int em_rcl_001D1F20(int32_t chan)
 {
     READY(1);

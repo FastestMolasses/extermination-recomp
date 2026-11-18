@@ -117,6 +117,14 @@ static inline int a21p_c_001026A0(A21P *o, uint32_t a0, uint32_t a1, uint32_t a2
     return 0;
 }
 
+static inline int a21p_c_00102900(A21P *o, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    if (a21p_failed(o)) return -1;
+    if (!o->h->w_00102900) return a21p_latch(o, 0x00102900u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
+    if (o->h->w_00102900(o->h->ctx, a0, a1, a21p_float(a2)) < 0) return a21p_latch(o, 0x00102900u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
+    return 0;
+}
+
 static inline int a21p_c_00102918(A21P *o, uint32_t a0, uint32_t a1, uint32_t a2)
 {
     if (a21p_failed(o)) return -1;
@@ -167,6 +175,16 @@ static inline int a21p_c_0011DE90(A21P *o, uint32_t a0, uint32_t *out)
     return 0;
 }
 
+static inline int a21p_c_0011E2A8(A21P *o, uint32_t a0, uint32_t *out)
+{
+    if (a21p_failed(o)) return -1;
+    if (!o->h->w_0011E2A8) return a21p_latch(o, 0x0011E2A8u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
+    float r = 0;
+    if (o->h->w_0011E2A8(o->h->ctx, a21p_float(a0), &r) < 0) return a21p_latch(o, 0x0011E2A8u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
+    *out = a21p_bits(r);
+    return 0;
+}
+
 static inline int a21p_c_00122BB8(A21P *o, int32_t *out)
 {
     if (a21p_failed(o)) return -1;
@@ -191,11 +209,43 @@ static inline int a21p_c_001AFC10(A21P *o, uint32_t a0)
     return 0;
 }
 
+static inline int a21p_c_001C6120(A21P *o, int32_t a0, int32_t a1, int32_t *out)
+{
+    if (a21p_failed(o)) return -1;
+    if (!o->h->w_001C6120) return a21p_latch(o, 0x001C6120u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
+    if (o->h->w_001C6120(o->h->ctx, a0, a1, out) < 0) return a21p_latch(o, 0x001C6120u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
+    return 0;
+}
+
 static inline int a21p_c_001C6190(A21P *o, uint32_t a0, int32_t *out)
 {
     if (a21p_failed(o)) return -1;
     if (!o->h->w_001C6190) return a21p_latch(o, 0x001C6190u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
     if (o->h->w_001C6190(o->h->ctx, a0, out) < 0) return a21p_latch(o, 0x001C6190u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
+    return 0;
+}
+
+static inline int a21p_c_001C7900(A21P *o, uint32_t a0, uint32_t a1, int32_t a2, int32_t a3)
+{
+    if (a21p_failed(o)) return -1;
+    if (!o->h->w_001C7900) return a21p_latch(o, 0x001C7900u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
+    if (o->h->w_001C7900(o->h->ctx, a0, a1, a2, a3) < 0) return a21p_latch(o, 0x001C7900u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
+    return 0;
+}
+
+static inline int a21p_c_001CA7B0(A21P *o, uint32_t a0, uint32_t a1, int32_t *out)
+{
+    if (a21p_failed(o)) return -1;
+    if (!o->h->w_001CA7B0) return a21p_latch(o, 0x001CA7B0u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
+    if (o->h->w_001CA7B0(o->h->ctx, a0, a21p_float(a1), out) < 0) return a21p_latch(o, 0x001CA7B0u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
+    return 0;
+}
+
+static inline int a21p_c_001CA940(A21P *o, int32_t a0, int32_t a1)
+{
+    if (a21p_failed(o)) return -1;
+    if (!o->h->w_001CA940) return a21p_latch(o, 0x001CA940u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
+    if (o->h->w_001CA940(o->h->ctx, a0, a1) < 0) return a21p_latch(o, 0x001CA940u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
     return 0;
 }
 
@@ -212,6 +262,14 @@ static inline int a21p_c_001CD520(A21P *o, int32_t a0, int32_t a1, uint32_t a2, 
     if (a21p_failed(o)) return -1;
     if (!o->h->w_001CD520) return a21p_latch(o, 0x001CD520u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
     if (o->h->w_001CD520(o->h->ctx, a0, a1, a2, a3, a4, a21p_float(a5), a21p_float(a6), a21p_float(a7)) < 0) return a21p_latch(o, 0x001CD520u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
+    return 0;
+}
+
+static inline int a21p_c_001CFAE0(A21P *o, uint32_t a0, int32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5, uint32_t a6)
+{
+    if (a21p_failed(o)) return -1;
+    if (!o->h->w_001CFAE0) return a21p_latch(o, 0x001CFAE0u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
+    if (o->h->w_001CFAE0(o->h->ctx, a0, a1, a2, a21p_float(a3), a21p_float(a4), a21p_float(a5), a21p_float(a6)) < 0) return a21p_latch(o, 0x001CFAE0u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
     return 0;
 }
 

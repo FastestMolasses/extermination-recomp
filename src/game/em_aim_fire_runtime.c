@@ -102,7 +102,7 @@ static struct {
     EmArea00HudVu vu;
     int vf23_valid;
     uint32_t self_word[EM_ACTOR_POOL_CAPACITY]; /* original pointer encodings */
-    EmPoseRegion bss[28];
+    EmPoseRegion bss[32];
     uint32_t piece_start;                /* 001F3E30 mode 2: its unit's start */
     int piece_model;
     uint32_t d28A56C;                    /* D_0028A490[0x37], read-only */
@@ -1161,6 +1161,13 @@ static int add_windows(void)
     R.bss[n++]=(EmPoseRegion){0x7E000000,sizeof ramp_stack,ramp_stack,1};
     R.bss[n++]=(EmPoseRegion){0x70003A30,sizeof scratch_3A30,(uint8_t *)scratch_3A30,1};
     R.bss[n++]=(EmPoseRegion){0x70003680,sizeof scratch_3680,(uint8_t *)scratch_3680,1};
+    /* D_00275C48: 001F3620's splash count (.bss, zero at boot; the casing
+     * that lands in water bumps it and spawns 0xDB on odd counts; AREA21
+     * g77 row 12323). It is never reset; the guided run's card source
+     * states before AREA21 (g72 end, g76 end) hold 0, so a chain from those
+     * cards starts it exactly; a card holding another count is not modelled. */
+    static uint32_t d275C48;
+    R.bss[n++]=(EmPoseRegion){0x275C48,4,(uint8_t *)&d275C48,1};
     /* The flash node 001E7310's ramp data (CREATURE_EFFECT_WINDOWS):
      * 001DEE80's D_0026E970 and 001DF180's colour D_0026E860, read only;
      * optional as the glow's block. */
