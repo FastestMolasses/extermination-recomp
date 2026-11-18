@@ -395,6 +395,38 @@ static int a00_worker_001FB9F0(void *ctx, int32_t id, int32_t a1, int32_t a2, in
     return rc;
 }
 
+static int a00_worker_001EFD90(void *ctx, int32_t id, uint32_t point, uint32_t vector)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001EFD90u, .sp = r->sp, .na = 3, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)id;
+    c.a[1] = (uint64_t)(int64_t)(int32_t)point;
+    c.a[2] = (uint64_t)(int64_t)(int32_t)vector;
+    return em_area01_runtime_call(r, &c);
+}
+
+static int a00_worker_00102C58(void *ctx, uint32_t dst, uint32_t a, uint32_t b)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x00102C58u, .sp = r->sp, .na = 3, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)dst;
+    c.a[1] = (uint64_t)(int64_t)(int32_t)a;
+    c.a[2] = (uint64_t)(int64_t)(int32_t)b;
+    return em_area01_runtime_call(r, &c);
+}
+
+static int a00_worker_001D04B0(void *ctx, uint32_t matrix, int32_t count, uint32_t table, float f12, float f13)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001D04B0u, .sp = r->sp, .na = 3, .nf = 2};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)matrix;
+    c.a[1] = (uint64_t)(int64_t)count;
+    c.a[2] = (uint64_t)(int64_t)(int32_t)table;
+    c.f[0] = em_ee_bits(f12);
+    c.f[1] = em_ee_bits(f13);
+    return em_area01_runtime_call(r, &c);
+}
+
 static void overlay00_workers(EmArea01Runtime *r)
 {
     r->overlay00.w_001026A0 = a00_worker_001026A0;
@@ -460,4 +492,7 @@ static void overlay00_workers(EmArea01Runtime *r)
     r->overlay00.w_00102760 = a00_worker_00102760;
     r->overlay00.w_001C6190 = a00_worker_001C6190;
     r->overlay00.w_001EFEB0 = a00_worker_001EFEB0;
+    r->overlay00.w_001EFD90 = a00_worker_001EFD90;
+    r->overlay00.w_00102C58 = a00_worker_00102C58;
+    r->overlay00.w_001D04B0 = a00_worker_001D04B0;
 }

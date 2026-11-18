@@ -34,7 +34,8 @@ store that is compared with the original's.
   (`overlay_not_run`: 0x823C50, 0x823CF0, 0x823E10, 0x823EB0, 0x824130,
   0x8241B0, 0x8247C0, 0x8247D0, 0x824BB0, 0x824E00, 0x824E40, 0x825D70,
   0x825E80, 0x825FC0, 0x8260B0, 0x8260F0, 0x826790, 0x826BE0, 0x826CB0,
-  0x826CC0) are not translated here.
+  0x826CC0) are not translated by this lane (later lanes translated sub 2's;
+  0x823C50 and 0x823E10: "Script 0x82ABC0's op14 callbacks" below).
 - No existing port translation covers any of the 13: a grep of the port for
   each address finds only the AREA11/AREA01 functions that share the address in
   their own overlays (em_area01_overlay.c's 0x823580 is AREA01's shaft door,
@@ -245,6 +246,48 @@ Nothing calls these entries. To run them live a host must:
   binding lane must pair them by address and check each pairing.
 - the op09 entry's a0 and a2 are unused by the original; pass what the
   interpreter passes.
+
+## Script 0x82ABC0's op14 callbacks (lane PORT-A00-BOSS, 2026-11-18)
+
+Sub 2's boss cutscene (guided take g33, the chain's segment 914) runs script
+0x82ABC0 on owner 0x7AEF00. Its fifth record is an op14 over group 0x82A920:
+entries [3..13] are 0x270E entries, so 001C8140 places eleven nodes running
+001C7EB0 (they follow bones 5..15 of the pose), each with the entry's routine as
+the callback at node +0x2EC. 001C7EB0 calls it in state 0 and, in state 1, when
+the pose's scale is not below 0.9 or the clip's end flags are set. In the
+original (hidden fork replay of g33) the op14 runs at take tick 1908, 70 ticks
+into the cutscene, and 0x823C50 runs 996 times by tick 2670.
+
+- **0x823C50** (`func_overlay_AREA00_00823C10`), entries [3..7]: in state 1,
+  when the world clock D_70003B68 is a multiple of 20, a vector (pi/2, 0, 0, 1)
+  in its 0x20-byte frame and 001EFD90(1, +0x100, that vector).
+- **0x823E10** (`func_overlay_AREA00_00823DD0`), entries [8..13]: in state 1,
+  e = 001F00A0(0x80000014, +0x100, +0xC0, 0); when e is nonzero, 001029C0(e +
+  0xD0) and 00102948(e + 0x100, +0x100).
+
+- **0x823CF0** (`func_overlay_AREA00_00823CB0`), the node of effect 1 (the one
+  0x823C50's 001EFD90 places; 9,072 calls in g33 by tick 2670): state 0 builds
+  +0xD0 (identity, turned by +0xC0 through 00102C58, moved to +0xB0), +0x1F0 = 0,
+  +0x1F4 = a random fraction, state 1, and falls into state 1 the same call;
+  state 1 calls 001D04B0(+0xD0, 1, 0x828900, +0x1F0, +0x1F4) and adds 0.008 to
+  +0x1F0, state 3 once it is not at most 1.5; states 2 / 3 001AFC10.
+
+All three are in `em_area00_overlay.c` (new hooks `w_001EFD90`, `w_00102C58`,
+`w_001D04B0`) and are compared with the original instructions by `make
+test-area00-overlay-reference` (states 0..3 and 5; for 0x823C50 the clock at 0,
+1, 19, 20, 21, two route values, 0x7FFFFFFC, INT32_MIN, -20 and -1, with the
+vector's four words compared as part of 001EFD90's arguments; for 0x823E10 the
+effect returned or not; for 0x823CF0 the timer around 1.5 and five random
+words; 00102C58 runs as original code in the oracle; full coverage of the three
+bodies and the hook contract). The runtime binds them in `dispatch_overlay00`
+(em_area01_runtime.c): 0x823C50 with its 0x20-byte frame, the other two as
+plain owners; 001EFD90, 00102C58 and 001D04B0 go to the host's workers, and the
+scene's rebind admits 0x823CF0 as a pool behaviour in sub 2.
+
+**Next gap: 0x824BB0** (`func_overlay_AREA00_00824B70`, a 21-sprite arc effect:
+00102BB0, 001CFB50 and a packet local in its frame). In g33 the original runs it
+on node 0x7A64F0 from take tick 2602 (69 calls), after the cutscene's player
+move; not translated.
 
 ## Known gaps
 
