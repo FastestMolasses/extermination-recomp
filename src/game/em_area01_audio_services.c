@@ -165,6 +165,17 @@ int em_area01_audio_services_call(const EmArea01RuntimeHost *h,EmSdkMathContext 
     if (!c) return -1;
     if(c->function==0x1FC3C0 || c->function==0x1FC520)return loop_call(h,sdk,mode,c);
     if(c->function==0x1FBE80)return voice_update(h,sdk,mode,c);
+    /* 0011A070(handle) (the stop, a NEARMISS ee-gcc unit): an index of 0x30 or
+     * more returns at once; otherwise the track's release and its voices' key-off,
+     * bit 0x8000 the hard stop: em_sfx_stop_track, the driver's translation
+     * (the ambient loop's and the player's binding). AREA08 sub 3's flames
+     * (0x824BC0) stop their refused voice with it. */
+    if(c->function==0x11A070) {
+        if(c->na!=1)return -1;
+        const int32_t handle=(int32_t)c->a[0];
+        if((handle&0x7FFF)>=0x30)return 0;
+        return em_sfx_stop_track(handle&0x7FFF,(handle&0x8000)!=0)<0 ? -1 : 0;
+    }
     if (c->function!=0x1FBF50 && c->function!=0x1FBD50 && c->function!=0x1B1380) return 1;
     if (!h || !h->bytes || !sdk || !sdk->tables || sdk->fault) return -1;
     Audio a={0};a.host=h;a.sdk=sdk;a.sp=c->sp;

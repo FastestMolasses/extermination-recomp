@@ -416,6 +416,15 @@ int bridge_hit(Bridge *b, BState *st, BHit *out)
     out->flags = h.entity_flags; out->type = h.entity_type;
     return 0;
 }
+
+/* A grid node's +0x34..+0x3F as the player's live adapters read it (the
+ * EMCL axis section: em_player_closure_live's le_from_state); -1 without. */
+int bridge_axis(Bridge *b, int32_t node, uint32_t out[3])
+{
+    if (!b->grid.axis || node < 0 || (uint32_t)node >= b->grid.count) return -1;
+    memcpy(out, b->grid.axis + 3 * (size_t)node, 12);
+    return 0;
+}
 """
 
 
@@ -477,6 +486,7 @@ def build_native():
     n.bridge_no_math.argtypes = [V, I]
     n.bridge_run.argtypes = [V, I, C.POINTER(BState), PF, PF, U32, C.c_int32, P]
     n.bridge_hit.argtypes = [V, C.POINTER(BState), C.POINTER(BHit)]
+    n.bridge_axis.argtypes = [V, C.c_int32, C.POINTER(C.c_uint32)]
     return n
 
 
@@ -594,6 +604,8 @@ class Pair:
         self.spad0 = bytes(self.ee.spad)
         self.b = native_world(native, world, emcl, self.ram)
         self.calls = []       # the original's lock calls: (entry, v0), counted in place
+        self.axes = 0         # grid-node hit views whose +0x34 axis was compared
+        self.axes_set = 0     # ... of them nonzero
 
     def rebind(self):
         self.native.bridge_free(self.b)
@@ -686,6 +698,14 @@ class Pair:
         assert h.entity == owner, where
         if owner:
             assert (h.flags, h.type) == (ee.load(owner + 2, 1), ee.load(owner + 3, 1)), where
+        # A grid node's +0x34..+0x3F (00181F60's heading axis): the EMCL axis
+        # section the live adapters copy into a hit (c10_segment, le_from_state).
+        if st.record == 2:
+            axis = (C.c_uint32 * 3)()
+            assert self.native.bridge_axis(self.b, st.node, axis) == 0, (where, 'no axis for grid node', st.node)
+            assert list(axis) == [ee.load(record + 0x34 + 4 * k) for k in range(3)], (where, 'record +0x34', st.node)
+            self.axes += 1
+            self.axes_set += any(axis)
         return 1
 
 
@@ -788,6 +808,8 @@ def run_rows(item):
         r, _ = pair.plain(base, w + ' plain mask 7', v['tgt'], v['pos'], 7)
         out['plain'][slot[r]] += 1
         assert not pair.calls, ('0019A440 ran a hull lock', w, pair.calls)
+    out['axes'] = pair.axes
+    out['axes_set'] = pair.axes_set
     polys = [q for a in GH.class2_entries(pair.ram) for q in GH.chain_polys(pair.ram, a)]
     if polys:
         rng = random.Random(len(rows) * 7 + len(polys))
@@ -1673,7 +1695,7 @@ def main():
              + [('bounds', '05_boxes'), ('words', '05_boxes')])
     results = reference_mode.parallel_map(run_item, items,
                                           cost=lambda it: {'units': 4, 'synth': 4, 'bounds': 5}.get(it[0], 1))
-    seg, cam, entities, locks, views = [0] * 4, [0] * 4, set(), 0, 0
+    seg, cam, entities, locks, views, axes, axes_set = [0] * 4, [0] * 4, set(), 0, 0, 0, 0
     plain, seen = [0] * 4, set()
     lock_hits = stale_hits = 0
     captures = {}
@@ -1692,6 +1714,8 @@ def main():
             lock_hits += res['lock_hits']
             stale_hits += res['stale_hits']
             views += res['views']
+            axes += res.get('axes', 0)
+            axes_set += res.get('axes_set', 0)
         elif kind == 'capture':
             captures[arg] = res
         elif kind == 'units':
@@ -1715,6 +1739,7 @@ def main():
     assert lock_hits, 'no hull lock accepted a record of a real class-2 chain'
     assert stale_hits, 'no hull lock accepted a record over stale 0x700030CC / D0 / 31D0 words'
     assert views, 'no hit view compared'
+    assert axes, 'no grid-node hit view compared its +0x34 axis'
     faces_hit = {k[0] for k, v in units['face'].items() if k[1] == 1}
     assert faces_hit == {1, 2, 3, 4, 5, 6}, units['face']
     round_classes = {k[2] for k in units['round'] if k[1] == 1}
@@ -1754,7 +1779,7 @@ def main():
     print(f'exporter: {verified} RAM images verified byte for byte ({installed})')
     print(f'route: 0019A570 none/lock/cells/grid {seg}, 0019A910 {cam}, owners hit '
           f'{sorted(hex(x) for x in entities)}, {locks} hull lock calls ({lock_hits} accepted, '
-          f'{stale_hits} more over stale words), {views} hit views')
+          f'{stale_hits} more over stale words), {views} hit views ({axes} grid-node axes, {axes_set} nonzero)')
     print(f'plain query 0019A440: route none/-/cells/grid {plain}; {len(reach)} of {len(reach)} reachable words '
           f'executed ({len(PLAIN_WORDS - reach)} of {len(PLAIN_WORDS)} are dead: '
           f'{sorted(hex(a) for a in PLAIN_WORDS - reach)}); word cases {words}')
