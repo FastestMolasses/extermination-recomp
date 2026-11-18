@@ -100,6 +100,21 @@ int em_sgp_field_frame(void);
  * claimed frame's list through the GS model. 0 (done, or not claimed), or
  * -1 (reported). */
 int em_sgp_kick(struct EmGfx *gfx);
+/* Main-loop step V after 001D2300, before the GS frame's kick of a recorded
+ * world frame (Original profile; docs/GS_EXACT.md section 9 "Slot 1"): the
+ * kicked list's slot-1 segment (001D2300 sends it after slot 0 and the
+ * chain page) as GIF data, the message service's glyph runs left out (the
+ * GPU overlay still draws them, with the letterbox bars and the fade), into
+ * the GS frame: register packets recorded into the body
+ * (em_gfx_gs_world_gif); a stream with transfers (the sights' glyph
+ * uploads) kept for em_sgp_world_tail. With D_008106C4 set (slot 1 kicked
+ * first) a segment that draws is refused. Nothing without the GS frame, in a
+ * status page frame, or when no world frame is recorded. 0, or -1
+ * (reported, latched). */
+int em_sgp_world_slot1(struct EmGfx *gfx);
+/* Right after the kick: the stream em_sgp_world_slot1 kept, through
+ * em_gfx_gs_world_tail. 0 (done, or none), or -1 (reported). */
+int em_sgp_world_tail(struct EmGfx *gfx);
 /* 00207F80(slot, x0, y0, x1, y1, rgba) from gameplay code (not a status
  * page): the flat rectangle into the frame's slot-1 packets. 1, or 0 when
  * the builder refused (reported once, latched). */

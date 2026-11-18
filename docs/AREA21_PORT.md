@@ -399,7 +399,11 @@ point), then from about row 1450 y rises (35.01 to 39.80): a climb.
   host too (it was bound only outside it, so the seat's first frame
   faulted there: the "00198AF0" of the earlier stop was this, not the
   state callback); 001B5DC0 (the stick ring, em_effect_original_001B5DC0)
-  and 00207F80 (the gauge bars into the slot-1 packets, em_sgp_00207F80)
+  and 00207F80 (the gauge bars into the slot-1 packets, em_sgp_00207F80;
+  on the Original profile's field since lane PORT-SLOT1-2D, 2026-11-18:
+  the original's own gauge packets from a fork capture of g77, drawn over
+  the port's world, give the port's field pixel for pixel, GS_EXACT.md
+  section 9 "Slot 1")
   in the runtime's worker switch; the muzzle node 001F5040 is allowed in
   AREA21 (em_scene_bindings); 001F4010 routes to the revisit's ring-slot
   translation in AREA21; 001CEEE0 (the rounds' draw, byte-identical C: the

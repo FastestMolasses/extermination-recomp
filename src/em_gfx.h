@@ -1133,6 +1133,16 @@ int em_gfx_gs_head(EmGfx *gfx, const void *env, size_t env_bytes, const void *cl
 /* EM_PRESENT_LOG's tag (a diagnostic): the frame loop's main-loop counter
  * at the frame's begin, written with the frame's line (em_gfx_metal.m). */
 void em_gfx_present_tag(EmGfx *gfx, uint64_t tag);
+/* The kicked list's slot-1 packets in a recorded world frame (main-loop
+ * step V; em_status_gs_page em_sgp_world_slot1, docs/GS_EXACT.md section 9
+ * "Slot 1"): em_gfx_gs_world_gif records register packets (PACKED, no
+ * transfer) into the body before the kick (em_gs_world_gif); a stream with
+ * transfers, REGLIST or IMAGE packets goes to em_gfx_gs_world_tail right
+ * after the kick instead (em_gs_world_tail: the body drawn, then the stream
+ * on the same model, the field read again). 0, or -1 (a fault, reported;
+ * also on a backend without the GS frame). */
+int em_gfx_gs_world_gif(EmGfx *gfx, const void *gif, size_t bytes);
+int em_gfx_gs_world_tail(EmGfx *gfx, const void *gif, size_t bytes);
 /* The latched fault of the GS frame (a refused primitive, a span fault, a
  * draw the GS frame cannot take), or NULL. */
 const char *em_gfx_gs_world_fault(EmGfx *gfx);

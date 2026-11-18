@@ -1669,6 +1669,110 @@ each mark), which `test_dof_pass_reference` part C drives with the
 original's captured memory: 1, 2, 3 and 8 workers leave every word equal to
 the original's after the pass.
 
+**Slot 1: a world frame's 2D packets (lane PORT-SLOT1-2D, 2026-11-18).**
+How the original sends them (decomp C of 001D1AE0, 001D2300, 001D2110 /
+2130 / 2160 / 2180 / 21E0, all byte-matched): 001D1AE0 points the render
+context's cursor +0x14 at the frame's slot-1 buffer D_0028F700 + 0xC9000 +
+index * 0x95760 and appends 001D1F20(1) (the draw environment of the
+index), 001D2040(1, 0) and 001D1FF0(1, 1); every 2D producer of the frame
+then appends its packets there at its call time (the letterbox 001AEBE0 and
+the fade 001AEE70 as REFs of their blocks, the message glyph runs, the
+sights, the Gatling's gauge bars; the census below); 001D2300 appends a REF
+of GS block +0 (a VIF FLUSH) and 001D1F80(1, 0, 7), then builds the kicked
+list: the REFs of the draw environment and the clear, a NEXT to slot 0's
+buffer, the chain page (context +0 .. +4), and a NEXT to slot 1's buffer,
+each segment ending in a NEXT back to the list; with D_008106C4 set (the
+status screen) slot 1 goes first, before slot 0 and the page. So in a world
+frame the GS draws slot 1 last, over the world and the page, on the GS
+state the page left, with nothing but its own packets' state.
+
+The port (Original profile): at step V, after 001D2300 and before the GS
+frame's kick, `em_sgp_world_slot1` (em_status_gs_page.c, called by
+em_gs_frame_live) walks the kicked list's slot-1 segment of the frame's
+index (tags CNT / NEXT / REF / REFS, to the NEXT that leaves the buffer)
+into its GIF data and hands it to the model in the list's order: register
+packets only (PACKED, no transfer: a frame without 2D content, its open and
+close blocks) are recorded into the body after the page
+(`em_gfx_gs_world_gif` -> `em_gs_world_gif`, drawn by the workers like any
+recorded GIF data); a stream with transfers, REGLIST or IMAGE packets (the
+sights' small-font glyph uploads) goes to `em_gs_world_tail` right after
+the kick: the workers draw the body, then the stream runs whole on the
+model that holds the GS registers on the calling thread (as a GIF frame's
+does, `gif_direct`, with the same checks: textured kicks reading resident
+or drawn memory, a transfer's blocks resident from the transfer on) and the
+field is read again; such a frame is not pipelined. Left out, on purpose:
+the message service's glyph runs (em_message_live's glyph sink records the
+cursor range of each run, and the walk skips those tags), because the GPU
+overlay pass still draws the glyph strips, the letterbox bars and the fade
+over the presented field (the port's letterbox and fade are not slot-1
+REFs: em_frame.c frame_screen_fade_draw), and the bars must stay under the
+text, as in the original's slot-1 order. Moving the three into the field is
+the next step (the original's order: bars, the frame's other 2D content in
+call order, glyphs, fade). A world frame with D_008106C4 set whose slot 1
+draws is refused (fail-stop); its open and close blocks alone are not sent.
+`EM_SLOT1_FIELD=0` (developer A/B switch, LAUNCHER_OPTIONS.md) leaves slot
+1 undrawn.
+
+Evidence, the zoom scope (`make test-slot1-field`, tools/test_slot1_field.py;
+the decomp's fork capture build/sights_ref/zoom, renderer 13): the port's
+fields at ticks 279 / 401 / 541 of the sight_zoom start point (zoom 0, 1.0,
+0.5; the original's field phase, OFY 1936.5) against the original's
+displayed fields frame_aim040 / 160 / 300, with and without slot 1:
+
+| point | slot-1 pixels | equal to the original | whole field exact, before -> after |
+|---|---|---|---|
+| zoom 0 (aim 040) | 64,976 | 64,975 (1 off by 1) | 49,406 -> 114,381 of 114,688 |
+| zoom 1.0 (aim 160) | 65,509 | 65,507 (2 off by 1) | 44,001 -> 109,508 |
+| zoom 0.5 (aim 300) | 65,453 | 65,301 (152 off, at most 112) | 47,981 -> 113,282 |
+
+The pixels off inside the sight are where its translucent glass blends over
+the port's world, and the world differs there (the red lamp glow, at 0.5
+two lights and a frame edge the zoomed camera shows); outside slot 1 the
+two runs are identical. In the other field phase (OFY 1936.0, ticks 278 /
+400 / 540) every edge moves half a line (76,877 / 83,439 / 74,616 exact):
+the port's phase relation (section 10.1), not this step.
+
+Evidence, the Gatling's gauge bars (AREA21 0x8260A0: 001D1F80(1, 2, 1) and
+two 00207F80 rectangles; register packets only, so recorded into the
+body): a hidden fork replay of g77 (renderer 13, decomp
+build/slot1_gatling/v4500..v4503, snapshots at vsyncs 4500..4503, seated
+after the mount) against the port's chain g20 into g77 (port ticks
+23434..23447 through the tick log; `EM_SLOT1_FIELD=0` for the A/B). The
+bars sit where the original's are (x 15..176, rows 187..195; 1,453 to
+1,458 pixels). The original's own slot-1 segment of each snapshot (both
+buffers, decoded from its RAM: the open and close blocks and the two
+rectangles, 832 bytes of GIF data) run through the GS model over the
+port's field without slot 1 gives the port's field with slot 1, 114,688 of
+114,688 pixels, at the four matching frames (port 23437..23440 against
+vsyncs 4500..4503). Against the original's displayed field directly the
+bars' pixels differ: they blend (alpha 0x30 and 0x80) over the world, and
+the port's world in the fight differs there (the whole field: 7,306 to
+13,808 exact; the haze ring, the creature, the snow). The bars' own
+packets drawn the original's way are what the step proves.
+
+The producers of a world frame's slot-1 packets (a census of the boot ELF
+and the 19 overlays: every call of a slot-argument builder with slot 1 and
+every direct writer of the +0x14 cursor), and what the port does with them:
+- drawn from slot 1 now: the frame's open and close blocks (001D1AE0,
+  001D2300); the sight switch 001999C0 and its drawers (001DB830, 001DB9D0,
+  001DBCB0, 001DBD50, 001DBE20, 001DBF00, 001DC020, 001DC610, 001DC890,
+  001DC960 and their helpers); AREA21's gauge bars 0x8260A0; the ending's
+  credits underlines 0022D380 (00207F80) where its frame is a world frame;
+  the render-context colour fade 001DFE70 (render flag 7, from 001DFF70,
+  em_render_context_live rcl_001DFE70: its packets would be drawn from
+  slot 1 too; no recorded route was seen to reach it, not verified);
+- built into slot 1 but drawn by the GPU overlay instead (left out of the
+  walk): the message glyph runs 001FC7B0 (001CC1E0 -> 001CC8A0 /
+  001CC3B0: prompts, radio, examine text) and the area-title card 001C5930,
+  which use them;
+- drawn by the GPU overlay, no slot-1 packet in the port: the letterbox
+  001AEBE0 and the fade 001AEE70 (em_frame.c);
+- fail-stops before any packet: the lock reticle 001DD170 (00199770 /
+  00199220; vf23 not certified) and the CA5 == 6 marker 0022E7F0 /
+  0022E630;
+- status screen only (D_008106C4 set; their own GIF-frame path): the
+  status pages, the options and card screens.
+
 **Not part of the GS frame.** The status frames (the hub, the pages; their
 models use the GPU's skinned path) and the tear-down frames draw with the
 GPU as before. (001DDE10's depth-of-field pass, walked over until step DOF,

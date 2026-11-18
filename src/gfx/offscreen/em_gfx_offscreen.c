@@ -210,6 +210,25 @@ int em_gfx_gs_world_kick(EmGfx *g, const void *env, size_t env_bytes, const void
     return 0;
 }
 
+/* em_gfx_gs_world_gif / em_gfx_gs_world_tail: the kicked list's slot-1
+ * packets in a world frame (em_gs_world_gif into the recorded body before
+ * the kick; em_gs_world_tail right after it, transfers included). */
+int em_gfx_gs_world_gif(EmGfx *g, const void *gif, size_t bytes)
+{
+    if (!g) return -1;
+    if (!g->gswFrame) return gsw_fail(g, "slot-1 GIF data outside a recorded world frame");
+    em_gs_world_gif(g->gsw, gif, bytes);
+    return gsw_check(g);
+}
+
+int em_gfx_gs_world_tail(EmGfx *g, const void *gif, size_t bytes)
+{
+    if (!g) return -1;
+    if (!g->gswOn || !g->gswShow) return gsw_fail(g, "a world frame's tail without its kick");
+    if (em_gs_world_tail(g->gsw, gif, bytes) < 0) return gsw_check(g);
+    return 0;
+}
+
 const char *em_gfx_gs_world_fault(EmGfx *g) { return g && g->gswWhy[0] ? g->gswWhy : NULL; }
 
 int em_gfx_gs_field_read(EmGfx *g, uint8_t *rgba, uint64_t *frame)
