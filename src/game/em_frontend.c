@@ -56,6 +56,10 @@ static struct {
     int switch_boot;     /* EM_NEW_GAME=1 booted without the title */
     unsigned cursor;
     uint32_t attract_serial;
+    int attract_demo;      /* D_00275BD4 of the running demo (the event's id) */
+    int attract_exit;      /* state 3 left this tick: its 001FBC50 / 001D2880 */
+    int attract_exit_seen; /* EM_STARTUP_TEST=attract: a demo has ended */
+    int attract_ended;     /* EM_STARTUP_TEST=attract: demos ended so far */
     unsigned movie_frames;
     uint64_t movie_picture;
     double movie_pts;
@@ -73,6 +77,7 @@ static struct {
     uint32_t load_serial;  /* the title's load screen (001AC070 state 5) */
     int load_drawn;        /* this tick's 00225AC0 call left a draw stream */
     int card_close;        /* the boot title's card binding closes after this tick's draw */
+    uint32_t options_serial; /* the title's OPTIONS (001AC070 state 6) */
     int load_test;         /* EM_STARTUP_TEST=loadgame: the boot title's LOAD GAME */
     int start_at;          /* EM_START_AT=<name> (em_start_at.h): the same LOAD GAME on a start-point card */
     const char *capture_dir;
@@ -95,6 +100,8 @@ static int new_game_test(const char *test)
 static int load_drive(void) { return f.load_test || f.start_at; }
 static int load_report(void) { return f.load_test || (f.start_at && em_start_at_report()); }
 static const char *load_prefix(void) { return f.load_test ? "startup test: loadgame" : "startup: EM_START_AT"; }
+/* EM_STARTUP_TEST=options: the boot title's OPTIONS (options_test_after_frame). */
+static int options_test(void) { return f.test && strcmp(f.test, "options") == 0; }
 
 static uint32_t le32(const unsigned char *p)
 {
@@ -102,6 +109,7 @@ static uint32_t le32(const unsigned char *p)
 }
 
 static void load_test_block(const char *when);
+static int attract_test(void);
 static void load_pad_release(void);
 
 static void fail(const char *message)
@@ -340,7 +348,8 @@ static int movie_pump(void *unused)
      * task's movie in the loaded game (the AREA01 revisit's E008S4) is the
      * player's to watch or skip. */
     if (!f.reinstalled && ((f.start_at && !f.new_game_movie) ||
-                           (f.test && (strcmp(f.test, "skip") == 0 || new_game_test(f.test) || f.load_test))) &&
+                           (f.test && (strcmp(f.test, "skip") == 0 || new_game_test(f.test) || f.load_test ||
+                                       attract_test() || options_test()))) &&
         f.movie_pts >= 2.0)
         held |= EM_PAD_START;
     /* EM_NEW_GAME=1: START is held from the movie's first picture, so the
@@ -412,17 +421,78 @@ static int native_storage_ready(void)
     return em_memcard_boot_check();
 }
 
-/* anim_frame_top_a states 0/1/3/4 return 2 while D_00810E70 & 0x9F0
- * (EM_STARTUP_ATTRACT_EXIT); 001AC070 state 3 then tears down and
- * re-enters the title. The demo's other exits (0xE10 demo frames,
- * 001ACE70, death/pause at fade 2) need the demo itself. */
-static void attract_abort(void)
+/* 001AC070 state 3: one anim_frame_top_a (001ACA20, em_scene_attract_001ACA20
+ * over this task's record) per tick; 2 (a button of 0x9F0 held, or 001ACE70)
+ * or 3 (the 0xE10 recorded pads played, or the world's request at fade 2)
+ * ends the demo, and em_startup leaves state 3 (docs/ATTRACT_DEMO.md). */
+/* EM_STARTUP_TEST=attract (tools/test_attract_demo.py): the boot's title
+ * idles into the demo; one row per 001ACA20 call; EM_ATTRACT_EXIT_AT=N holds
+ * CROSS (0x40 of the held word the gate reads) at the call whose record
+ * counter +0x16 is N; the run quits when the title is back. */
+static int attract_test(void) { return f.test && strcmp(f.test, "attract") == 0; }
+
+static int attract_rc = -100; /* this frame's 001ACA20 result; -100: no call */
+
+/* The frame tail (em_frame_set_frame_tail): the row of this frame's call,
+ * after the frame's fade step, as the capture reads it at the loop top. */
+static void attract_row_tail(void)
 {
-    if (!f.attract_serial ||
-        !(em_frame_input()->held & EM_STARTUP_ATTRACT_EXIT)) return;
+    if (attract_rc == -100) return;
+    int rc = attract_rc;
+    attract_rc = -100;
+    const EmTask *t = em_task_slot(0);
+    const EmSceneState *sc = em_scene_state();
+    const EmPadUnpack *pad = em_frame_pad_block();
+    char task[64] = "";
+    for (int i = 0; t && i < 16; ++i)
+        snprintf(task + 2 * i, sizeof task - 2 * (size_t)i, "%02x", t->user[i]);
+    printf("attract row demo %d task %s area %02x%02x%02x%02x pad %04x %02x %02x %02x pos %.5f %.5f %.5f "
+           "yaw %.5f fade %d rand %08x rc %d\n", f.attract_demo, task, sc->d810700, sc->d810701, sc->d810702,
+           sc->progress.bytes[3], pad->held, pad->lx, pad->ly, pad->gait, (double)g.pos[0], (double)g.pos[1],
+           (double)g.pos[2], (double)g.yaw, (int)em_frame_transition()->substate, (unsigned)em_random_peek(), rc);
+}
+
+/* The demos the port runs (docs/ATTRACT_DEMO.md section 4): demo 0 (AREA06)
+ * and demo 2 (AREA03) play to their end. Demo 1 (AREA13) stops at its
+ * record 1436 on an aim/fire fault, so it keeps the stand-in (a black screen
+ * that serves only the state-0 gate's button exit) unless EM_ATTRACT_ALL=1
+ * (comparison runs). */
+static int attract_live(int demo)
+{
+    const char *all = getenv("EM_ATTRACT_ALL");
+    return demo == 0 || demo == 2 || (all && all[0] == '1');
+}
+
+static void attract_tick(int begin)
+{
+    if (!f.attract_serial) return;
+    if (!attract_live(f.attract_demo)) {
+        if (!(em_frame_input()->held & EM_STARTUP_ATTRACT_EXIT)) return;
+        uint32_t serial = f.attract_serial;
+        f.attract_serial = 0;
+        f.attract_exit_seen = 1;
+        em_startup_complete(&f.flow, serial, 2);
+        return;
+    }
+    if (attract_test()) {
+        const EmTask *t = em_task_current();
+        const char *at = getenv("EM_ATTRACT_EXIT_AT");
+        if (t && at && at[0] && t->user[1] == 4 && t->user[3] == 1 &&
+            (unsigned)(t->user[0x16 - 8] | t->user[0x17 - 8] << 8) == (unsigned)atoi(at))
+            em_scene_state()->d810E70 |= 0x40;
+    }
+    int r = em_scene_attract_001ACA20(f.attract_demo, begin);
+    if (attract_test()) attract_rc = r;
+    if (r < 0) {
+        fail("001ACA20: the attract demo faulted");
+        return;
+    }
+    if (r != 2 && r != 3) return;
     uint32_t serial = f.attract_serial;
     f.attract_serial = 0;
-    em_startup_complete(&f.flow, serial, 2);
+    f.attract_exit = 1;
+    f.attract_exit_seen = 1;
+    em_startup_complete(&f.flow, serial, r);
 }
 
 /* The boot resources the title reads: the composed screens and the title
@@ -481,20 +551,23 @@ static uint32_t card_le32(const uint8_t *p)
     return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
 }
 
-/* 001FF3F0 state 3's send of module 0x2A's chunk (00200830 of D_00275C74). */
+/* 001FF3F0 state 3's send of the screen module's chunk (00200830 of
+ * D_00275C74): 0x2A (the card screen) or 0x2B (the title's OPTIONS). */
 static int card_chain(void *context, uint32_t chain, const uint8_t *bytes, uint32_t size)
 {
     (void)context;
     EmModuleLoader *ml = em_module_loader_live();
     const EmTask *record = em_module_loader_record(ml);
     const EmStatusSceneLoader *ld = em_module_loader_state(ml);
-    if (!bytes || !record || !ld || record->user[0] != 0 || record->user[6] != 0x2A || chain != ld->d275C74)
+    const uint32_t module = record ? record->user[6] : 0;
+    if (!bytes || !record || !ld || record->user[0] != 0 || (module != 0x2A && module != 0x2B) ||
+        chain != ld->d275C74)
         return -1;
     const uint8_t *h = ld->header;
-    if (card_le32(h) != 0x2A || (h[0x0E] | h[0x0F] << 8) != 1 || card_le32(h + 0x10) != 0 ||
+    if (card_le32(h) != module || (h[0x0E] | h[0x0F] << 8) != 1 || card_le32(h + 0x10) != 0 ||
         size < card_le32(h + 0x24))
         return -1;
-    return em_gs_texture_apply(s_card.gs, 0x2A) ? 0 : -1;
+    return em_gs_texture_apply(s_card.gs, module) ? 0 : -1;
 }
 
 static int card_sound(void *context, int32_t id, int32_t a1, int32_t a2, int32_t a3)
@@ -516,7 +589,8 @@ static int card_sound(void *context, int32_t id, int32_t a1, int32_t a2, int32_t
 static int card_module_load(void *context, uint32_t module)
 {
     (void)context;
-    return module == 0x2A && em_module_loader_request_001FF080(em_module_loader_live(), 0, 0x2A) == 0;
+    return (module == 0x2A || module == 0x2B) &&
+           em_module_loader_request_001FF080(em_module_loader_live(), 0, module) == 0;
 }
 
 static int card_restore(void *context)
@@ -684,6 +758,74 @@ static void load_frame(void)
     }
 }
 
+/* The title's OPTIONS (001AC070 state 6, docs/OPTIONS.md section 4.5):
+ * 001AC070 sets the record's +0xC = 0 at the menu's verdict, then calls
+ * 00200A40 every tick through the same options binding as the load screen
+ * (after a death the AREA11 host's, on the boot's title its own s_card,
+ * whose loader hook applies screen module 0x2B as 00200A40's state 1
+ * loads it). Its result 1 (the fade-out after exit, Circle or Triangle
+ * is done) completes the request in the same tick: the flow is back in
+ * state 2, whose sub 0 loads the title's module 1 again. */
+static void options_begin(uint32_t serial)
+{
+    f.options_serial = 0;
+    if (!f.reinstalled && !card_open()) {
+        fail("the title's OPTIONS 00200A40 could not be bound");
+        return;
+    }
+    EmTask *task = em_task_current();
+    uint8_t *state = task ? em_scene_task_byte(task->user, EM_SCENE_TASK_0C) : NULL;
+    if (!load_options() || !state) {
+        fail("the title's OPTIONS 00200A40 has no options binding");
+        return;
+    }
+    *state = 0;
+    f.options_serial = serial;
+}
+
+static void options_frame(void)
+{
+    EmOptionsLive *options = load_options();
+    EmSceneState *scene = em_scene_state();
+    EmTask *task = em_task_current();      /* 001AC070 in slot 0 */
+    if (!f.options_serial || !options || !task || task != em_task_slot(0)) {
+        fail("001AC070 state 6 without its OPTIONS screen");
+        return;
+    }
+    EmOptionsFrame frame = {
+        .settings = scene->d810118,
+        .task_address = 0x0028A750u,        /* slot 0: 001AC070's record */
+        .task = task->user,
+        .mc = scene->d810040,
+        .progress = scene->progress.bytes,
+        .message = em_message_live_block(),
+        .busy = &scene->d275BD8,
+        .masks = scene->spad3B74,
+        .offset = &scene->spad3B94,
+        .read_phase = em_stream_live_read_phase(),
+        .fade = em_frame_transition()->substate,
+        .held = scene->d810E70,
+        .pressed = scene->d810E74,
+        .repeat = em_frame_pad_block()->repeat,
+        .pad_mode = em_frame_d810E6A(),
+        .pad_phase = scene->d810E50,
+        .spad3B90 = scene->spad3B90,
+        .spad3B93 = scene->spad3B93,
+    };
+    uint32_t r = 0;
+    if (em_options_live_00200A40(options, &frame, &r) < 0) {
+        fail("00200A40 (the title's OPTIONS) faulted");
+        return;
+    }
+    f.load_drawn = 1;
+    if (r != 0) {
+        const uint32_t serial = f.options_serial;
+        f.options_serial = 0;
+        if (!f.reinstalled) f.card_close = 1;
+        em_startup_complete(&f.flow, serial, (int)r);
+    }
+}
+
 static void notify(void *unused, const EmStartupEvent *event)
 {
     (void)unused;
@@ -719,6 +861,15 @@ static void notify(void *unused, const EmStartupEvent *event)
         em_frame_fade_start(1, event->value);
         return;
     case EM_STARTUP_AUDIO_STOP:
+        if (f.attract_exit) {
+            /* 001AC070 state 3's exit: 001FBC50, then 001D2880 (the render
+             * context); its 001AEDB0(0) is the FADE_FULL that follows. */
+            f.attract_exit = 0;
+            em_startup_audio_stop();
+            if (em_scene_bindings_001FBC50() < 0 || em_rcl_001D2880() < 0)
+                fail("001AC070 state 3: 001FBC50 / 001D2880");
+            return;
+        }
         /* 001AC3B0 state 0: 001FBC50 (em_sfx_stop_all and its two 00119828
          * calls) and 001FABB0 on the stream lanes. */
         em_startup_audio_stop();
@@ -771,11 +922,13 @@ static void notify(void *unused, const EmStartupEvent *event)
         em_game_install_new();
         return;
     case EM_STARTUP_ATTRACT:
-        /* anim_frame_top_a (the attract demo) is not ported (WP-17
-         * residue): the screen stays black and only its button exit is
-         * served, see attract_abort. */
+        /* The attract demo, D_00275BD4 = id: its first 001ACA20 call is
+         * this tick's (the state-0 gate can end it at once). */
         f.attract_serial = event->serial;
-        attract_abort();
+        f.attract_demo = event->id;
+        if (attract_test() && getenv("EM_ATTRACT_DEMO_ID"))
+            f.attract_demo = atoi(getenv("EM_ATTRACT_DEMO_ID")); /* constructed: another demo first */
+        attract_tick(1);
         return;
     case EM_STARTUP_LOAD_GAME:
         load_begin(event->serial);
@@ -784,8 +937,10 @@ static void notify(void *unused, const EmStartupEvent *event)
         load_frame();
         return;
     case EM_STARTUP_OPTIONS:
-        fprintf(stderr, "startup: service %d awaits native translation\n", event->kind);
-        /* Preserve pending state rather than manufacturing an outcome. */
+        options_begin(event->serial);
+        return;
+    case EM_STARTUP_OPTIONS_FRAME:
+        options_frame();
         return;
     }
     em_startup_complete(&f.flow, event->serial, ready ? 1 : -1);
@@ -951,6 +1106,210 @@ static float load_test_f32(const uint8_t *p)
     float v;
     memcpy(&v, p, 4);
     return v;
+}
+
+/* EM_STARTUP_TEST=options (test input only; tools/test_title_options.py):
+ * the boot's title, Down twice to OPTIONS and its CROSS (menu ticks 13, 14
+ * and 15, after the fixtures' common presses), then the closed-loop policy of the original's capture
+ * (tools/capture_title_options.py, "title_options_v1"): every page of
+ * 00200A40 in the row order of its action table, each press the game word
+ * as pad buttons (em_pad_swap) held two ticks after the condition has held
+ * for ten, then back to the title and 30 idle ticks. Every tick prints one
+ * "options row" line (the sample the test compares with the capture's
+ * rows) and the page captures land in EM_STARTUP_CAPTURE_DIR. */
+static struct {
+    int phase;          /* 0 the title, 1 the screen, 2 back on the title, 3 done */
+    int target, step;   /* the row action being visited and its page step */
+    int idle, hold, settle, wait, end;
+    uint16_t button;
+    uint8_t before[64];
+    int pre_fade, pre_mono; /* at the tick's start: after the previous frame's steps H and 001AEE70 */
+} ot;
+
+
+static unsigned ot_key(uint8_t *out)
+{
+    const EmSceneState *sc = em_scene_state();
+    EmTask *task = (EmTask *)em_task_slot(0);
+    unsigned n = 0;
+    memcpy(out + n, task ? task->user : (const uint8_t *)"", task ? EM_TASK_USER_BYTES : 0);
+    n += EM_TASK_USER_BYTES;
+    memcpy(out + n, sc->d810118, 0x10);
+    n += 0x10;
+    memcpy(out + n, &sc->spad3B94, 2);
+    memcpy(out + n + 2, &sc->spad3B96, 2);
+    n += 4;
+    memcpy(out + n, sc->spad3B74, 16);
+    return n + 16;
+}
+
+static uint8_t ot_byte(unsigned offset) { return load_test_task_byte(offset); }
+
+static unsigned ot_cursor(void)
+{
+    return ot_byte(0x1C) | (unsigned)ot_byte(0x1D) << 8;
+}
+
+/* The row's action, D_00264EC0[cursor] as the binding's .data window holds
+ * it (read through the original's own table, never a copy). */
+static int ot_action(void)
+{
+    const unsigned cur = ot_cursor();
+    return cur < 7 ? (int)cur : -1; /* checked against the capture's table (0..6) by the test */
+}
+
+static void options_test_row(unsigned major, unsigned sub)
+{
+    const EmSceneState *sc = em_scene_state();
+    const uint8_t *mode = em_stream_live_output_mode();
+    const uint8_t *pad = em_pad_actuator_block();
+    printf("options row %u %u %u", em_frame_counter(), major, sub);
+    for (unsigned i = 0; i < EM_TASK_USER_BYTES; i++) printf(i ? "%02X" : " %02X", ot_byte(8 + i));
+    for (unsigned i = 0; i < 0x10; i++) printf(i ? "%02X" : " %02X", sc->d810118[i]);
+    printf(" %d %d ", sc->spad3B94, sc->spad3B96);
+    for (unsigned i = 0; i < 8; i++) printf("%04X", sc->spad3B74[i]);
+    printf(" %d %u %d %u %04X %04X %04X %u %d %d\n", (int)em_frame_transition()->substate,
+           (unsigned)sc->d275BD8, mode ? (int)*mode : -1, pad ? (unsigned)pad[0x16] : 0u, (unsigned)sc->d810E74,
+           (unsigned)em_frame_pad_block()->repeat, (unsigned)em_frame_d810E6A(), ot.button, ot.pre_fade,
+           ot.pre_mono);
+}
+
+/* The page step's condition and press; 0 when the target's page is done. */
+static int ot_page(int *cond, uint16_t *button, const char **snap)
+{
+    const uint8_t tc = ot_byte(0x0C), td = ot_byte(0x0D);
+    const int menu = tc == 4 && em_frame_transition()->substate == 0;
+    static const char *names[7] = {"p0_vibration", "p1_sound", "p2_screen_position", "p3_brightness",
+                                   "p4_button_config", "p5_default", "menu"};
+    *snap = NULL;
+    if (ot.step == 0) {            /* the row: Down until the cursor is on it, then CROSS */
+        *cond = menu;
+        if (menu && ot_action() != ot.target) {
+            *button = 0x4000;
+            return 1;
+        }
+        *button = 0x40;
+        if (ot.target == 6) *snap = names[6];
+        return 1;
+    }
+    const int s = ot.step;
+    switch (ot.target) {
+    case 0:
+    case 1:
+        *cond = tc == 5 && td == 1;
+        *button = s == 1 ? 0x2000 : 0x40;
+        if (s == 2) *snap = names[ot.target];
+        return s <= 2;
+    case 2:
+        *cond = tc == 7;
+        *button = s == 1 ? 0x8000 : s == 2 ? 0x1000 : 0x40;
+        if (s == 3) *snap = names[2];
+        return s <= 3;
+    case 3:
+        *cond = tc == 8;
+        *button = 0x40;
+        *snap = names[3];
+        return s <= 1;
+    case 4:
+        *cond = tc == 9 && (s == 2 || td == 1);
+        *button = s == 1 ? 0x2000 : 0x40;
+        if (s == 2) *snap = names[4];
+        return s <= 2;
+    case 5:
+        *cond = tc == 6 && td == 1;
+        *button = 0x40;
+        *snap = names[5];
+        return s <= 1;
+    default:
+        return 0;
+    }
+}
+
+static void options_test_after_frame(void)
+{
+    unsigned major = 0, sub = 0;
+    em_frontend_title_state(&major, &sub);
+    if (f.menu_ticks < 15) {            /* the boot and the title before its CROSS */
+        if (++ot.wait > 6000) load_test_fail("the title menu did not come up");
+        return;
+    }
+    options_test_row(major, sub);
+    if (ot.phase == 0) {
+        if (major == 6) {
+            ot.phase = 1;
+            ot.target = em_frame_d810E6A() == 7 ? 0 : 1;
+            printf("startup test: options entered at engine frame %u (pad mode %u)\n", em_frame_counter(),
+                   (unsigned)em_frame_d810E6A());
+        } else if (++ot.wait > 4000) {
+            load_test_fail("the title's OPTIONS did not open");
+        }
+        return;
+    }
+    if (ot.phase == 2) {
+        if (major == 2 && sub == 2 && em_frame_transition()->substate == 0) {
+            if (++ot.end > 30) {
+                ot.phase = 3;
+                printf("startup test: options PASS (back on the title at engine frame %u)\n", em_frame_counter());
+                em_frame_request_quit();
+            }
+        } else if (++ot.wait > 2000) {
+            load_test_fail("the title did not come back after OPTIONS");
+        }
+        return;
+    }
+    if (ot.phase != 1) return;
+    if (ot.hold) {                       /* the press: two ticks */
+        if (++ot.hold > 2) {
+            ot.hold = 0;
+            ot.button = 0;
+            load_test_pad(0);
+            ot.settle = 1;
+        }
+        return;
+    }
+    uint8_t key[64];
+    if (ot.settle) {                     /* until the press shows (30 ticks at most) */
+        const unsigned n = ot_key(key);
+        if (memcmp(key, ot.before, n) == 0 && ++ot.settle <= 30) return;
+        ot.settle = 0;
+    }
+    if (major == 6 && ot.target == 7) return;    /* exit pressed: the fade-out */
+    if (major != 6) {
+        if (ot.target != 7) {
+            load_test_fail("the title's OPTIONS ended before its exit row");
+            return;
+        }
+        ot.phase = 2;
+        ot.wait = 0;
+        return;
+    }
+    int cond = 0;
+    uint16_t button = 0;
+    const char *snap = NULL;
+    if (!ot_page(&cond, &button, &snap)) {
+        ot.target = ot.target == 6 ? 7 : ot.target + 1;
+        ot.step = 0;
+        ot.idle = 0;
+        if (!ot_page(&cond, &button, &snap)) return;
+    }
+    if (!cond) {
+        ot.idle = 0;
+        if (++ot.wait > 2000) load_test_fail("an OPTIONS page's condition never held");
+        return;
+    }
+    ot.wait = 0;
+    if (++ot.idle <= 10) return;
+    if (snap) {
+        capture(1u << (11 + ot.target), snap);
+        printf("startup test: options page %s at engine frame %u\n", snap, em_frame_counter());
+    }
+    ot_key(ot.before);
+    ot.button = button;
+    load_test_pad(em_pad_swap(button));
+    ot.hold = 1;
+    ot.idle = 0;
+    if (!(ot.step == 0 && button == 0x4000)) ++ot.step;
+    if (ot.step == 1 && ot.target == 6) ot.target = 7;
 }
 
 /* EM_START_AT without EM_START_AT_TEST: the run is the player's after the
@@ -1161,14 +1520,27 @@ static void startup_task(void)
      * load screen reads them), as at the start of every game-task tick. */
     em_frame_scene_input(em_scene_state());
     f.load_drawn = 0;
+    if (options_test()) {
+        const uint8_t *mode = em_stream_live_output_mode();
+        ot.pre_fade = em_frame_transition()->substate;
+        ot.pre_mono = mode ? *mode : -1;
+    }
     const EmFrameInput *pad = em_frame_input();
     EmStartupInput input = {pad->held, pad->pressed,
                             em_frame_transition()->substate, 0, em_scene_state()->d275BDC};
-    attract_abort();
+    attract_tick(0);
     int expected_cursor = -1;
     /* The fixtures drive the boot's title only; after a death the player's
      * pad (the level smoke's driver) drives it. */
-    if ((f.test || f.start_at) && !f.reinstalled && em_startup_view(&f.flow, &input).interactive) {
+    if (f.attract_exit_seen && attract_test() && em_startup_view(&f.flow, &input).interactive) {
+        /* EM_ATTRACT_DEMOS=N (default 1): quit once N demos have ended. */
+        const char *n = getenv("EM_ATTRACT_DEMOS");
+        f.attract_exit_seen = 0;
+        printf("startup test: attract: the title is back at engine frame %u\n", em_frame_counter());
+        if (++f.attract_ended >= (n && n[0] ? atoi(n) : 1)) em_frame_request_quit();
+    }
+    if ((f.test || f.start_at) && !attract_test() && !f.reinstalled &&
+        em_startup_view(&f.flow, &input).interactive) {
         /* End-to-end fixture: exercise the rendered menu through the same
          * state-machine input boundary as the frame's unpacked pad. */
         input.held = input.pressed = 0;
@@ -1200,6 +1572,12 @@ static void startup_task(void)
         }
         if (load_drive() && f.menu_ticks == 15)
             input.held = input.pressed = EM_PAD_CROSS;
+        /* EM_STARTUP_TEST=options: Down twice to OPTIONS, its CROSS. */
+        if (options_test() && ot.phase == 0 && (f.menu_ticks == 13 || f.menu_ticks == 14)) {
+            input.held = input.pressed = EM_PAD_DOWN;
+            expected_cursor = f.menu_ticks == 13 ? 1 : 2;
+        }
+        if (options_test() && ot.phase == 0 && f.menu_ticks == 15) input.held = input.pressed = EM_PAD_CROSS;
     }
     em_startup_tick(&f.flow, &input);
     EmStartupView view = em_startup_view(&f.flow, &input);
@@ -1213,7 +1591,12 @@ static void startup_task(void)
     }
     EmGfx *gfx = em_frame_gfx();
     const float black[4] = {0, 0, 0, 1};
-    em_gfx_overlay_rect(gfx, 0, 0, EM_GFX_OVERLAY_W, EM_GFX_OVERLAY_H, black);
+    /* The demo's world frame draws itself (001AE5E0 / 001AE6B0). The black
+     * frame is the overlay pass's bottom fill, under the backdrop quads:
+     * the load screen's and the OPTIONS' 0020A7A0 background draws there
+     * (an overlay rect would cover it; docs/OPTIONS.md section 4.5). */
+    if (!f.attract_serial || !attract_live(f.attract_demo))
+        em_gfx_overlay_backdrop_fill(gfx, black);
     int screen = -1;
     if (view.screen >= EM_STARTUP_SCREEN_LOGO_A && view.screen <= EM_STARTUP_SCREEN_LOGO_C)
         screen = view.screen - EM_STARTUP_SCREEN_LOGO_A;
@@ -1232,7 +1615,8 @@ static void startup_task(void)
             capture(1u << (screen < 3 ? screen : screen + 1), names[screen]);
         }
     }
-    /* The load screen's draw stream of this tick's 00225AC0 call. */
+    /* The load screen's (00225AC0) or the OPTIONS' (00200A40) draw stream
+     * of this tick's call. */
     if (f.load_drawn) {
         if (em_options_live_render(load_options(), gfx) != 1)
             fail("the load screen's draw stream");
@@ -1245,12 +1629,14 @@ static void startup_task(void)
         card_close();
     }
     if (load_drive()) load_test_after_frame();
+    if (options_test() && !f.reinstalled) options_test_after_frame();
     f.interactive = view.interactive;
     f.cursor = view.cursor;
     /* The level smoke drives the title after a death with the pad (its
      * after-frame hook, as at every world frame's close-out). */
     if (f.reinstalled) em_level_smoke_test_after_frame();
-    if (view.interactive && !f.reinstalled && ++f.menu_ticks == 30 && f.test) {
+    if (view.interactive && !f.reinstalled && ++f.menu_ticks == 30 && f.test && !attract_test() &&
+        !options_test()) {
         unsigned required = (1u << EM_STARTUP_SCREEN_LOGO_A) |
             (1u << EM_STARTUP_SCREEN_LOGO_B) | (1u << EM_STARTUP_SCREEN_LOGO_C) |
             (1u << EM_STARTUP_SCREEN_MOVIE) | (1u << EM_STARTUP_SCREEN_TITLE);
@@ -1278,6 +1664,7 @@ int em_frontend_install_001AC070(void)
     f.texture_screen = -1;
     f.previous_screen = -1;
     f.attract_serial = 0;
+    f.attract_exit = 0;
     if (!em_task_replace_current(startup_task)) return -1;
     printf("startup: 001AC070 again (D_00275BDC = %u), engine frame %u\n",
            (unsigned)em_scene_state()->d275BDC, em_frame_counter());
@@ -1321,6 +1708,7 @@ void em_frontend_install(void)
     f.installed = 1;
     f.capture_dir = getenv("EM_STARTUP_CAPTURE_DIR");
     f.test = getenv("EM_STARTUP_TEST");
+    if (attract_test()) em_frame_set_frame_tail(attract_row_tail);
     f.load_test = f.test && strcmp(f.test, "loadgame") == 0;
     /* Test input only (EM_STARTUP_TEST runs, and a replay, whose saves must
      * not reach the player's card): the host card folder for the whole run,

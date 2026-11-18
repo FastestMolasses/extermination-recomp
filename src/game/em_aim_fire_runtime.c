@@ -7,6 +7,7 @@
 #include "game/em_aim_fire_flash.h"
 #include "game/em_aim_fire_trail.h"
 #include "game/em_aim_fire_burst.h"
+#include "game/em_effect_001E3630.h"
 #include "game/em_area01_rcl_workers.h"
 #include "game/em_bone_burst.h"
 #include "game/em_effect_001F77B0.h"
@@ -691,6 +692,15 @@ static int external_call(void *context,EmAimFireLive *live,EmAimFireTargetCall *
         if (!a || !a->allocated) return -1;
         return em_collision_world_publish_001B1B70(a)<0 ? -1 : 0;
     }
+    case 0x1F0460: {
+        /* 001F0460(n, M): a ring decal slot (the flamethrower burst
+         * 001E3630's double-hit retry, preset 6): em_effects_live's
+         * translation over the 4x4 at a[1]. */
+        const void *p=em_aim_fire_live_map(live,(uint32_t)f->a[1]&~15u,64,0);
+        if (!p) return -1;
+        float m[16];memcpy(m,p,64);
+        return em_effects_live_001F0460((int32_t)f->a[0],m);
+    }
     case 0x1EFD20: {
         float position[4];
         const void *p=em_aim_fire_live_map(live,(uint32_t)f->a[1],16,0);
@@ -1101,7 +1111,8 @@ static int other_tick(void *context,uint32_t node,uint32_t callback)
     }
     if (callback==0x001E2E80u || callback==0x001F6FB0u || callback==0x001E7310u || callback==0x001E7440u ||
         callback==0x001E7050u ||
-        callback==0x001E7570u || callback==EM_AIM_FIRE_BURST_CALLBACK || callback==EM_AIM_FIRE_RING_CALLBACK) {
+        callback==0x001E7570u || callback==EM_AIM_FIRE_BURST_CALLBACK || callback==EM_AIM_FIRE_RING_CALLBACK ||
+        callback==EM_EFFECT_001E3630_CALLBACK) {
         /* The spat hazard node 001E2E80 (em_area00_hud) and the creatures'
          * glow node 001F6FB0 (em_area00_fx), through the composition, with
          * D_00275B40 = its +0x110 (the walk's 001CB590); 1 while its record

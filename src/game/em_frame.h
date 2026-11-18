@@ -76,6 +76,14 @@ const EmFrameInput *em_frame_input(void);
  * (including the repeat word 0x00810E78), analog 0x00810E64..67 and the
  * 001B5CC0 gait byte 0x00810E57. */
 const EmPadUnpack *em_frame_pad_block(void);
+/* 001B5BC0 over the step-C pad block (the attract demo, lane PORT-DEMO):
+ * em_pad_record_001B5BC0 on the one storage of D_00810E70..76 / E64 / E65 /
+ * E57, then the native view (em_frame_input) refreshed as step C does. The
+ * next step C reads the block the demo left (as the original's 001B5940
+ * reads D_00810E70 for its previous word). */
+void em_frame_pad_record_001B5BC0(const uint8_t rec[5], const uint8_t *prev);
+/* The main-loop counter 0x70003B64 (sw): 001ACA20 state 4 sub 0 clears it. */
+void em_frame_store_counter_70003B64(uint32_t value);
 /* D_00810E6A (the pad block's +0x2A halfword, the read-time mode id). */
 uint16_t em_frame_d810E6A(void);
 
@@ -105,7 +113,8 @@ uint32_t em_frame_counter(void);
 /* A hook run at the very end of a frame step, before the counter moves
  * (EM_START_AT's deferred end-of-frame step; comparison only). */
 void em_frame_set_frame_tail(void (*fn)(void));
-/* Read-only byte views borrow the same word; only the frame loop writes it. */
+/* Read-only byte views borrow the same word; only the frame loop writes it
+ * (and 001ACA20's clear, em_frame_store_counter_70003B64). */
 const uint32_t *em_frame_counter_storage(void);
 
 /* Frame parity (step W's `frame_idx ^= 1`, halfword 0x00810E80) — selects

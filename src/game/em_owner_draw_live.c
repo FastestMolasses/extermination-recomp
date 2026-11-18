@@ -1070,12 +1070,11 @@ static int method_list(uint32_t method, const EmWorldModel *m, const uint32_t rg
     } else {
         const int six = method == 0x001CB2B0u;
         const uint8_t *data = em_effects_live_window(six ? 0x0026E4C0u : 0x0026E470u, 0x50u);
-        const uint8_t *row0 = em_effects_live_window(six ? 0x00251C10u : 0x00251BD0u, 16u);
-        const uint8_t *rest = em_effects_live_window(six ? 0x00251C2Cu : 0x00251BECu, 0x24u);
-        if (!data || !row0 || !rest) return report(0x0026E470u, "the method's rows are not mapped (re-export effect_tables.emet)");
-        uint8_t colours[64] = {0};
-        memcpy(colours, row0, 16);
-        memcpy(colours + 0x1Cu, rest, 0x24u);
+        if (!data) return report(0x0026E470u, "the method's rows are not mapped (re-export effect_tables.emet)");
+        /* D_00251BD0 / D_00251C10: the render context's storage of those
+         * bytes, whose +0x10..+0x1B 001D40E0 / 001D4440 store. */
+        uint8_t *colours = em_rcl_bytes_mut(six ? 0x00251C10u : 0x00251BD0u, 64u);
+        if (!colours) return report(0x00251BD0u, "the method's colour rows are not in the render context's storage");
         rc = em_rcl_001D40E0(3, six, m->address, m->w04, rgb, data, data + 16, colours);
     }
     return rc < 0 ? -1 : ch3_load();

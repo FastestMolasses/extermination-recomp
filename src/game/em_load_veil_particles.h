@@ -183,13 +183,14 @@ int em_load_veil_particles_001D6580(EmLoadVeilParticles *s, int32_t chan, const 
  * into the 256 x 256 buffer, the strip added over it, the object drawn from
  * it. `copy` is the quadword of D_0026E470 / D_0026E4C0, `xy` the 64 bytes at
  * D_0026E480 / D_0026E4D0, `colours` the 64 bytes at D_00251BD0 / D_00251C10
- * (their row 1's first three words are this call's), `rgb` the owner's
- * +0x80..: three binary32 words, multiplied by 128 and put through
- * float_to_int. 001D3F60(chan, model, 0): the same copy, the object drawn from
+ * in the caller's storage of those bytes: the call stores row 1's first three
+ * words (D_00251BE0..E8 / D_00251C20..28) as the original does, `rgb` the
+ * owner's +0x80..: three binary32 words, multiplied by 128 and put through
+ * float_to_int, and then reads the rows. 001D3F60(chan, model, 0): the same copy, the object drawn from
  * it at its screen position. `model_w04` is the model's +0x04 word. */
 int em_load_veil_particles_001D40E0(EmLoadVeilParticles *s, int32_t chan, int six, uint32_t model, uint32_t model_w04,
                                     const uint32_t rgb[3], const uint8_t copy[16], const uint8_t xy[64],
-                                    const uint8_t colours[64]);
+                                    uint8_t colours[64]);
 int em_load_veil_particles_001D3F60(EmLoadVeilParticles *s, int32_t chan, uint32_t model, uint32_t model_w04,
                                     const uint8_t copy[16]);
 /* 001DFA40(chan, a1, a2, f12): only the low words of a1/a2 reach the packets. */

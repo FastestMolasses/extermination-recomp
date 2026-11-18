@@ -52,6 +52,7 @@ DATA_WINDOWS = [
     # the options screen and its card screen (docs/OPTIONS.md)
     (0x00264CB0, 0x00264CC8),   # 001FC770's config D_00264CB0 for 001FCBD0 / 001FCE30
     (0x00264D30, 0x00264DB0),   # 001FCBD0's 128-byte line template D_00264D30
+    (0x00264EA0, 0x00264EE0),   # the title options' row colours D_00264EA0 and actions D_00264EC0 (00200A40)
     (0x00264EE0, 0x00264FA4),   # 00202D10's icon rows and their pointers D_00264F98
     (0x002672C0, 0x00267308),   # the row colours D_002672C0 and the actions D_002672E0
     (0x0026C658, 0x0026C760),   # the ctype table 001FCBD0 reads (D_0026C659)

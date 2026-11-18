@@ -551,7 +551,7 @@ static int object_tail(S *s, int32_t chan, u32 skin, u32 model, u32 w04, u32 fn)
 }
 
 int em_load_veil_particles_001D40E0(S *s, int32_t chan, int six, u32 model, u32 w04, const uint32_t rgb[3],
-                                    const uint8_t copy[16], const uint8_t xy[64], const uint8_t colours[64])
+                                    const uint8_t copy[16], const uint8_t xy[64], uint8_t colours[64])
 {
     const u32 fn = six ? 0x001D4440u : 0x001D40E0u;
     if (latched(s)) return -1;
@@ -560,14 +560,14 @@ int em_load_veil_particles_001D40E0(S *s, int32_t chan, int six, u32 model, u32 
     if (program_call(s, chan, 0x0023D0C0u, fn) < 0) return -1;
     if (em_load_veil_particles_001D6930(s, chan, buffer, 8, 8, copy, NULL) < 0) return -1;
     if (em_load_veil_particles_001D1F80(s, chan, 0, 2) < 0) return -1;
-    uint8_t rows[64];
-    memcpy(rows, colours, sizeof rows);
+    /* D_00251BE0 / 4 / 8 (001D4440: D_00251C20 / 4 / 8) = float_to_int(128 *
+     * rgb[k]): stored into the row itself, which 001D6580 then reads. */
     for (unsigned k = 0; k < 3u; ++k) {
         int32_t v = 0;
         if (to_int(s, em_ee_mul_bits(0x43000000u, rgb[k]), &v) < 0) return -1;
-        put32(rows + 16u + 4u * k, (u32)v);
+        put32(colours + 16u + 4u * k, (u32)v);
     }
-    if (em_load_veil_particles_001D6580(s, chan, xy, rows, 0x48, NULL) < 0) return -1;
+    if (em_load_veil_particles_001D6580(s, chan, xy, colours, 0x48, NULL) < 0) return -1;
     if (em_load_veil_particles_001D1F20(s, chan) < 0) return -1;
     if (em_load_veil_particles_001D1F80(s, chan, 1, six ? 7 : 1) < 0) return -1;
     if (em_load_veil_particles_001D6BA0(s, chan, buffer, 8, 8, 0, 0, NULL) < 0) return -1;

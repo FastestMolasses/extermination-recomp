@@ -95,7 +95,7 @@ COMMON  := src/main.c src/em_model.c src/em_input.c src/em_settings.c \
            src/game/em_aim_fire_control.c src/game/em_aim_fire_machines.c src/game/em_aim_fire_pose.c \
            src/game/em_aim_fire_target.c src/game/em_aim_fire_shots.c src/game/em_aim_fire_reticle.c \
            src/game/em_aim_fire_tables.c src/game/em_aim_fire_leaves.c \
-           src/game/em_aim_fire_live.c src/game/em_aim_fire_marker.c src/game/em_aim_fire_projectile.c src/game/em_aim_fire_flash.c src/game/em_aim_fire_trail.c src/game/em_aim_fire_burst.c src/game/em_bone_burst.c src/game/em_effect_001F77B0.c src/game/em_aim_fire_binding.c src/game/em_aim_fire_soft_float.c \
+           src/game/em_aim_fire_live.c src/game/em_aim_fire_marker.c src/game/em_aim_fire_projectile.c src/game/em_aim_fire_flash.c src/game/em_aim_fire_trail.c src/game/em_aim_fire_burst.c src/game/em_bone_burst.c src/game/em_effect_001F77B0.c src/game/em_effect_001E3630.c src/game/em_aim_fire_binding.c src/game/em_aim_fire_soft_float.c \
            src/game/em_aim_fire_lamp.c \
            src/game/em_aim_fire_render_live.c src/game/em_aim_fire_world_live.c src/game/em_aim_fire_runtime.c \
            src/game/em_aim_fire_sdk_memory.c src/game/em_aim_fire_cable_live.c src/game/em_area11_gun_live.c src/game/em_area06_port_strip.c \
@@ -424,6 +424,10 @@ test-input-block-reference:
 .PHONY: test-title-menu-reference
 test-title-menu-reference:
 	python3 tools/test_title_menu_reference.py
+
+.PHONY: test-attract-demo
+test-attract-demo: all
+	python3 tools/test_attract_demo.py
 
 .PHONY: test-random-seed-reference
 test-random-seed-reference:
@@ -849,6 +853,11 @@ test-player-reaction-reference:
 .PHONY: test-player-hang-reference
 test-player-hang-reference:
 	python3 tools/test_player_hang_reference.py
+
+# 001645D0 (state 0x0A, the climb up from a hang) against em_player_hang_up_state.
+.PHONY: test-player-hang-up-reference
+test-player-hang-up-reference:
+	python3 tools/test_player_hang_up_reference.py
 
 .PHONY: test-player-recovery-reference
 test-player-recovery-reference:
@@ -1657,6 +1666,15 @@ test-start-saves:
 test-title-load-game: $(BIN)
 	python3 tools/test_title_load_game.py
 
+# The title's OPTIONS (00200A40; docs/OPTIONS.md section 4.5): boot, Down
+# twice to OPTIONS, every page with the original capture's closed-loop
+# presses, back to the title; the distinct states and their lengths
+# against ../Extermination/build/options_ref (tools/capture_title_options.py;
+# about 2 s).
+.PHONY: test-title-options
+test-title-options: $(BIN)
+	python3 tools/test_title_options.py
+
 # EM_START_AT=<name>, the developer switch (docs/STARTUP.md "Developer
 # switches"): area01 through the boot title's LOAD GAME on the start-point
 # card itself (read-only) into control in AREA01, checked as
@@ -2144,6 +2162,12 @@ test-area01-model-live-reference:
 	python3 tools/test_area01_model_live_reference.py
 test-area01-model-draw-reference:
 	python3 tools/test_area01_model_draw_reference.py
+
+# 001CB130 -> 001CB070 (kind 9, the AREA19 worms) run in full against the
+# production em_area01_model_draw_call path over captured AREA19 RAM.
+.PHONY: test-area19-kind9-draw-reference
+test-area19-kind9-draw-reference:
+	python3 tools/test_area19_kind9_draw_reference.py
 test-area01-runtime-reference:
 	python3 tools/test_area01_runtime_reference.py
 .PHONY: test-area01-revisit-runtime-reference
@@ -2434,6 +2458,10 @@ test-area21-creature-c-reference:
 .PHONY: test-area00s2-creature-reference
 test-area00s2-creature-reference:
 	python3 tools/test_area00s2_creature_reference.py
+.PHONY: test-effect-001E3630-reference
+test-effect-001E3630-reference:
+	python3 tools/test_effect_001E3630_reference.py
+
 .PHONY: test-area14-overlay-reference
 test-area14-overlay-reference:
 	python3 tools/test_area14_overlay_reference.py

@@ -1122,6 +1122,11 @@ section 5): the boot's card check creates them, and the card screen's GetInfo /
 Sync answer from them; loading a game reads the card's files
 (docs/SAVE_GAME.md section 6), saving one is not bound yet. Load Game runs the original
 memory-card screen after a death (docs/OPTIONS.md section 4.3) and on the
-boot's title (on the title's own binding, docs/SAVE_GAME.md section 6.4); the Option and attract services remain pending
+boot's title (on the title's own binding, docs/SAVE_GAME.md section 6.4). The title's
+attract demo (001AC070 state 3) runs 001ACA20 on the recorded pads of module 0x36
+(docs/ATTRACT_DEMO.md): demos 0 (AREA06) and 2 (AREA03) are live, and demo 1 (AREA13)
+keeps the black stand-in with the button exit until its aim/fire fault is fixed.
+`EM_STARTUP_TEST=attract` (`make test-attract-demo`) idles into demo 0 and compares
+it with the original's capture. The Option service remains pending
 rather than manufacturing an outcome. Windows/Linux movie backends and
 other existing gameplay approximations also remain unfinished.

@@ -9,6 +9,9 @@
 #undef report
 #include "game/em_load_veil_particles.h"
 #include "game/em_render_context.h"
+#include "game/em_packet_chain_original.h"
+#include "game/em_sdk_math_original.h"
+#include "game/em_player_stage_workers.h"
 EmGameState g;
 static EmArea01ModelDraw draw_view;
 static EmRenderContext render;
@@ -28,7 +31,33 @@ int em_rcl_001D1F80(int32_t a0,int32_t a1,int32_t a2)
 {return em_load_veil_particles_001D1F80(&veil,a0,a1,a2);}
 int em_rcl_001D2910(int32_t a0,uint32_t *out)
 {return em_render_context_001D2910(&render,a0,out);}
-EmPacketChain *em_rcl_packet_chain(void){abort();}
+/* The draw methods (001CB130 kind 9 ...): 001CAAC0's chain over the same
+ * memory, and the veil module's builders the render context would call. */
+static EmPacketChain chain;
+static EmPacketChainRegion chain_regions[2];
+EmPacketChain *em_rcl_packet_chain(void){return &chain;}
+int em_rcl_001D40E0(int32_t chan,int six,uint32_t model,uint32_t model_w04,const uint32_t rgb[3],
+                    const uint8_t copy[16],const uint8_t xy[64],uint8_t colours[64])
+{return em_load_veil_particles_001D40E0(&veil,chan,six,model,model_w04,rgb,copy,xy,colours);}
+int em_rcl_001D3F60(int32_t chan,uint32_t model,uint32_t model_w04,const uint8_t copy[16])
+{return em_load_veil_particles_001D3F60(&veil,chan,model,model_w04,copy);}
+int em_rcl_001D1F20(int32_t chan){return em_load_veil_particles_001D1F20(&veil,chan);}
+int em_rcl_001D1FF0(int32_t chan,int32_t a1){return em_load_veil_particles_001D1FF0(&veil,chan,a1);}
+int em_rcl_001CB760(uint32_t table,int32_t id,uint32_t address)
+{return em_packet_chain_001CB760(&chain,table,id,address);}
+/* The method's D_0026E470 / D_0026E4C0 quadword and rows (ELF data; the
+ * oracle checks the captured bytes equal the ELF's before serving them).
+ * Production reads them from effect_tables.emet. */
+const uint8_t *em_effects_live_window(uint32_t a,uint32_t n)
+{
+    static const uint32_t win[][2]={{0x0026E470u,0x50u},{0x0026E4C0u,0x50u}};
+    for(unsigned i=0;i<sizeof win/sizeof win[0];++i)
+        if(a>=win[i][0] && n<=win[i][1] && a-win[i][0]<=win[i][1]-n)return ram+a;
+    return NULL;
+}
+static int veil_fabs(void *ctx,uint32_t x,uint32_t *r)
+{(void)ctx;float f,v;memcpy(&f,&x,4);v=em_sdk_math_original_0011DF78(f);memcpy(r,&v,4);return 0;}
+static int veil_int(void *ctx,uint32_t x,int32_t *r){(void)ctx;*r=em_player_float_to_int(x);return 0;}
 #ifndef EM_A01_TEST_SHADOW
 int em_shadow_live_actor_001DA6A0(uint32_t record,const uint8_t *bytes,uint32_t size,
                                 const uint8_t *const nodes[],uint32_t count)
@@ -55,7 +84,18 @@ int ad_seed(uint8_t *memory,uint8_t *scratch,uint32_t node)
     veil.world.ctx_9C=(uint32_t *)(void *)(ram+EM_RCL_CONTEXT+0x9C);
     veil.world.d00275674=(uint32_t *)(void *)(ram+0x275674);
     veil.world.packet=ram;veil.world.packet_address=0;veil.world.packet_size=0x2000000u;
+    veil.world.d00275678=(uint32_t *)(void *)(ram+0x275678);
+    veil.world.d0027568C=(uint32_t *)(void *)(ram+0x27568C);
+    veil.world.ctx_0C=(uint32_t *)(void *)(ram+EM_RCL_CONTEXT+0x0C);
+    veil.world.ctx_50=(uint32_t *)(void *)(ram+EM_RCL_CONTEXT+0x50);
+    veil.world.d0026E880=ram+0x26E880;veil.world.d00241010=ram+0x241010;
+    veil.workers.w_0011DF78=veil_fabs;veil.workers.w_001281C0=veil_int;
+    chain_regions[0]=(EmPacketChainRegion){0,0x2000000u,ram};
+    chain_regions[1]=(EmPacketChainRegion){0x70000000u,0x4000u,spr};
+    uint32_t ctx_word,gs_word;memcpy(&ctx_word,ram+0x275670,4);memcpy(&gs_word,ram+0x275674,4);
+    em_packet_chain_init(&chain,chain_regions,2,ctx_word,gs_word);
     em_area01_model_draw_bind(&draw_view,&model);
+    draw_view.current=node;   /* D_00275B44, as em_area01_live sets it from the host */
     return 0;
 }
 int ad_call(uint32_t function,uint32_t node)

@@ -29,13 +29,14 @@ def build():
              'src/game/em_area01_sys.c','src/game/em_aim_fire_sdk_memory.c','src/game/em_camera_commit_original.c','src/game/em_sdk_math_original.c',
              'src/game/em_coll_probe_original.c','src/game/em_owner_services_original.c',
              'src/game/em_stream_lanes_original.c','src/game/em_effect_original.c',
-             'src/game/em_effect_manager.c',
+             'src/game/em_effect_manager.c','src/game/em_effect_001E3630.c',
              'src/game/em_effect_kinds.c','src/game/em_head_sprite_original.c',
              'src/game/em_packet_chain_original.c','src/game/em_actor_pool.c',
              'src/game/em_status_ui_leftovers.c',
              # handler_001EF510 (em_effects_live) reaches em_area00_fx's spray.
              'src/game/em_area00_fx_gs.c','src/game/em_area00_fx_spawn.c','src/game/em_area00_fx_trail.c',
-             'src/game/em_area00_fx_debris.c','src/game/em_area00_fx_exit.c','src/game/em_area00_fx_glow.c']
+             'src/game/em_area00_fx_debris.c','src/game/em_area00_fx_exit.c','src/game/em_area00_fx_glow.c',
+             'src/game/em_effect_001EB440.c','src/game/em_level14_port_boot.c']
     subprocess.run(['cc','-std=c11','-O2','-Wall','-Wextra','-Werror','-ffp-contract=off',
                     '-shared','-fPIC','-Isrc','-Wl,-dead_strip','-Wl,-exported_symbol,_fs_*',
                     *sources,'-lm','-o',str(target)],cwd=ROOT,check=True)

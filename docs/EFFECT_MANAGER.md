@@ -345,6 +345,7 @@ RENDER_CONTEXT.md section 8).
 | 001EFD90 | the player closure's workers (the footsteps 00187EE0, the climb's 0017DEB0, the slide, the walk's skid 001612D0, the fall and reaction spawns), with the record's whole +0xC0 quadword; the crates' 001551B0 |
 | 001EFD20 | the truck 00823FF0's 32 spawns, the drums' 00156620, the weather node 001C1EA0 (0x80000017) |
 | 001E4CE0, 001E4610 | the blast of a drum (0x80000013 + 0x8000001C / 0x8000002E, the class-0xD, type-5 emitter and ring): rows 0x1E4CE0 and 0x1E4610 of em_area11_bindings through em_aim_fire_burst in AREA11; the area runtime everywhere else (em_area02_misc / em_level11_port). AREA11's blast was checked against a scripted run of the original (the bursts, the chain to the second drum and the crate, every record's lifetime, tick by tick) |
+| 001E3630 (with its +0x34 contact 001E3620) | the flamethrower's burst: 00188630 mode 4 (sub-weapon 4, fuel D_00810CAE) spawns 0x80000039 through w_001EFEB0; the node's behaviour 0x1E3630 runs as row 0x1E3630 of em_area11_bindings (every area) through em_aim_fire_burst (em_aim_fire_runtime's other_tick, its callees through the composition; 001F0460 is the composition's case to em_effects_live_001F0460; D_00253BC0..CC is writable through em_effects_live_window_mutable). The translation is em_effect_001E3630 (byte-matched decomp C; test-effect-001E3630-reference runs the original over every state and branch). 001E3620 (empty) is accepted by both +0x34 contact dispatchers (em_area11_bindings flame_behaviour, em_scene_bindings area01_contact). No recording reaches it yet |
 | 001F0120 | 0015C420 (the player's 0x3B), Roger's 001BA8E0 (0x47) |
 | 001EA240, 001E2560 | the pool walk 001AFD70, rows 0x1EA240 and 0x1E2560 of em_area11_bindings |
 | the draw block of 001F1180 (001F0A60) | the pickup owner's tick (em_area11_interaction_host `aura_draw`, the owner's +0xD0 matrix, through the hook `em_area11_interaction_host_set_aura_draw` the bindings' effect attach sets; unset it faults) |
@@ -384,6 +385,14 @@ handlers em_effect_kinds does not translate split in two:
   clear) and the slide (0016CD70, surfaces outside 5, 6, 7, 8,
   0x5A..0x5C). The binder's `gaps` counter stays in the tick log and is
   always 0.
+- **001ECE70 (0x8000001A, subtype 0x10), bound 2026-11-18 (lane GAP-3).**
+  Its one spawner is the flamethrower burst 001E3630's retry window (both
+  side probes hit). handler_001ECE70 runs em_effect_001E3630's translation
+  (byte-matched decomp C; test-effect-001E3630-reference): one 001CFB50 of
+  the node's matrix with the work block's +0x244 / +0x24C (through
+  D_00275C34), 1.0, 0.1 and 9.0, then 001CFBE0 kind 1 of D_00257000 (the
+  boot constants' copy; added to w_001CFBE0's sources). No recording
+  reaches it yet.
 - **Everything else faults** (fail-stop at the handler's address, latched
   by the binder; the scene coordinator stops the game task). None of them
   is checked, and some do more than draw: 001EF510 (subtype 6) spawns

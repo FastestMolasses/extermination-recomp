@@ -95,7 +95,11 @@ SUBAREA_MODULES = (0x1D,)
 # is 0x32): the load's 00175770-side resident read of a loaded game that holds
 # one, and the part page's reload.
 ATTACHMENT_MODULES = (0x32, 0x33, 0x34, 0x35)
-DEFAULT_MODULES = (3,) + PAGE_MODULES + SCREEN_MODULES + SUBAREA_MODULES + ATTACHMENT_MODULES
+# The attract demo's recorded pads, module 0x36 (001ACA20 state 2's
+# 001FF080(0, 0x36); its header names slot 0x87, D_0028A6AC, the table
+# 001B5BC0 reads: three demos of 0x4800 bytes; docs/ATTRACT_DEMO.md).
+DEMO_MODULES = (0x36,)
+DEFAULT_MODULES = (3,) + PAGE_MODULES + SCREEN_MODULES + SUBAREA_MODULES + ATTACHMENT_MODULES + DEMO_MODULES
 # (area, room): AREA11 (the New Game's 001FF080(1, 0)), AREA01 sub 0 (the
 # level exit's load: Roger's departure requests 001B0C60(1, 0, 4); route beat
 # 15, docs/FIRST_LEVEL_EXIT.md) and AREA00 sub 0 (the second level's exit:
