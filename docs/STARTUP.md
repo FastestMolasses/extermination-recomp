@@ -569,6 +569,10 @@ recording-derived and stay in the ignored `build/`.
   states per script frame (both comparison only, docs/AREA03X_PORT.md).
   `EM_START_AT_RANDS=<file>` (lines `f state`) puts
   the rand() word in place at those script frames.
+  `EM_START_AT_CLOCK=<f>:<hex>` (comparison only) sets 0x70003B68 to the
+  recording's value at script frame f: a card's load counts other frames than
+  the recording's, and owners read the clock's parity (the guided beats g4x
+  take it from their first row, tools/mid_route_beats.py).
   `EM_START_AT_RESTORE=<image>:<f>:<clock>[,...]` at each script frame copies from
   a recording's RAM image what a load resets: the bugs' records, the items' glow
   timers, the NPC's face timers, health and infection, and sets 0x70003B68

@@ -542,10 +542,16 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   build/fork_refs/guided-20261117/), with its CREATURES / FLAG_RULES /
   EXPLICIT_MODELS rules, the named orphan-unproven drums and the attachment
   bank; all kinds, profile 17, sfx scope (0x11, 0) and its stream cues are
-  exported; cards g46 .. g48 load it live. The beat g46 fails: the port
-  leaves the player at the load pose where the original's arrival moves it
-  (row 311), and 00133E30's shadow (44 bones, kind 0) fail-stops after ~400
-  frames. AREA16's owners now bind in the live composition too (area 0x10:
+  exported; cards g46 .. g48 load it live. Lane PORT-LIVE-A17 (branch
+  live-a17): the row-310 pose is 001B07C0's spawn entry 0 on the original's
+  area change, not a script op (a card's LOAD GAME places from the load
+  pose); g46 drops the recording's 312 load rows, gets the rand() table
+  and world clock from its own rows (comparison only), runs [30]'s skip at
+  the recording's frame; 001DA6A0 returns for kind 0 as the original does,
+  music cue 0xB is exported, the muzzle node binds in AREA17. g46 and g47
+  now stop at the untranslated particle burst 001F1F60 (effects
+  0x80000037 / 0x80000038 of the creature's spit), g48 at 001BAD40 (from
+  0x8251B0) after ~12200 frames. No beat passes yet. AREA16's owners now bind in the live composition too (area 0x10:
   dispatch_second_half, scene bindings, 001B6660's window, op09 callbacks).
 - Every boot behaviour of the six areas is now in a census ledger or
   defined (section 6 for the six BOOT2 added); those marked only "defined"

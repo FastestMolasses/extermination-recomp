@@ -245,6 +245,11 @@ static struct {
     const char *restore;
     int restore_f;
     unsigned restore_clock;
+    /* EM_START_AT_CLOCK=<f>:<hex>: at that script frame 0x70003B68 takes the
+     * recording's value (the actors' staggered periods read its parity; a
+     * card's load counts other frames than the recording's; comparison only). */
+    int clock_f, clock_set;
+    unsigned clock_value;
     /* EM_START_AT_SYNC=<byte address>:<value>:<f>: when that progress byte
      * first holds the value the script's clock is set to f (a scripted
      * stretch started off the recording's frame keeps the recording's rows
@@ -696,6 +701,12 @@ int em_start_at_check(void)
         } else {
             pad.sync_done = 1;
         }
+        const char *clock = getenv("EM_START_AT_CLOCK");
+        if (clock && clock[0]) {
+            if (sscanf(clock, "%d:%x", &pad.clock_f, &pad.clock_value) != 2 || pad.clock_f < 0)
+                return refuse("EM_START_AT_CLOCK: not f:hex", clock);
+            pad.clock_set = 1;
+        }
         const char *restore = getenv("EM_START_AT_RESTORE");
         if (restore && restore[0]) {
             const char *colon = strchr(restore, ':');
@@ -846,6 +857,12 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
         printf("startup: EM_START_AT_RANDS: rand() state %08x at script frame %d (comparison only)\n",
                pad.rand_at[pad.rand_next].state, t);
         pad.rand_next++;
+    }
+    if (pad.clock_set && t >= pad.clock_f) {
+        em_scene_state()->spad3B68 = (int32_t)pad.clock_value;
+        printf("startup: EM_START_AT_CLOCK: 0x70003B68 = %u at script frame %d (comparison only)\n",
+               pad.clock_value, t);
+        pad.clock_set = 0;
     }
     if (pad.restore && t >= pad.restore_f) {
         char path[512];
