@@ -3003,6 +3003,17 @@ compared tick on the recording: 170,833 of 170,833, all 529 segments exact, to
 position, heading, area and sub-area per tick; loads, cutscenes and menus keep each
 side's own length, so their ticks are not compared. `test1` likewise: 17,212 of 17,212.
 
+Claude's guided run (the decomp's `build/guided_play`, g01 onward) plays the same way
+from the title: `python3 tools/watch_takes.py --check --root
+../Extermination/build/guided_play g01_title_newgame` puts 144,038 of 144,038 compared
+ticks on the recording, all 318 segments exact (AREA11, AREA01, AREA00 and on into
+AREA19), until the port's first fail-stop: in g11_area19 (AREA19 sub 0) the cutscene
+at original counter 147,500 plays its 1,278 ticks exactly, then script actor
+001BB0E0's node faults (runtime 008106C0, code 2) instead of returning to play
+(2026-11-18, lane PORT-WATCH-DRIFT). Before that lane every gameplay segment left the
+recording one pi/8 turn step ahead: the tool fed a guided take's pad one tick early
+(its recorder's replay timeline is one vsync off the user's; `read_pads` in the tool).
+
 ## What we deliberately do not emulate
 
 The port reproduces the game, not the console. The rule (user, 2026-09-27):
