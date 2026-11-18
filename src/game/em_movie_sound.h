@@ -29,6 +29,8 @@ uint32_t em_movie_sound_push(const int16_t *pcm, uint32_t frames);
 /* Audio thread: add the queued frames into `out` (interleaved float
  * stereo). Only at 48000 Hz (the movie's rate); other rates are counted. */
 void em_movie_sound_mix(float *out, int frames, int device_rate);
+/* The device thread, once: drop the ring's queued samples (em_bgm_fast_end). */
+void em_movie_sound_flush(void);
 /* Frames pushed / dropped so far (diagnostics). */
 void em_movie_sound_counters(uint64_t *pushed, uint64_t *overruns, uint64_t *bad_rate);
 /* The ring and its counters (host output and the audio thread's read

@@ -486,6 +486,8 @@ EmWindow *em_window_create(const char *title, int width, int height)
     return w;
 }
 
+void em_window_show(EmWindow *w) { (void)w; }
+
 void em_window_destroy(EmWindow *w)
 {
     free(w);

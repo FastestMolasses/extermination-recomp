@@ -15,6 +15,7 @@
 #include "em_gfx.h"
 #include "em_platform.h"
 #include "em_settings.h"
+#include "game/em_fast.h"
 #include "game/em_frame.h"
 #include "game/em_game.h"
 #include "game/em_frontend.h"
@@ -289,6 +290,15 @@ static int stream_field(void *context)
     return em_stream_live_field();
 }
 static int loader_check(void *context) { (void)context; return em_scene_bindings_module_loader_check(); }
+
+/* The fast-forward start's switch (game/em_fast.h): the picture shows, the window comes up. */
+typedef struct { EmWindow *win; EmGfx *gfx; } EmFastBinding;
+static void fast_end(void *user)
+{
+    const EmFastBinding *b = user;
+    em_gfx_present_hold(b->gfx, 0);
+    em_window_show(b->win);
+}
 /* Main-loop step B: 001D1AE0(D_00810E80) on the render context. */
 static int rcl_step_b(void *context, int32_t index)
 {
@@ -348,6 +358,10 @@ int main(void)
     if (em_new_game_switch_check() != 0)
         return 1;
 
+    /* EM_FAST_UNTIL (game/em_fast.h): a playback's fast-forward start; the
+     * window is created hidden and shown at the switch. */
+    if (em_fast_init() < 0)
+        return 1;
     EmWindow *win = em_window_create("Extermination (native port)", 960, 720);
     if (!win) {
         fprintf(stderr, "fatal: could not create window\n");
@@ -401,6 +415,13 @@ int main(void)
     /* Engine bring-up: frame loop env + input + task table, then the boot
      * task into slot 0 (the engine init's func_001AB740(0, boot)). */
     em_frame_init(win, gfx);
+    static EmFastBinding fast;
+    fast.win = win;
+    fast.gfx = gfx;
+    if (em_fast_start_unpaced()) {
+        em_gfx_present_hold(gfx, 1);
+        em_fast_bind(fast_end, &fast);
+    }
     /* EM_INPUT_RECORD / EM_INPUT_PLAY: the video comparison's input
      * recording and playback (game/em_replay.h); inert when unset. */
     if (em_replay_install() != 0) {

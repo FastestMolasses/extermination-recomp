@@ -30,6 +30,15 @@ Usage (native arm64 macOS; build/extermination first, native):
   python3 tools/watch_takes.py --check --ticks 64000 --root ../Extermination/build/guided_play g01_title_newgame
                                                # a stop point: the chain's first 64000 game ticks
 
+  python3 tools/watch_takes.py --root ../Extermination/build/guided_play g01_title_newgame --chapters
+                                               # the guided chain's chapters, with their times
+  python3 tools/watch_takes.py --root ../Extermination/build/guided_play g01_title_newgame --from g16_area08
+  python3 tools/watch_takes.py --root ../Extermination/build/guided_play g01_title_newgame --at 2:41:37
+                                               # fast-forward (no window, no sound, no pacing) to that take or
+                                               # chapter, then the normal window, pace and sound, one process
+                                               # (EM_FAST_UNTIL, docs/STARTUP.md); the point's (segment:offset)
+                                               # is printed, and a warning when it is past the last --check's frontier
+
 --root DIR plays the chains of another take folder; the default is the user's
 own takes. A chain never mixes the two: under --root, a take whose start state or
 card lies outside DIR is refused, and the output goes to build/guided_takes/.
@@ -55,6 +64,7 @@ import shutil
 import struct
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,6 +74,7 @@ BIN = ROOT / 'build/extermination'
 COLS = ('step counter mv ph btn lx ly rx ry area sub entry bd8 s8d t9 tb x y z yaw seg off cap af').split()
 HEADER = ['# EMREC 1', '# source ps2-takes', '# mode recording', '# area0 world', '# tick_hz 59.94',
           '#cols ' + ' '.join(COLS) + ' rand']
+TICK_HZ = 59.94
 SAME = 0.01             # position difference a float print can leave
 TURNED = 0.001          # the same for the heading, in radians
 
@@ -153,7 +164,10 @@ def read_pads(name, carried):
     return pads, log[keys[-1]] if keys else carried
 
 
-def stitch(names, path, ticks=None):
+def stitch(names, path, ticks=None, marks=None):
+    """Write the stitched recording; returns its game ticks. `marks`, when given,
+    becomes {take: [stitched row index of each game row of its take.rec, or None
+    for a row the earlier take already had]}."""
     rows, last = [], -1
     clock = clocks(names)
     carried = (0, 128, 128, 128, 128)
@@ -177,11 +191,15 @@ def stitch(names, path, ticks=None):
                     parts[4:9] = [f'0x{btn:04x}', *map(str, axes)]
                     line = ' '.join(parts)
             if not movie and int(parts[1]) <= last:
+                if marks is not None:
+                    marks.setdefault(name, []).append(None)
                 continue            # the tick a take ended inside: the earlier take has it
             if not rows and not movie:
                 rows = lead_in(int(parts[1]))
             if not movie:
                 last = int(parts[1])
+                if marks is not None:
+                    marks.setdefault(name, []).append(len(rows))
             rows.append(line)
     if ticks is not None:
         played = [i for i, line in enumerate(rows) if line.split()[2] == '0']
@@ -202,7 +220,100 @@ def stitch(names, path, ticks=None):
         rows = kept
         header = HEADER[:-1] + [HEADER[-1] + ' clock']
     path.write_text('\n'.join(header + rows) + '\n')
+    if marks is not None:
+        marks['_pos'] = positions(rows)
     return sum(line.split()[2] == '0' for line in rows)
+
+
+def positions(rows):
+    """(segment, offset) of each stitched row, None for a movie row: the pair the
+    port's log writes and compare() reads (segments() groups the game rows)."""
+    pos, seg, off, prev = [], -1, 0, None
+    for line in rows:
+        parts = line.split()
+        if parts[2] != '0':
+            pos.append(None)
+            continue
+        if parts[3] != prev:
+            seg, off, prev = seg + 1, 0, parts[3]
+        else:
+            off += 1
+        pos.append((seg, off))
+    return pos
+
+
+def chain_vsyncs(names):
+    """The vsyncs before each take in the one continuous run, and the total: the
+    decomp's guided_run.timeline.chain_offsets, whose seconds the chapters use."""
+    off, total = {}, 0
+    for name in names:
+        start, end = (json.loads((TAKES / name / f).read_text()) for f in ('start.json', 'end.json'))
+        off[name] = total
+        total += end['vsync'] - start.get('vsync', 0)
+    return off, total
+
+
+def take_vsyncs(name):
+    """The vsync (from the take's start) of each game row of the take."""
+    folder = TAKES / name
+    meta = json.loads((folder / 'rows.tbl.json').read_text())
+    at = next(h['offset'] for h in meta['row_header'] if h['name'] == 'vsync')
+    table = (folder / 'rows.tbl').read_bytes()[meta['header_size']:]
+    size = meta['row_size']
+    v0 = json.loads((folder / 'start.json').read_text()).get('vsync', 0)
+    return [struct.unpack_from('<I', table, i * size + at)[0] - v0 for i in range(len(table) // size)]
+
+
+def stitched_row(names, marks, vsync):
+    """The stitched row that plays chain vsync `vsync`: its take's game row at or
+    just before that time (the next one the earlier take did not already have)."""
+    off, total = chain_vsyncs(names)
+    vsync = max(0, min(vsync, total - 1))
+    name = [n for n in names if off[n] <= vsync][-1]
+    row = max(0, bisect.bisect_right(take_vsyncs(name), vsync - off[name]) - 1)
+    mine = marks[name]
+    while row < len(mine) and mine[row] is None:
+        row += 1
+    return mine[row] if row < len(mine) else len(marks['_pos']) - 1
+
+
+def target_of(names, marks, vsync):
+    """EM_FAST_UNTIL's "segment:offset" for chain vsync `vsync`, and its stitched row."""
+    idx = stitched_row(names, marks, vsync)
+    while idx < len(marks['_pos']) and marks['_pos'][idx] is None:
+        idx += 1                    # a movie row: the first game tick after it
+    seg, off = marks['_pos'][min(idx, len(marks['_pos']) - 1)]
+    return seg, off, idx
+
+
+def parse_clock(text):
+    """H:MM:SS, M:SS or plain seconds, as `record_guided_run.py chapters` prints them."""
+    seconds = 0.0
+    for part in text.split(':'):
+        seconds = seconds * 60 + float(part)
+    return seconds
+
+
+def chapter_list():
+    """The decomp's chapters over the guided chain: [(seconds, label, derived)]
+    (tools/guided_run/timeline.py, read as that script's `chapters` prints them)."""
+    sys.path.insert(0, str(ROOT.parent / 'Extermination/tools'))
+    from guided_run import timeline
+    return timeline.chapters(), timeline.clock
+
+
+def frontier_of(take):
+    """The last full --check run's exact frontier: {segment, offset} of the first
+    tick that left the recording, or None if there is no such run."""
+    path = OUT / take / 'frontier.json'
+    return json.loads(path.read_text()) if path.exists() else None
+
+
+def beyond(frontier, seg, off):
+    """True when (seg, off) lies past the first tick the port left the recording."""
+    if not frontier or frontier.get('segment') is None:
+        return False
+    return (seg, off) >= (frontier['segment'], frontier['offset'])
 
 
 def fresh_until(names):
@@ -259,6 +370,10 @@ def compare(rec, log):
         if entry['first'] is None and not same:
             entry['first'] = (off, int(want['counter']), away, turned)
     print(f'{ticks} ticks compared, {exact} on the recording ({100 * exact / max(ticks, 1):.1f}%)')
+    bad = [(seg, e['first'][0]) for seg, e in sorted(per.items()) if e['first'] is not None]
+    compare.frontier = dict(segment=bad[0][0], offset=bad[0][1]) if bad else dict(segment=None, offset=None)
+    compare.frontier['segments'] = len(segs)
+    compare.frontier['reached'] = max(per, default=-1)
     for seg, e in sorted(per.items()):
         state = 'exact' if e['first'] is None else \
             f'leaves at offset {e["first"][0]} (original counter {e["first"][1]}), {e["first"][2]:.2f} away, ' \
@@ -288,6 +403,64 @@ def refuse_mixing(names):
             sys.exit(f'{name}: its previous take {start["after"]} is not in {TAKES}')
 
 
+def progress(proc, log, until_row):
+    """While the port fast-forwards (no window yet), say how far it is every few seconds."""
+    if until_row is None:
+        return
+    began = time.monotonic()
+    while proc.poll() is None:
+        time.sleep(3)
+        try:
+            with log.open('rb') as f:
+                f.seek(0, os.SEEK_END)
+                f.seek(max(0, f.tell() - 600))
+                last = f.read().decode(errors='replace').splitlines()
+            step = int(last[-2].split()[0]) if len(last) > 2 else 0
+        except (OSError, ValueError, IndexError):
+            continue
+        if step >= until_row:
+            return
+        print(f'fast-forwarding: {100 * step / max(until_row, 1):.0f}% ({step} of {until_row} steps, '
+              f'{time.monotonic() - began:.0f} s)', flush=True)
+
+
+def choose_start(args, names, marks):
+    """The start the options name, as (segment, offset, stitched row); prints the
+    chapters for --chapters (None). Warns when the point is past the port's exact frontier."""
+    frontier = frontier_of(args.take)
+    off, total = chain_vsyncs(names)
+    if args.chapters:
+        chapters, clock = chapter_list()
+        for t, label, derived in chapters:
+            seg, o, _ = target_of(names, marks, round(t * TICK_HZ))
+            flag = '  (past the exact frontier)' if beyond(frontier, seg, o) else ''
+            print(f'{clock(t):>8} {label}{" *" if derived else ""}{flag}')
+        print(f'\n{len(chapters)} chapters over {clock(total / TICK_HZ)}; start at one with --at <time> (or --from <take>); '
+              f'* = a derived time.' + ('' if frontier else ' No --check result yet: the exact frontier is unknown.'))
+        return None
+    if args.start:
+        if args.start not in off:
+            sys.exit(f'--from {args.start}: not a take of this chain ({", ".join(names)})')
+        vsync, what = off[args.start], f'the start of {args.start}'
+    else:
+        seconds = parse_clock(args.at)
+        try:                        # a chapter's own time is exact to the vsync
+            chapters, clock = chapter_list()
+            seconds = next((t for t, _, _ in chapters if clock(t) == args.at.lstrip('0:') or clock(t) == args.at), seconds)
+        except Exception:
+            pass
+        vsync, what = round(seconds * TICK_HZ), f'chain time {args.at}'
+    seg, o, idx = target_of(names, marks, vsync)
+    print(f'starting at {what}: segment {seg} offset {o} (stitched row {idx} of {len(marks["_pos"])})', flush=True)
+    if beyond(frontier, seg, o):
+        print(f'WARNING: that point is past where the port stops matching the recording (segment {frontier["segment"]} '
+              f'offset {frontier["offset"]}): the pad no longer fits the game there, and what plays can drift or stall.')
+    elif frontier is None:
+        print('No full --check result for this chain: whether the port is exact up to there is unknown '
+              f'(python3 tools/watch_takes.py --check --root ... {args.take}).')
+    return seg, o, idx
+
+
 def main():
     global BIN
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -298,6 +471,17 @@ def main():
     parser.add_argument('--port', help='run this port checkout\'s build (default: this one)')
     parser.add_argument('--ticks', type=int, help='play only the chain\'s first N game ticks (the lead-in\'s '
                         'included): a stop point inside a long chain')
+    parser.add_argument('--from', dest='start', metavar='TAKE', help='start watching at the start of this take of the chain '
+                        '(the port fast-forwards to it first: no window, no sound, no pacing)')
+    parser.add_argument('--at', metavar='H:MM:SS', help='start watching at this chain time (as `--chapters` or the decomp\'s '
+                        '`record_guided_run.py chapters` prints it)')
+    parser.add_argument('--chapters', action='store_true', help='list the guided chain\'s chapters with their times and exit')
+    parser.add_argument('--then', type=int, metavar='N', help='with --from/--at: stop N game ticks after the start point '
+                        '(a test or a timing of the fast-forward)')
+    parser.add_argument('--env', action='append', default=[], metavar='NAME=VALUE', help='one more variable for the port '
+                        '(developer: e.g. EM_FRAME_TIMING=<file>)')
+    parser.add_argument('--hidden', action='store_true', help='with --from/--at: no window even after the switch, '
+                        'and no sound (a test of the switch)')
     args = parser.parse_args()
     if args.root:
         use_root(args.root)
@@ -311,22 +495,40 @@ def main():
         sys.exit(f'{names[0]} starts where route beat {beat} ended (record_original_play.py --beat), not at the '
                  f'title: the port cannot play it from New Game')
     out = OUT / args.take
+    fast = args.start or args.at or args.chapters
+    if fast:
+        out = out / 'from'
     if (out / 'card').exists():
         shutil.rmtree(out / 'card')     # every run starts from an empty card, as the take did
     (out / 'card').mkdir(parents=True)
     rec, log = out / 'stitched.rec', out / 'played.rec'
-    ticks = stitch(names, rec, args.ticks)
+    marks = {} if fast else None
+    ticks = stitch(names, rec, args.ticks, marks)
     print(f'{" + ".join(names)}: {ticks} ticks, {ticks / 59.94 / 60:.1f} minutes', flush=True)
+    until = None
+    if fast:
+        until = choose_start(args, names, marks)
+        if until is None:
+            return 0
+        if args.then is not None:
+            ticks = stitch(names, rec, sum(p is not None for p in marks['_pos'][:until[2] + 1]) + args.then)
     env = {k: v for k, v in os.environ.items() if not k.startswith('EM_')}
     env.update(EM_INPUT_PLAY=str(rec), EM_INPUT_RECORD=str(log), EM_PS2_DISC_DRIVE_TIMING='1',
                EM_REPLAY_MAX_OVERRUN='3600', EM_TEST_MEMCARD_ROOT=str(out / 'card'))
     env.update(EM_TEST_CARD_FRESH=str(fresh_until(names)))
+    env.update(item.split('=', 1) for item in args.env)
+    if until:
+        env.update(EM_FAST_UNTIL=f'{until[0]}:{until[1]}')
+    if args.hidden:
+        env.update(EM_HEADLESS='1', EM_MUTE='1')
     if args.check:
         env.update(EM_HEADLESS='1', EM_UNCAPPED='1', EM_MUTE='1')
         if not args.render:
             env.update(EM_NO_RENDER='1')    # a comparison reads no picture (docs/LAUNCHER_OPTIONS.md)
     with (out / 'run.log').open('w') as text:
-        result = subprocess.run([str(BIN)], cwd=port, env=env, stdout=text, stderr=subprocess.STDOUT)
+        proc = subprocess.Popen([str(BIN)], cwd=port, env=env, stdout=text, stderr=subprocess.STDOUT)
+        progress(proc, log, until[2] if until else None)
+        code = proc.wait()
     faulted = False
     for line in (out / 'run.log').read_text(errors='replace').splitlines():
         stopped = 'FAULT' in line or 'player stage worker' in line or ' fault code ' in line or \
@@ -334,11 +536,13 @@ def main():
         if line.startswith('replay:') or stopped or 'fail-stop' in line:
             print(line[:200], flush=True)
             faulted = faulted or stopped
-    print(f'port exit {result.returncode}', flush=True)
+    print(f'port exit {code}', flush=True)
     compare(rec, log)
+    if args.check and not args.ticks and not fast:
+        (out / 'frontier.json').write_text(json.dumps(compare.frontier) + '\n')
     if faulted:
         print('The game stopped at the FAULT above: a difference after it is the stopped game, not a new one.')
-    return result.returncode
+    return code
 
 
 if __name__ == '__main__':

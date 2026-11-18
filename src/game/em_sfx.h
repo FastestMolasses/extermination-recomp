@@ -412,6 +412,9 @@ int em_sfx_compute_gains_mode(const float pos[3], int32_t flat, float radius,
  * frames). device_rate must be 48000; any other rate is counted and adds
  * nothing. Real-time safe (no locks/allocation/IO). */
 void em_sfx_mix(float *out_interleaved_stereo, int frames, int device_rate);
+/* The device thread, once: drop the mixer ring's queued samples (the fast-forward
+ * start's switch, em_bgm_fast_end). */
+void em_sfx_flush_output(void);
 
 /* LOOPED POSITIONAL SERVICE — func_001FC3C0, called every frame by an
  * owner that keeps a sound alive (the AREA11 flame/steam effect owner

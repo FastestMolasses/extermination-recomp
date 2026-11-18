@@ -17,6 +17,7 @@ EmWindow *em_window_create(const char *title, int width, int height)
     return NULL; /* TODO: Win32 implementation */
 }
 void em_window_destroy(EmWindow *win) { (void)win; }
+void em_window_show(EmWindow *win) { (void)win; }
 bool em_window_poll(EmWindow *win, EmEvent *out) { (void)win; (void)out; return false; }
 void em_window_drawable_size(EmWindow *win, int *w, int *h)
 { (void)win; if (w) *w = 0; if (h) *h = 0; }

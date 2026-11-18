@@ -94,15 +94,19 @@ static inline bool em_headless(void)
  * the device's pull cadence exactly as when audible, so nothing the game
  * computes or its timing changes; the backend only zeroes what the mixer
  * wrote before it reaches the speakers. */
+extern int em_fast_flag;   /* the fast-forward phase of a playback (game/em_fast.h) */
 static inline bool em_audio_muted(void)
 {
     const char *m = getenv("EM_MUTE");
-    return em_headless() || (m && m[0] == '1');
+    return em_headless() || (m && m[0] == '1') || em_fast_flag;
 }
 
 /* Create a window. Returns NULL on failure. */
 EmWindow *em_window_create(const char *title, int width, int height);
 void      em_window_destroy(EmWindow *win);
+/* Bring a window created hidden for a fast-forward start (EM_FAST_UNTIL,
+ * game/em_fast.h) to the front. A no-op for a window already shown. */
+void      em_window_show(EmWindow *win);
 
 /* Drain one pending event into *out. Returns true if an event was produced,
  * false when the queue is empty for this iteration. Call in a loop each

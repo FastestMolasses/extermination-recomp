@@ -783,6 +783,41 @@ the speakers (macOS and iOS), and the movie player is muted (it keeps its
 audio clock, which paces the video). Headless runs have always been muted
 this way.
 
+### EM_FAST_UNTIL=<segment>:<offset>: a playback that fast-forwards to a point, then plays normally
+
+Added 2026-11-18 (port lane PORT-WATCH-FROM; `src/game/em_fast.h`; user request:
+watch Claude's guided run from a chosen chapter without rewatching the
+beginning). With `EM_INPUT_PLAY` (em_replay.c) the recording plays from its
+first tick with no picture, no sound and no pacing, and at the first tick whose
+recorded segment is `<segment>` and whose offset in it is at least `<offset>`
+(the playback log's `seg` and `off` columns) the normal presentation starts, in
+the same process with the same state:
+
+- **Fast phase.** `em_norender()` is on whatever the window (the same skipped
+  work as `EM_NO_RENDER=1`; refused only by an `EM_` name holding PRESENT, _PX,
+  DUMP, DIGEST, _FB, GS_ or PIXEL, or `EM_HEADLESS_RASTER=1`; a CAPTURE variable
+  does not refuse it, because `EM_REPLAY_CAPTURE` takes no capture until the
+  switch); the loop is unpaced (`em_frame_set_unpaced`); the output is silent
+  (`em_audio_muted`); the window is created hidden (no Dock activation,
+  `em_window_show` brings it up) and no frame is presented
+  (`em_gfx_present_hold`). The GS world keeps its raster (it is windowed), so
+  the picture after the switch draws from the tick on.
+- **The switch** (`em_fast_end`, at the pad read of the chosen tick): norender
+  off, pacing from "now" (no catch-up burst), the window shown, presentation on,
+  and the audio device's rings drop what the skipped part left (the SFX mixer
+  ring, the startup notes, the movie ring; done on the device thread by
+  `em_bgm_fast_end`, then the output is unmuted). The streamed voice lane is not
+  dropped: it follows the game's own tick clock.
+- **Exactness.** Nothing the game computes changes: `tools/test_fast_from.py`
+  (`make test-fast-from`) plays one recording plain (`EM_NO_RENDER=1`, uncapped)
+  and fast (paced after the switch) and compares every `EM_STATE_TRACE` digest
+  and every playback-log tick: identical; `EM_TEST_FULL=1` also compares the
+  frames captured after the switch with the plain run's (identical). In a
+  hidden run (`EM_HEADLESS=1`, the tests) the window never appears.
+- `tools/watch_takes.py --from <take>` / `--at H:MM:SS` / `--chapters` map a take
+  or a chapter time to the pair (see FIDELITY_FEATURES.md "Watching Claude's run").
+  Not with `EM_START_AT` (both drive the pacing).
+
 ### EM_HEADLESS_RASTER=0/1 and headless pacing (EM_UNCAPPED=0/1): faster headless runs
 
 Added 2026-10-29 (PERFORMANCE.md "Progress" P18; the user's go-ahead of

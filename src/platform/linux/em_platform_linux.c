@@ -20,6 +20,7 @@ EmWindow *em_window_create(const char *title, int width, int height)
     return win;
 }
 void em_window_destroy(EmWindow *win) { free(win); }
+void em_window_show(EmWindow *win) { (void)win; }
 bool em_window_poll(EmWindow *win, EmEvent *out) { (void)win; (void)out; return false; }
 void em_window_drawable_size(EmWindow *win, int *w, int *h)
 { if (w) *w = win ? win->width : 0; if (h) *h = win ? win->height : 0; }

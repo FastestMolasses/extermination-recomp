@@ -1043,6 +1043,10 @@ int em_gfx_gs_world_enabled(EmGfx *gfx);
  * (em_gs_world_raster_wanted). 0, or -1 (the model exists with the other
  * setting). */
 int em_gfx_gs_world_raster(EmGfx *gfx, int raster);
+/* Hold the presentation: 1 draws each frame as usual but takes no drawable and
+ * shows nothing (the fast-forward start's window waits hidden, game/em_fast.h),
+ * 0 presents again from the next frame. A headless backend never presents. */
+void em_gfx_present_hold(EmGfx *gfx, int hold);
 /* Install the GS memory image of the boot's library upload (the EMGM file
  * of tools/export_gs_memory.py: module 0x1B, which the port's boot does not
  * load) once. 0, or -1 (reported). */

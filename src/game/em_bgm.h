@@ -58,6 +58,9 @@ int em_bgm_device_rate(void);
  * the same producers' mix on the game thread with em_bgm_render_offline
  * (interleaved stereo floats; silence until a producer has started). */
 void em_bgm_set_offline(void);
+/* The fast-forward start's switch (game/em_fast.h): drop the sound the skipped
+ * part left in the output rings, then make the device audible again. */
+void em_bgm_fast_end(void);
 void em_bgm_render_offline(float *out, int frames);
 
 #ifdef __cplusplus

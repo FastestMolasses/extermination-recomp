@@ -201,6 +201,13 @@ void em_startup_audio_shutdown(void)
     release_samples();
 }
 
+void em_startup_audio_flush(void)
+{
+    /* The device thread: the notes queued so far and the notes sounding are dropped. */
+    atomic_store_explicit(&s.read, atomic_load_explicit(&s.write, memory_order_acquire), memory_order_release);
+    memset(s.voices, 0, sizeof(s.voices));
+}
+
 void em_startup_audio_mix(float *out, int frames, int device_rate)
 {
     if (!atomic_load_explicit(&s.enabled, memory_order_acquire) ||

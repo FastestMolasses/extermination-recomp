@@ -100,6 +100,7 @@ int em_gfx_gs_world_enable(EmGfx *gfx, int on, EmGfxGsRead read, void *read_ctx)
 { (void)gfx; (void)read; (void)read_ctx; return on ? -1 : 0; }
 int em_gfx_gs_world_enabled(EmGfx *gfx) { (void)gfx; return 0; }
 int em_gfx_gs_world_raster(EmGfx *gfx, int raster) { (void)gfx; (void)raster; return 0; }
+void em_gfx_present_hold(EmGfx *gfx, int hold) { (void)gfx; (void)hold; }
 int em_gfx_gs_memory_load(EmGfx *gfx, const char *path) { (void)gfx; (void)path; return -1; }
 int em_gfx_gs_world_frame(EmGfx *gfx) { (void)gfx; return 0; }
 int em_gfx_gs_upload(EmGfx *gfx, const uint8_t *chain, size_t bytes) { (void)gfx; (void)chain; (void)bytes; return 0; }

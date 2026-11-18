@@ -127,7 +127,7 @@ COMMON  := src/main.c src/em_model.c src/em_input.c src/em_settings.c \
            src/game/em_truck_original.c src/game/em_pad_actuator.c \
            src/game/em_frame_render_heads.c src/game/em_render_context.c src/game/em_render_context_live.c src/game/em_area01_render_vif.c \
            src/game/em_level9_port_fx.c src/game/em_area13_route.c \
-           src/game/em_replay.c \
+           src/game/em_replay.c src/game/em_fast.c \
            src/game/em_static_world.c src/game/em_static_world_compose.c src/game/em_static_world_draw.c \
            src/game/em_static_world_live.c src/game/em_far_light.c src/game/em_grid_water.c src/game/em_haze_ring.c src/game/em_haze_ring_live.c \
            src/game/em_load_veil_particles.c src/game/em_actor_light_001D89D0.c src/game/em_player_equipment.c \
@@ -1675,6 +1675,13 @@ ifdef EM_TEST_FULL
 	python3 tools/test_norender_equal.py beat k01_02 a01u_00
 	python3 tools/test_norender_equal.py take test1
 endif
+
+# The fast-forward start of a playback (EM_FAST_UNTIL, src/game/em_fast.h): a plain run and a
+# fast-to-the-switch run of the guided chain's opening agree on every state digest and every
+# logged tick, and the run paces again after the switch (tools/test_fast_from.py).
+.PHONY: test-fast-from
+test-fast-from: $(BIN)
+	python3 tools/test_fast_from.py
 
 .PHONY: test-start-at
 test-start-at: $(BIN)
