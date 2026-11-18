@@ -89,6 +89,11 @@ typedef struct {
     uint8_t used, bound;
     uint8_t b28[2], a0[16];
     uint8_t w28[2], wa0[16];
+    /* The projectile 0018AF50's (001869A0's record): +0x24 its target,
+     * +0x2A its life, +0x38 its fall speed, +0xD0..+0x10F its matrix
+     * (build_trs_matrix), each written before it is read. */
+    uint8_t b24[4], b2A[2], b38[4], d0[64];
+    uint8_t w24[4], w2A[2], w38[4], wd0[64];
 } AimRecord;
 
 static struct {
@@ -165,6 +170,12 @@ static void *pool_field(uint32_t address,size_t size,int write)
             uint8_t *bytes=NULL,*mask=NULL;
             if ((p=span(address,size,base+0x28,2,r->b28))) { bytes=p; mask=r->w28+(address-base-0x28); }
             else if ((p=span(address,size,base+0xA0,16,r->a0))) { bytes=p; mask=r->wa0+(address-base-0xA0); }
+            else if ((p=span(address,size,base+0x24,4,r->b24))) { bytes=p; mask=r->w24+(address-base-0x24); }
+            else if ((p=span(address,size,base+0x2A,2,r->b2A))) { bytes=p; mask=r->w2A+(address-base-0x2A); }
+            else if ((p=span(address,size,base+0x38,4,r->b38))) { bytes=p; mask=r->w38+(address-base-0x38); }
+            else if (a->callback==0x0018AF50u && (p=span(address,size,base+0xD0,64,r->d0))) {
+                bytes=p; mask=r->wd0+(address-base-0xD0);
+            }
             if (bytes) {
                 if (write) { memset(mask,1,size); return bytes; }
                 for (size_t k=0;k<size;++k) if (!mask[k]) return NULL;
@@ -879,7 +890,9 @@ static int settle(void *context)
         unsigned i=(unsigned)(a-R.pool->records);
         if (!a->allocated || R.rec[i].generation!=a->generation) continue;   /* freed again */
         const int flash=em_aim_fire_flash_owns(a);
-        if (a->callback!=(flash ? EM_AIM_FIRE_FLASH_CALLBACK : 0x0018ABA0u) || !R.bind || R.bind(a)<0) {
+        const int known=flash ? a->callback==EM_AIM_FIRE_FLASH_CALLBACK
+                              : a->callback==0x0018ABA0u || a->callback==0x0018AF50u;
+        if (!known || !R.bind || R.bind(a)<0) {
             rc=-1;continue;
         }
         R.rec[i].bound=1;
@@ -934,7 +947,7 @@ int em_aim_fire_runtime_tick(EmActor *actor)
         em_aim_fire_flash_set_current(NULL);
         return rc<0 ? -1 : 1;
     }
-    if (!R.rec[i].used || actor->callback!=0x0018ABA0u) return -1;
+    if (!R.rec[i].used || (actor->callback!=0x0018ABA0u && actor->callback!=0x0018AF50u)) return -1;
     EmAimFireTargetCall frame={0};
     frame.function=actor->callback;frame.a[0]=address;frame.na=1;
     return em_aim_fire_binding_frame(&frame)<0 ? -1 : 1;

@@ -23,6 +23,20 @@ static int write_bytes(Memory *m,uint32_t a,const void *p,size_t n)
     if (!v) return -1;
     memcpy(v,p,n);return 0;
 }
+/* 00103200(out, v0, v1, t) (byte-matched decomp C, inline VU0): vf7.x =
+ * vf0.x + vf0.w (1), vf8.x = 1 - t, ACC.xyz = v0.xyz * t, out.xyz = ACC +
+ * v1.xyz * (1 - t), out.w = v0.w; both loads precede the store. */
+static int blend_00103200(uint32_t out[4],const uint32_t v0[4],const uint32_t v1[4],uint32_t t)
+{
+    static const uint32_t vf0[4]={0,0,0,0x3F800000u};
+    uint32_t vf6[4]={t,0,0,0},vf7[4]={0},vf8[4]={0},acc[4]={0},r[4]={0,0,0,v0[3]};
+    if (em_vu_vec_bits(EM_VU_ADDBC,8,3,vf0,vf0,0,NULL,vf7)!=EM_EE_FLOAT_OK) return -1;
+    if (em_vu_vec_bits(EM_VU_SUB,8,EM_VU_NO_BC,vf7,vf6,0,NULL,vf8)!=EM_EE_FLOAT_OK) return -1;
+    if (em_vu_vec_bits(EM_VU_MULABC,14,0,v0,vf6,0,NULL,acc)!=EM_EE_FLOAT_OK) return -1;
+    if (em_vu_vec_bits(EM_VU_MADDBC,14,0,v1,vf8,0,acc,r)!=EM_EE_FLOAT_OK) return -1;
+    memcpy(out,r,sizeof r);return 0;
+}
+static int overlaps(uint32_t a,uint32_t n,uint32_t b,uint32_t m) { return a<b+m && b<a+n; }
 int em_aim_fire_sdk_memory_call(void *context,
     void *(*map)(void *,uint32_t,size_t,int),EmAimFireTargetCall *f)
 {
@@ -150,6 +164,29 @@ int em_aim_fire_sdk_memory_call(void *context,
         TRY(read_bytes(m,b,in,16));
         TRY(em_coll_probe_sdk_scale(out,in,em_ee_float(f->f[0])));
         return write_bytes(m,a,out,16);
+    case 0x103200: {
+        /* The projectile 0018AF50's homing blend. */
+        uint32_t x[4],y[4],o[4];
+        a&=~15u;b&=~15u;c&=~15u;
+        TRY(read_bytes(m,b,x,16));TRY(read_bytes(m,c,y,16));
+        TRY(blend_00103200(o,x,y,f->f[0]));
+        return write_bytes(m,a,o,16);
+    }
+    case 0x1C94B0: {
+        /* build_trs_matrix(m, pos, rot, scale) (em_owner_services'
+         * translation; the projectile 0018AF50's matrix): pos (00102918's)
+         * and scale are quadword loads (low four address bits ignored),
+         * rot three words. m (an aligned 64-byte block) may not overlap
+         * them: the original's read / store order would then matter. */
+        const uint32_t d=(uint32_t)f->a[3]&~15u;
+        uint32_t qp[4],qs[4];float pos[3],rot[3],scale[3];
+        b&=~15u;
+        if (a&15u || c&3u || overlaps(a,64,b,16) || overlaps(a,64,c,12) || overlaps(a,64,d,16)) return -1;
+        TRY(read_bytes(m,b,qp,16));TRY(read_bytes(m,c,rot,12));TRY(read_bytes(m,d,qs,16));
+        memcpy(pos,qp,12);memcpy(scale,qs,12);
+        if (em_owner_services_build_trs_matrix(out,pos,rot,scale)!=EM_EE_FLOAT_OK) return -1;
+        return write_bytes(m,a,out,64);
+    }
     case 0x102900: {
         a&=~15u;b&=~15u;
         uint32_t source[4],result[4];

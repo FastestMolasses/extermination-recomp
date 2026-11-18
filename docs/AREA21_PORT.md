@@ -615,12 +615,59 @@ em_equipment_live) faults at address 0x7A6DE4. g80 not reached.
   saved files with the take's card_end.ps2 (tools/ps2_card.py ls,
   read only).
 
+## Sub-weapon projectile (lane PORT-A21-G79, 2026-11-18, branch `a21g79`)
+
+- **0018AF50** (the projectile 001869A0 spawns; byte-identical decomp C,
+  translated from the instructions): `em_aim_fire_projectile.c`, dispatched
+  by em_aim_fire_live beside the marker 0018ABA0 and bound through
+  em_aim_fire_runtime (settle / tick accept 0x0018AF50; the binder row in
+  em_area11_bindings, `tick_aim_record`). The runtime now holds the record's
+  +0x24 (the target 001869A0 stores), +0x2A, +0x38 and, for a 0018AF50
+  record, the matrix +0xD0..+0x10F, each byte readable only after a write.
+  Its SDK leaves 00103200 (the homing blend) and build_trs_matrix
+  (001C94B0) joined em_aim_fire_sdk_memory. Oracles:
+  tools/test_aim_fire_projectile_reference.py (1,500 cases over the AREA11
+  captures, every store and callee entry in order, whole RAM and
+  scratchpad, all 40 branch outcomes both ways, 64 callee failure cuts;
+  a flipped clamp is caught) and test-aim-fire-sdk-memory-reference
+  (00103200 in the ordered-access sweep, build_trs_matrix 96 cases plus
+  the refused overlaps).
+- **The blast's draw 001EE190** (effect 0x80000069 from state 2's 001EFD20;
+  byte-matched C): the fourth twin of 001EDE40 / 001EF1C0 / 001ED450 over
+  the records D_00257360 / D_002573F0 / D_00257480 (em_level14_port
+  `em_level14_port_001EE190`, bound in em_effects_live as 001ED100's
+  window); test_level14_port_reference.py's five designed cases (every
+  branch).
+- **001A8970's f20 path** (the player against the blast, a class-0xD entry
+  with reaction 6 / 7): the original compares its caller's f20 with 0.8
+  times itself. f20 is never written by 001A8970, 001A8BE0, 001AAD00,
+  001AE5E0 or 001AE6B0; hidden fork replays (a regs_ee table at the PC,
+  tools/guided_take_probe.py's table with a register span) measured f20 = 0
+  at all 720 001A8970 entries of g79 and all 13,000 001AAD00 calls of g77.
+  em_collision_world supplies that 0 (EmCollListGlobals caller_f20); the
+  coll-list oracle compares the path with the original on five f20 values
+  (COLL_LIST_PASSES.md). The blast's own 001A91C0 response was already
+  translated (em_coll_list_passes).
+- **Chain g20** (card g73): g73 .. g78 unchanged (g78 15530 / 15530);
+  **g79 756 / 756 on the row to row 848** (was 578 to 667); hits equal:
+  (519, 65.0), (673, 60.0), (782, 45.0); the original's 21 later hits
+  (1481 .. 6566) not reached; g80 not reached.
+- **g79 row 848** (not fixed): the take opens the status screen and the
+  equipment page binds glyph model 0x35 of D_0028A56C (001C6120 through
+  0020E1E0): tools/export_status_models.py skips it (a model whose nodes
+  have binds of their own: "not exported"), so em_status_models faults at
+  001C6120 and the interaction host's 0020CDC0 stops. Next: export the
+  multi-node glyph models and pose their nodes in em_status_models (the
+  menu player's skeleton path), then rerun g79 from row 848.
+
 ## Next
 
-0. Next: g79 row 667's 001869A0 store to +0x24 and the 0018AF50
-   behaviour, then g80: 001AD740, the credits 0022D380, module 0x37's
-   pictures, the clear save (Final phase). (done: g79's rand() word at
-   row 418 and g76's at row 6386, Final phase.)
+0. Next: g79 row 848's glyph model 0x35 (Sub-weapon projectile), then
+   the rest of g79 (21 hits), then g80: 001AD740, the credits 0022D380,
+   module 0x37's pictures, the clear save (Final phase; lane
+   PORT-A21-ENDING). (done: g79's rand() word at row 418 and g76's at row
+   6386, Final phase; row 667's 0018AF50, the blast 001EE190 and 001A8970's
+   f20, Sub-weapon projectile.)
 1. (done) 0x825B00, the AREA21 op09 callbacks, D_00275C48 (Phases);
    001E76A0 (Haze ring); 0x823B40 and 001B7670's gate (lane
    PORT-A21-3B40); 001741D0 and the seated frame's workers (The Gatling

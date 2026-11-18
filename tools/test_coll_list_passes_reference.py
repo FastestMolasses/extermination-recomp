@@ -509,7 +509,8 @@ class Globals(C.Structure):
                 ('d275B90', C.c_uint32), ('d275B98', C.c_int16), ('d275B80', C.c_uint32), ('d275B88', C.c_int16),
                 ('s3B86', C.c_int16), ('s3B88', C.c_int16), ('s3B8D', C.c_uint8), ('d28A9A0', C.c_int16),
                 ('d810700', C.c_uint8), ('d810702', C.c_uint8), ('d81070A', C.c_uint8), ('s38A0', C.c_uint32 * 4),
-                ('d810707', C.c_uint8), ('s38B0', C.c_uint32 * 4), ('s3A20', C.c_uint32), ('s3A24', C.c_uint32)]
+                ('d810707', C.c_uint8), ('s38B0', C.c_uint32 * 4), ('s3A20', C.c_uint32), ('s3A24', C.c_uint32),
+                ('caller_f20', C.POINTER(C.c_uint32))]
 
 
 LISTS = (('d275BB0', 'd275BB8', 0x275BB0, 0x275BB8), ('d275BA0', 'd275BA8', 0x275BA0, 0x275BA8),
@@ -1598,7 +1599,7 @@ class ListWorld:
         cursor, count = ee.load(0x275BA0), cp.sx16(ee.load(0x275BA8, 2))
         return {ee.load(ee.load(cursor + 4 * j) + 0x34) for j in range(max(0, count))} | {FAKE_FN}
 
-    def run(self, where, which, player=PLAYER, entry=0, script=None, bd10=0, drop=0, peek=None):
+    def run(self, where, which, player=PLAYER, entry=0, script=None, bd10=0, drop=0, peek=None, f20=None):
         """Run `which` (a pass address, P8660 or 'hooks') on both sides from
         the current (patched) RAM; compare; restore."""
         ee = self.ee
@@ -1607,6 +1608,10 @@ class ListWorld:
         if which in EXEC:
             del self.ee.hooks[which]     # executed, not a boundary
         g = self.globals()
+        if f20 is not None:  # 001A8970's caller f20 (raw bits): the register and the binder's value
+            self.f20_word = C.c_uint32(f20)
+            g.caller_f20 = C.pointer(self.f20_word)
+            ee.f[20] = f20
         if drop:     # a fail-stop case: the native side alone
             code = WHICH[which]
             self.native.lp_script(self.b, 0, None, None, None, 0)
@@ -1824,6 +1829,12 @@ def stage_pair_callees(w, rng, e1, e2):
         r, fault = w.run(f'staged 001A8970 f20 path {react}', P8970, player=PLAYER, entry=e1, drop=7)
         assert r == -1 and fault == 0x1A8AC4, ('001A8970 must fault on the f20 path', react, r, hex(fault))
         w.restore()
+        # With the binder's f20 (the frame chain's 0 in the original, and the
+        # other outcome's signs): compared with the original run on that f20.
+        for f20 in (0x00000000, 0x80000000, 0x3F800000, 0xBF800000, 0x00000001):
+            for st in (1, 0):
+                st8970(((0.0, 0.0, 0.0), react, st, 0, 0))
+                w.run(f'staged 001A8970 f20 {react} {f20:08X} {st}', P8970, player=PLAYER, entry=e1, f20=f20)
 
     # 001A8E80(e1, e2): sqrt(dx dx + dz dz) <= 7 + r ((36, 77) = 85 with
     # r 78), |6 + e2.y - e1.y| <= 8 (e2.y 2 or -14 with e1.y 0).
@@ -2635,7 +2646,7 @@ def main():
           f'carried / not {c99e0_carried[1]} / {c99e0_carried[0]} PASS')
     print('pair callees executed (staged runs, outcomes hit / not): ' +
           ', '.join(f'{name} {n} ({seen[1]} / {seen[0]})' for name, (n, seen) in sorted(pairs.items())) +
-          '; 001A8970\'s f20 path faults natively PASS')
+          '; 001A8970\'s f20 path faults without the binder\'s f20 and matches the original with it PASS')
     reference_mode.banner(reference_mode.part(picked_rows, total_rows, 'route rows'),
                           f'{wcases} walker cases', f'{rruns + sruns} list-pass runs')
 

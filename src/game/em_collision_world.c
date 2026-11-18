@@ -332,8 +332,9 @@ static void bind_passes(void)
     /* AREA01 supplies its existing SYS owners for the three pair calls
      * below (001A8840, 001A9E00 and 001AA000); without that binding the
      * translations in em_coll_list_passes.c run. Every pair callee is
-     * translated from the byte-matched C (COLL_LIST_PASSES.md); 001A8970
-     * still faults on the path that reads its caller's f20 (0x1A8AC4). */
+     * translated from the byte-matched C (COLL_LIST_PASSES.md); 001A8970's
+     * path that reads its caller's f20 takes the frame chain's measured
+     * value (the close-out below). */
     k->w_001A8840 = area_001A8840;
     k->w_001A8970 = em_coll_list_passes_001A8970;
     /* 001A8DA0's pair callee, translated (first reached in AREA01 by a
@@ -524,6 +525,13 @@ int em_collision_world_close_out_001AAD00(const EmSceneState *scene, int16_t d28
     /* D_00810707 (the infected-latch copy, canonical progress byte):
      * 001A8840's gate. */
     g->d810707 = scene->progress.bytes[0x00810707u - EM_SCENE_PROGRESS_BASE];
+    /* 001A8970's reaction-6/7 test reads the f20 register its caller chain
+     * leaves. 001A8BE0, 001AAD00, 001AE5E0 and 001AE6B0 never write f20;
+     * measured in the original (hidden fork replays, lane PORT-A21-G79): f20
+     * is 0 at all 13,000 001AAD00 calls of g77 (both callers) and at all
+     * 720 001A8970 entries of g79 (the projectile's blasts, reactions 6 / 7). */
+    static const uint32_t k_frame_f20 = 0;
+    g->caller_f20 = &k_frame_f20;
     /* 0x700038A0..AC: every pass writes all four lanes (001028D0, then
      * +0xC) before reading them. 0x700038B0..BC: 00183C40 writes x/y/z
      * (type 18 also w) before 001028D0 reads the quadword; the stale w

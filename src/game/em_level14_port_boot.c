@@ -333,9 +333,11 @@ static const uint32_t EDE40_SLOTS[24][2] = {
     {0x00257660u, 0x42C00000u}, {0x00257664u, 0}, {0x00257668u, 0x42C00000u}, {0x0025766Cu, 0},
 };
 
-static int ede40_body(const H14 *h, uint32_t a0, uint32_t a1, const uint32_t slots[24][2], F14 *fault)
+static const uint32_t EDE40_RECORDS[3] = {0x00257510u, 0x002575A0u, 0x00257630u};
+
+static int ede40_rows(const H14 *h, uint32_t a0, uint32_t a1, const uint32_t slots[24][2],
+                      const uint32_t records[3], F14 *fault)
 {
-    static const uint32_t records[3] = {0x00257510u, 0x002575A0u, 0x00257630u};
     L14 o;
     if (l14_begin(&o, h, fault)) return -1;
     uint32_t st = 0;
@@ -360,6 +362,11 @@ static int ede40_body(const H14 *h, uint32_t a0, uint32_t a1, const uint32_t slo
     if (L14_LT(v, 0x3CA3D70Au)) v = 0x3CA3D70Au;
     l14_w32(&o, st + 8, v);
     return l14_end(&o);
+}
+
+static int ede40_body(const H14 *h, uint32_t a0, uint32_t a1, const uint32_t slots[24][2], F14 *fault)
+{
+    return ede40_rows(h, a0, a1, slots, EDE40_RECORDS, fault);
 }
 
 int em_level14_port_001EDE40(const H14 *h, uint32_t a0, uint32_t a1, F14 *fault)
@@ -397,6 +404,26 @@ static const uint32_t ED450_SLOTS[24][2] = {
 int em_level14_port_001ED450(const H14 *h, uint32_t a0, uint32_t a1, F14 *fault)
 {
     return ede40_body(h, a0, a1, ED450_SLOTS, fault);
+}
+
+/* 001EE190, the fourth twin over the records D_00257360 / D_002573F0 /
+ * D_00257480 (their rows +0x20 .. +0x3C; the sub-weapon projectile's hit
+ * effect, AREA21 g79; byte-matched decomp C, checked against the
+ * instructions: the same order, the state pointer read before the last
+ * row store, the same 1e-6 / 10.0 / 1.0 arguments). */
+static const uint32_t EE190_SLOTS[24][2] = {
+    {0x00257380u, 0x41400000u}, {0x00257384u, 0x41400000u}, {0x00257388u, 0x41800000u}, {0x0025738Cu, 0},
+    {0x00257390u, 0}, {0x00257394u, 0}, {0x00257398u, 0}, {0x0025739Cu, 0},
+    {0x00257410u, 0x42000000u}, {0x00257414u, 0x42000000u}, {0x00257418u, 0x42800000u}, {0x0025741Cu, 0x42C00000u},
+    {0x00257420u, 0x41800000u}, {0x00257424u, 0x41800000u}, {0x00257428u, 0x42800000u}, {0x0025742Cu, 0},
+    {0x002574A0u, 0x42000000u}, {0x002574A4u, 0x42000000u}, {0x002574A8u, 0x42800000u}, {0x002574ACu, 0x42C00000u},
+    {0x002574B0u, 0x41800000u}, {0x002574B4u, 0x41800000u}, {0x002574B8u, 0x42800000u}, {0x002574BCu, 0},
+};
+static const uint32_t EE190_RECORDS[3] = {0x00257360u, 0x002573F0u, 0x00257480u};
+
+int em_level14_port_001EE190(const H14 *h, uint32_t a0, uint32_t a1, F14 *fault)
+{
+    return ede40_rows(h, a0, a1, EE190_SLOTS, EE190_RECORDS, fault);
 }
 
 /* ------------------------------------------------------------------------

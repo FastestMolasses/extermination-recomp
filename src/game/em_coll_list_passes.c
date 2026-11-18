@@ -1140,8 +1140,10 @@ int em_coll_list_001A8840(P *p, uint32_t a0, uint32_t a1)
  * zero 0x70003B86, and so does a0's +0 other than 1.
  *
  * With a0's +0 at 1 and a1's +0xD at 6 or 7 the original compares its
- * caller's f20 register (never written in 001A8970) with 0.8 times itself;
- * the port has no such register, so that path faults at 0x1A8AC4. The
+ * caller's f20 register (never written in 001A8970) with 0.8 times itself
+ * (f20 <= 0.8 * f20, else a return with no 0x70003B86 store); the binder
+ * supplies that register's value (globals caller_f20), NULL faults at
+ * 0x1A8AC4. The
  * speed tables are read from EmCollListData (D_0024A7C0 = D_0024A740 +
  * 0x80, D_0024A800 = + 0xC0); a read past it faults. */
 int em_coll_list_001A8970(P *p, uint32_t a0, uint32_t a1)
@@ -1201,7 +1203,13 @@ int em_coll_list_001A8970(P *p, uint32_t a0, uint32_t a1)
         g->s3B86 = 0;
         return 0;
     }
-    if ((uint8_t)(react - 6) < 2) return fail(p, 0x1A8AC4);          /* the caller's f20 */
+    if ((uint8_t)(react - 6) < 2) {                                   /* 0x1A8AA4 */
+        /* f20 is never written in 001A8970 (callee-saved through the
+         * behaviour call): its caller chain's value, when the binder has it. */
+        if (!g->caller_f20) return fail(p, 0x1A8AC4);
+        const uint32_t f20 = *g->caller_f20;
+        if (!em_ee_c_le_bits(f20, em_ee_mul_bits(0x3F4CCCCDu, f20))) return 0;   /* 0x1A8AC4: no 3B86 store */
+    }
     if (react == 0xE) {
         int r;
         if (p->workers.w_0021BD10(p->workers.context, p, &r) < 0) return fail(p, 0x1A8AE4);
