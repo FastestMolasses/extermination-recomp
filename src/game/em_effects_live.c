@@ -1472,8 +1472,9 @@ static int handler_001EC9A0(EmEffectOriginalNode *node, int32_t depth, EmEffectO
 }
 
 /* AREA06's effect handlers 001ECA20 (the AREA06 load's, kinds 2 / 1 of
- * D_00256DC0 / D_00256E50) and 001EBE10 (the beam's collapse, kind 1 of
- * D_002564C0): em_area06_port's translations (test_area06_port_reference;
+ * D_00256DC0 / D_00256E50), 001EBE10 (the beam's collapse, kind 1 of
+ * D_002564C0) and 001EBE90 (its sibling, kind 1 of D_00256550; AREA16's,
+ * g64): em_area06_port's translations (test_area06_port_reference;
  * docs/AREA06_PORT.md): 001CFB50 of the node's matrix into D_0081F8F0 with
  * the work block's +0x244 / +0x24C (through D_00275C34), then 001CFBE0;
  * the views and workers handler_001ECEF0's. */
@@ -1527,7 +1528,8 @@ static int handler_area06(u32 handler, EmEffectOriginalNode *node, int32_t depth
     h.w_001CFB50=a06_handler_001CFB50;h.w_001CFBE0=a06_handler_001CFBE0;
     EmArea06PortFault f={0,0};
     const int rc=handler==0x001ECA20u ? em_area06_port_001ECA20(&h,at+0xD0u,(u32)depth,&f)
-                                      : em_area06_port_001EBE10(&h,at+0xD0u,(u32)depth,&f);
+                 : handler==0x001EBE90u ? em_area06_port_001EBE90(&h,at+0xD0u,(u32)depth,&f)
+                                        : em_area06_port_001EBE10(&h,at+0xD0u,(u32)depth,&f);
     return rc<0 ? fail(f.address?f.address:handler,"AREA06 effect fault (em_area06_port)") : 0;
 }
 
@@ -1555,7 +1557,8 @@ static int w_handler(void *ctx, u32 handler, EmEffectOriginalNode *node, int32_t
     if (handler == 0x001EC9A0u) return handler_001EC9A0(node, depth, work);
     if (handler == 0x001EC5F0u) return handler_001EC5F0(node, depth, work);
     if (handler == 0x001EC820u) return handler_001EC820(node, depth, work);
-    if (handler == 0x001ECA20u || handler == 0x001EBE10u) return handler_area06(handler, node, depth, work);
+    if (handler == 0x001ECA20u || handler == 0x001EBE10u || handler == 0x001EBE90u)
+        return handler_area06(handler, node, depth, work);
     if (splash_handler(handler)) return handler_splash(handler, node, depth, work);
     return fail(handler, "untranslated effect handler");
 }
@@ -1635,6 +1638,7 @@ static int w_001CFBE0(void *ctx, int32_t id, int32_t kind, u32 source, u32 xf, i
                               source == 0x00256C10u || source == 0x00256CA0u || /* 001EC820's */
                               source == 0x00256DC0u || source == 0x00256E50u || /* 001ECA20's */
                               source == 0x002564C0u ||                          /* 001EBE10's */
+                              source == 0x00256550u ||                          /* 001EBE90's */
                               source == 0x00257510u || source == 0x002575A0u || /* 001EDAF0's middle row */
                               source == 0x00257630u || source == 0x00257870u ||
                               source == 0x00257900u || source == 0x002571B0u || source == 0x00257240u ||

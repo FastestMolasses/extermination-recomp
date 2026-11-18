@@ -301,6 +301,34 @@ int em_indicator_bind_live_node(const EmActor *child, unsigned k, float matrix[1
     return 0;
 }
 
+unsigned em_indicator_bind_live_slot_words(const EmActor *child, uint32_t *words, unsigned max)
+{
+    const Child *c = child_of(child);
+    if (!c || !words || !c->live || c->generation != child->generation) return 0;
+    unsigned n = child->bones < c->held ? child->bones : c->held;
+    if (n > max) n = max;
+    for (unsigned k = 0; k < n; ++k) words[k] = c->word[k];
+    return n;
+}
+
+uint8_t *em_indicator_bind_live_slot_bytes(uint32_t address, uint32_t size)
+{
+    if (!S.attached || S.fault || !S.pool || !size || size > 64u) return NULL;
+    const EmRogerActorWorld *w = &S.stack.world;
+    if (address < w->slots_base || address - w->slots_base >= w->slots_size) return NULL;
+    for (unsigned i = 0; i < EM_ACTOR_POOL_CAPACITY; ++i) {
+        Child *c = &S.child[i];
+        const EmActor *a = &S.pool->records[i];
+        if (!c->live || !c->held || c->generation != a->generation) continue;
+        for (unsigned k = 0; k < c->held && k < a->bones; ++k) {
+            const u32 node = c->word[k] + 0x90u;
+            if (c->word[k] && address >= node && address - node <= 64u - size)
+                return (uint8_t *)c->bone[k].world + (address - node);
+        }
+    }
+    return NULL;
+}
+
 int em_indicator_bind_live_draw(EmActor *child)
 {
     if (S.fault) return -1;

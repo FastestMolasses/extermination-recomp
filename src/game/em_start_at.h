@@ -68,6 +68,15 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
  * heading the trace prints (the frontend's g.yaw, em_replay.c's column).
  * Comparison only. */
 void em_start_at_trace_position(const float pos[3], float heading);
+/* The frontend's call at every frame's end while a pad script may run
+ * (comparison only): the rand() word, the player's position and heading
+ * there, which are the next frame's start. A recording's row is sampled at
+ * a frame's start; the next frame's hook (em_start_at_pad_frame) runs at
+ * its world frame's head, after anything the frame machine ran before it
+ * (0x1AE040 state 4's re-place and its 001FAE70 rand() on a room move).
+ * The hook then traces these start values and re-seeds the row's word
+ * with the draws made since the start replayed on it. */
+void em_start_at_frame_end(unsigned counter, const float pos[3], float heading);
 /* 1 on every 100th frame of a running pad script (its progress line). */
 int em_start_at_pad_progress(unsigned counter);
 /* The pad script's clock (its frame; it waits for a lagging player). */

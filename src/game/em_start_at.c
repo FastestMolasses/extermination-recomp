@@ -858,6 +858,39 @@ static void pad_filter(EmPadState *out, void *user)
     out->buttons |= em_input_test_buttons();
 }
 
+/* The previous frame's end (em_start_at_frame_end): the next frame's start. */
+static struct {
+    unsigned counter;
+    uint32_t word;
+    float pos[3], heading;
+    int set, has_pos;
+} frame_start;
+
+void em_start_at_frame_end(unsigned counter, const float pos[3], float heading)
+{
+    frame_start.counter = counter;
+    frame_start.word = em_random_peek();
+    frame_start.has_pos = pos != NULL;
+    if (pos) memcpy(frame_start.pos, pos, sizeof frame_start.pos);
+    frame_start.heading = heading;
+    frame_start.set = 1;
+}
+
+/* The draws from the frame's start word to the current word (0 when the
+ * hook's frame has no recorded start, or the word is not reached within
+ * 4096 steps: then the hook's own word stands, as before). */
+static unsigned draws_since_frame_start(unsigned counter)
+{
+    if (!frame_start.set || frame_start.counter + 1u != counter) return 0;
+    uint32_t w = frame_start.word;
+    const uint32_t now = em_random_peek();
+    for (unsigned n = 0; n < 4096u; ++n) {
+        if (w == now) return n;
+        em_random_step(&w);
+    }
+    return 0;
+}
+
 void em_start_at_pad_control(unsigned counter)
 {
     if (!s.on || !pad.loaded || pad.active || pad.done) return;
@@ -897,6 +930,7 @@ void em_start_at_pad_control(unsigned counter)
         }
     }
     if (!pad.fade_wait && pad.rand_set) {
+        frame_start.set = 0; /* the script's first word is put in place here, not at a frame's start */
         em_random_seed(pad.rand_state);
         printf("startup: EM_START_AT_RAND: rand() state %08x at control (comparison only)\n", pad.rand_state);
     }
@@ -904,6 +938,7 @@ void em_start_at_pad_control(unsigned counter)
 
 static float trace_pos[3], trace_heading;
 static int trace_pos_set;
+
 
 void em_start_at_trace_position(const float pos[3], float heading)
 {
@@ -930,6 +965,7 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
         printf("startup: EM_START_AT_PAD: the script starts at engine frame %u (level %u)\n", counter,
                fade ? (unsigned)fade->level : 0u);
         if (pad.rand_set) {
+            frame_start.set = 0;
             em_random_seed(pad.rand_state);
             printf("startup: EM_START_AT_RAND: rand() state %08x (comparison only)\n", pad.rand_state);
         }
@@ -1013,6 +1049,13 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
         pad.phase_was_load = load;
     }
     const int t = pad.t;
+    /* The frame's start (em_start_at_frame_end): what a recording's row
+     * samples. A hook at a world frame's head has the frame machine's own
+     * work before it (state 4's re-place on a room move draws rand() in
+     * 001FAE70): the trace shows the start, and the re-seed below replays
+     * those draws on the row's word. */
+    const unsigned pre_draws = at_frame_end ? 0u : draws_since_frame_start(counter);
+    const int start_known = !at_frame_end && frame_start.set && frame_start.counter + 1u == counter;
     {
         static FILE *trace;
         static int opened;
@@ -1022,16 +1065,25 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
             trace = path ? fopen(path, "w") : NULL;
         }
         if (trace) {
-            em_scene_creature_trace(trace, t, pos ? pos : trace_pos_set ? trace_pos : NULL,
-                                    trace_pos_set ? &trace_heading : heading);
+            const float *tp = pos ? pos : trace_pos_set ? trace_pos : NULL;
+            const float *th = trace_pos_set ? &trace_heading : heading;
+            if (start_known && frame_start.has_pos && tp) {
+                tp = frame_start.pos;
+                th = &frame_start.heading;
+            }
+            em_scene_creature_trace(trace, t, tp, th, start_known ? frame_start.word : em_random_peek());
             fflush(trace);
         }
     }
     while (pad.rand_next + 1u < pad.rands && t >= pad.rand_at[pad.rand_next + 1u].f) pad.rand_next++;
     if (pad.rand_next < pad.rands && t >= pad.rand_at[pad.rand_next].f) {
-        em_random_seed(pad.rand_at[pad.rand_next].state);
-        printf("startup: EM_START_AT_RANDS: rand() state %08x at script frame %d (comparison only)\n",
+        uint32_t w = pad.rand_at[pad.rand_next].state;
+        for (unsigned i = 0; i < pre_draws; ++i) em_random_step(&w);
+        em_random_seed(w);
+        printf("startup: EM_START_AT_RANDS: rand() state %08x at script frame %d (comparison only)",
                pad.rand_at[pad.rand_next].state, t);
+        if (pre_draws) printf(", %u draw(s) since the frame's start replayed", pre_draws);
+        printf("\n");
         pad.rand_next++;
     }
     while (pad.clock_next + 1u < pad.clocks && t >= pad.clock_at[pad.clock_next + 1u].f) pad.clock_next++;

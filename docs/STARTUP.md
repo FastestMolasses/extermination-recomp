@@ -709,6 +709,11 @@ real load: g49 4778 / 4841 compared rows on the row, g50 1037 / 1037, g51
 original's hits. Assets it needs: AREA01 sub 1's and AREA02 sub 2's exports
 (docs/AREA01_ASSETS.md, docs/AREA02_ASSETS.md, their sub sections), the
 module packs and the sfx registry re-run after them.
+A row is sampled at a frame's start (lane PORT-A16-G62): the frontend's
+frame-end hook (em_start_at_frame_end) keeps the rand() word, position and
+heading, the next hook traces them and re-seeds the row's word with the
+draws made since the frame's start replayed (0x1AE040 state 4's re-place
+and 001FAE70 draw on a room move run before the hook).
 
 ### EM_SKIP_STARTUP=1: the older debug fixture
 

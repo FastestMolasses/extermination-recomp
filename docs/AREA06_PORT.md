@@ -214,6 +214,7 @@ translation.
 | 001CE860 | 1,656 | assembly (undecompiled) | a06_00 f39 | hook only (`em_security_gun_rest.h` w_001CE860; SECURITY_GUN.md: "no translation") | translated |
 | 0021A500 | 1,468 | NEARMISS | a06_00 f39 | `em_gun_rest_0021A500` (`em_security_gun_rest.c`, SECURITY_GUN.md, oracle-verified) | **reused**, re-checked |
 | 001EBE10 | 124 | NEARMISS | a06_00 f296 | none | translated |
+| 001EBE90 | 120 | C, byte-identical | AREA16 g64 (not an AREA06 capture) | none | translated (lane PORT-A16-G62) |
 | AREA06 0x8242C0 | 128 | C, byte-identical (lane A06C) | a06_02 f340 | none | translated |
 | 002072C0 | 136 | C, byte-identical | a06_02 f369 | a comment in `em_status_page.c` | translated |
 | 00207350 | 1,692 | C, byte-identical | a06_02 f370 | docs only (STATUS_PAGES.md) | translated |

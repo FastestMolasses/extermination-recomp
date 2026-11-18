@@ -54,6 +54,7 @@
 #include "game/em_stream_lanes_original.h"
 #include "game/em_stream_live.h"
 #include "game/em_frame.h"
+#include "game/em_indicator_bind_live.h"
 #include "game/em_scene_bindings.h"
 #include "game/em_sfx.h"
 #include "game/em_pad_actuator.h"
@@ -131,6 +132,14 @@ static int project(void *ctx,EmActor *a,EmArea01ActorSpan spans[EM_AREA01_ACTOR_
     EmArea01Live *l=ctx;
     int effects=em_area01_effects_services_project(a,spans);
     if(effects)return effects;
+    /* An indicator child (001C5680 / 001C5760, em_indicator_bind_live):
+     * its +0x110 slot words, read-only (AREA16's 0x824E10 reads its
+     * attachment's +0x12C). */
+    const unsigned held=em_indicator_bind_live_slot_words(a,l->slots,EM_OWNER_SERVICES_MAX_BONES);
+    if(held) {
+        spans[0]=(EmArea01ActorSpan){0x110,(uint16_t)(4*held),(uint8_t *)l->slots,0};
+        return 1;
+    }
     if(!em_area11_boxes_owner_fields(a,l->metadata,l->metadata+1,l->metadata+2))return 0;
     if(a->bones>EM_OWNER_SERVICES_MAX_BONES)return -1;
     for(unsigned i=0;i<a->bones;++i)
@@ -375,6 +384,9 @@ uint8_t *em_area01_live_bytes(EmArea01Live *l,uint32_t a,uint32_t n,int write)
                     ? (uint8_t *)particles[k].bytes+a-particles[k].address : NULL;
     }
     if((p=em_area01_script_bytes(&l->scripts,a,n,write)))return p;
+    /* A held indicator slot's +0x90 node matrix: its typed view, the one
+     * storage its draw and em_indicator_bind_live_set_node use. */
+    if((p=em_indicator_bind_live_slot_bytes(a,n)))return p;
     if((p=em_area01_model_slot_bytes(&l->model,a,n)))return p;
     if(overlaps(a,n,0x0028A56Cu,4)) {
         const uint32_t *library=em_area11_roger_library_word();

@@ -87,13 +87,9 @@ section "Live".
   investigated yet; check it the same way (per-frame progress past the
   last good pad frame, the nodes near the player against the recording's
   source state).
-- The live run: the g16 chain's first divergence (section "Lane
-  PORT-A16-DRAW"): g61's rand() word differs from row 4 (the frame before
-  drew a different number of times) and the port takes two hits in g61
-  (rows 2345, 2457) the original did not; then g62 does not leave sub 0
-  (row 4336) and the player dies in g63. A live 001BAD40 worker for sub
-  1's booth (lane PORT-FX's); g66's return to the title; then the guided
-  states' live nodes as oracle cases.
+- The live run (section "Lane PORT-A16-G62"): g59 .. g64 are on the row;
+  the chain stops at g65 row 96 on the effect handler 001EF780. Then g65
+  .. g67, and the guided states' live nodes as oracle cases.
 - A start before the area change (card g60) needs AREA06 sub 1 exported
   (AREA06_ASSETS.md "Known gaps" 1).
 - 001DB480's packets now run live (section "Effects"), but no capture
@@ -292,13 +288,79 @@ reads, STARTUP.md "Guided chains"):
   first stick is read at take.rec row 1, and the chain clamped it to f = 0
   (read at row 2). Every route_g16 take starts with a neutral read at row 0
   and its stick at row 1; capture_from_take now keeps both with their row.
-- **First divergence:** g62 row 1660, position 4.0 away (port z 191.5, row
-  195.5) in sub 0; rand() from g62 row 428. The player stays in sub 0 (area
+- **First divergence** (resolved by lane PORT-A16-G62, below: the
+  comparison's sampling point at a room move): g62 row 1660, position 4.0
+  away (port z 191.5, row 195.5) in sub 0; rand() from g62 row 428. The player stays in sub 0 (area
   bytes at row 4336: port 10 00 03, row 10 01 00), takes hits at 2949,
   4172, 4268 and dies in g63 (row 446).
 
 **D_0081085A / beat g61:** the chain now matches the original's two g61
 hits; beat g61 from its own card still is the PORT-A06S1 case above.
+
+### Lane PORT-A16-G62 (2026-11-17, branch `a16g62`): g62 .. g64 on the row
+
+`guided_chain.py g16` (card g59) now plays g59 .. g64 on the row and stops
+in g65 (chain frame 27615 of 40736):
+
+| Take | Compared rows on the row | Hits |
+|---|---|---|
+| g59 | 1453 / 1453 | |
+| g60 | 1474 / 1474 | 274 (both) |
+| g61 | 2788 / 2788 | 2345, 2457 (both) |
+| g62 | 4128 / 4128, the load into sub 1 through slider [1] | 3160 (both) |
+| g63 | 3136 / 3136 | |
+| g64 | 13535 / 13535 (the booth, 0x824E10's attachments, the scripts) | |
+| g65 | 96 / 96, then the fail-stop below | |
+
+**1. g62 row 1660 was the comparison's sampling point, not a game
+difference.** The slider [3] is a room move: 001AD010 sets D_00810702 at
+the end of one tick, and 0x1AE040 state 4 re-places the player (001B07C0)
+and draws one rand() (001FAE70's music pick) at the start of the next,
+before the world frame. The original's rows are sampled at the frame
+boundary: row 1660 shows room 2 with the old position, row 1661 the new
+one. The port's trace and EM_START_AT_RANDS's re-seed ran at the world
+frame's head, after state 4: the row showed the new position one row
+early, and the re-seed to row 1660's word dropped state 4's draw, so every
+later draw of that frame (the tendril field 001546C0's 74-draw restart
+among them) used the next word. From there the field's draws, the wall
+bug's sense rolls (00128640) and its 001288D0 sparks drifted, the bug
+reached the player at 2890 and bit at 2949 (the original's six light
+melees hold it off), and the run never reached slider [1]. Fix
+(comparison only, em_start_at.c): the frontend's frame-end hook
+(em_start_at_frame_end) records the word, position and heading at each
+frame's end; the next hook traces those (a recording's row) and re-seeds
+the row's word with the draws made since the frame's start replayed on it.
+It changes only the two room-move frames of g62 (run.log: "1 draw(s)
+since the frame's start replayed"); g17 through g48 and g59 .. g61 are as
+before. The creature trace prints each record's +0x34 (HP) and +0x36 (hit
+mailbox) too (comparison only).
+
+**2. 0x824E10's attachment follow (g64).** The record view now projects a
+bound indicator child's +0x110 slot words read-only
+(em_indicator_bind_live_slot_words, em_area01_live's project), and an
+access inside a held slot's +0x90 node matrix resolves to the child's
+typed slot view (em_indicator_bind_live_slot_bytes: the one storage its
+draw and em_indicator_bind_live_set_node use), so 00102958 copies the
+owner's +0x12C node into the child's.
+
+**3. 001EBE90 (g64).** An effect handler, 001EBE10's byte-matched sibling
+(one 001CFB50 / 001CFBE0 pair, last float 0.0, kind 1 of D_00256550):
+em_area06_port_001EBE90, bound in em_effects_live's handler_area06;
+test_area06_port_reference runs the original (14 cases, 27 of 27 words).
+D_00256550 is a new window of tools/export_area00_runtime_tables.py
+(assets/effect_tables.emet must be re-exported).
+
+**4. 001B7670 in AREA16 (g64).** The booth [11] 0x824690's script record
+0x829D30 calls the boot script worker 001B7670 (the 0x70003B91 toggle):
+em_area01_script_worker_handles_area now serves area 0x10 too.
+
+**Next stop: g65 row 96**, the effect handler 001EF780 (decomp C, 436
+bytes, fx_render; untranslated): em_effects_live fail-stops on it. Then
+g65's hit at 2043, g66 (the bed) and g67 (out to AREA06).
+
+**The rand() notes.** g59 row 1 (the card's frame 0) and g60 row 488 still
+differ with no position change; g60's is a single frame inside AREA06 sub
+1 and bears on nothing above. g62 row 428 and g63 row 2355 likewise.
 
 ### Lane PORT-A16-DRAW (2026-11-17, branch `a16draw`): model kind 3's draw
 
