@@ -233,6 +233,8 @@ int em_area06_port_00823580(const EmArea06PortHooks *h, uint32_t self, EmArea06P
 int em_area06_port_00823B10(const EmArea06PortHooks *h, uint32_t self, uint32_t toucher, EmArea06PortFault *fault);
 /* 0x824290: AREA06's area init (001E7780 keys 0x600 / 0x601). */
 int em_area06_port_00824290(const EmArea06PortHooks *h, EmArea06PortFault *fault);
+/* AREA06 sub 1's director 0x825E20 (func_overlay_AREA06_00825DE0.c) */
+int em_area06_port_00825E20(const EmArea06PortHooks *h, uint32_t self, EmArea06PortFault *fault);
 int em_area06_port_008242C0(const EmArea06PortHooks *h, uint32_t self, uint32_t st, int32_t *result,
                             EmArea06PortFault *fault);
 int em_area06_port_00824560(const EmArea06PortHooks *h, uint32_t self, uint32_t sp, EmArea06PortFault *fault);

@@ -223,9 +223,58 @@ its first frame at 001CAE30, [10]'s +0x4C draw method, as beat g61 does:
 not a card difference, so the curtains question (g62's card respawns
 them) waits behind it; in the chain g62 continues from g61's broken
 curtains with no load. A start before the area change (card g60: g59's
-end, AREA06 sub 1 in play; built and registered) does not load yet:
-AREA06 sub 1 is not exported (assets/area06 holds sub 0; the module pack
-has no room (0x06, 1), so em_module_loader fails at its first read).
+end, AREA06 sub 1 in play) loads since lane PORT-A06S1 (below).
+
+### Lane PORT-A06S1 (2026-11-17, branch `a06s1`): the chain from g60
+
+AREA06 sub 1 is exported and live (the sub-1 sections of AREA06_ASSETS.md and
+AREA06_PORT.md), so `guided_chain.py g16` now starts from the card g60 (g59's end,
+AREA06 sub 1 in play) and plays g60 -> g61 -> ... -> g67; the area change
+into AREA16 at g60 row 1583 is a real one. route_g16's traces were rebuilt
+(capture_from_take.py; snapshots and manifest unchanged) and now carry the
+world clock and the takes' vitals: the original's hits are g60 row 273
+(50 -> 35), g61 rows 2344 (65 -> 60) and 2456 (60 -> 55). The earlier
+"hits the original did not take" at g61 2345 / 2457 were the original's
+own (the old traces had no vitals).
+
+First divergences from g60 (pad alone):
+- **g60 row 1, rand():** the port draws 19 times in frame 0, the original
+  18; the extra draw is the pickup aura 001F1180's countdown (EM_RAND_TRACE).
+  A card artifact: the LOAD GAME restarts the aura's timer, as AREA14's g45.
+- **g60 row 274, position (0.3) / the hit:** the original is hit at row 273,
+  the port at 278 (both 50 -> 35). The gunners 00147390 restart at their
+  placements in sub-state 0 (port [9] (-241.6, 17, -729.4), [12] (-151.9,
+  60.5, -647.7)); in the original's g59 end they are in sub-state 1 at
+  (-230.8, 17, -678.9) and (-149.6, 60.5, -637.8). Every other sub-1
+  creature (0013D2D0, 0012A5D0) starts where the original's is. A card
+  artifact (creature state is not saved), not a translation gap.
+- From there the port's path, heals and hits differ (port hits 278, 843 ..
+  1751), the player misses the area change (bytes stay 06 01 00 at row
+  1582) and in g61 dies at row 425. With `--steer g60` it dies in g60 (row
+  827). So the chain does not yet reach AREA16 on the recorded path.
+
+**D_0081085A (beat g61's end check, port 0x48, original 0x5C).** It is
+byte 2 of D_00810858, the saved player health (float; 0015CF90 copies
+player +0x220 into it, 001AF2C0 sets 100.0): port 50.0, original 55.0. Not
+AREA16 progress. Beat g61 is hit three times (2345, 2410, 2501: 65 -> 60
+-> 55 -> 50), the original twice (2344, 2456); the bug [5] 0012A5D0 is the
+nearest creature at each, and EM_START_AT_PATH holds the port's player back
+(waits of 15 .. 84 frames at script frames 2358 .. 2501) where the original
+walked on. Not explained further yet.
+
+**Open (lane PORT-A06S1 handback).**
+- An earlier start with a real load into AREA06 sub 1 (card g59 = g58's
+  end, AREA01 sub 1, area bytes 01 01 06 01) needs AREA01 sub 1 exported
+  (chunk05.n1; capture route_g16pre/g58, previous g57's end) and its
+  owners bound; then g59 -> g60 plays the AREA06 sub-1 arrival as the
+  original did, with no restarted gunners or aura timer.
+- Beat g61's third hit (2410 / 2501) with the path's waits: whether the
+  waits come from the first hit's knockback or the bugs' restarted state
+  is not established.
+- Beats a06_04 .. a06b_01 were not rerun in the lane: a06_04 stops at pad
+  frame 100 (no new pad frame line until the 900 s timeout) in the lane and
+  in a main baseline (e012ad4e) alike; a06_05, a06b, a06b_01 not run. The chain from
+g60 cannot check it (it dies before g61's end).
 
 ### Lane PORT-A16-DRAW (2026-11-17, branch `a16draw`): model kind 3's draw
 

@@ -43,7 +43,7 @@ Usage (native arm64 macOS; build/extermination and the cards g45 / g60 first):
 
   python3 tools/guided_chain.py --list
   python3 tools/guided_chain.py g17            # g45 -> g46 -> g47 -> g48 from card g45 (AREA14)
-  python3 tools/guided_chain.py g16            # g61 -> g62 -> ... from card g61 (AREA16 sub 0)
+  python3 tools/guided_chain.py g16            # g60 -> g61 -> ... from card g60 (AREA06 sub 1)
   python3 tools/guided_chain.py g16 --until g62   # stop the chain after g62
   python3 tools/guided_chain.py g17 --steer    # steer where the player falls behind the path
 
@@ -75,12 +75,12 @@ CHAINS = {
     # AREA14 entry 1 (g44's end, in play) -> [6]'s Use -> AREA17 entry 0 (a real area change) -> ...
     'g17': ('g45', mrb.G17_ROUTE, ('g45_area14_area17', 'g46_area17_ramp', 'g47_area17_roger',
                                    'g48_area17_cable')),
-    # AREA16 sub 0 at control after the real load from AREA06 sub 1 (g60's end) -> the barrier ->
-    # the curtains -> sub 1 -> ... The card g60 (g59's end, AREA06 sub 1, before the area change) is
-    # built but does not load yet: AREA06 sub 1 is not exported (assets/area06 holds sub 0 only and
-    # the module pack has no (0x06, 1) room: em_module_loader faults at its first read).
-    'g16': ('g61', mrb.G16_ROUTE, ('g61_area16_water', 'g62_area16_sub1', 'g63_area16_recharge',
-                                   'g64_area16_booth', 'g65_area16_vaccine', 'g66_area16_bed', 'g67_area16_out')),
+    # AREA06 sub 1 (g59's end, in play) -> the area change into AREA16 sub 0 (g60, a real one) -> the
+    # barrier -> the curtains -> sub 1 -> ... The card g60 loads AREA06 sub 1
+    # (tools/export_area06s1_assets.py, lane PORT-A06S1).
+    'g16': ('g60', mrb.G16_ROUTE, ('g60_area06_area16', 'g61_area16_water', 'g62_area16_sub1',
+                                   'g63_area16_recharge', 'g64_area16_booth', 'g65_area16_vaccine', 'g66_area16_bed',
+                                   'g67_area16_out')),
 }
 
 

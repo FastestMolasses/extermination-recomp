@@ -39,7 +39,7 @@ static int supported(void)
         return 0;
     if ((S.area == 8u || S.area == 7u) && (S.subarea == 2u || S.subarea == 3u)) return 1;
     return ((S.area == 0u || S.area == 2u || S.area == 0x0Fu || S.area == 4u || S.area == 0x13u) && S.subarea <= 1u) ||
-           (S.area == 0u && S.subarea == 2u) || (S.area == 0x0Eu && S.subarea == 0u) || (S.area == 0x11u && S.subarea == 0u) ||
+           (S.area == 0u && S.subarea == 2u) || (S.area == 6u && S.subarea == 1u) || (S.area == 0x0Eu && S.subarea == 0u) || (S.area == 0x11u && S.subarea == 0u) ||
            (S.area == 0x10u && S.subarea <= 1u) ||
            (S.area == 3u && S.subarea <= 2u) ||
            (S.subarea == 0u && (S.area == 11u || S.area == 1u || S.area == 4u || S.area == 0x16u || S.area == 6u ||

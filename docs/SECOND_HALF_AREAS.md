@@ -602,10 +602,18 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   (card g61): since lane PORT-A16-DRAW (001CAE30, below) it plays to chain
   frame 11186 of 37219: g61 on the recorded position for all 2788 rows
   (its three melees break the curtains, so g62's card question is gone in
-  the chain), but rand() differs from row 4 and two hits the original did
-  not take (rows 2345, 2457); g62 stays in sub 0 at row 4336; the player
-  dies in g63. A start before AREA16 (card g60, AREA06 sub 1) needs
-  AREA06 sub 1 exported (assets and the module pack's room (0x06, 1)). AREA16's owners now bind in the live composition too (area 0x10:
+  the chain), but rand() differs from row 4 (the hits at 2345 / 2457 are
+  the original's own, 2344 / 2456: route_g16's rebuilt traces carry the
+  takes' vitals); g62 stays in sub 0 at row 4336; the player dies in g63.
+  Since lane PORT-A06S1 the chain starts from card g60 (AREA06 sub 1,
+  exported and live: the sub-1 section of AREA06_ASSETS.md) with a real area change
+  into AREA16. Its first divergences are card artifacts in AREA06 sub 1:
+  the aura 001F1180's restarted countdown (rand() from g60 row 1) and the
+  gunners 00147390 restarted at their placements (the original's hit at
+  row 273 lands at 278); the path then drifts, the area change is missed
+  and the player dies in g61 row 425 (AREA16_PORT.md "Lane PORT-A06S1").
+  An earlier start needs AREA01 sub 1 exported (card g59, g58's end).
+  AREA16's owners now bind in the live composition too (area 0x10:
   dispatch_second_half, scene bindings, 001B6660's window, op09 callbacks).
 - AREA16 live (lane PORT-LIVE-A16, AREA16_PORT.md "Live"): SUBS rows for
   subs 0 and 1 from the guided run's g60 .. g66 (route_g16), CREATURES

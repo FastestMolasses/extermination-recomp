@@ -83,8 +83,8 @@ def collect(C, caps, replay=True):
     # func_001D5370.c's area/sub arms. Elsewhere this global is stale.
     dynamic = []
     # (0x10, 0), (0x10, 1), (0x11, 0), (0x15, 0): the second half's arms of the same switch (cases
-    # 0x1000, 0x1001, 0x1100, 0x1500).
-    if (C.AREA, C.SUB) in ((1, 0), (3, 1), (4, 0), (4, 1), (6, 0), (15, 0), (7, 0), (7, 3), (8, 0), (8, 3),
+    # 0x1000, 0x1001, 0x1100, 0x1500); (6, 1): its case 0x0601 (AREA06 sub 1, the guided run's g59).
+    if (C.AREA, C.SUB) in ((1, 0), (3, 1), (4, 0), (4, 1), (6, 0), (6, 1), (15, 0), (7, 0), (7, 3), (8, 0), (8, 3),
                            (0x10, 0), (0x10, 1), (0x11, 0), (0x15, 0)):
         dynamic = E.L.dynamic_entries(image.read, C.u32(cap.ram, 0x28A5A4))
         for ident, address in dynamic:
