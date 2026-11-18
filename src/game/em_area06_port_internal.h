@@ -664,6 +664,9 @@ static inline int a6_c_0020CD60(A6 *o)
 #define D_00275868 0x00275868u
 #define D_00275B40 0x00275B40u
 #define D_00275C34 0x00275C34u
+#define D_00257B40 0x00257B40u /* 001EF780's 001CFBE0 source */
+#define D_00257BD0 0x00257BD0u /* 001EF780's eight offsets (vec4) */
+#define D_00257C50 0x00257C50u /* 001EF780's four angle rows (vec4) */
 #define D_002754CC 0x002754CCu
 #define D_00281B50 0x00281B50u
 #define D_00810360 0x00810360u /* player block + 0xB0 */
@@ -716,6 +719,10 @@ static inline int a6_c_0020CD60(A6 *o)
 #define F_300     0x43960000u
 #define F_HALF    0x3F000000u
 #define F_1EM6    0x358637BDu /* 1e-6 */
+#define F_1EM4    0x38D1B717u /* 1e-4 */
+#define F_0_02    0x3CA3D70Au
+#define F_TEN     0x41200000u
+#define F_65535   0x477FFF00u
 #define F_M0_015  0xBC75C28Fu
 #define F_PI_8    0x3EC90FDBu /* pi / 8 */
 #define F_PI_2    0x3FC90FDBu
@@ -814,6 +821,20 @@ static inline int a6_c_001EFE00(A6 *o, int32_t n0, uint32_t a1)
     if (a6_failed(o)) return -1;
     if (!o->h->w_001EFE00) return a6_latch(o, 0x001EFE00u, EM_AREA06_PORT_FAULT_NULL_WORKER);
     return o->h->w_001EFE00(o->h->ctx, n0, a1) < 0 ? a6_latch(o, 0x001EFE00u, EM_AREA06_PORT_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a6_c_00102C58(A6 *o, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    if (a6_failed(o)) return -1;
+    if (!o->h->w_00102C58) return a6_latch(o, 0x00102C58u, EM_AREA06_PORT_FAULT_NULL_WORKER);
+    return o->h->w_00102C58(o->h->ctx, a0, a1, a2) < 0 ? a6_latch(o, 0x00102C58u, EM_AREA06_PORT_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a6_c_001026D0(A6 *o, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    if (a6_failed(o)) return -1;
+    if (!o->h->w_001026D0) return a6_latch(o, 0x001026D0u, EM_AREA06_PORT_FAULT_NULL_WORKER);
+    return o->h->w_001026D0(o->h->ctx, a0, a1, a2) < 0 ? a6_latch(o, 0x001026D0u, EM_AREA06_PORT_FAULT_WORKER_FAILED) : 0;
 }
 
 static inline int a6_c_001F4A00(A6 *o, uint32_t a0, uint32_t a1)

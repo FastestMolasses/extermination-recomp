@@ -176,9 +176,14 @@ Destinations:
 - D_00289BC0 (the 0x800-byte header) is the loader's own `ld.header`.
 - Every other destination is a host region keyed by its original address.
   A later read that overlaps a region replaces its overlapped interval
-  only: the untouched suffix is copied into a region of its own and the
-  untouched prefix keeps its storage (2026-10-21), so a reader's pointer
-  into it stays the same bytes, as the original's memory does. Before
+  only: the untouched prefix (2026-10-21) and suffix (2026-11-17, lane
+  PORT-A16-END) keep their storage as regions of their own (Region.base
+  names the allocation they share; it is freed when no region uses it), so
+  a reader's pointer into them stays the same bytes, as the original's
+  memory does. Until 2026-11-17 the suffix was copied: launcher C's read
+  (g67) moved the player's script bank D_0028A490[0x96] above it, and the
+  pose host's mapped region kept the freed bytes (AREA16_PORT.md "Lane
+  PORT-A16-END"). Before
   that the prefix was copied too and its old storage freed: module 0x1D
   (AREA00 sub 1's static-object bank at D_0028A5A0, inside room 0's
   resident region) left the collision view reading freed memory, and

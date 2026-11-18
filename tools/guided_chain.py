@@ -101,7 +101,7 @@ CHAINS = {
     # the chain started from card g60, AREA06 sub 1: lane PORT-A06S1).
     'g16': ('g59', mrb.G16_ROUTE, ('g59_area01_area06', 'g60_area06_area16', 'g61_area16_water', 'g62_area16_sub1',
                                    'g63_area16_recharge', 'g64_area16_booth', 'g65_area16_vaccine', 'g66_area16_bed',
-                                   'g67_area16_out')),
+                                   'g67_area16_out', 'g68_area06_area01')),
 }
 
 

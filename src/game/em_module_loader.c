@@ -160,6 +160,7 @@ typedef struct {
 typedef struct {
     uint32_t address, size;
     uint8_t *bytes;
+    uint8_t *base; /* the allocation that holds `bytes` (shared by the parts of a split read) */
 } Region;
 
 #define MAX_REGIONS 128
@@ -310,43 +311,39 @@ static uint8_t *region_for(EmModuleLoader *ml, uint32_t buf, uint32_t size)
         uint32_t starts[2] = {r->address, (uint32_t)end};
         uint32_t lengths[2] = {buf > r->address ? buf - r->address : 0,
                               old_end > end ? (uint32_t)(old_end - end) : 0};
+        /* The untouched prefix and suffix keep their storage: a resident
+         * reader's pointer into them (the collision file below a sub-area
+         * bank; the player's script bank D_0028A490[0x96] above an item's
+         * read, g67's launcher C) stays the same bytes, as the original's
+         * memory does. */
         for (unsigned part = 0; part < 2; ++part) {
             if (!lengths[part]) continue;
             if (count == MAX_REGIONS) goto failed;
-            /* The untouched prefix keeps its storage: a resident reader's
-             * pointer into it (the collision file below a sub-area bank)
-             * stays the same bytes, as the original's memory does. */
-            if (part == 0) {
-                next[count++] = (Region){starts[0], lengths[0], r->bytes};
-                continue;
-            }
-            uint8_t *bytes = malloc(lengths[part]);
-            if (!bytes) goto failed;
-            memcpy(bytes, r->bytes + (starts[part] - r->address), lengths[part]);
-            next[count++] = (Region){starts[part], lengths[part], bytes};
+            next[count++] = (Region){starts[part], lengths[part], r->bytes + (starts[part] - r->address), r->base};
         }
     }
     if (count == MAX_REGIONS) goto failed;
     uint8_t *dst = malloc(size ? size : 1);
     if (!dst) goto failed;
-    next[count++] = (Region){buf, size, dst};
+    next[count++] = (Region){buf, size, dst, dst};
     for (int i = 0; i < MAX_REGIONS; ++i) {
         Region *r = &ml->regions[i];
         if (!r->bytes || !overlaps(buf, size, r->address, r->size)) continue;
         int kept = 0;
         for (unsigned j = 0; j < count; ++j)
-            if (next[j].bytes == r->bytes) kept = 1;
-        if (!kept) free(r->bytes);
+            if (next[j].base == r->base) kept = 1;
+        /* Free an allocation once: another replaced region may share it. */
+        for (int k = 0; k < i && !kept; ++k)
+            if (ml->regions[k].bytes && ml->regions[k].base == r->base &&
+                overlaps(buf, size, ml->regions[k].address, ml->regions[k].size))
+                kept = 1;
+        if (!kept) free(r->base);
     }
     memcpy(ml->regions, next, sizeof next);
     return dst;
 failed:
-    for (unsigned i = 0; i < count; ++i) {
-        int borrowed = 0;
-        for (int j = 0; j < MAX_REGIONS; ++j)
-            if (next[i].bytes == ml->regions[j].bytes) borrowed = 1;
-        if (!borrowed) free(next[i].bytes);
-    }
+    /* Every region in `next` borrows an existing allocation (dst is the
+     * only new one, made after the last jump here). */
     return NULL;
 }
 
@@ -745,8 +742,12 @@ void em_module_loader_close(EmModuleLoader *ml)
         return;
     if (s_live == ml)
         s_live = NULL;
-    for (int i = 0; i < MAX_REGIONS; ++i)
-        free(ml->regions[i].bytes);
+    for (int i = 0; i < MAX_REGIONS; ++i) {
+        int shared = 0;
+        for (int k = 0; k < i; ++k)
+            if (ml->regions[k].bytes && ml->regions[k].base == ml->regions[i].base) shared = 1;
+        if (ml->regions[i].bytes && !shared) free(ml->regions[i].base);
+    }
     free(ml->ranges);
     free(ml->pack);
     free(ml);

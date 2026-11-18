@@ -136,6 +136,52 @@ int em_area06_port_001ECA20(const EmArea06PortHooks *h, uint32_t a0, uint32_t a1
 }
 
 /* ------------------------------------------------------------------------
+ * 001EF780 (C byte-identical; AREA16's effect handler, g65). Eight times,
+ * i = 0..7: the scratch matrix 0x700036A0 = identity (001029C0), rotated by
+ * the angle row D_00257C50[i >> 1] (00102C58), moved by the offset row
+ * D_00257BD0[i] (00102918), times the node's matrix a0 (001026D0(m, a0,
+ * m)); then the work block's seed v = *D_00275C34 +4 gives the fraction
+ * cvt((v >> 16) & 0xFFFF) / 65535.0 + 1e-4 and is stepped to v * 0x25 + 0xB
+ * (stored before the pointer and +0x54 are read again), and
+ * 001CFB50(D_0081F8F0, 0, 0x700036A0, +0x54, fraction, 1.0, 1e-6, 0.0),
+ * 001CFBE0(a1, 1, D_00257B40, D_0081F8F0, 0). After the loop +8 = x +
+ * (0.02 - x) / 10.0, then read again and raised to 0.02 when below it.
+ * ---------------------------------------------------------------------- */
+int em_area06_port_001EF780(const EmArea06PortHooks *h, uint32_t a0, uint32_t a1, EmArea06PortFault *fault)
+{
+    A6 o;
+    if (a6_begin(&o, h, fault)) return -1;
+    uint32_t offset = D_00257BD0;
+    for (int32_t i = 0; i < 8; ++i) {
+        if (a6_c_001029C0(&o, S_700036A0)) return -1;
+        if (a6_c_00102C58(&o, S_700036A0, S_700036A0, D_00257C50 + ((uint32_t)(i >> 1) << 4))) return -1;
+        if (a6_c_00102918(&o, S_700036A0, S_700036A0, offset)) return -1;
+        if (a6_c_001026D0(&o, S_700036A0, a0, S_700036A0)) return -1;
+        const uint32_t g = a6_u32(&o, D_00275C34);
+        const uint32_t v = a6_u32(&o, g + 4);
+        uint32_t f13 = A6_CVT((v >> 16) & 0xFFFFu);
+        f13 = A6_DIV(f13, F_65535);
+        a6_w32(&o, g + 4, v * 0x25u + 0xBu);
+        const uint32_t g2 = a6_u32(&o, D_00275C34);
+        const uint32_t f12 = a6_u32(&o, g2 + 0x54);
+        f13 = A6_ADD(f13, F_1EM4);
+        if (a6_c_001CFB50(&o, D_0081F8F0, 0, (int32_t)S_700036A0, fl(f12), fl(f13), fl(F_ONE), fl(F_1EM6),
+                          fl(F_ZERO)))
+            return -1;
+        if (a6_c_001CFBE0(&o, (int32_t)a1, 1, D_00257B40, D_0081F8F0, 0)) return -1;
+        offset += 0x10u;
+    }
+    const uint32_t g = a6_u32(&o, D_00275C34);
+    const uint32_t x = a6_u32(&o, g + 8);
+    a6_w32(&o, g + 8, A6_ADD(x, A6_DIV(A6_SUB(F_0_02, x), F_TEN)));
+    const uint32_t g2 = a6_u32(&o, D_00275C34);
+    uint32_t y = a6_u32(&o, g2 + 8);
+    if (A6_LT(y, F_0_02)) y = F_0_02;
+    a6_w32(&o, g2 + 8, y);
+    return a6_end(&o);
+}
+
+/* ------------------------------------------------------------------------
  * 002072A0 (C byte-identical): the sound 0x8CD (001FB9F0, three 0x1000).
  * ---------------------------------------------------------------------- */
 void a6_002072A0(A6 *o) { a6_c_001FB9F0(o, 0x8CD, 0x1000, 0x1000, 0x1000); }
