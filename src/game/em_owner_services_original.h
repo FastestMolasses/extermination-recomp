@@ -218,6 +218,13 @@ typedef struct {
     /* 001CAAC0(owner + 0xB0, node): the depth-sorted page CALL of the unit
      * that starts at `node` (a host pointer into channel 3). */
     int (*w_001CAAC0)(void *ctx, const EmOwnerServicesOwner *owner, const uint8_t *node);
+    /* Appended for 001CACC0 (model kind 3): 001D39A0(3, model) /
+     * 001D3DA0(3, model), its object and clip passes on channel 3, and
+     * 001CB760(table, id, node) (its page insertion at the fixed slot 0 of
+     * D_007635C0 when the owner's +0x02 has bit 0x40). */
+    int (*w_001D39A0)(void *ctx, const EmOwnerModel *model);
+    int (*w_001D3DA0)(void *ctx, const EmOwnerModel *model);
+    int (*w_001CB760)(void *ctx, uint32_t table, int32_t id, const uint8_t *node);
 } EmOwnerServicesWorkers;
 
 typedef struct {
@@ -306,6 +313,16 @@ int em_owner_services_001CA990(EmOwnerServices *s, EmOwnerServicesOwner *o,
  * when flags != 0 and flags & 1, else 001D3990(model); a RET tag on channel
  * 3, 001D8C20(0) and 001CAAC0(owner + 0xB0, node). Returns 0. */
 int em_owner_services_001CABA0(EmOwnerServices *s, EmOwnerServicesOwner *o, const EmOwnerModel *model);
+/* 001CACC0(owner, model) (decomp func_001CACC0.c, byte-matched; 001CAE30,
+ * model kind 3's +0x4C, tail-calls it with the owner's +0x44): 001CABA0's
+ * sibling. f = model +0x20 (20.0 without a model), times 1.2 (EE multiply)
+ * when the owner's +0x02 has bit 0x40; flags = 001CA7B0(owner +0xB0, f);
+ * culled: nothing. Otherwise node = the channel-3 cursor, 001D8C20(1),
+ * 001C7420(owner, 0x3F5, 3), 001D3DA0(3, model) when flags != 0 and flags
+ * & 1, else 001D39A0(3, model); the RET tag on channel 3, 001D8C20(0); then
+ * with +0x02 bit 0x40 001CB760(D_007635C0, 0, node), else
+ * 001CAAC0(owner +0xB0, node). Returns 0. */
+int em_owner_services_001CACC0(EmOwnerServices *s, EmOwnerServicesOwner *o, const EmOwnerModel *model);
 /* 001C7420(owner, vuaddr, chan). Returns 0 and the channel cursor on entry
  * (the original return value) in *first, or -1. */
 int em_owner_services_001C7420(EmOwnerServices *s, const EmOwnerServicesOwner *o,

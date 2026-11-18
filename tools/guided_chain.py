@@ -43,7 +43,7 @@ Usage (native arm64 macOS; build/extermination and the cards g45 / g60 first):
 
   python3 tools/guided_chain.py --list
   python3 tools/guided_chain.py g17            # g45 -> g46 -> g47 -> g48 from card g45 (AREA14)
-  python3 tools/guided_chain.py g16            # g61 -> g62 -> ... from card g61 (AREA16 sub 0)
+  python3 tools/guided_chain.py g16            # g60 -> g61 -> ... from card g60 (AREA06 sub 1)
   python3 tools/guided_chain.py g16 --until g62   # stop the chain after g62
   python3 tools/guided_chain.py g17 --steer    # steer where the player falls behind the path
 
@@ -94,12 +94,12 @@ CHAINS = {
     # AREA11 entry 3 in play after the cable ride's scene (g48's end; the scene itself, script
     # 0x828C70, is not ported yet: the g17 chain stops there) -> AREA01 sub 1 -> AREA02 sub 1 -> ...
     'g11': ('g49', G49_ROUTE, G49_TAKES),
-    # AREA16 sub 0 at control after the real load from AREA06 sub 1 (g60's end) -> the barrier ->
-    # the curtains -> sub 1 -> ... The card g60 (g59's end, AREA06 sub 1, before the area change) is
-    # built but does not load yet: AREA06 sub 1 is not exported (assets/area06 holds sub 0 only and
-    # the module pack has no (0x06, 1) room: em_module_loader faults at its first read).
-    'g16': ('g61', mrb.G16_ROUTE, ('g61_area16_water', 'g62_area16_sub1', 'g63_area16_recharge',
-                                   'g64_area16_booth', 'g65_area16_vaccine', 'g66_area16_bed', 'g67_area16_out')),
+    # AREA06 sub 1 (g59's end, in play) -> the area change into AREA16 sub 0 (g60, a real one) -> the
+    # barrier -> the curtains -> sub 1 -> ... The card g60 loads AREA06 sub 1
+    # (tools/export_area06s1_assets.py, lane PORT-A06S1).
+    'g16': ('g60', mrb.G16_ROUTE, ('g60_area06_area16', 'g61_area16_water', 'g62_area16_sub1',
+                                   'g63_area16_recharge', 'g64_area16_booth', 'g65_area16_vaccine', 'g66_area16_bed',
+                                   'g67_area16_out')),
 }
 
 
@@ -145,7 +145,7 @@ def write_inputs(out, rows, inputs, starts):
             lines.append(f'{r["f"]} {value[0]:x} {value[1]} {value[2]}')
             sent = value
     last = len(rows) - 1
-    assert len(lines) <= 32768, 'more pad rows than EM_START_AT_PAD holds'
+    assert len(lines) <= 65536, 'more pad rows than EM_START_AT_PAD holds (PAD_MAX, em_start_at.c)'
     pad.write_text('\n'.join([f'EMA1 1 {last} 1'] + lines) + '\n')
     rands = out / 'chain.rands'
     rands.write_text(''.join(f'{r["f"]} {r["rand"]}\n' for r in rows))

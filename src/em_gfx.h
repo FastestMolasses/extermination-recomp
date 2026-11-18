@@ -985,7 +985,10 @@ typedef struct {
                                         001D1F80(3, 2, 1) set 2 class 1 and the
                                         skin records D_00816D40 / D_00816E40 (ABE,
                                         ALPHA 0x44, no Z write), on the chain page
-                                        as class 2 */
+                                        as class 2; 3, 001CACC0's 001D1F80(3, 2, 3)
+                                        set 2 class 3 and D_00816C40 / D_00816E40
+                                        (ABE, ALPHA 0x8000000062: Cd - Cs, no Z
+                                        write), on the chain page as class 2 */
 } EmGfxObjectUnit;
 int em_gfx_object_unit(EmGfx *gfx, const EmGfxObjectUnit *unit);
 

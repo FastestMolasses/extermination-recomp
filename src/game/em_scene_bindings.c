@@ -233,7 +233,10 @@ static int mid_area(unsigned area, unsigned sub)
     /* AREA00 sub 2 (chunk04.n2, another level than subs 0 / 1; tools/
      * export_area00s2_assets.py, docs/AREA14_PORT.md) keeps its folder
      * assets/area00/sub2 in the later areas' layout. */
-    return (area == 0u && sub == 2u) || ((area == 0x16u || area == 6u || area == 0x0Du || area == 0x0Eu || area == 0x11u) && sub == 0) ||
+    /* AREA06 sub 1 (chunk10.n1; tools/export_area06s1_assets.py,
+     * docs/AREA06_ASSETS.md) keeps its folder assets/area06/sub1. */
+    return (area == 0u && sub == 2u) || (area == 6u && sub == 1u) ||
+           ((area == 0x16u || area == 6u || area == 0x0Du || area == 0x0Eu || area == 0x11u) && sub == 0) ||
            ((area == 0x0Fu || area == 0x13u || area == 0x10u) && sub <= 1) || (area == 3u && sub <= 2) || (area == 4u && sub == 1) ||
            ((area == 8u || area == 7u) && (sub == 0 || sub == 2 || sub == 3));
 }
@@ -252,7 +255,8 @@ static const char *mid_file(unsigned area, const char *name)
         snprintf(out, sizeof path[0], "assets/levels/%02u/sub%u%s%s", area, s_state.d810701, name[0] ? "/" : "", name);
     else
         snprintf(out, sizeof path[0], "assets/area%02u/sub%u%s%s", area,
-                 (area == 0x0Fu || area == 8u || area == 7u || area == 0u || area == 0x10u) ? s_state.d810701 : 0u,
+                 (area == 0x0Fu || area == 8u || area == 7u || area == 0u || area == 0x10u || area == 6u) ?
+                     s_state.d810701 : 0u,
                  name[0] ? "/" : "", name);
     return out;
 }
@@ -2903,6 +2907,7 @@ static int arrival_scene(void)
            strcmp(g.scene_dir, AREA04_SCENE_DIR) == 0 ||
            strcmp(g.scene_dir, "assets/area22/sub0") == 0 ||
            strcmp(g.scene_dir, "assets/area06/sub0") == 0 ||
+           strcmp(g.scene_dir, "assets/area06/sub1") == 0 ||
            strcmp(g.scene_dir, "assets/area13/sub0") == 0 ||
            strcmp(g.scene_dir, "assets/area15/sub0") == 0 ||
            strcmp(g.scene_dir, "assets/area15/sub1") == 0 ||
@@ -4192,10 +4197,21 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
         switch (fn) {
         case 0x00823580u: case 0x00823B50u: case 0x008240E0u: case 0x00824340u: case 0x00824560u:
             goto bind;
+        /* sub 1's director (placements 0x8283D0; decomp tools/area_overview.py
+         * --area 6): em_area06_port_00825E20 through dispatch_a06 */
+        case 0x00825E20u:
+            if (s_state.d810701 == 1) goto bind;
+            return -1;
         default:
             return -1;
         }
     }
+    /* AREA06 sub 1's boot owners (its placements', group 0x8265E0's and
+     * spawns'), as AREA00 sub 2's: the runtime's owners or its fallback
+     * (em_area01_runtime_later); an untranslated one faults at its address
+     * when it runs. */
+    if (s_state.d810700 == 6 && s_state.d810701 == 1 && fn < 0x00823500u && fn && fn != 0x001F5040u)
+        goto bind;
     if (s_state.d810700 == 0x16 && fn >= 0x00823500u)
         return -1;
     /* AREA13's placements and spawns (em_area01_runtime dispatch_a13). */
@@ -4282,7 +4298,9 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
     if ((s_state.d810700 == 1 || s_state.d810700 == 4 || s_state.d810700 == 0x0F || s_state.d810700 == 3 || s_state.d810700 == 0x13 ||
          s_state.d810700 == 8 || s_state.d810700 == 7 || s_state.d810700 == 0x0D || s_state.d810700 == 0x0E ||
          /* AREA17: the creature's beam 001B3C30 (00133E30's 001348E0) */
-         s_state.d810700 == 0x11) &&
+         s_state.d810700 == 0x11 ||
+         /* AREA06 sub 1: the creature 00147390's beam 001B3C30 (group 0x8265E0) */
+         (s_state.d810700 == 6 && s_state.d810701 == 1)) &&
         fn == 0x001F5040u) {
         if (!em_aim_fire_flash_owns(a) && em_area01_live_adopt_flash(&s_area01_live, a) < 0)
             return -1;

@@ -112,6 +112,30 @@ Where AREA06 stands (2026-10-30, after the second pass):
   1e-19, vf15 at +-MAX): the EFU case with no established result. Since
   2026-11-01 the port drops that one quad (docs/AREA19_PORT.md open item 1).
 
+## Sub 1 live (lane PORT-A06S1, 2026-11-17, branch `a06s1`)
+
+AREA06 sub 1 (assets: the sub-1 section of AREA06_ASSETS.md) runs in the shared
+composition from the card g60 (g59's end).
+- **The director 0x825E20** (func_overlay_AREA06_00825DE0.c, byte-identical,
+  sub 1's only own overlay owner): em_area06_port_00825E20 (state 0 picks 3
+  or 1 on 001BA1C0(self, 0x2A); state 1 starts script 0x8276C0 on
+  001BA1C0(self, 0x31) with the scratchpad byte 0x70003B8D not 4, waits for
+  its end, then D_00810802 = 0xFF, D_00810845 |= 0x10, 001FABB0, 001FB0B0(0x15),
+  001C4760(0x1F, 1); 001B17A0 each state-1 frame; states 2 / 3 001AFC10).
+  `tools/test_area06_port_reference.py`: 30 designed cases on a sub-0
+  beat's resident overlay (the overlay is one file for both subs), 61 of
+  61 reachable words.
+- **Binding:** em_area01_runtime dispatch_a06 runs it; area01_rebind binds
+  0x825E20 in sub 1 only, sub 1's boot owners as AREA00 sub 2's (the
+  runtime's or its fail-stop), and the flash node 001F5040 that the
+  creature 00147390's beam 001B3C30 allocates. Sub 1's boot calls take the
+  later areas' dispatch (area06_sub1 in em_area01_runtime: group 0x8265E0
+  places the creatures 00147390, 0013D2D0 and the bugs 0012A5D0).
+- **Paths:** mid_area / mid_file take (6, 1) as assets/area06/sub1; shadow
+  receivers and world textures from assets/levels/06/sub1.
+
+Sub 0's path is unchanged: every new rule is gated on sub 1.
+
 ## Full-route audit extension (2026-10-18)
 
 The full census adds three previously omitted AREA06 arrival routines:

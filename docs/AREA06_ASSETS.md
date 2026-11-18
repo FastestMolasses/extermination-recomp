@@ -455,10 +455,52 @@ is bound:
 - The ctx block is evaluated at run time by 001D8FD0 at a room load and by
   001D1C50 every frame, from `assets/render_context.emrc`.
 
+## Sub 1 (lane PORT-A06S1, 2026-11-17)
+
+`tools/export_area06s1_assets.py` exports AREA06 sub 1 (`chunk10.n1`:
+placements 0x8283D0, group 0x8265E0, the director 0x825E20) through the
+AREA13 lane's per-(target, sub) exporters, as AREA00 sub 2 does
+(export_area00s2_assets): a Target for AREA06 (area 6, AREA06.BIN = MWo3
+id 6, INDEX chunk10, nested) pointed at sub 1.
+
+- **Captures:** the guided run's g59 end (AREA01 sub 1 -> AREA06 sub 1,
+  area bytes 06 01 00 06) and g67 end (AREA16 -> AREA06 sub 1, 06 01 03 06)
+  in decomp `build/fork_refs/guided-20261117/s87/route_g16`; previous: g58's
+  end (AREA01 sub 1, 01 01 06 01), a new set `route_g16pre`
+  (`tools/capture_from_take.py --set guided-20261117/s87/route_g16pre
+  g58_area04_area01`). One load map fits both captures; every binary output
+  is identical with g59 alone (only the reports gain g67's rows).
+- **Rules** (from AREA06's byte-identical overlay C): only the beam
+  0x824560 (sub 0's) calls 001A2370 and only [9] 0x823580 calls 0019C6F0;
+  sub 1 places [9], so its 0019C6F0 rule is sub 0's for sub 1 (flag calls
+  (0xD, 0) in g59, (0xD, 1) in g67). No sub-1 overlay owner is a
+  matrix-address caller.
+- **Sound:** group 3 bank 0 holds the fitted attachment's bank in both
+  captures (global row 3's twin from chunk50..53), the attachment scope's
+  (export_second_half_common._attachment_aware), as in the second half's
+  areas. Scope (6, 1) is the registry's last mid scope (84 samples; the
+  attachment scopes' sample indices move up).
+- **Side files:** the run's spawn table, door rows, scripts window and
+  overlay data are byte-identical to sub 0's (assets/area06/), so sub 0's
+  serve both subs; the run's copies stay under build/area06s1/.
+- **Profile 06s1** (`tools/level_asset_profiles.py`): world textures
+  (`export_level_world_textures.py`; func_001D5370's dynamic-object switch
+  has the case 0x0601, so (6, 1) reads the dynamic list), shadow receivers,
+  player texture variants (route_g16's AREA06 sub-1 ends); output
+  assets/levels/06/sub1/.
+- **Module packs:** (0x06, 1) in export_module_loader.DEFAULT_AREAS and
+  export_level_module_pack.AREAS.
+
+Output (ignored, never committed): assets/area06/sub1/ (level, collision,
+cells, roster, world models, messages, sfx, tables.json, sub1.json),
+assets/levels/06/sub1/. Sub 0's files are unchanged.
+
 ## Known gaps
 
-1. **Sub 1** (`chunk10.n1`, placements 0x8283D0 and group 0x8265E0, the
-   director 0x825E20) is loaded by no capture and not exported.
+1. **Sub 1** is exported (the section on sub 1 above, lane PORT-A06S1). Its owners'
+   behaviour beyond the director 0x825E20 is the shared translations';
+   sub 1's own load has no route capture, only the guided run's g59 / g67
+   ends.
 2. **Ids 0x71, 0x7C, 0x72, 0x79, 0x73, 0x7A** (0x16A69C0 .. 0x17711C0) are not
    decoded; their bytes are only checked equal to RAM through the load map.
 3. **Hull 28 after the collapse** is accepted by the written-words orphan rule

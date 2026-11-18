@@ -168,11 +168,12 @@ FUNCS = {
     0x824340: ('em_area06_port_00824340', 0x214, [U], None),
     0x8242C0: ('em_area06_port_008242C0', 0x80, [U, U], I),
     0x824290: ('em_area06_port_00824290', 0x30, [], None),
+    0x825E20: ('em_area06_port_00825E20', 0x178, [U], None),
     0x824560: ('em_area06_port_00824560', 0x18BC, [U, S], None),
     0x826950: ('em_area06_port_00826950', 0x244, [U, U, U], I),
 }
 OVERLAY_OF = {0x823B10: 6, 0x823B50: 6, 0x8240E0: 6, 0x824340: 6, 0x823580: 6, 0x8242C0: 6, 0x824560: 6, 0x826950: 2,
-              0x824290: 6}
+              0x824290: 6, 0x825E20: 6}
 
 
 def has_result(entry):
@@ -2092,6 +2093,26 @@ def overlay_cases(add):
     for s in (0, 1, 2):
         for bit in (0, 0x20, 0xDF):
             add('8242C0 st %d bit %X' % (s, bit), beat, 0x8242C0, [node, st], [(st + 4, b8(s)), (0x810845, b8(bit))])
+    # 0x825E20 (self): AREA06 sub 1's director (the overlay is the same in both
+    # subs; a sub-0 beat's resident overlay runs it on a free node): every
+    # state and sub-state, both 001BA1C0 results, the scratchpad byte
+    # 0x70003B8D at 4 and not, the script end and not
+    d = FREE + 0xC000
+    for state in (0, 1, 2, 3, 4):
+        for sub in (0, 1, 2, 3):
+            if state != 1 and sub:
+                continue
+            for hit in (0, 1, -5):
+                for b8d in (4, 3):
+                    if (state != 1 or sub != 0) and b8d == 3:
+                        continue
+                    for done in ((0, 1) if (state, sub) == (1, 1) else (0,)):
+                        add('825E20 st %d sub %d hit %d b8d %d done %d' % (state, sub, hit, b8d, done), beat,
+                            0x825E20, [d],
+                            [(d, b8(0)), (d + 4, b8(state)), (d + 5, b8(sub)), (0x810802, b8(0x11)),
+                             (0x810845, b8(0x25))],
+                            [(0x70003B8D, b8(b8d))],
+                            queues={0x1BA1C0: [hit], 0x1BA1F0: [done], 0x1B17A0: [hit]})
     beam_cases(add)
 
 

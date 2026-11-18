@@ -68,7 +68,8 @@ extern "C" {
 #define EM_OWNER_DRAW_SKIN_METHOD10      UINT32_C(0x00817140) /* 001D42E0 */
 #define EM_OWNER_DRAW_METHOD10           UINT32_C(0x0023D4D0) /* 001D42E0's program */
 #define EM_OWNER_DRAW_METHOD10_TEX0      UINT64_C(0x2004818599422020) /* 001D42E0's 001D6F60 */
-#define EM_OWNER_DRAW_SKIN_RECORD_3_CLIP UINT32_C(0x00816E40) /* 001D3CF0 */
+#define EM_OWNER_DRAW_SKIN_RECORD_3_CLIP UINT32_C(0x00816E40) /* 001D3CF0, 001D3DA0 */
+#define EM_OWNER_DRAW_SKIN_RECORD_3_SUB  UINT32_C(0x00816C40) /* 001D39A0 */
 
 /* Fault codes (numerically the EM_SCENE_FAULT_* / EM_OWNER_FAULT_* codes). */
 enum {
@@ -210,6 +211,14 @@ typedef int (*EmOwnerDrawGsState)(void *ctx, int32_t chan, int32_t a1, int32_t a
 int em_owner_draw_001D3900(EmOwnerDraw *s, int32_t chan, uint32_t model_address, uint32_t model_w04,
                            EmOwnerDrawGsState gs, void *ctx);
 int em_owner_draw_001D3CF0(EmOwnerDraw *s, int32_t chan, uint32_t model_address, uint32_t model_w04,
+                           EmOwnerDrawGsState gs, void *ctx);
+/* 001D39A0(chan, model) / 001D3DA0(chan, model) (decomp func_001D39A0.c,
+ * func_001D3DA0.c; 001CACC0's object and clip passes, model kind 3): as
+ * 001D3900 / 001D3CF0 with 001D1F80(chan, 2, 3) (set 2, class 3) and the
+ * object pass's skin record D_00816C40 (the clip pass keeps D_00816E40). */
+int em_owner_draw_001D39A0(EmOwnerDraw *s, int32_t chan, uint32_t model_address, uint32_t model_w04,
+                           EmOwnerDrawGsState gs, void *ctx);
+int em_owner_draw_001D3DA0(EmOwnerDraw *s, int32_t chan, uint32_t model_address, uint32_t model_w04,
                            EmOwnerDrawGsState gs, void *ctx);
 
 /* 001D42E0(chan, model): the draw method kind 10's channel list after

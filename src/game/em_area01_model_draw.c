@@ -108,6 +108,9 @@ int em_area01_model_draw_call(EmArea01ModelDraw *d,uint32_t function,uint32_t no
         rc=em_owner_draw_live_001CAF60(&d->bank,&d->owner,d->rgb,node,d->current,d->sp,d->regions,d->region_count);
     } else if(r && function==0x001CACB0u && prepare(d,node,r,0,0)==0) {
         rc=em_owner_draw_live_001CABA0(&d->bank,&d->owner,d->rgb,node);
+    } else if(r && function==0x001CAE30u && prepare(d,node,r,0,0)==0) {
+        /* 001CAE30(owner) = 001CACC0(owner, +0x44): model kind 3 */
+        rc=em_owner_draw_live_001CACC0(&d->bank,&d->owner,d->rgb,node);
     } else if(r && (function==0x001CB1F0u || function==0x001CB130u || function==0x001CB2B0u ||
                     function==0x001CB060u) && prepare(d,node,r,0,0)==0) {
         /* 001CB070 stores +0x88, +0x84, +0x80 = 1.0 before its 001C7420 */

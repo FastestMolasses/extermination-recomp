@@ -468,7 +468,7 @@ AREA01). docs/STARTUP.md "Guided chains" says how to run them.
   (11, 0) entry. export_sfx_registry resolves it through AREA11's own bank
   binding after every other scope (AREA11_REVISIT_IDS; every earlier entry
   and sample unchanged; the new entry is audible).
-- **Row limits**: EM_START_AT_PAD holds 32768 rows and the per-frame tables
+- **Row limits**: EM_START_AT_PAD holds 65536 rows (main's PAD_MAX) and the per-frame tables
   (rands, clocks, path) 240000 frames (a chain of ten takes is ~83500
   frames, ~11000 pad changes).
 

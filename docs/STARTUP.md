@@ -686,7 +686,7 @@ Output: build/guided_chain/<chain>/report.txt (per take: compared frames,
 frames on the row, the first frame of each kind of difference, where the run
 stopped) and run.log. A chain's takes may come from two route sets
 (guided_chain.G49_TAKES: route_g49). Cards g49 .. g58 are the source states
-of g49 .. g58 (route_g49). EM_START_AT_PAD holds 32768 pad rows and the
+of g49 .. g58 (route_g49). EM_START_AT_PAD holds 65536 pad rows and the
 per-frame tables 240000 frames.
 
 ### EM_SKIP_STARTUP=1: the older debug fixture
