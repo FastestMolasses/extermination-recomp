@@ -3016,6 +3016,34 @@ Before PORT-WATCH-DRIFT every gameplay segment left the
 recording one pi/8 turn step ahead: the tool fed a guided take's pad one tick early
 (its recorder's replay timeline is one vsync off the user's; `read_pads` in the tool).
 
+### Watching Claude's run
+
+Start the guided run (Claude's whole game, `../Extermination/build/guided_play`) at a
+chapter instead of the title (native macOS, `build/extermination` built):
+
+    python3 tools/watch_takes.py --root ../Extermination/build/guided_play g01_title_newgame --chapters
+    python3 tools/watch_takes.py --root ../Extermination/build/guided_play g01_title_newgame --from g16_area08
+    python3 tools/watch_takes.py --root ../Extermination/build/guided_play g01_title_newgame --at 2:41:37
+
+`--chapters` lists the decomp's chapters (`record_guided_run.py chapters`) with their
+times and marks those past the port's exact frontier; `--from <take>` starts at that
+kept take, `--at H:MM:SS` at a chapter's time. A load-game state is not used (it differs
+from continuous play and the pad desyncs): the port plays the same stitched recording from
+the title with no window, no sound and no pacing (`EM_FAST_UNTIL`, STARTUP.md), printing
+its progress every few seconds, and at the chosen tick the window opens, the sound starts
+and the run plays on at 59.94 Hz to the end of the recording or the port's current
+frontier. The fast part is the game's own logic at full speed on one core, so a start
+deep in the run waits for it: measured 2026-11-18 on a machine at load average 30 to 45,
+114,000 ticks (to g10) took 697 s (164 ticks a second; 99% of the main thread is the area's
+actor walk, nothing of the frame loop is left to skip), so the exact frontier (stitched row
+377,800, chain time 1:50:39, segment 913) is about 38 minutes away on such a machine, less on an
+idle one. Starts in the first hour or so are quick (g01 to g02: about 9 s).
+The tool warns when the chosen point lies past the first tick of the last full
+`--check` run that left the recording (`build/guided_takes/<first take>/frontier.json`,
+written by `--check` with no `--ticks`); after that point the recorded pad no longer fits the
+port's game. `--hidden` (no window or sound even after the switch) and `--then N` (stop
+N ticks after it) are for tests.
+
 ## What we deliberately do not emulate
 
 The port reproduces the game, not the console. The rule (user, 2026-09-27):

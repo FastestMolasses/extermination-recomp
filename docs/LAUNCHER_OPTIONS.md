@@ -166,6 +166,12 @@ its statuses are the ones that count.
     tests, harnesses and discovery runs, not launcher options: the game
     runs the same, and the Original profile's windowed run draws and paces
     as before.
+  - `EM_FAST_UNTIL=<segment>:<offset>` (2026-11-18, port lane PORT-WATCH-FROM;
+    src/game/em_fast.h; STARTUP.md "EM_FAST_UNTIL"): a recorded playback
+    (`EM_INPUT_PLAY`) runs with no picture, no sound and no pacing, hidden,
+    until the named tick, then plays normally (window, 59.94 Hz, sound) with
+    the same state. Used by `tools/watch_takes.py --from / --at` to watch the
+    guided run from a chapter; the game runs the same (tools/test_fast_from.py).
   - `EM_NO_RENDER=1` (2026-11-16, port lane NORENDER; src/game/em_norender.h):
     a headless run that reads no picture skips the work whose only output is
     the picture: the VU1 object kernels, the static-world and background

@@ -42,5 +42,6 @@ void em_audio_destroy(EmAudio *a) {
     if (!a) return;
     atomic_store(&a->stop,1); pthread_join(a->thread,NULL); free(a);
 }
+void em_audio_refresh_muted(EmAudio *a) { (void)a; }
 void em_audio_pause(EmAudio *a) { if (a) atomic_store(&a->paused,1); }
 void em_audio_resume(EmAudio *a) { if (a) atomic_store(&a->paused,0); }

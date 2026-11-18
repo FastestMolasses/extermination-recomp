@@ -37,7 +37,7 @@ struct EmAudio {
     AudioUnit       unit;
     EmAudioCallback cb;
     void           *user;
-    int             silent;   /* em_audio_muted() at create: mute the output */
+    volatile int    silent;   /* em_audio_muted() at create: mute the output */
     int             paused;   /* em_audio_pause: the game asked for a stop */
     EmAudio        *next;     /* the open units (guarded by s_lock) */
 };
@@ -205,6 +205,11 @@ EmAudio *em_audio_create(int sample_rate, EmAudioCallback cb, void *user)
     s_units = a;
     pthread_mutex_unlock(&s_lock);
     return a;
+}
+
+void em_audio_refresh_muted(EmAudio *a)
+{
+    if (a) a->silent = em_audio_muted();
 }
 
 void em_audio_destroy(EmAudio *a)

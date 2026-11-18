@@ -79,6 +79,7 @@ struct EmGfx {
     id<MTLTexture>               target;
     id<MTLTexture>               offscreen;
     bool                         headless;
+    volatile bool                presentHold;   /* em_gfx_present_hold */
     /* The GS world draws its frames (em_gs_world_raster_wanted, read at
      * create): false is the headless raster skip (docs/PERFORMANCE.md P18),
      * where no picture may be read back or captured. */
@@ -393,7 +394,7 @@ static bool present_visible(EmGfx *g)
  * the display has not yet shown the two frames presented before. */
 static void present_commit(EmGfx *g, id<MTLCommandBuffer> cmd, id<MTLTexture> frame)
 {
-    if (!g->headless && frame && present_visible(g)) {
+    if (!g->headless && !g->presentHold && frame && present_visible(g)) {
 #if !TARGET_OS_IPHONE
         /* macOS: the drawable takes the frame's size (the view's backing
          * size at the frame's start); iOS's main thread sizes the layer. */
@@ -4348,6 +4349,11 @@ int em_gfx_gs_world_enable(EmGfx *g, int on, EmGfxGsRead read, void *read_ctx)
 }
 
 int em_gfx_gs_world_enabled(EmGfx *g) { return g && g->gswOn; }
+
+void em_gfx_present_hold(EmGfx *g, int hold)
+{
+    if (g) g->presentHold = hold != 0;
+}
 
 int em_gfx_gs_world_raster(EmGfx *g, int raster)
 {

@@ -53,6 +53,11 @@ void em_movie_sound_mix(float *out, int frames, int device_rate)
     atomic_store_explicit(&s.read, r + n, memory_order_release);
 }
 
+void em_movie_sound_flush(void)
+{
+    atomic_store_explicit(&s.read, atomic_load_explicit(&s.write, memory_order_acquire), memory_order_release);
+}
+
 void em_movie_sound_counters(uint64_t *pushed, uint64_t *overruns, uint64_t *bad_rate)
 {
     if (pushed) *pushed = atomic_load_explicit(&s.pushed, memory_order_relaxed);

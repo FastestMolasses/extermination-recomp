@@ -37,7 +37,7 @@ struct EmAudio {
     AudioUnit       unit;
     EmAudioCallback cb;
     void           *user;
-    int             silent; /* em_audio_muted() at create: mute the output */
+    volatile int    silent; /* em_audio_muted() (create, em_audio_refresh_muted): mute the output */
 };
 
 static OSStatus em_audio_render(void *inRefCon,
@@ -144,6 +144,12 @@ void em_audio_destroy(EmAudio *a)
     AudioUnitUninitialize(a->unit);
     AudioComponentInstanceDispose(a->unit);
     free(a);
+}
+
+void em_audio_refresh_muted(EmAudio *a)
+{
+    if (a)
+        a->silent = em_audio_muted();
 }
 
 void em_audio_pause(EmAudio *a)

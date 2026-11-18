@@ -49,6 +49,9 @@ EmAudio *em_audio_create(int sample_rate, EmAudioCallback cb, void *user);
 /* Stop the device and release it. Blocks until the callback can no longer
  * fire. NULL is a no-op. */
 void em_audio_destroy(EmAudio *audio);
+/* Re-read em_audio_muted() for the running device (the fast-forward start's
+ * switch, game/em_fast.h). Callable from the game thread. */
+void em_audio_refresh_muted(EmAudio *audio);
 
 /* Stop/restart pulling without tearing the device down (e.g. app loses
  * focus). While paused the OS emits silence; the callback is not invoked. */

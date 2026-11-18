@@ -18,5 +18,6 @@
 EmAudio *em_audio_create(int sample_rate, EmAudioCallback cb, void *user)
 { (void)sample_rate; (void)cb; (void)user; return NULL; } /* TODO */
 void em_audio_destroy(EmAudio *audio) { (void)audio; }
+void em_audio_refresh_muted(EmAudio *audio) { (void)audio; }
 void em_audio_pause(EmAudio *audio) { (void)audio; }
 void em_audio_resume(EmAudio *audio) { (void)audio; }

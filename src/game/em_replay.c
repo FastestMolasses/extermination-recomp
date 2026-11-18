@@ -45,6 +45,7 @@
 #include "em_input.h"
 #include "em_settings.h"
 #include "game/em_bgm.h"
+#include "game/em_fast.h"
 #include "game/em_frame.h"
 #include "game/em_game_internal.h"
 #include "game/em_replay_audio.h"
@@ -363,6 +364,11 @@ static void filter(EmPadState *pad, void *user)
             } else if (s.prev_phase) {
                 s.off++;
             }
+            if (em_fast_active()) {   /* EM_FAST_UNTIL: the normal presentation from this tick */
+                uint32_t seg, off;
+                em_fast_target(&seg, &off);
+                if (s.cur_seg > seg || (s.cur_seg == seg && s.off >= off)) em_fast_end();
+            }
             const RecSeg *g0 = &s.segs[s.cur_seg];
             const uint32_t i = s.off < g0->len ? s.off : g0->len - 1;
             pad_set(pad, &s.ticks[g0->start + i]);
@@ -374,7 +380,7 @@ static void filter(EmPadState *pad, void *user)
             }
             if ((long)s.off - (long)g0->len > s.max_overrun) stop("desync: segment overran the recording");
             if (s.cur_seg + 1 == s.nsegs && s.off + 1 >= g0->len) stop("recording used up");
-            if (s.capture && phase != 'T' && s.off % s.capture_every == 0) {
+            if (s.capture && !em_fast_active() && phase != 'T' && s.off % s.capture_every == 0) {
                 char path[1024];
                 if (strstr(s.capture, "%u"))
                     snprintf(path, sizeof path, s.capture, s.captures);
@@ -411,6 +417,10 @@ int em_replay_install(void)
 {
     const char *rec = getenv("EM_INPUT_RECORD"), *play = getenv("EM_INPUT_PLAY");
     const char *audio = getenv("EM_REPLAY_AUDIO");
+    if (em_fast_active() && (!play || !play[0])) {
+        fprintf(stderr, "EM_FAST_UNTIL needs EM_INPUT_PLAY\n");
+        return -1;
+    }
     if ((!rec || !rec[0]) && (!play || !play[0])) return 0;
     memset(&s, 0, sizeof s);
     s.capture_every = 1;
