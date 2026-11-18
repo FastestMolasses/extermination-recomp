@@ -581,7 +581,11 @@ recording-derived and stay in the ignored `build/`.
   recording's next row f after its own load (within 400 frames; others are
   reported and skipped). `EM_START_AT_CLOCKS=<file>` (lines `f hex`) puts the
   recording's world clock 0x70003B68 (and D_00810750 by the same difference)
-  in place at those script frames. Both comparison only, for
+  in place at those script frames; at the first one (row 0) D_00810750 instead
+  keeps the card's value: it gives back the gameplay frames the port ran after
+  the card's load (the clock's count since the port's boot; g20's card replays
+  the lift's arrival scene), since the recording's source state is the frame
+  before row 0 (docs/AREA21_PORT.md "Ending 3"). Both comparison only, for
   `tools/guided_chain.py`: Claude's guided takes played as one continuous run
   from one card (no reload between takes), every frame compared with the takes'
   rows, with the recorded disc-drive timing (as tools/watch_takes.py); see

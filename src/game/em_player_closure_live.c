@@ -21,6 +21,7 @@
 #include <string.h>
 
 #include "game/em_actor_collision.h"
+#include "game/em_actor_pool.h"
 #include "game/em_area02_misc.h"
 #include "game/em_coll_move_original.h"
 #include "game/em_coll_segment_walkers.h"
@@ -3395,16 +3396,57 @@ int em_player_closure_live_use_press(EmPlayerLiveActor *actor, int *result)
  * the record at D_008102B0, the caller's D_00810707 byte, and the .data
  * halfwords of 0015C7C0's clip pairs (D_00248A00..0B, D_002754C0..DB) each
  * as its own two-byte region when `table16` has it (one it lacks faults
- * only if read). The +0x1C link object is not kept by the port: a nonzero
- * +0x1C reads its +4 outside every region (fail-stop). */
+ * only if read). When the record's +0x1C link is nonzero (in continuous
+ * play it names a pool record, 0x80000048's node), the original stores
+ * that record's +4 = 3 and clears the link: the view takes the one-byte
+ * store at a pool record's +4 into a staging byte and hands it to the
+ * actor pool (em_scene_bindings_pool_set_u4) before the next call leaves
+ * the routine and at its end, in the original's order. Any other address
+ * outside the regions faults (fail-stop), as before. */
 typedef struct {
     uint32_t d8106C8;
     int failed;
+    const EmArea02MiscRegion *regions;
+    unsigned region_count;
+    uint32_t pool_address;  /* the pending pool record +4 store, or 0 */
+    uint8_t pool_value;
 } C750Calls;
+
+static int c750_flush(C750Calls *k)
+{
+    if (!k->pool_address) return 0;
+    const uint32_t address = k->pool_address;
+    k->pool_address = 0;
+    if (em_scene_bindings_pool_set_u4(address - 4u, k->pool_value) < 0) {
+        k->failed = 1;
+        return unbound("the +1C object's +4 outside the pool (0015C750)");
+    }
+    return 0;
+}
+
+static uint8_t *c750_view(void *ctx, uint32_t address, uint32_t size, int write)
+{
+    C750Calls *k = ctx;
+    for (unsigned i = 0; i < k->region_count; ++i) {
+        const EmArea02MiscRegion *g = &k->regions[i];
+        if (g->bytes && address >= g->base && size <= g->size && address - g->base <= g->size - size)
+            return g->bytes + (address - g->base);
+    }
+    /* The link record's +4 (a store only; the original never reads it here). */
+    if (write && size == 1 && address >= EM_ACTOR_POOL_BASE + 4u &&
+        (address - 4u - EM_ACTOR_POOL_BASE) % EM_ACTOR_RECORD_SIZE == 0 &&
+        (address - 4u - EM_ACTOR_POOL_BASE) / EM_ACTOR_RECORD_SIZE < EM_ACTOR_POOL_CAPACITY) {
+        if (k->pool_address && k->pool_address != address && c750_flush(k) < 0) return NULL;
+        k->pool_address = address;
+        return &k->pool_value;
+    }
+    return NULL;
+}
 
 static int c750_call(void *ctx, EmArea02MiscCall *call)
 {
     C750Calls *k = ctx;
+    if (c750_flush(k) < 0) return -1;
     switch (call->fn) {
     case 0x0015C1F0u:   /* the player model rebind, over the misc host */
         if (call->na < 1 || (uint32_t)call->a[0] != 0x008102B0u) break;
@@ -3459,15 +3501,13 @@ int em_player_closure_live_0015C750(uint32_t d8106C8, int (*table16)(void *, uin
         half[i][1] = (uint8_t)((uint16_t)v >> 8);
         regions[n++] = (EmArea02MiscRegion){ address, 2, half[i] };
     }
-    C750Calls k = { d8106C8, 0 };
+    C750Calls k = { d8106C8, 0, regions, n, 0, 0 };
     EmArea02Misc m;
     memset(&m, 0, sizeof m);
-    m.regions = regions;
-    m.region_count = n;
     m.call = c750_call;
     m.ctx = &k;
     m.sp = 0x01FFF000u;   /* no stack local of 0015C750 / 0015C7C0 is addressed */
-    if (em_area02_misc_0015C750(&m, 0x008102B0u) < 0) {
+    if (em_area02_misc_view_0015C750(&m, c750_view, 0x008102B0u) < 0 || c750_flush(&k) < 0) {
         if (!k.failed) {
             char what[128];
             snprintf(what, sizeof what, "0015C750 (em_area02_misc fault %d at %08X, address %08X)",

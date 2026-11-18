@@ -81,8 +81,9 @@ int em_player_closure_live_001798D0(EmPlayerLiveActor *actor);
  * caller's D_00810707 byte), the .data halfwords D_00248A00..0B and
  * D_002754C0..DB that `table16` reads, with 0015C1F0 = this closure's
  * em_player_misc_0015C1F0, 001B0070 = `d8106C8` and 001749A0 = the record
- * pose's request (player_pose_record_request). The +0x1C link object the
- * port does not keep: a nonzero +0x1C faults (unmapped). 0, or -1. */
+ * pose's request (player_pose_record_request). A nonzero +0x1C link names
+ * a pool record: its +4 = 3 goes to the actor pool
+ * (em_scene_bindings_pool_set_u4); any other link faults. 0, or -1. */
 int em_player_closure_live_0015C750(uint32_t d8106C8, int (*table16)(void *, uint32_t, int16_t *),
                                     void *table_context, uint8_t *d810707);
 /* 0015C7B0(D_008102B0) (byte-matched C: a jump to 0015C1F0): the status

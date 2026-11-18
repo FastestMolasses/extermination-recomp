@@ -832,11 +832,93 @@ em_equipment_live) faults at address 0x7A6DE4. g80 not reached.
   routine besides 001FABB0 in state 2; whatever plays comes from the script
   before it and was not compared).
 
+## Ending 3: the continuous run (lane PORT-A21-ENDING3, 2026-11-18, branch `a21ending3`)
+
+- **Row 331 fixed** (chain g20, g80). In continuous play the player record's
+  +0x1C link names a pool record (0x7BD130, pool index 0x81; what the record
+  is was not traced), and the ending script's op09 callback
+  0x827250 calls 0015C750(D_008102B0). The decomp C (src/func_0015C750.c,
+  byte-matched) clears +0x234 and D_00810707, runs 0015C1F0, then, when the
+  link (read after 0015C1F0) is nonzero, stores the link record's +4 = 3 and
+  clears +0x1C, then runs 0015C7C0. The closure's em_area02_misc run had only
+  the record, D_00810707 and the clip halfwords as regions, so the +4 store
+  faulted (fault 3, address 0x7BD134); a card start (chain g21) has +0x1C = 0
+  and never reached it. Now em_player_closure_live_0015C750 runs the same
+  translation through a new view entry, em_area02_misc_view_0015C750: the
+  regions as before, plus a one-byte store at a pool record's +4 (base
+  D_007A5640, stride 0x2F0, 0x100 records), staged and handed to the actor
+  pool (em_scene_bindings_pool_set_u4, the store em_player_stage_live's
+  +0x1C writes already use) before the next call that leaves the routine and
+  at its end, in the original's order. Any other address still faults.
+  Proof: the routine's logic by the original-instruction oracle
+  (tools/test_area02_misc_reference.py now runs every 0015C750 case,
+  `t 15C750 link1e02000 ...` with a nonzero link among them, through the view
+  entry over the same memory; 15C750's branch both ways); the pool plumbing
+  by the recording (row 331 and all of g80 on the row below).
+- **Chain g20 through the ending** (card g73, `python3 tools/guided_chain.py
+  g20`): g73 4191 / 4192 (heading at row 1130, 0.0012 off, as before), g74
+  3736 / 3736, g75 3864 / 3864, g76 6383 / 6383, g77 12864 / 12864, g78
+  15530 / 15530, g79 6603 / 6603, **g80 28041 / 28041** compared rows on the
+  row; the port's script reaches g80 row 28137 and the run stops at the
+  title (001AC070 again, D_00275BDC = 1). Claude's guided run now plays
+  continuously in the port from card g73 (AREA04, before the radio) through
+  AREA20, AREA21, the Origin's three phases, the ending script, the credits,
+  both pictures and the clear save to the title.
+- **The ending's timeline, tick by tick** (EM_AREA_CHANGE_LOG's slot-0 tick
+  states, aligned on the first +9 = 3 tick = original row 8244). Every step
+  of 001AD740 lands on the original's row: +A 0 -> 1 at 8245, the credits
+  (+B 1) 8293 .. 19907, +A 2 at 19971, 3 at 19972, module 0x37's load from
+  19973; picture 1 lasts 7265 ticks, the fades 64, picture 2 429, the fade
+  64, +A 5 one tick later, +9 = 4 one tick after +A 6, all as the original.
+  Two lengths differ, both hardware time: module 0x37's load takes 10 ticks
+  in the port and 28 in the original (the disc at host speed), and the card
+  screen's save 304 ticks against 442 (host card, docs/SAVE_GAME.md 6.2:
+  the original's card answers with hardware time and the fork's re-seat).
+  The port's script therefore stops at g80 row 28137 against the
+  original's 28267 (with the labelling offsets below).
+- **Card g80's 27-frame-late script end is not in continuous play.** In g20
+  the ending script 0x82CBD0 ends (3B8D 2 -> 0) at g80 row 8243 and +9 = 3
+  at row 8244, as the original. Chain g21's 27 frames come from its card
+  start (the LOAD GAME pose and rand() differ from row 0; not diagnosed
+  further), not from the ending's own logic.
+- **The labels' offsets are the comparison aid's.** The ending's frames
+  before its first draw step no pad hook, so EM_START_AT_PHASES sees 49
+  engine frames without a step after row 8243 and reads them as a load
+  ("not anchored"); the labels stay 49 behind through the credits. Module
+  0x37's load anchors them at row 20000: the port's first step after its
+  shorter load is already in picture 1 (+B = 2), the original's row 20000
+  is the last tick of sub 1 (+B = 2 from 20001), and the trace samples at a
+  frame's end, a tick ahead of the head sample the recording takes. Hence
+  subs 4 .. 6 and state 4 labelled 2 early (27264 / 27328 / 27757 / 27821
+  against 27266 / 27330 / 27759 / 27823) while the ticks above are exact.
+  Not changed: rows in these stretches are not compared (no position or
+  rand() moves), and a per-tick anchor there would need a hook the ending
+  does not have.
+- **The card.** The run swaps to an empty card folder at g80 row 27800
+  (`--set EM_START_AT_CARD_SWAP=82112:<folder>`: chain frame = g80's start
+  54312 + 27800). Against the take's card_end.ps2 (the decomp's
+  tools/ps2_card.py `listing` / `read_file`, read only): **all eight files
+  byte-identical**, EX_DATA.00 included (D_00810750 = 596,325, check byte
+  +0x63F equal). This needed a comparison-aid fix: EM_START_AT_CLOCKS moved
+  D_00810750 with every clock jump, including the card's row 0, where the
+  scratchpad clock (no save holds it) counts from the port's boot while
+  D_00810750 came from the card. In the original's guided run the two are
+  equal at every take boundary (g72 .. g80 end states: 537,874 .. 596,325),
+  and the card holds the source state's value. Now the first clock row sets
+  the clock and gives back the gameplay frames the port ran after the load
+  (D_00810750 -= the clock before it: g20's card replays the lift's arrival
+  scene, 261 frames; g21's its fade-in, 66); later rows move both as
+  before. Before: g20's EX_DATA.00 held 1,134,199 (+ the clock jump
+  537,874), then 596,586 (+ the 261 replayed frames) with only the row-0
+  jump removed. Chain g21 (card g80) with the same swap at 27800 now saves
+  all eight files byte-identical too (its rows: 19772 of 28092 on the row,
+  the card's LOAD GAME pose as before).
+
 ## Next
 
-0. Next: g80 through chain g20 (it reaches g80, row 331) with this lane's
-   ending; g80's ending script ending 27 frames late from card g80 (Ending
-   2); a fork capture of the credits and the pictures. (done: g79's rand()
+0. Next: a fork capture of the credits and the pictures (their picture is
+   not verified); the credits' music. (done: chain g20 through all of g80,
+   the ending and the clear save, card byte-identical, Ending 3; g79's rand()
    word at row 418 and g76's at row 6386, Final phase; row 667's 0018AF50,
    the blast 001EE190 and 001A8970's f20, Sub-weapon projectile; row 848's
    glyph 0x35 and the rest of g79, Status glyph nodes; g80 from its card

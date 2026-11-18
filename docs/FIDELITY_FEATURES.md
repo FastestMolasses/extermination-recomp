@@ -2919,7 +2919,7 @@ shooting and knifing anywhere also run without a fault.
   weather strips, the sky, the fade) and sound beyond the lockstep; door [20],
   hole [6] / hatch [63], [44]'s event and AREA19 are not reached.
 
-### The ending: credits, pictures and the clear save (from card g80)
+### The ending: credits, pictures and the clear save (continuous from card g73)
 
 **The end credits scroll, the two closing pictures and the clear save run the original's code**
 
@@ -2929,14 +2929,21 @@ Game+ bonuses, two closing pictures and the card screen's clear save.
 - How: the credits' scroll (0022D360 / 0022D380) is checked frame by frame
   against the original's instructions (`make test-credits-reference`: the
   state bytes, the return and every text and underline draw in order); the
-  ending task is checked by `make test-scene-task-reference`; chain g21 plays
-  Claude's guided take of the ending from card g80 to the title, and its save
-  on an empty card equals the take's card in 7 of 8 files and in all of
-  EX_DATA.00 but the world frame counter, which a comparison aid offsets
-  (docs/AREA21_PORT.md "Ending 2").
-- Status: VERIFIED for the credits' logic and draw calls and the saved
-  bytes; NOT VERIFIED for the picture on screen (no capture compared) and
-  the credits' music.
+  ending task is checked by `make test-scene-task-reference`. Chain g20
+  plays Claude's guided run continuously from card g73 (AREA04, before the
+  radio) through AREA20, AREA21, the Origin's three phases, the ending
+  script, the credits, both pictures and the clear save to the title, with
+  no reload: every compared row of g74 .. g80 on the original's (g80: 28,041
+  of 28,041; g73 4,191 of 4,192, a heading 0.0012 off), every step of the
+  ending task on the original's tick except the two hardware-time waits (the
+  disc load of the pictures' module, 10 ticks against 28, and the card save,
+  304 against 442), and the save on an empty card byte-identical to the
+  take's card in all eight files (docs/AREA21_PORT.md "Ending 3").
+- Status: VERIFIED for the credits' logic and draw calls, the ending's
+  timeline and the saved bytes; NOT VERIFIED for the picture on screen (no
+  capture compared) and the credits' music. How far Claude's run plays
+  continuously: from the title through segment 913 (watch_takes, "Watching
+  Claude's run") and, as one chain from card g73, from AREA04 to the end.
 
 ### AREA19 from its start cards
 

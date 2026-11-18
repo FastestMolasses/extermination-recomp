@@ -400,8 +400,26 @@ RETURNS = {0x1B6AE0, 0x1D66A0, 0x21BD10}
 FRETURNS = {0x11C128, 0x11E520}
 
 
+VIEW = C.CFUNCTYPE(C.c_void_p, C.c_void_p, U32, U32, C.c_int)
+
+
+def _view(_ctx, address, size, _write):
+    """em_area02_misc_view_0015C750's memory: the same three regions as the
+    region-based entry (the closure's live view, em_player_closure_live.c,
+    adds a pool record's +4 store; here every address is RAM)."""
+    for base, key in ((0, 'ram'), (0x70000000, 'spad'), (STACK_BASE, 'stack')):
+        buf = BUFFERS[key]
+        if base <= address and address + size <= base + len(buf):
+            return C.addressof(buf) + (address - base)
+    return None
+
+
+VIEW_CB = VIEW(_view)
+
+
 def native_call(fn, ctx, args, fargs):
-    """(rc, result or None)."""
+    """(rc, result or None). 0015C750 runs through its view entry (the one
+    the live closure calls), over the same memory."""
     out = U32(0)
     N = NATIVE
     a = [x & MASK for x in list(args) + [0] * 5]
@@ -409,6 +427,8 @@ def native_call(fn, ctx, args, fargs):
     name = f'em_area02_misc_{fn:08X}'
     if fn in TWO:
         return getattr(N, name)(ctx, U32(a[0]), U32(a[1])), None
+    if fn == 0x15C750:
+        return N.em_area02_misc_view_0015C750(ctx, VIEW_CB, U32(a[0])), None
     if fn in ONE:
         return getattr(N, name)(ctx, U32(a[0])), None
     if fn in NONE:

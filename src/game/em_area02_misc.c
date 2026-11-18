@@ -1359,6 +1359,15 @@ int em_area02_misc_0015C750(EmArea02Misc *s, uint32_t a0)
     return 0;
 }
 
+int em_area02_misc_view_0015C750(EmArea02Misc *s, EmArea02MiscView view, uint32_t a0)
+{
+    ENTER(0x0015C750u)
+    if (!view) { s->fault = EM_AREA02_MISC_FAULT_NULL; s->fault_function = 0x0015C750u; return -1; }
+    r->view = view;
+    f_15C750(r, s->sp, a0);
+    return 0;
+}
+
 int em_area02_misc_0015C7C0(EmArea02Misc *s, uint32_t a0)
 {
     ENTER(0x0015C7C0u)

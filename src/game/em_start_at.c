@@ -310,8 +310,18 @@ static struct {
     /* EM_START_AT_CLOCKS=<file> ("f hex" lines, f increasing): the
      * recording's world clock 0x70003B68 at those script frames; the clock
      * and its twin D_00810750 move by the same difference, as em_replay.c's
-     * per-tick clock column (comparison only: tools/guided_chain.py). */
-    unsigned clocks, clock_next;
+     * per-tick clock column (comparison only: tools/guided_chain.py). The
+     * first one (the card's row 0) differs: the card's LOAD GAME restores
+     * D_00810750 from the save (the recording's source state, the frame
+     * before row 0), while the scratchpad clock, which no save holds, counts
+     * from the port's boot (0; a LOAD GAME from the title runs no gameplay
+     * frame before the card's load). The clock then holds exactly the
+     * gameplay frames the port ran after the load (g20's card replays the
+     * lift's arrival scene: 261), which the recording never ran, so
+     * D_00810750 gives those back and the clock takes the recording's value.
+     * Later ones move both, as the original's gameplay frame (001AE5E0 /
+     * 001AE6B0) counts both. */
+    unsigned clocks, clock_next, clock_started;
     struct { int f; uint32_t value; } clock_at[PATH_MAX_ROWS];
     /* EM_START_AT_SYNC=<byte address>:<value>:<f>: when that progress byte
      * first holds the value the script's clock is set to f (a scripted
@@ -1146,8 +1156,17 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
     if (pad.clock_next < pad.clocks && t >= pad.clock_at[pad.clock_next].f) {
         EmSceneState *st = em_scene_state();
         const uint32_t behind = pad.clock_at[pad.clock_next].value - (uint32_t)st->spad3B68;
+        if (pad.clock_started) {
+            st->d810750 = (int32_t)((uint32_t)st->d810750 + behind);
+        } else {
+            const uint32_t since_load = (uint32_t)st->spad3B68;
+            st->d810750 = (int32_t)((uint32_t)st->d810750 - since_load);
+            printf("startup: EM_START_AT_CLOCKS: 0x70003B68 = %u at script frame %d; D_00810750 = %d, the card's "
+                   "(%u gameplay frames since the load given back; comparison only)\n",
+                   pad.clock_at[pad.clock_next].value, t, (int)st->d810750, since_load);
+        }
         st->spad3B68 = (int32_t)((uint32_t)st->spad3B68 + behind);
-        st->d810750 = (int32_t)((uint32_t)st->d810750 + behind);
+        pad.clock_started = 1;
         pad.clock_next++;
     }
     if (pad.clock_set && t >= pad.clock_f) {
