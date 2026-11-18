@@ -29,9 +29,10 @@ static int supported(void)
 {
     /* The player's other texture packets (00200890 slots 9..0xC) have
      * catalogs for AREA00 / 01 / 02 / 04 / 06 / 13 / 22 (every recorded sub, tools/
-     * export_player_texture_variants.py); AREA11 has none: the player's
-     * infection cannot reach it. */
-    if ((S.mode || S.costume) && !((S.area == 0x16u || S.area == 6u || S.area == 0x0Du || S.area == 1u ||
+     * export_player_texture_variants.py), and AREA11 sub 0 (tools/
+     * export_area11_player_variants.py: the guided run's cable from AREA17
+     * arrives with costume 2). */
+    if ((S.mode || S.costume) && !(((S.area == 11u && S.subarea == 0u) || S.area == 0x16u || S.area == 6u || S.area == 0x0Du || S.area == 1u ||
                                     S.area == 4u || S.area == 0u || S.area == 2u || S.area == 0x0Fu ||
                                     S.area == 3u || S.area == 0x13u || S.area == 8u || S.area == 7u ||
                                     S.area == 0x0Eu || S.area == 0x11u || S.area == 0x10u) && S.mode <= 2u &&
@@ -166,6 +167,12 @@ int em_world_textures_live_ensure(EmGfx *gfx)
     if (S.area == 0x13u) {
         snprintf(mid, sizeof mid, "assets/levels/%s/world_textures_mode%u_costume%u.emot",
                  S.subarea ? "19s1/sub1" : "19/sub0", S.mode, S.costume);
+        paths[0] = mid;
+    }
+    /* tools/export_area11_player_variants.py: AREA11's object catalog
+     * for the other player packets (the page catalog serves every pair) */
+    if (S.area == 11u && (S.mode || S.costume)) {
+        snprintf(mid, sizeof mid, "assets/scene_snow/object_textures_mode%u_costume%u.emot", S.mode, S.costume);
         paths[0] = mid;
     }
     Texture textures[EM_GFX_OBJECT_TEX_MAX];

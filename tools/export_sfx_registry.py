@@ -89,6 +89,12 @@ MID_IDS = AREA00_IDS
 # so every earlier scope keeps its samples.
 AREA19_SCOPES = ((0x13, 0), (0x13, 1))
 AREA19_IDS = AREA00_IDS
+# AREA11 entered again (the guided run's cable from AREA17, entry 3): its spawn entry names the
+# ambient loop 0x44E, which 001FC280 starts with 001FB9F0 at the load's 001FAE70 (the AREA01
+# arrival's loop id, here through AREA11's own bank binding). Resolved after every other scope,
+# so every earlier entry keeps its samples and indices.
+AREA11_REVISIT_SCOPE = (11, 0)
+AREA11_REVISIT_IDS = (0x44E,)
 AREA19_SFX_DIRS = {0: ROOT / 'assets/area19/sub0/sfx', 1: ROOT / 'assets/area19s1/sub1/sfx'}
 
 STATE_AUDIBLE, STATE_ABSENT, STATE_UNSUPPORTED = 1, 2, 3
@@ -856,6 +862,10 @@ def export(out_dir: Path):
                        for e in entries):
                     continue
             entries.append(entry)
+    area, sub = AREA11_REVISIT_SCOPE
+    for sound_id in AREA11_REVISIT_IDS:
+        if not any(e['id'] == sound_id and e['scope'] in ([-1, -1], [area, sub]) for e in entries):
+            entries.append(resolve(elf, bindings, sound_id, area, sub, samples))
     entries.sort(key=lambda e: (e['scope'], e['id']))
     ordered = sorted(samples.values(), key=lambda s: s['index'])
     for sample in ordered:

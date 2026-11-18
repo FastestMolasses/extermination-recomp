@@ -427,15 +427,94 @@ stops in the AREA11 entry-3 load from AREA17: the screen-module loader
 faults at 001FFCD0 (code 2) after "world textures: AREA11/0: no verified
 catalog for this delivery".
 
+### Lane PORT-CHAIN2 (2026-11-17, branch `chain2`): past the cable
+
+The g17 chain now runs g45 .. g58 (route_g49 below) and a second chain
+`g11` starts at card g49 (g48's end, AREA11 entry 3 in play after the
+cable ride's scene) and plays g49 .. g58 (AREA11 -> AREA01 sub 1 ->
+AREA02 sub 1 -> AREA04 sub 1 -> AREA03 -> AREA19 / AREA15 -> AREA04 ->
+AREA01). docs/STARTUP.md "Guided chains" says how to run them.
+
+- **route_g49** (decomp build/fork_refs/guided-20261117/s87/route_g49):
+  `tools/capture_from_take.py` over g48 .. g58 (no take has a movie row).
+  Their end states: g48 AREA11 sub 0 entry 3 with the AREA11 overlay
+  resident (0x823504 = 9), D_00810707 0 and D_00810C60 **2** (the
+  harness); g49 .. g58 mode 0, costume 0.
+- **The AREA11 load fault** (001FFCD0 code 2 after "world textures:
+  AREA11/0: no verified catalog for this delivery"): the arrival carries
+  costume 2, so 001FFCD0 state 7's 00200890 uploads the player texture
+  packet slot 0xA, and the port had AREA11 catalogs for (0, 0) only (a New
+  Game reaches no other pair there). `tools/export_area11_player_variants.py`
+  writes assets/scene_snow/object_textures_mode<m>_costume<c>.emot for the
+  six pairs from the disc replay FirstLevel.world(11, 0, mode, costume) (the
+  replay object_textures.emot comes from; its (0, 0) decode equals that
+  file byte for byte; each pair changes player keys only; every page key
+  decodes as in page_textures.emot, so the page catalog serves every pair).
+  The (0, 2) catalog is cross-checked against g48's end GS memory (every key
+  the same texels). em_world_textures_live loads it for AREA11 with a
+  nonzero pair. The 001FFCD0 fault was this bind's failure; the load now
+  completes.
+- **The breath** 001E7050 (effect 0x80000018): 001B07C0 at the entry spawns
+  it when D_008106C8 holds 4 and 0x60 (why the first visit never spawns
+  it is not checked; no first-level capture holds the node). AREA11's
+  binding table had no row: the node now binds (tick_effect_node) and runs
+  em_level9_port_001E7050 through the aim / fire composition (its callees
+  back through it; 001CFAE0 through the weather's translation, as
+  em_area01_flame_services binds it). Its sprite source D_00255320's TEX0
+  is already in page_textures.emot (export_page_textures lists the
+  producer; the catalog bytes are unchanged).
+- **The area loop 0x44E**: AREA11 entry 3's spawn entry names it and the
+  load's 001FAE70 starts it through 001FC280; the sfx registry had no
+  (11, 0) entry. export_sfx_registry resolves it through AREA11's own bank
+  binding after every other scope (AREA11_REVISIT_IDS; every earlier entry
+  and sample unchanged; the new entry is audible).
+- **Row limits**: EM_START_AT_PAD holds 65536 rows (main's PAD_MAX) and the per-frame tables
+  (rands, clocks, path) 240000 frames (a chain of ten takes is ~83500
+  frames, ~11000 pad changes).
+
+Where it stands:
+
+- **g17** (card g45, `--steer g45`): g45 .. g48 as before (g45 to row 167
+  steered / 248 by the pad, the card's AREA14 timers; g46 1964 / 1964, g47
+  6524 / 6524, g48 19489 / 19489 on the row to row 19587). The AREA11 load
+  now completes (the script's last compared row stays 19587: the load
+  rows are not compared) and the run faults on the first frame after it
+  (the recording's row 19885), the start of **the cable ride's scene**: the flag-0x30 manager 00823CE0 (D_00810788 set by
+  AREA17's [38]) starts script 0x828C70, which no exported image holds
+  (em_area11 script host: "001BA1A0: no image holds the entry"). The
+  original plays it for rows 19889 .. 26789 (~115 s): op07 sub 0xC, op0A
+  sub 1 (the player's bank D_0028A490[0x97]), op14 (placement list
+  0x828BE0: two 001BB0E0 actors, command 0, keys 0x50 / 0x5A, bank 0x97),
+  op0C, op00, op0D, op18, op0A sub 5, op01 sub 9 (the player to (460, 269,
+  424), heading pi), op0D, op07 sub 5 (flag 0x30 = 0xFF). Porting it needs
+  the image 0x828BE0..0x828F30 exported (export_area11_scripts.py), the
+  host's 001BAC00 / 001BB0E0 path widened beyond the opening's Roger pair
+  (em_area11_roger_opening_tick is Roger's body and equipment only) and
+  bank 0x97's actors exported and drawn: the next work package.
+- **g11** (card g49): the load and the first frame run (the catalog, the
+  breath and the loop above); the run stops at g49 row 0: the security gun
+  0x825940 is in a return-visit lifecycle (D_00810788 = 0xFF), which
+  em_area11_bindings does not bind ("a return-visit lifecycle (4 or 1) is
+  not bound in the first level", fault 00825B74 code 1). Lifecycles 4 and
+  1 are translated and oracle-proven in em_security_gun_rest
+  (SECURITY_GUN.md section 6, test_security_gun_rest_reference.py) but run
+  only through the typed em_gun_tick binding; binding em_gun_rest_tick
+  needs its ~35 workers over AREA11's memory (as em_aim_fire_cable_live
+  does for the cable's 0021AAC0 / 0021A500) and the revisit-only callees
+  0019AA80, 0011E520 and 001E2BA0 bound. g50 .. g58 are not reached yet:
+  no furthest frame and no divergence to report for them.
+
 ## Not done
 
 - **The live area** (section "Live"; 001F1F60 and 001BAD40 done by
   PORT-FX; 001D6B10 and 0x810835 by PORT-WORKERS; the continuous chain by
-  PORT-CHAIN; g46 .. g48 on the row by PORT-A17-NEXT): the AREA11 entry-3
-  load at g48 row 19588 (001FFCD0 code 2), g48's extra original draws from
-  row 12782, the status background's extra steps near page loads, drawing
-  the haze list on the chain page. g46's op07 sub 0xC wait is the drive
-  timing (PORT-CHAIN), not a card fault.
+  PORT-CHAIN; g46 .. g48 on the row by PORT-A17-NEXT; the AREA11 load by
+  PORT-CHAIN2): the cable ride's scene 0x828C70 at g48 row 19886 and the
+  security gun's return-visit lifecycles at g49 row 0 (lane PORT-CHAIN2
+  above), g48's extra original draws from row 12782, the status
+  background's extra steps near page loads, drawing the haze list on the
+  chain page. g46's op07 sub 0xC wait is the drive timing (PORT-CHAIN),
+  not a card fault.
 - The other live-only bindings AREA14 needed (AREA14_PORT.md "Pieces the
   live run needed") but the muzzle node 001F5040 are not checked for AREA17.
 - 0x8235E0 and 0x823860, and the group holding 0x823580 / 0x8236F0 /
