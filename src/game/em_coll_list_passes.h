@@ -115,6 +115,10 @@ typedef struct EmCollListGlobals {
     uint8_t d810707;                     /* D_00810707 (001A8840's gate) */
     uint32_t s38B0[4];                   /* 0x700038B0..0x700038BC (raw bits; 00183C40's point) */
     uint32_t s3A20, s3A24;               /* 0x70003A20 / 0x70003A24 (raw bits) */
+    /* Not memory: the f20 register 001AAD00's caller chain leaves for
+     * 001A8970 (raw bits), which its reaction-6/7 path compares with 0.8
+     * times itself; NULL faults there (0x1A8AC4). */
+    const uint32_t *caller_f20;
 } EmCollListGlobals;
 
 /* Read-only data from the user's ELF. D_0024A740 (and D_0024A780 =

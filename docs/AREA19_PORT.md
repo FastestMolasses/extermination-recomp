@@ -222,8 +222,51 @@ leaves only on its last tick, 0.09 away (original counter 235,955). Segments 455
 then 860 ticks of segment 489 (g16, AREA08 sub 2) are on the recording. In all, 238,784 of 240,324
 compared ticks are on the recording, and the playback overruns at counter 245,515.
 
-**Next divergence** (segment 489, g16 `_a08_ceiling`, AREA08 sub 2, original counter 246,510).
-The position is equal, but the heading is 0.140 off. The beat is the lab's "along the ceiling" stretch.
-Which player state runs at that tick has not been checked, and the divergence is not
-diagnosed. Following the AREA19 lessons, the next lane should tabulate every word that state's
-heading code reads at that tick: scratchpad, record and probe state.
+**The ceiling hang's edge turn, closed (lane PORT-A08-CEILING, 2026-11-18).** In segment 489
+(g16 `_a08_ceiling`, AREA08 sub 2, original counter 246,510) the player hangs from the lab's
+ceiling: +5 0x12 (0016AE40). At counter 246,506 its +6 0x14 phase 4 step lands (+6 = 0); sub-state 0
+copies +290 = +B0; at 246,508 sub-state 1's stick finds no 0x1E node ahead (00181E20), so 00181F60 finds
+the 0x36 edge 4 ahead and sets +218 = wrap(pi/2 + atan2(-axis.z, axis.x)) from the hit record's
++0x34 / +0x3C (*0x700031D0), and +6 = 0x1E; from 246,509 0x1E turns +C4 4 degrees a tick
+(001B12B0) toward +218. The original's +218 was pi: +C4 went 2.88736, 2.95717, 3.02699, 3.09680,
+pi. The port's live `segment` worker (c10_segment) filled the hit from the segment module's hit
+view, which carries the node's attribute, point and normal but no axis, so 00181F60 read
+(0, 0, 0), set +218 = pi/2 and turned the other way: 2.81755 at 246,510, 0.1396 off (two 4-degree
+steps; the port's value is inferred from the chain's 0.140, the fix makes the tick exact). c10_segment now fills the ladder scratch from that query (le_fill_last, as lc_dash and
+le_midpoint do) and copies the grid node's +0x34..+0x3F from it; a hit without an axis faults when
+its attribute is 0x36. The translation was right: test_player_closure_10_12_19_reference feeds
+00181F60 an axis, the live adapter never did.
+
+Evidence:
+- A hidden fork replay of g16 from its start state with a per-tick table of the player record
+  (0x8102B0, 0x300 bytes) and the whole scratchpad: +4..+7, +C4, +218, +23F, +24C, +200 and
+  0x700031E4 (pi, already equal) through counters 246,480..246,516.
+- test_coll_segment_walkers_reference now compares the original record's +0x34..+0x3F with the EMCL
+  axis the adapter copies, on every grid-node hit view of the route rows (55 in the quick run, 42
+  of them nonzero). No oracle reaches c10_segment itself; the recording proves the fix: segment
+  489 and everything after it to segment 500 are exact.
+
+**0011A070 for the overlay owners.** Segment 500 (g16 `_a08_recharger`, AREA08 sub 3, a cutscene,
+original counter 250,537..251,030) then stopped at AREA08's flames 0x824BC0: its looping voice was
+refused (D_00281C30[track] != 0x910), and its stop 0011A070 had no binding in the live composition
+(fail-stop at 0011A070). em_area01_audio_services now answers it with em_sfx_stop_track, the
+driver's translation that the ambient loop (001FC280) and the player already use; an index of 0x30
+or more returns at once, as the NEARMISS C does. No oracle runs 0011A070 (its state is the IOP-side
+voice table); the recording is the proof (below).
+
+**Segment 454's last tick** (g15, AREA03 sub 1, a cutscene, original counter 235,955): the port's
+cutscene phase is 3,083 ticks, the recording's 3,085; both move the player (649.7563, 25, 683.9946)
+-> (649.8177, 24.9457, 684.0419) on the phase's last tick, so offset 3,082 compares the port's
+moved tick with a recording tick two before the move. Not diagnosed: which wait ends the phase two
+ticks early (a disc stream's end or a script count) was not traced.
+
+Chain now (both fixes): segments 0 .. 913 are exact but for segment 454's last tick (362,809
+compared ticks: takes g01 .. g32 and into g33's AREA00 boss); 363,539 of 363,636 compared ticks are on the recording.
+
+**Next divergence** (segment 914, g33 `area00_boss`, AREA00 sub 2, a cutscene, original counter
+378,860, take tick 2,569 in its `_g35_quad` beat). For that one tick the original's player
+position is (-0.84, 0.21, -0.62), then (-94, -59, -1543); the port stays at (-49.38, -43.99,
+-1596.96), 1,597.68 away. About 96 ticks later the boot owner 001C7EB0 (node 0x7B87C0) calls AREA00
+sub 2's overlay routine 0x823C50, which has no binding in the live composition: fail-stop, and the
+playback overruns. Not diagnosed: the next lane should read 001C7EB0 and 0x823C50 (and what moves
+the player record to the origin for one tick) before binding anything.

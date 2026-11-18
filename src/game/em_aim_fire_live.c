@@ -3,6 +3,7 @@
 #include "game/em_aim_fire_lamp.h"
 #include "game/em_aim_fire_machines.h"
 #include "game/em_aim_fire_marker.h"
+#include "game/em_aim_fire_projectile.h"
 #include "game/em_aim_fire_pose.h"
 #include "game/em_aim_fire_shots.h"
 #include "game/em_ee_float.h"
@@ -79,7 +80,7 @@ static void signature(EmAimFireTargetCall *f)
     case 0x1FBD50: case 0x1749A0: f->na=3; f->nf=1; break;
     case 0x1B5DC0: case 0x17A130: case 0x16F5D0: case 0x1C6DA0: case 0x1029C0:
     case 0x11E860: case 0x1607D0: case 0x17AF70: case 0x11A070:
-    case 0x1839A0: case 0x1AFA90: case 0x1F4F40: case 0x18ABA0: case 0x1B17A0: f->na=1; f->nf=0; break;
+    case 0x1839A0: case 0x1AFA90: case 0x1F4F40: case 0x18ABA0: case 0x18AF50: case 0x1B17A0: f->na=1; f->nf=0; break;
     case 0x11E2A8: case 0x1B1470: case 0x11DE90: case 0x11E748: case 0x1B1510:
     case 0x1281C0: f->na=0; f->nf=1; break;
     case 0x11E620: f->na=0; f->nf=2; break;
@@ -270,6 +271,17 @@ static int dispatch(EmAimFireLive *h,EmAimFireTargetCall *f)
          * (em_aim_fire_runtime binds the record; AIM_FIRE.md section 7). */
         EmAimFireTarget target={0}; target.context=h; target.map=target_map; target.call=target_call; target.sp=sp;
         if (em_aim_fire_marker_0018ABA0(&target,a)<0) {
+            if (!h->fault_function) h->fault_function=target.fault_function;
+            if (!h->fault_address) h->fault_address=target.fault_address;
+            return -1;
+        }
+        return 0;
+    }
+    case 0x18AF50: {
+        /* The sub-weapon's projectile, the pool behaviour 001869A0 stores
+         * (em_aim_fire_runtime binds the record; AIM_FIRE.md section 3). */
+        EmAimFireTarget target={0}; target.context=h; target.map=target_map; target.call=target_call; target.sp=sp;
+        if (em_aim_fire_projectile_0018AF50(&target,a)<0) {
             if (!h->fault_function) h->fault_function=target.fault_function;
             if (!h->fault_address) h->fault_address=target.fault_address;
             return -1;

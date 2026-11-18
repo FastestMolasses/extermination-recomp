@@ -451,7 +451,15 @@ bind it through a small adapter:
 The probe workers fill an `EmPlayerProbeHit`: `node` (the low byte is the
 +1A attribute), `point` (0x700031B0), `normal` (node +24) and `axis`
 (node +34). They receive the mask exactly as the original passes it,
-0x80000000 bit included.
+0x80000000 bit included. The live `segment` (c10_segment) gets `axis` from
+the ladder scratch it fills from the same query (a grid node's EMCL axis);
+the segment module's hit view has no axis. Before 2026-11-18 it left
+`axis` zero, so 00181F60 set +218 = pi/2 for every edge and the AREA08
+ceiling hang (+5 0x12 +6 0x1E) turned the wrong way (guided chain g16,
+counter 246,510; docs/AREA19_PORT.md). A hit without an axis (a cell
+record) faults when its attribute is 0x36, the one reader.
+`test_coll_segment_walkers_reference` compares the original record's
++0x34..+0x3F with that axis on every grid-node hit view.
 
 **Build.** When bound, add `src/game/em_player_closure_10_12_19.c`,
 `src/game/em_player_fall.c` and `src/game/em_player_major2.c` to `COMMON`.

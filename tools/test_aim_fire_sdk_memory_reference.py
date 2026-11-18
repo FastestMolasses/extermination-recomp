@@ -24,7 +24,7 @@ import test_aim_fire_target_reference as T
 BASE=0x680000
 SIZE=0x200
 MAP=C.CFUNCTYPE(C.c_void_p,C.c_void_p,C.c_uint32,C.c_size_t,C.c_int)
-ENTRIES=(0x102948,0x102958,0x1031E0,0x1029C0,0x102918,0x102B08,0x102BB0,0x102A60,0x102798)
+ENTRIES=(0x102948,0x102958,0x1031E0,0x1029C0,0x102918,0x102B08,0x102BB0,0x102A60,0x102798,0x103200)
 VECTORS=(0x1026A0,0x102760,0x102718,0x102738,0x1028D0,0x1028B8,0x103230,0x102900)
 OUT=ROOT/'build/aim-fire/sdk-memory'
 
@@ -165,6 +165,39 @@ def look_at_cases(lib,e):
         count+=1
     return count
 
+def trs(lib,e,seed,offsets):
+    """build_trs_matrix (001C94B0, the projectile 0018AF50's matrix): final
+    memory and status. Its reads all precede its first store when m does not
+    overlap pos / rot / scale; the native refuses an overlap (-1, no store)."""
+    rng=random.Random(seed)
+    data=bytearray().join(S.bits(rng.uniform(-3.2,3.2)).to_bytes(4,'little') for _ in range(SIZE//4))
+    m,p,r,q=(BASE+o for o in offsets)
+    e.write(BASE,data);e.events=[];e.missing=None
+    e.r[4:8]=[m,p,r,q];e.r[31]=S.RETURN
+    e.run(0x1C94B0)
+    n=bytearray(data);array=(C.c_uint8*len(n)).from_buffer(n)
+    def mapping(_,address,size,write):
+        if address<BASE or address+size>BASE+SIZE:return None
+        return C.addressof(array)+address-BASE
+    cb=MAP(mapping);frame=T.Call();frame.function=0x1C94B0;frame.a[0:4]=[m,p,r,q];frame.na=4
+    status=lib.em_aim_fire_sdk_memory_call(None,cb,C.byref(frame))
+    pa,qa=p&~15,q&~15
+    clash=any(x<m+64 and m<x+k for x,k in ((pa,16),(r,12),(qa,16)))
+    if clash or m&15:
+        assert status==-1 and bytes(n)==bytes(data),(offsets,'refusal')
+        return 0
+    assert status==0,(offsets,'status',status)
+    assert bytes(n)==e.read(BASE,SIZE),(offsets,'final memory')
+    return 1
+
+def trs_cases(lib,e):
+    count=0
+    for seed in range(24):
+        for offsets in ((0x100,0x40,0x80,0x50),(0x100,0x44,0x88,0x5C),(0x0,0x180,0x190,0x180),
+                        (0x40,0x10,0x20,0x10),(0x100,0x110,0x40,0x50),(0x104,0x40,0x80,0x50)):
+            count+=trs(lib,e,seed,offsets)
+    return count
+
 def targeted_mutations(elf):
     source=(ROOT/'src/game/em_aim_fire_sdk_memory.c').read_text()
     receipt=[]
@@ -194,17 +227,18 @@ def main():
         for seed in range(4):
             for offset in offsets:
                 events+=run(lib,e,fn,offset,seed);count+=1
-        if fn in (0x102948,0x102958,0x102B08,0x102BB0,0x102A60,0x102798)+VECTORS:
+        if fn in (0x102948,0x102958,0x102B08,0x102BB0,0x102A60,0x102798,0x103200)+VECTORS:
             for offset in (3,15):
                 events+=run(lib,e,fn,64,2,source_offset=offset);count+=1
-        if fn in (0x1026A0,0x102718,0x1028D0,0x1028B8):
+        if fn in (0x1026A0,0x102718,0x1028D0,0x1028B8,0x103200):
             for offset in (1,15):
                 events+=run(lib,e,fn,64,2,third_offset=offset);count+=1
         # Missing first/late source and destination rows, with disjoint ranges.
         for absent in (BASE+0x80,BASE+0xA0,BASE+0xE0,BASE+0x100):
             events+=run(lib,e,fn,96,2,absent);cuts+=1
     looks=look_at_cases(lib,e)
-    print(f'PASS: {count} copy/matrix/vector overlap cases across {len(ENTRIES)+len(VECTORS)} entries; {cuts} missing-view cases; {events} ordered access bytes; 001CD390: {looks} look-at cases (out and 0x70003600..3F, 3 refusals); {time.monotonic()-started:.2f}s')
+    trss=trs_cases(lib,e)
+    print(f'PASS: {count} copy/matrix/vector overlap cases across {len(ENTRIES)+len(VECTORS)} entries; {cuts} missing-view cases; {events} ordered access bytes; 001CD390: {looks} look-at cases (out and 0x70003600..3F, 3 refusals); build_trs_matrix: {trss} cases; {time.monotonic()-started:.2f}s')
     if '--targeted-mutations' in sys.argv:targeted_mutations(S.read_elf())
 
 if __name__=='__main__':main()

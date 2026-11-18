@@ -2319,6 +2319,7 @@ static const Binding k_bindings[] = {
     {0x001F77B0u, "death decal: em_effect_001F77B0 (em_shadow_live's 001CE300, em_effects_live)", tick_effect_node,
      NULL},
     {0x0018ABA0u, "impact marker: em_aim_fire_marker 0018ABA0 (em_aim_fire_runtime)", tick_aim_record, NULL},
+    {0x0018AF50u, "projectile: em_aim_fire_projectile 0018AF50 (em_aim_fire_runtime)", tick_aim_record, NULL},
     {0x001F5040u, "muzzle node: em_area00_fx 001F5040 (em_aim_fire_flash, em_aim_fire_runtime)", tick_aim_record,
      NULL},
     {0x001C5680u, "indicator child: 001C5680 (em_indicator_child)", tick_indicator, NULL},

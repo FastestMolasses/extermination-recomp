@@ -79,6 +79,7 @@ All four PASS (section 10.6); `r1` and `r2` faulted at AIMLIVE on the
 | 001860A0, 001861C0, 001869A0, 00186A60, 001872C0, 00187CC0 | the equipment one-shots and the surface resolution | em_aim_fire_shots | test-aim-fire-shots-reference |
 | 001DD170, 001DD2F0, 001DD600 | the target reticle and its packet builders | em_aim_fire_reticle | test-aim-fire-reticle-reference |
 | 0018ABA0 | the round's impact marker (pool behaviour) | em_aim_fire_marker, bound by em_aim_fire_runtime (001861C0's 001AFA90 route and the settle bind; section 3) | test-aim-fire-marker-reference |
+| 0018AF50 | the sub-weapon's projectile (pool behaviour of 001869A0's class-1 record: the homing turn to the lock +0x24, the fall, the segment / probe hits, its matrix, the smoke trail 0x80000037 and the blast 0x80000069) | em_aim_fire_projectile, bound by em_aim_fire_runtime beside the marker (section 3; AREA21_PORT.md "Sub-weapon projectile") | test-aim-fire-projectile-reference (1,500 cases, all 40 branch outcomes, callee failure cuts); its SDK leaves 00103200 and build_trs_matrix in em_aim_fire_sdk_memory (test-aim-fire-sdk-memory-reference) |
 | 001EACF0, 001EBA20 | the impact effects' draw handlers (subtypes 0x23 / 0x1B: ids 0x80000060 from the marker's 001F00A0, 0x8000002C from 001861C0's 001EFD90) | em_effect_kinds (fix round), through em_effects_live's handler dispatch | test-effect-kinds-reference (both fully executed against the original) |
 | 001F00A0 | the marker's effect spawn | em_area00_fx (its one bound owner, composed by em_aim_fire_world_live) | tools/test_area00_fx_reference.py |
 | 00197D20, 00198650, 0018CA90 and what they own | the aim camera (camera actions 1 / 2 / 5) | em_camera_aim, bound in em_camera_live (CAMERA_LIVE.md section 7) | test-camera-aim-reference, test-level-smoke-aim (aim_00 / aim_01 row for row) |
@@ -151,6 +152,11 @@ reference tests read the same bytes from the ELF.
   (em_area11_bindings `tick_aim_record`, every walk mode, class 1), whose
   tick runs `em_aim_fire_runtime_tick` -> 0018ABA0 through the binding; any
   other +0x10 faults (the muzzle node 001F5040 is not bound, section 7).
+  Since lane PORT-A21-G79 also 0x0018AF50, the projectile 001869A0
+  allocates (same row shape, `em_aim_fire_projectile`): the runtime keeps
+  its +0x24 (the target), +0x2A (life), +0x38 (fall speed) and, for a
+  record whose +0x10 is 0018AF50, its matrix +0xD0..+0x10F, each byte
+  readable only after a write since the allocation.
   The marker's callees: 001B1470, 00102948, 00122BB8 and 001FBD50 (the
   ricochet) through the binding; 001B17A0 through the interaction host's
   byte-matched translation (`em_area11_interaction_host_offer_001B17A0`)
@@ -446,7 +452,8 @@ em_effects_live faults on each (an untranslated handler).
   001DD170, the numeric reticle (kind 1, 001CBA50 / 001CBC20) and the vf23
   bookkeeping are not reached; the render adapter keeps refusing an
   uncertified vf23.
-- **The projectiles 0018AF50 / 0018B3E0** (001869A0 / 001872C0) need the
+- **The projectiles 0018AF50 / 0018B3E0** (001869A0 / 001872C0; 0018AF50
+  is translated and bound since lane PORT-A21-G79, section 2) need the
   sub-weapon byte +275 != 0; with D_00810CA4 = 0xFF and D_00810CA6 = 0,
   Square toggles the light and Cross (0017AAD0) changes nothing (aim_08),
   and +275 stays 0 in every AIM beat.

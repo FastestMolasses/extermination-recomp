@@ -41,7 +41,7 @@ the census rows), and since the one-owner step (2026-09-27, census 1.28)
 | 001A9B10 | BM | missing | verified-unbound | Class-2 type-0 entries whose +0x2D4 word >> 8 is 1..3 against the class-4 list: type 7 with a nonzero +0x38 float -> 001A99E0(outer, inner). |
 | 001A99E0 | BM (matching wave 2026-10-28) | missing | live (2026-10-28) | 001A9B10's pair callee: when the outer (class-2) record is within 67 + the first float of its +0x30 record of the inner (class-4 type-7) record in x/z (0011E748 over dx dx + dz dz, the sum in the accumulator) and within 8 in y (0011DF78), its x/z are rotated about the inner point by the inner +0x38 angle a (x = f.x + (dx cos a + dz sin a), z = f.z + (dx -sin a + dz cos a), cosf 0011DE90 / sinf 0011E2A8 called once per term), its +0xC4 heading = 001B1470(heading + a), and 0x70003B88 = 0 (the inner walk ends). Not reached on the census route. Executed on its own by the oracle. |
 | 001A8840 | BM | missing (AREA01 had its SYS owner) | live (2026-10-28) | 001A8BE0's type-3 callee (player, entry): the player's +0xA0 point in the entry's box (half sizes at its +0x30 record, re-read per axis) \|dx\| <= w[0], \|dz\| <= w[2], \|dy\| <= 1.5 + w[1] (0011DF78); inside, by the entry's +0xD: 0 -> entry +0x0A = 1, 00187EC0(6, entry +0x56) (D_008102BB = 1, D_008104EA, D_008105CE: player-record bytes), and with the entry's +0xB set, D_00810707 != 1 and the player's +0 at 1: player +0x22C = 5.0, +0 = 3; 1 -> 00187EC0(7, 0); any contact zeroes 0x70003B86. An area that binds its own SYS owner (AREA01) keeps it. Executed on its own by the oracle. |
-| 001A8970 | BM | missing | live (2026-10-28; one path fails stop) | 001A8BE0's type-5 callee (player, entry): \|x\| and \|z\| gates against the entry's +0x30 record, \|player +0xA4 + h - entry.y\| <= h + w1[1] (h = the player's height / 2), the entry's +0x34 behaviour(entry, player, player + 0xB0); reaction (+0xD) 5: player +0xF = 0xA, +0x224 = +0x220, +0 = 3, +0x70 = normalize(player +0xA0 - entry +0xB0, w = 1); otherwise with the player's +0 at 1: +0xD 0xE and 0021BD10 -> +0xF = 2, the speed table D_0024A7C0 / D_0024A800 (by D_0081070A) into +0x22C and +0x224 (reactions 9, 0xC, 0xD) or +0x224, +0 = 3 and the same direction; both commits and a player +0 other than 1 zero 0x70003B86. Reactions 6 and 7 with the player's +0 at 1 compare the caller's f20 register (never set in 001A8970; it comes from 001AAD00's caller chain): the port faults there (0x1A8AC4). Executed on its own by the oracle. |
+| 001A8970 | BM | missing | live (2026-10-28; one path fails stop) | 001A8BE0's type-5 callee (player, entry): \|x\| and \|z\| gates against the entry's +0x30 record, \|player +0xA4 + h - entry.y\| <= h + w1[1] (h = the player's height / 2), the entry's +0x34 behaviour(entry, player, player + 0xB0); reaction (+0xD) 5: player +0xF = 0xA, +0x224 = +0x220, +0 = 3, +0x70 = normalize(player +0xA0 - entry +0xB0, w = 1); otherwise with the player's +0 at 1: +0xD 0xE and 0021BD10 -> +0xF = 2, the speed table D_0024A7C0 / D_0024A800 (by D_0081070A) into +0x22C and +0x224 (reactions 9, 0xC, 0xD) or +0x224, +0 = 3 and the same direction; both commits and a player +0 other than 1 zero 0x70003B86. Reactions 6 and 7 with the player's +0 at 1 compare the caller's f20 register (never set in 001A8970; it comes from 001AAD00's caller chain) with 0.8 times itself (a failed test returns with no 0x70003B86 store): em_collision_world supplies the frame chain's value, 0 (measured, section 5); without it the port faults there (0x1A8AC4). Executed on its own by the oracle. |
 | 001A8E80 | BM | missing | live (2026-10-28) | 001A9000's callee for class-4 types 6 / 0x1C / 0x1E / 0x1F / 0x50: sqrt(dx dx + dz dz) (inner - outer, the sum in the accumulator) <= 7 + the outer radius and \|6 + inner.y - outer.y\| <= 8: inner +0x36 = 0x14, 0x70003B88 = 0. Executed on its own by the oracle. |
 | 001A8F40 | BM | missing | live (2026-10-28) | 001A9000's callee for class-4 types 0xA / 0xC / 0x18 / 0x2A: 0x700038A0 = inner +0xB0 - outer +0xB0 (001028D0, four lanes), w = 0, 0x70003A20 = its xyz dot (00102738), 0x70003A24 = (3 + the outer radius) squared in place; within: inner +0x36 = 0x2014, 0x70003B88 = 0. Executed on its own by the oracle. |
 | 001A9360 | BM | missing | live (2026-10-28) | 001A97B0's callee for an outer type 5: 00183C40(inner, 0x700038B0) (the anchor point: the +0xB0 point unless the class byte & 0x1F is 2; class 2 by type the +0xC0 point of the node at +0x118 / +0x11C / +0x120 / +0x124 / +0x130 / +0x148, type 16 the point with y + 6, type 18 (0, 6, 0, 1) through the matrix at (+0x110) + 0x90 by 001026A0), the scratch distance against (r0 + r1) squared; within: 001A91C0(outer, inner, sqrt) (+0x36 by the outer +0xD: 0x3C, 0x64, 0x50 / 0x1E or the +0x94 table by distance < 10, 5, 0x28, none for 11 / 14, then \|= 0x2000), inner +0x70 = the normal (00102760, w = 1), 0x70003B88 = 0. Executed on its own by the oracle. |
@@ -575,9 +575,12 @@ item 3 since 2026-09-27. What each translation replaced and what it needs:
 - Every pair callee is translated (section 4 item 4); the +0x34 behaviour
   is whatever the binder supplies (AREA11's flame 0x00823580; any other
   routine faults at the call). 001A8970's reaction-6/7 path reads its
-  caller's f20 register and faults (0x1A8AC4) until the coordinator can
-  supply that register's value. The census shows none of them on the
-  route.
+  caller's f20 register: em_collision_world supplies 0 (lane PORT-A21-G79:
+  001A8BE0, 001AAD00, 001AE5E0 and 001AE6B0 never write f20; hidden fork
+  replays measured f20 = 0 at all 13,000 001AAD00 calls of g77 and all 720
+  001A8970 entries of g79, the sub-weapon projectile's blasts); without a
+  value it faults (0x1A8AC4). The census shows none of them on the
+  first-level route.
 - The route evidence for the passes is the snapshot lists, not the
   frame-by-frame lists. The census shows every pass running every frame from
   S2 on, but it does not record which branches ran.
@@ -719,11 +722,14 @@ passes no longer fault when these pair types meet (none occurs on the
 census route); AREA01 keeps its SYS owners for 001A8840, 001A9E00 and
 001AA000.
 
-One path stays fail-stop: 001A8970 with the player's +0 at 1 and the
-entry's reaction byte 6 or 7 compares the caller's f20 register with 0.8
-times itself (f20 is never written in 001A8970 and is callee-saved through
-001A8BE0 and 001AAD00), so the outcome depends on a register value the port
-does not hold; the translation faults there (0x1A8AC4).
+001A8970 with the player's +0 at 1 and the entry's reaction byte 6 or 7
+compares the caller's f20 register with 0.8 times itself (f20 is never
+written in 001A8970 and is callee-saved through 001A8BE0 and 001AAD00);
+since lane PORT-A21-G79 the binder supplies that register's value
+(EmCollListGlobals caller_f20: 0, measured, section 5) and the oracle
+compares that path with the original run on f20 = +0, -0, 1.0, -1.0 and
+the smallest denormal (reactions 6 and 7, the player's +0 at 1 and 0); a
+NULL value still faults (0x1A8AC4).
 
 Evidence: tools/test_coll_list_passes_reference.py executes each original
 on its own over staged records (`stage_pair_callees`, every third world in
