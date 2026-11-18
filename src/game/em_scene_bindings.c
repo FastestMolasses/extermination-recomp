@@ -3143,6 +3143,7 @@ static int w_001AFCA0(void *ctx)
      * (em_area11_interaction_host.h: whole-world teardown). */
     player_use_set_hook(NULL, NULL);
     em_player_closure_live_set_scan(NULL, NULL);
+    em_player_closure_live_set_classify(NULL, NULL);
     em_player_closure_live_set_water(NULL, NULL);
     em_player_closure_live_set_crawl_clip(NULL, NULL);
     em_player_closure_live_set_spawn_read(NULL);
@@ -3996,6 +3997,11 @@ static int area01_scan(void *ctx, EmPlayerLiveActor *player, int *result)
     (void)ctx;
     return em_area01_live_scan(&s_area01_live, player, result);
 }
+static int area01_classify(void *ctx, EmPlayerLiveActor *player, int *result)
+{
+    (void)ctx;
+    return em_area01_live_classify(&s_area01_live, player, result);
+}
 static int area01_crawl_clip(void *ctx, EmPlayerLiveActor *player, int *result)
 {
     (void)ctx;
@@ -4043,6 +4049,7 @@ static int area01_shared_interactions(void)
     player_pose_set_takeover_end_hook(em_area11_interaction_host_staged_released, NULL);
     player_use_set_hook(em_area11_interaction_host_use, NULL);
     em_player_closure_live_set_scan(area01_scan, NULL);
+    em_player_closure_live_set_classify(area01_classify, NULL);
     em_player_closure_live_set_water(area01_water, NULL);
     em_player_closure_live_set_crawl_clip(area01_crawl_clip, NULL);
     em_player_closure_live_set_spawn_read(closure_spawn_read);
@@ -4555,6 +4562,8 @@ static int area01_missing_worker(void *ctx, EmArea01Call *call)
         return area_spawn_deferred(call, 0x0Du, 0x00828480u, 0x0082C500u);
     if (s_state.d810700 == 0x11 && call->function == 0x001B6660u)   /* AREA17: [30], 0x824280, [34] */
         return area_spawn_deferred(call, 0x0Eu, 0x00826280u, 0x00828E80u);
+    if (s_state.d810700 == 0x15 && call->function == 0x001B6660u)   /* AREA21: [43] / [44] 0x8262D0 */
+        return area_spawn_deferred(call, 0x12u, 0x0082A380u, 0x0082DC80u);
     if ((s_state.d810700 == 8 || s_state.d810700 == 7) && call->function == 0x001B0460u && call->na >= 1)
         return em_area11_script_host_001B0460((int)call->a[0]);
     /* 001D8C20(mode): the light mode of the next owner draw (001CB1F0's

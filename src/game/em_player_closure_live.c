@@ -154,6 +154,8 @@ static struct {
     EmPlayerUseWorkers use;
     int (*scan)(void *context, EmPlayerLiveActor *actor, int *result);
     void *scan_context;
+    int (*classify)(void *context, EmPlayerLiveActor *actor, int *result);
+    void *classify_context;
     int (*water)(void *context, uint32_t function, EmPlayerLiveActor *actor, uint32_t level);
     void *water_context;
     int (*crawl_clip)(void *context, EmPlayerLiveActor *actor, int *result);
@@ -2291,9 +2293,10 @@ static int use_scan(void *c, EmPlayerLiveActor *a, int *result)
 static int use_row_request(void *c, EmPlayerLiveActor *a, float blend) { return w_row_request(c, a, blend); }
 static int use_classify(void *c, EmPlayerLiveActor *a, int *result)
 {
-    (void)c; (void)a;
+    (void)c;
     *result = 0;
-    return unbound("001AAC00 (area 0x15's classifier)");
+    if (!L.classify) return unbound("001AAC00 (area 0x15's classifier)");
+    return L.classify(L.classify_context, a, result);
 }
 static int use_trs(void *c, uint32_t out[16], const uint32_t pos[4], const uint32_t rot[4],
                    const uint32_t scale[4])
@@ -2357,6 +2360,14 @@ void em_player_closure_live_set_scan(int (*scan)(void *context, EmPlayerLiveActo
 {
     L.scan = scan;
     L.scan_context = context;
+}
+
+void em_player_closure_live_set_classify(int (*classify)(void *context, EmPlayerLiveActor *actor,
+                                                         int *result),
+                                         void *context)
+{
+    L.classify = classify;
+    L.classify_context = context;
 }
 
 void em_player_closure_live_set_water(int (*water)(void *, uint32_t, EmPlayerLiveActor *, uint32_t),

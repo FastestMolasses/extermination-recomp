@@ -124,8 +124,50 @@ static int a16_owner(uint32_t fn)
  * three that keep frame locals their callees read (0x8297C0, 0x823580,
  * 0x8243B0).
  * 0x824CF0 (translated, unreached in the original) is not bound. */
+#include "game/em_area21_use.h"
+
+/* AREA21's Use classifier 001AAC00 (boot code, reached only in area
+ * 0x15, from the Use dispatcher 00160220: em_area01_live_classify) with
+ * its tests 001AA8D0 / 001AAA90 (em_area21_use; make
+ * test-area21-use-reference). Memory is this runtime's bytes; the four
+ * callees re-enter this dispatcher by address. */
+static uint8_t *a21u_bytes(void *ctx, uint32_t address, uint32_t size, int write)
+{
+    EmArea01Runtime *r = ctx;
+    return r->host.bytes ? r->host.bytes(r->host.ctx, address, size, write) : NULL;
+}
+static int a21u_float(EmArea01Runtime *r, uint32_t fn, float x, float *result)
+{
+    EmArea01Call c = {.function = fn, .sp = r->sp, .na = 0, .nf = 1};
+    c.f[0] = em_ee_bits(x);
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = em_ee_float(c.f0);
+    return rc;
+}
+static int a21u_fabs(void *ctx, float x, float *r) { return a21u_float(ctx, 0x0011DF78u, x, r); }
+static int a21u_sqrt(void *ctx, float x, float *r) { return a21u_float(ctx, 0x0011E748u, x, r); }
+static int a21u_wrap(void *ctx, float x, float *r) { return a21u_float(ctx, 0x001B1470u, x, r); }
+static int a21u_xform(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001026A0u, .sp = r->sp, .na = 3, .a = {a0, a1, a2}};
+    return em_area01_runtime_call(r, &c);
+}
+
 static int dispatch_area21(EmArea01Runtime *r, EmArea01Call *c, int *out, int *x, uint32_t *where, int32_t *code)
 {
+    if (c->function == 0x001AAC00u) {
+        if (area_frame(r, c, 3, 0x60u, out) < 0) return -1;
+        const EmArea21UseHooks h = {r, a21u_bytes, a21u_xform, a21u_fabs, a21u_sqrt, a21u_wrap};
+        EmArea21UseFault f = {0, 0};
+        int32_t result = 0;
+        *x = em_area21_use_001AAC00(&h, (uint32_t)c->a[0], (uint32_t)c->a[1], (uint32_t)c->a[2],
+                                    &result, &f);
+        *where = f.address;
+        *code = f.code;
+        if (*x >= 0) c->v0 = (uint64_t)(int64_t)result;
+        return 1;
+    }
     static const struct { uint32_t fn, frame; unsigned na; char module; } owners[] = {
         /* em_area21_overlay: the Gatling, the cannon, its projectile */
         {0x008297C0u, 0x50u, 1, 'g'}, {0x00828700u, 0x40u, 1, 'g'}, {0x00828F30u, 0x30u, 1, 'g'},

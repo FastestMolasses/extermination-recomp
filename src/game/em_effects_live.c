@@ -5,6 +5,7 @@
  * it names and calls that callee's one translation over the shared storage
  * (the render context of em_render_context_live, the actor pool, the scene
  * state, the player record and Roger's). */
+#include "game/em_effect_001EB440.h"
 #include "game/em_effects_live.h"
 
 #include "game/em_area11_roger.h"
@@ -1632,6 +1633,58 @@ static int handler_001EF780(EmEffectOriginalNode *node, int32_t depth, EmEffectO
     return rc < 0 ? fail(f.address ? f.address : 0x001EF780u, "AREA16 effect fault (em_area06_port)") : 0;
 }
 
+/* 001EB440 (AREA21, first reached in the guided run's g77, phase 1 of the
+ * boss): em_effect_001EB440's translation (test_effect_001EB440_reference)
+ * over the views it addresses: D_00275C34 (the work block, node + 0x1F0,
+ * as 001EA240 sets it), the block's +4 seed (read and stored) and +0x54
+ * accumulator (read). Its 001CFB50 transforms the node's +0xD0 matrix
+ * (a0); its 001CFBE0 sources D_00255C50 / D_00255CE0 are exported by
+ * export_area00_runtime_tables.py AREA21_EFFECT_WINDOWS. */
+typedef struct { const EmEffectOriginalNode *node; u32 address; const EmArea02MiscRegion *regions; unsigned n; } EB440;
+static uint8_t *eb440_bytes(void *ctx, u32 address, u32 size, int write)
+{
+    const EB440 *v = ctx;
+    (void)write;
+    for (unsigned i = 0; i < v->n; ++i)
+        if (address >= v->regions[i].base && address - v->regions[i].base + size <= v->regions[i].size)
+            return v->regions[i].bytes + (address - v->regions[i].base);
+    return NULL;
+}
+static int eb440_fog(void *ctx, int32_t mode, u32 f12, u32 f13) { return w_0021B9A0_bits(ctx, mode, f12, f13); }
+static int eb440_001CFB50(void *ctx, u32 a0, int32_t a1, u32 a2, u32 f12, u32 f13, u32 f14, u32 f15, u32 f16)
+{
+    const EB440 *v = ctx;
+    if (a2 != v->address + 0xD0u) return -1;
+    return w_001CFB50(NULL, a0, (u32)a1, v->node->matrix, f12, f13, f14, f15, f16);
+}
+static int eb440_001CFBE0(void *ctx, int32_t a0, int32_t a1, u32 a2, u32 a3, int32_t a4)
+{
+    (void)ctx;
+    return w_001CFBE0(NULL, a0, a1, a2, a3, a4);
+}
+/* 001EB250, its twin (also g77): the same views plus the node's +0xD0
+ * matrix, whose translation z (+0x38 of it) it lowers by 2 while the
+ * accumulator is above 0.8; sources D_00255B30 / D_00255BC0. */
+static int handler_001EB440(u32 handler, EmEffectOriginalNode *node, int32_t depth, EmEffectOriginalWork *work)
+{
+    Slot *slot = slot_of_node(node);
+    if (!slot || !work || work != &node->work) return fail(handler, "AREA21 effect without its node");
+    u32 at = em_actor_pool_address(S.pool, actor_of(slot)), pointer = at + 0x1F0u;
+    EmArea02MiscRegion regions[] = {
+        {0x00275C34u, 4, (uint8_t *)&pointer},
+        {at + 0x1F4u, 4, (uint8_t *)&work->seed_copy},
+        {at + 0x244u, 4, (uint8_t *)&work->accumulator},
+        {at + 0xD0u, 0x40, (uint8_t *)node->matrix},
+    };
+    EB440 v = {node, at, regions, sizeof regions / sizeof *regions};
+    const EmEffect001EB440Hooks h = {&v, eb440_bytes, eb440_fog, eb440_001CFB50, eb440_001CFBE0};
+    EmEffect001EB440Fault f = {0, 0};
+    const int rc = handler == 0x001EB440u ? em_effect_001EB440(&h, at + 0xD0u, depth, &f)
+                                          : em_effect_001EB250(&h, at + 0xD0u, depth, &f);
+    if (rc < 0) return fail(f.address ? f.address : handler, "AREA21 effect fault (em_effect_001EB440)");
+    return 0;
+}
+
 static int w_handler(void *ctx, u32 handler, EmEffectOriginalNode *node, int32_t depth,
                      EmEffectOriginalWork *work)
 {
@@ -1659,6 +1712,7 @@ static int w_handler(void *ctx, u32 handler, EmEffectOriginalNode *node, int32_t
     if (handler == 0x001ECA20u || handler == 0x001EBE10u || handler == 0x001EBE90u)
         return handler_area06(handler, node, depth, work);
     if (handler == 0x001EF780u) return handler_001EF780(node, depth, work);
+    if (handler == 0x001EB440u || handler == 0x001EB250u) return handler_001EB440(handler, node, depth, work);
     if (splash_handler(handler)) return handler_splash(handler, node, depth, work);
     return fail(handler, "untranslated effect handler");
 }
@@ -1740,6 +1794,8 @@ static int w_001CFBE0(void *ctx, int32_t id, int32_t kind, u32 source, u32 xf, i
                               source == 0x002564C0u ||                          /* 001EBE10's */
                               source == 0x00256550u ||                          /* 001EBE90's */
                               source == 0x00257B40u ||                          /* 001EF780's */
+                              source == 0x00255C50u || source == 0x00255CE0u || /* 001EB440's */
+                              source == 0x00255B30u || source == 0x00255BC0u || /* 001EB250's */
                               source == 0x00257510u || source == 0x002575A0u || /* 001EDAF0's middle row */
                               source == 0x00257630u || source == 0x00257870u ||
                               source == 0x00257900u || source == 0x002571B0u || source == 0x00257240u ||

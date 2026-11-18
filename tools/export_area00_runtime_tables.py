@@ -89,6 +89,10 @@ CREATURE_EFFECT_WINDOWS = ((0x002571B0, 0x1B0), (0x0025D800, 0x90),
 # the event, a01r_01 / a01r_02) submits D_00257090 or D_00257120 by its node's
 # +0x38: one window, only read.
 REVISIT_EFFECT_WINDOWS = ((0x00257090, 0x120),)
+# AREA21's effect handlers 001EB250 and 001EB440 (byte-matched decomp C;
+# the boss fight, the guided run's g77): their 001CFBE0 source records
+# D_00255B30 / D_00255BC0 and D_00255C50 / D_00255CE0, one window, only read.
+AREA21_EFFECT_WINDOWS = ((0x00255B30, 0x240),)
 # AREA02 (a02_01 / a02_02, the car's run after switch [31]): the effect
 # handler 001EC9A0's source block D_00256D30 (one 0x90-byte record); the
 # burst emitter 001E4CE0 / 001E4A00 the car spawns: the frame doublewords
@@ -278,7 +282,7 @@ def blocks(elf):
     common = (*E.BLOCKS, *AREA01_EFFECT_WINDOWS)
     windows = (*common, *AREA00_WINDOWS, *LIGHT_WINDOWS, *FIELD_WINDOWS, *CLASS2_WINDOWS, *FOOTSTEP_WINDOWS,
                *BOX_BREAK_WINDOWS, *HAZARD_WINDOWS, *HAZARD_EFFECT_WINDOWS, *CREATURE_EFFECT_WINDOWS,
-               *REVISIT_EFFECT_WINDOWS, *AREA02_LIGHT_WINDOWS, *AREA02_EFFECT_WINDOWS, *MID_WINDOWS,
+               *REVISIT_EFFECT_WINDOWS, *AREA21_EFFECT_WINDOWS, *AREA02_LIGHT_WINDOWS, *AREA02_EFFECT_WINDOWS, *MID_WINDOWS,
                *AREA13_DATA_WINDOWS, *AREA15_WINDOWS, *AREA19_WINDOWS, *AREA08_WINDOWS, *AREA04X_WINDOWS)
     ordered = sorted(windows)
     if any(a + n > b for (a, n), (b, _) in zip(ordered, ordered[1:])):
