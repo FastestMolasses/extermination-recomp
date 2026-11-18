@@ -114,17 +114,65 @@ change from AREA20 (chain g20, AREA20_PORT.md "Live"); it does not play yet.
   sfx scope (0x15, 0), stream cues (D_00264DD0[0x16]).
 - **Runtime**: area 0x15 as a mid / later area (boot owners bound), data
   window 0x82A380 .. 0x82DC80, receivers, textures, arrival scene list.
-- **Blocker**: on AREA21's first frame the static world faults: 001E1E60's
-  flag-0x23 branch (AREA21 sets render flag 0x23) calls 00122BB8, 001D73A0,
-  001D72D0, 001D75E0 and 001CEFD0, which em_render_context_live's swc_setup
-  leaves unbound ("static world fault in module 6 at 00122BB8"). 001D72D0 and
-  001D75E0 are byte-matched (VU0 asm), 001D73A0 is C, 001CEFD0 a NEARMISS
-  (95.71%); each needs a translation with an original-instruction oracle
-  before g75's last 2000 rows and g76 .. g79 can run.
+- **Blocker (lane PORT-A21-RENDER, below)**: the far light runs; AREA21's
+  first frame now stops in 001E1AD0, the flag-0x22 grid background (AREA21
+  sets flags 0x22 and 0x23): D_00275C0C (its phase float, .bss) has no view
+  and its callees 001E1760 / 001E17E0 are unbound.
+
+## Far light (lane PORT-A21-RENDER, 2026-11-18, branch `a21render`)
+
+001E1E60's flag-0x23 branch (STATIC_WORLD.md 2.3 step 9 calls it a "sound"
+branch: that label is wrong, the code builds a far point's screen sprite,
+queues a GS read-back probe at its pixel and draws a flare) is translated in
+`em_far_light` (header: every function's behaviour) from the decomp C:
+001D73A0 (C), 001D72D0 and 001D75E0 (byte-identical C with VU0 asm), their
+callee 001D7200, 001CEFD0 (NEARMISS 95.71%: the original instructions were
+followed; the sqrt argument is MULA then MADD, the clamp `c.le` against 1)
+and its callee 001CF320. 00122BB8 is the shared rand (em_random_next,
+test_random_reference). They bind in em_render_context_live's swc_setup
+(views: the read-back list D_008172C0..+0x900, scratch 0x70003600..7F and
+0x70003A20..3F; the sqrt is the binder's 0011E748; 001CB5F0 / 001CB900 the
+packet chain over R.pc).
+
+- **Evidence**: `make test-far-light-reference`
+  (tools/test_far_light_reference.py): the original instructions of all six
+  over designed states (camera, clip matrix and fog ramp built to put the
+  point inside, at the edges of and outside the window, behind the camera,
+  exactly at the clip bound, at 001D7200's clamps and at the fog bounds
+  0 / 0x100; lists full or not, both banks); sqrt, 001CB5F0 and 001CB900
+  scripted on both sides. Compared: return values, every byte of the
+  windows (and no original store outside them), the scripted calls, and
+  vf1, vf2, vf23..vf31, ACC, Q, CLIP. Quick 200 cases, EM_TEST_FULL=1 1600.
+  Mutants caught: the 0.8 scale, the fog min lane, the 393.84616 divisor
+  (one ulp), the clip compare (>= for >), the read-back word offset, the
+  extent operand, both fog bounds; equivalent (not catchable): 001D7200's
+  clamps written as < 0xDF / < 511.5.
+- **vf23**: these functions read vf23 as their caller left it. A fork watch
+  table at every 001D72D0 entry over 1804 frames from the guided run's
+  states g76 end and g77 end found vf23 equal to the fog quadword ctx +0xA0
+  every time (the last writers before 001C1D00 are the fog loaders
+  001CAAC0 / 001CCF70 / 001CD520 / 001F4A10; 001D0540, which loads a matrix
+  row into vf23, also runs in those frames but never last). The binding
+  starts each call from ctx +0xA0.
+- **Not modelled: 001D7410** (main-loop step K, NEARMISS
+  gs_readback_queue_drain): the original reads back an 8 x 8 PSMZ24 block of
+  the Z buffer at each queued point into the entry's +8. The port does not,
+  so the list keeps 001D7200's floats and zeros, 001D73A0 returns 0 and the
+  flare (001CEFD0) is built whenever its clip and fog tests pass. In the
+  original over g76 end and g77 end (1800 frames) 001CEFD0 never ran: the
+  read-back word was non-zero. This only changes packets (no game byte
+  reads them); exact behaviour needs the GS world's Z buffer at step K
+  (renderer work, decision for the orchestrator).
 
 ## Next
 
-1. 001E1E60's flag-0x23 workers (above), then chain g20 through g75 .. g79.
+1. (done) 001E1E60's flag-0x23 workers (Far light). Next: 001E1AD0's
+   flag-0x22 path: a view for D_00275C0C (its value at AREA21's entry in the
+   original is session history: read it from the g75 states), 001E1760 (C;
+   its callees 001D6E60 (em_load_veil_particles), 001D1F80 / 001D1FF0 /
+   001D6F60 (translated), 001E10A0 (C), 001E13E0 (NEARMISS), 001D1F20 (C))
+   and 001E17E0 (NEARMISS, VU0); then chain g20 through g75 .. g79.
+1b. 001D7410's Z read-back (Far light, "Not modelled").
 2. Run the live owners of that recording through these oracles (as
    test_area14_overlay_reference's `live/` cases).
 3. (done) 0x8243B0, [52], lane PORT-A21-52.

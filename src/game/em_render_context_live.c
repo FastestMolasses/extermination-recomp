@@ -15,6 +15,7 @@
 #include "game/em_area01_render_vif.h"
 #include "game/em_census_standins.h"
 #include "game/em_effect_original.h"
+#include "game/em_far_light.h"
 #include "game/em_frame_kick.h"
 #include "gs/em_gs_world.h"
 #include "game/em_frame_render_heads.h"
@@ -80,6 +81,10 @@ typedef uint32_t u32;
 #define D_81C050_SIZE 0x38A0u     /* grids D_0081C0F0 / D_0081D0F0 (0x1000 each) and */
                                   /* 001E1010's table D_0081E0F0 (0x1800), .bss */
 #define D_275C08    0x00275C08u   /* the GS read-back queue count 001D71F0 clears */
+#define D_8172C0    0x008172C0u   /* the read-back list (2 banks x 0x480, .bss): */
+#define D_8172C0_SIZE 0x900u      /* 001D7200 queues, 001D73A0 reads (em_far_light) */
+#define SPAD_3600   0x70003600u   /* em_far_light's scratch: 0x70003600..0x7000367F */
+#define SPAD_3A20   0x70003A20u   /* and 0x70003A20..0x70003A3F */
 #define D_253490    0x00253490u   /* .data: 001DE920's basis, 001DF020's pairs, */
 #define D_253490_SIZE 0xA0u       /* 001DFE70's corners, 001E0380's quadword */
 #define D_26E810    0x0026E810u   /* .data: 001DDB70's four colour quadwords */
@@ -104,6 +109,9 @@ static uint8_t *s_spad3400_borrowed;
 static uint32_t s_d817E20_words[0x100 / 4];
 static uint32_t s_d81C050_words[D_81C050_SIZE / 4];
 static uint32_t s_d275C08_words[1];
+static uint32_t s_d8172C0_words[D_8172C0_SIZE / 4];
+static uint32_t s_spad3600_words[0x80 / 4];
+static uint32_t s_spad3A20_words[0x20 / 4];
 static uint8_t s_d253490[D_253490_SIZE];
 static uint8_t s_d26E810[D_26E810_SIZE];
 static uint32_t s_d8101D0_words[0x10 / 4];
@@ -273,6 +281,9 @@ static void build_views(void)
     add_view(D_817E20, 0x100, (uint8_t *)s_d817E20_words, 1);
     add_view(D_81C050, D_81C050_SIZE, (uint8_t *)s_d81C050_words, 1);
     add_view(D_275C08, 4, (uint8_t *)s_d275C08_words, 1);
+    add_view(D_8172C0, D_8172C0_SIZE, (uint8_t *)s_d8172C0_words, 1);
+    add_view(SPAD_3600, 0x80, (uint8_t *)s_spad3600_words, 1);
+    add_view(SPAD_3A20, 0x20, (uint8_t *)s_spad3A20_words, 1);
     add_view(D_253490, D_253490_SIZE, s_d253490, 0);
     add_view(D_26E810, D_26E810_SIZE, s_d26E810, 0);
     if (s_dynamic_word) {
@@ -672,6 +683,94 @@ static int dynamic_pass(void *ctx)
     return 0;
 }
 
+/* 001E1E60's flag-0x23 branch (AREA21): em_far_light over this module's
+ * views. VU0: the branch reads vf23 as its caller left it; in the original
+ * that is the fog quadword ctx +0xA0 at every 001D72D0 entry captured
+ * (1804 frames of the guided run's AREA21 end states g76 and g77, fork
+ * watch table, AREA21_PORT.md "Far light"), so each call starts from it.
+ * The registers the workers load themselves need no carried state. */
+static EmFarLightVu s_far_vu;
+static uint8_t *far_map(void *ctx, uint32_t address, uint32_t size, int write)
+{
+    (void)ctx;
+    (void)write;
+    return own(address, size);
+}
+static int far_sqrt(void *ctx, uint32_t x, uint32_t *result)
+{
+    (void)ctx;
+    /* the binder's 0011E748 (em_scene_bindings: em_sdk_math_original) */
+    return R.host.w_0011E748 ? R.host.w_0011E748(R.host.ctx, x, result) : -1;
+}
+static int far_001CB5F0(void *ctx, uint32_t table, int32_t id, int32_t count, uint32_t *packet)
+{
+    (void)ctx;
+    uint8_t *bytes = NULL;
+    return em_packet_chain_001CB5F0(&R.pc, table, id, count, packet, &bytes);
+}
+static int far_001CB900(void *ctx, uint32_t table, int32_t id, int32_t mode)
+{
+    (void)ctx;
+    return em_packet_chain_001CB900(&R.pc, table, id, mode);
+}
+static int far_begin(EmFarLight *f, u32 fn)
+{
+    memset(f, 0, sizeof *f);
+    f->map = far_map;
+    f->vu = &s_far_vu;
+    f->w_0011E748 = far_sqrt;
+    f->w_001CB5F0 = far_001CB5F0;
+    f->w_001CB900 = far_001CB900;
+    const uint8_t *fog = own(CTX_BASE + 0xA0u, 16);
+    if (!fog) return fail(fn, "the far light's fog quadword is not owned");
+    memcpy(s_far_vu.vf[23], fog, 16);
+    memcpy(s_far_vu.vf[0], (const uint32_t[4]){0, 0, 0, 0x3F800000u}, 16);
+    return 0;
+}
+static int far_end(EmFarLight *f, int rc)
+{
+    if (rc >= 0) return 0;
+    fprintf(stderr, "render context: far light fault %d in %08X at %08X\n", (int)f->fault,
+            (unsigned)f->fault_function, (unsigned)f->fault_address);
+    return -1;
+}
+static int far_00122BB8(void *ctx, int32_t *result)
+{
+    (void)ctx;
+    *result = (int32_t)em_random_next();   /* the shared rand (em_random) */
+    return 0;
+}
+static int far_001D73A0(void *ctx, int32_t handle, int32_t *result)
+{
+    (void)ctx;
+    EmFarLight f;
+    if (far_begin(&f, 0x001D73A0u) < 0) return -1;
+    return far_end(&f, em_far_light_001D73A0(&f, handle, result));
+}
+static int far_001D72D0(void *ctx, const uint32_t snd[4], int32_t *result)
+{
+    (void)ctx;
+    EmFarLight f;
+    if (far_begin(&f, 0x001D72D0u) < 0) return -1;
+    return far_end(&f, em_far_light_001D72D0(&f, snd, result));
+}
+static int far_001D75E0(void *ctx, int32_t chan, const uint32_t snd[4], uint64_t a2, uint32_t a3,
+                        uint32_t f12, uint32_t f13)
+{
+    (void)ctx;
+    EmFarLight f;
+    uint32_t packet;
+    if (far_begin(&f, 0x001D75E0u) < 0) return -1;
+    return far_end(&f, em_far_light_001D75E0(&f, chan, snd, a2, a3, f12, f13, &packet));
+}
+static int far_001CEFD0(void *ctx, const uint32_t snd[4], const uint32_t vol[4])
+{
+    (void)ctx;
+    EmFarLight f;
+    if (far_begin(&f, 0x001CEFD0u) < 0) return -1;
+    return far_end(&f, em_far_light_001CEFD0(&f, snd, vol));
+}
+
 /* 001C1E70's 001D52E0: the grid header from the bank into +0x140..+0x167
  * (em_swc_001D52E0 over this module's views; the bank must be loaded). */
 static int swc_setup(EmSwc *c)
@@ -682,8 +781,16 @@ static int swc_setup(EmSwc *c)
     c->read_only = R.swc_read_only;
     c->host.ctx = c;
     c->host.w_001D5BD0 = dynamic_pass;
-    /* The flag-0x23 sound branch and 001E1AD0's 001E1760 / 001E17E0
-     * (flag 0x22) remain unbound; reaching one faults. */
+    /* 001E1E60's flag-0x23 branch (em_far_light). 001D7410, the main loop's
+     * GS read-back (step K) that fills the list 001D73A0 reads, is not
+     * modelled: the entries stay as stored (AREA21_PORT.md "Far light").
+     * 001E1AD0's 001E1760 / 001E17E0 (flag 0x22) remain unbound; reaching
+     * one faults. */
+    c->host.w_00122BB8 = far_00122BB8;
+    c->host.w_001D73A0 = far_001D73A0;
+    c->host.w_001D72D0 = far_001D72D0;
+    c->host.w_001D75E0 = far_001D75E0;
+    c->host.w_001CEFD0 = far_001CEFD0;
     return s_bank ? 0 : -1;
 }
 static int swc_done(EmSwc *c, int rc, u32 entry)

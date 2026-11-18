@@ -174,14 +174,19 @@ routine:
    - the data by block_copy.
 8. 001D2090(chan, 0x0023C990), the grid kernel. 001D71A0(chan, 0) is a CNT
    with MSCAL 0.
-9. Under flag 0x23 (never set on the first level) the sound branch runs:
-   - 001D2910(0x24) picks the id 0x4B4E4514 with level 16 + 16 r, or the id
-     0xCDC3D411 with 32 + 32 r, where r = rand x 2^-31;
-   - 001D73A0 stops the old handle D_0027569C unless it is -1, and
-     001D72D0 starts a new one, stored back to D_0027569C;
+9. Under flag 0x23 (AREA21; never set on the first level) the far-light
+   branch runs (an earlier "sound" label was wrong: these are a far point's
+   sprite, its GS read-back probe and its flare, em_far_light):
+   - 001D2910(0x24) picks the point (0x4B4E4514, -10, 0x4E1D842D, 0) with
+     level 16 + 16 r, or (0xCDC3D411, ..) with 32 + 32 r, r = rand x 2^-31;
+   - 001D73A0 returns the previous frame's read-back word for the point
+     unless D_0027569C is -1, and 001D72D0 queues the point's pixel for
+     this frame's read-back; its index is stored to D_0027569C;
    - 001D1F80(chan, 2, 2);
-   - 001D75E0(chan, id block, 0x2007780621322A00, 0x80808080, 384, 384);
-   - 001CEFD0(id block, levels) runs only when the stop returned 0.
+   - 001D75E0(chan, point, 0x2007780621322A00, 0x80808080, 384, 384): the
+     sprite;
+   - 001CEFD0(point, levels), the flare, runs only when the read-back word
+     was 0.
 10. 001D2040(chan, 1), then a RET tag (0x60) at the cursor.
 
 The list is 0x250 bytes on the first level.
@@ -472,10 +477,11 @@ set, marking included.
 
 ### 5.3 Host workers
 
-All eight EmSwcHostWorkers are NULL: reaching one faults (001D5BD0: key
-0x0B00 is not in its list; the sound branch 00122BB8, 001D73A0, 001D72D0,
-001D75E0, 001CEFD0: flag 0x23 is clear, +0x174 = 3 in every capture;
-001E1760 / 001E17E0: flag 0x22 is cleared by 001C1F50 for key 0x0B00).
+001D5BD0 is the dynamic pass; the far-light branch 00122BB8, 001D73A0,
+001D72D0, 001D75E0, 001CEFD0 is em_far_light (flag 0x23 is clear on the
+first level, +0x174 = 3 in every capture; AREA21 sets it). 001E1760 /
+001E17E0 stay NULL: reaching one faults (flag 0x22 is cleared by 001C1F50
+for key 0x0B00 on the first level; AREA21 sets it).
 
 ### 5.4 The background gate
 
@@ -496,10 +502,10 @@ that storage (section 6).
   001E1760's 001D6E60 path, 001E10A0 and 001E13E0. They are host workers
   (flag 0x22; the first level never sets it), bound to a fault. The unit
   oracle stubs them on both sides.
-- **The flag-0x23 sound branch's callees are not translated** (00122BB8,
-  001D73A0, 001D72D0, 001D75E0, 001CEFD0). They are host workers, bound to
-  a fault; their arguments, including the id and level blocks, are compared
-  by the unit oracle.
+- **The flag-0x23 branch's callees** (00122BB8, 001D73A0, 001D72D0,
+  001D75E0, 001CEFD0) are host workers; the unit oracle stubs them and
+  compares their arguments. Live, em_render_context_live binds them to
+  em_far_light (AREA21_PORT.md "Far light"; its own oracle).
 - **001D5BD0 is not bound** (a fault when reached). The AREA01 lane's
   verified em_area01_render_001D5BD0 is not in the Makefile.
 - **The scratchpad matrices 0x70003400..7F are not compared with the
