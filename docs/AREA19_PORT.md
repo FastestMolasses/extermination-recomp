@@ -147,3 +147,38 @@ behaviour defects until a row comparison says so.
    the executed original builders'. Pixels are not compared with an original frame, and
    no beat of this file was seen to draw a worm or kind 8.
 3. **a19b_00**, the arrival by the hatch [63], is the AREA13 side's.
+
+## The guided chain from the title (lane PORT-A19-OWNER, 2026-11-18)
+
+`python3 tools/watch_takes.py --check --root ../Extermination/build/guided_play
+g01_title_newgame` now plays g11_area19 through AREA19 sub 0's event and into sub 1:
+segments 0 .. 340 exact (161,881 ticks), then 1,195 ticks of segment 341 (g12) on the
+recording; 163,194 of 165,990 compared ticks in all. Two gaps were closed:
+
+1. **001BAD40's messages 0x270C and 0x270D through the runtime.** 001BB0E0's state 0
+   binds its script command with 001BAD40 (em_sdf_001BAD40, test_script_door_fan_reference
+   covers both messages); the runtime adapter `rv_slg_001BAD40` gave it no storage for
+   0x270C's published word D_008106C0 (= the node's +0x18, which [6]'s 0x825240 reads back
+   at its count 0x424) or for 0x270D's request block D_002821B0 / B4 / B8, so the node
+   faulted at 008106C0 (g11, after the cutscene at counter 147,500). Each word now comes
+   from its one storage (D_002821B0 is em_message_live's block).
+   `make test-area01-revisit-runtime-reference` runs 001BB0E0 with both messages in states
+   0 .. 2 against the original instructions (six cases, always in the quick run); without
+   the binding they fail at 0x8106C0.
+2. **Movie selector 6, E39S2.PSS** (the event script 0x82B6E0 that 0x825240 starts):
+   `python3 tools/export_movie.py --iso <iso> --disc-path /MOVIE/E39S2.PSS --out
+   assets/movies/e39s2.mov` (240 pictures); feed_end 619 from g11's movie.tbl (one
+   main-loop step of 641 vblanks, vsync 3177 -> 3818, less E46S4's 22), derived, not
+   probed. Without the export the request failed and 001BA1F0 faulted.
+
+**Next divergence** (segment 341, g12_area19_area15, AREA19 sub 1, original counter
+168,017; 0.01 away at 168,035). The player has climbed onto the ceiling hang (0016AC50,
+then +5 0x12 0016AE40) at (936.2, 426, 928.0) and steps with the stick held: +6 0x14,
+phase 2 (clip 0xBC requested at blend 8.0 in phase 0; 00182090 turns +C4 4 degrees a
+tick). 00178B90 is called with no collision push, so each step is exactly +38 along +C4,
+and +38 is the root node's +8 delta. The port's +38 is 0.0696111 every tick; the
+recording's steps are 0.07014 (ratio 1.0076) for the whole phase, which ends on the same
+tick on both sides. Phase 4's steps (00181430's clip) are equal (0.0860238). So the root
+node's +8 track during clip 0xBC after its blend-8 start differs: the transition's start
+cursor or that clip's translation track. Not established; the next lane reads 001C67E0 /
+the transition and clip 0xBC's root track against the original.

@@ -387,6 +387,14 @@ static int rv_slg_001BAD40(void *ctx, const EmSlgScriptActor *s, int32_t *ret)
     EmSdfWorld world;
     memset(&world, 0, sizeof world);
     world.d275BCC = &budget;
+    /* Message 0x270D's request block (D_002821B0 = 2, D_002821B4 = 1,
+     * D_002821B8 = the entry's +8) and message 0x270C's published word
+     * D_008106C0 (= the node's +0x18; AREA19's 0x825240 reads it back), each
+     * from its one storage. */
+    world.d2821B0 = (int32_t *)(void *)bytes(a->r, 0x002821B0u, 4, 1);
+    world.d2821B4 = (int32_t *)(void *)bytes(a->r, 0x002821B4u, 4, 1);
+    world.d2821B8 = (int32_t *)(void *)bytes(a->r, 0x002821B8u, 4, 1);
+    world.d8106C0 = (uint32_t *)(void *)bytes(a->r, 0x008106C0u, 4, 1);
     /* The camera block's words command 3 writes (D_008101E0 +0x04, +0x6E,
      * +0x70..+0x78), each from its one storage. */
     world.d810250 = (uint32_t *)(void *)bytes(a->r, 0x00810250u, 4, 1);

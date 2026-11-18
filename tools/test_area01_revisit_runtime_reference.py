@@ -284,6 +284,21 @@ def main():
                 cases.append((beat, 0x1BB0E0, (node,),
                               ((node + 4, b8(state)), (node + 0x20, struct.pack('<I', entry_address)),
                                (node + 0x24, struct.pack('<I', g5)), (node + 0x2E, h16(k)), (g5 + 0x2E, h16(mask)))))
+    # Messages 0x270D (the request block D_002821B0 / B4 / B8, the node's
+    # +0x09 / +0x0C cleared) and 0x270C (D_008106C0 = the node's +0x18; AREA19's
+    # 0x825240 reads it back, the guided chain's g11 at counter ~148,800): the
+    # group's entry [0] with its message halfword +4 replaced, states 0 .. 2
+    # (state 2 skips 001BA540 for 0x270D only).
+    always = []
+    for msg in (0x270C, 0x270D):
+        for state in (0, 1, 2):
+            always.append(len(cases))
+            cases.append((beat, 0x1BB0E0, (node,),
+                          ((node + 4, b8(state)), (node + 0x20, struct.pack('<I', 0x82A900)),
+                           (0x82A900 + 4, h16(msg)), (0x82A900 + 8, h16(0x31)),
+                           (node + 0x18, struct.pack('<I', 0x7A1230)), (node + 0x24, struct.pack('<I', g5)),
+                           (node + 0x2E, h16(0)), (g5 + 0x2E, h16(0)),
+                           (0x8106C0, struct.pack('<I', 0x5A5A5A5A)))))
     for key in (0x4B, 0x6E, 0x72):
         cases.append((beat, 0x1F9660, (node, key), ()))
     # 0x8237D0's 001F4010(3, matrix) directly (its 001F2F90 / 001F3340 run
@@ -294,7 +309,7 @@ def main():
     # Quick: every captured case, one of each entry and a fixed-seed sample
     # of the designed ones (EM_TEST_FULL=1: all).
     chosen = mode.select(list(range(len(cases))), min(len(cases), 72), 0xA01A5,
-                         axes=(lambda k: cases[k][1],), keep=lambda i, k: k < capture_count)
+                         axes=(lambda k: cases[k][1],), keep=lambda i, k: k < capture_count or k in always)
     global STATE
     STATE = (native, elf, images, cases)
     for k, seen in zip(chosen, mode.parallel_map(run_index, chosen)):
