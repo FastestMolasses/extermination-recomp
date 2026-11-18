@@ -296,3 +296,14 @@ const char *em_pad_button_name(int bit_index)
     if (bit_index < 0 || bit_index > 15) return "?";
     return names[bit_index];
 }
+
+void em_pad_record_001B5BC0(EmPadUnpack *u, const uint8_t rec[5], const uint8_t *prev)
+{
+    u->prev_held = prev ? (uint16_t)(((unsigned)prev[0] << 8 | prev[1]) ^ 0xFFFFu) : 0;
+    u->held = (uint16_t)(((unsigned)rec[0] << 8 | rec[1]) ^ 0xFFFFu);
+    u->prev_pressed = u->pressed;
+    u->pressed = (uint16_t)(~u->prev_held & u->held);
+    u->lx = rec[2];
+    u->ly = rec[3];
+    u->gait = rec[4];
+}

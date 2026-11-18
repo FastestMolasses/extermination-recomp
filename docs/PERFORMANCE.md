@@ -1751,6 +1751,48 @@ The raster skip saves CPU on the worker cores, which cut total CPU about 3x on t
 - The VU1 kernels (the object kernel is now ~7 % of a02_03's main thread) still run under the skip. Their packets go through the recorder's checks, and their operand faults are fail-stops.
 - The d3d12 and Vulkan stubs only gained `em_gfx_gs_world_raster` (syntax-checked).
 
+### P19. The game logic's hot paths: VU0 lanes inline, shared clip corners, bounded scans (2026-11-18)
+
+Lane PORT-PERF, branch `perf`. Goal: faster fast-forward ("Watching Claude's run", FIDELITY_FEATURES.md) and less energy in normal play, with no computed value changed.
+
+**How it was profiled** (macOS `sample`, native arm64; scripts were kept in the lane's ignored `build/perf/`, recipe here). Start the run (`watch_takes.py --check ...`), take the port child's PID (`pgrep -P <python pid>`), wait until its `played.rec` row's area column reaches the stretch (AREA13 = 13), then `sample <pid> 30 -file out.txt`, and sum the main thread's call graph into self and inclusive counts.
+- *The guided chain from the title to 120,000 ticks*, sampled early (AREA11), at row ~55,000 (AREA01/02) and in AREA13 (rows 115,500-117,200).
+- *The first level* (`watch_takes.py --check test1`) and *the AREA21 boss chain* (`guided_chain.py g20`) timed whole.
+
+**What was hot** (main thread, the share of samples):
+- *VU0 macro lanes* (em_vu_vec_bits, em_eei_vu_add_raw / mul_raw, the exact sum and product): 47 % in AREA11 (most of it 001D5370's grid clip test, `clip8` / `corner`), 25 % in AREA13 (001C7420 / 001CA990's row transform `vu_row` and the 0010xxxx rotations), 22 % in AREA01/02. em_vu_vec_bits was not inlined: every call looked its form up and switched on the op at run time although nearly every call site names a constant form.
+- *The AREA01 composition's memory map* (em_area01_live_bytes, 42 % inclusive at row 55,000): the region chain walked for every guest access, there mostly from 001E7D20's water grid. Inside it, em_area01_collision_view_owns spent most of its time in the module loader's region lookups, which scanned all 128 region slots on every call.
+- *Per-window bookkeeping in AREA13*: em_area01_actor_view_begin / commit visited all 256 record views (about 3 KB apart) to find the touched ones on every live call; em_equipment_live_field scanned all 256 equipment slots before its own lookup; the world-owner box search (owner_box, behind em_area11_boxes_owner_world and aim/fire's pool_field) scanned up to 256 boxes.
+
+**What changed** (each keeps the same C evaluated in the same order, or skips only work whose result is proven):
+- *src/game/em_ee_float.h.* The VU0 lane path is `always_inline` (form lookup, lane switch, dest mask, the exact sum and product); the denormal / Inf / NaN branches of the add, sub and mul lanes moved to out-of-line cold functions with the same bodies. The per-file `vu()` wrappers that forward an op (em_owner_services_original.c, em_anim_runtime_rest.c, em_actor_light_001D89D0.c, em_owner_draw_original.c, em_coll_probe_original.c, em_coll_list_passes_walkers.c, em_pose_host_workers.c) are inlined too, so their constant forms fold.
+- *src/game/em_render_context.c, 001D5370's clip test.* The eight corners share their parts: 2 VMULAbc results, 2 + 2 + 1 products, 4 sums after the second step, 8 after the third, each computed once with the form's own lane rule (clamps, product, ACC clamp, sum in the form's NaN order). The clip flags are then read corner by corner in the original order, so a fault comes from the same corner.
+- *src/game/em_module_loader.c.* `region_count`: region_for, the only writer of the region table, packs the live regions to the front; the four lookups stop at the count (same first match).
+- *src/game/em_area01_actor_view.c / .h.* A bitmap mirrors each record's `touched` flag (set and cleared with it); begin clears only the set ones and commit visits them in index order, re-reading the bitmap at each step, so a record touched during a commit is visited exactly when the full scan would reach it.
+- *src/game/em_equipment_live.c.* `live_hi`: one past the highest slot ever made live since the slots were cleared; the bone-matrix scan stops there (every slot above has live == 0).
+- *src/game/em_area11_boxes.c.* `box_hi`: one past the highest box ever taken since the table was cleared (box_for is the one writer of a box's actor); every scan that needs a box with an actor stops there, and box_for takes box_hi itself when no lower box is free. owner_box first tries a remembered box per actor address: at most one unfreed box holds an (actor, generation), so a remembered box that passes the full test is the scan's answer.
+
+**Not changed** (looked at, left): the collision view's begin / commit read all 256 records' generation and allocated words; a pool-wide lifetime counter would skip that, but tests poke the records directly to prove the guard, so the guard would no longer see those writes. em_area01_live_bytes's chain order and checks are unchanged: a window cache over it would need every earlier branch's claim set proven disjoint at run time.
+
+**Same results.**
+- *The guided chain from the title, 120,000 ticks* (`watch_takes.py --check --root ../Extermination/build/guided_play g01_title_newgame --ticks 120000`): 115,599 of 115,599 ticks on the recording with both binaries; the 257 per-segment lines identical.
+- *test1* (`watch_takes.py --check test1`): 17,212 of 17,212 with both; per-segment lines identical.
+- *Chain g20, g16, g17* (`guided_chain.py`): the per-take lines equal the old binary's (g20: g73 4,191 of 4,192, g74 3,736, g75 3,864, g76 6,383, g77 12,864, g78 15,530, g79 6,603, g80 28,171 of 28,171 on main 49aa21b1). New binary: g16 g67 6,352 of 6,355 and g68 675 of 2,805; `g17 --steer` g45 667 of 1,819 (equal to the old binary's lines); g11 g58 5,625 of 5,625.
+- *EM_STATE_TRACE digests* (the per-frame render-context, scene, actor-pool, actor-view, rand, player and camera digests): identical between the old and new binary over newgame-control (2,999 lines) and beat a19d_00 (2,366 lines, and its 538-line start-at trace).
+- *Gate*: `make -j8 INC=1` 0 warnings; test-newgame-control, test-start-at, test-fast-from, test-norender-equal and beats a19d_00 and k01_02 PASS.
+- *Oracles of the touched files, all PASS*: test-render-context-reference (also EM_TEST_FULL=1: 2,045 cases), test-ee-float-header, test_owner_services / owner_draw / render_context_live / area01_actor_view / module_loader / actor_light_001d89d0 / actor_lighting / anim_runtime_rest / actor_collision / coll_list_passes / area01_model_live / aim_fire_target_pool / area00_owner_capacity / world_model_bank / area01_crate_registry / aim_fire_sdk_memory / area01_effects_services / face_attach references. test_area00_spawn_binding_reference and test_area01_aim_model_reference fail to build their bridges on main as well (an undeclared 0015C700 helper; a missing EmArea02Math initializer field): not this change.
+
+**Faster** (M1 Pro, no render, uncapped, muted; a shared machine, so the load average is given; one run each unless a spread is shown):
+
+| Stretch | Before | After |
+|---|---|---|
+| Guided chain from the title to 120,000 ticks | 697 s, 672 s CPU (172 ticks/s; load 10-20) | 571 s, 558 s CPU (210 ticks/s; load 17-25) |
+| test1 (17,212 ticks) | 57.4 s (300 ticks/s; load 17-25) | 47.9 s (359 ticks/s; load 17-25) |
+| Chain g20 (AREA20, AREA21's boss, the ending) | 507 s, 574 s CPU (163 frames/s; load 14-20) | 398 s, 450 s CPU (208 frames/s; load 14-16) |
+| newgame-control (EM_NO_RENDER, uncapped) | 5.45 / 5.53 s | 5.07 / 5.23 s |
+
+Paced play at 59.94 Hz with the raster drawn (test1 from 150 s to 210 s, headless with `EM_UNCAPPED=0 EM_HEADLESS_RASTER=1`, the closest headless stand-in for windowed play): 168 % of one core over all threads before (load 33), 158 % after (load 17). The GS raster workers are most of that; the main thread's game logic is the part that shrank.
+
 ## Appendix: the skeptic's corrections (adversarial review, 2026-10-10)
 
 Skeptic review, with 5 new headless runs and a code re-read. The synthesis's mechanism holds up: the Original profile draws on the CPU, and the depth-of-field pass and the effects multiply the overdraw. But it does not explain the user's complaint on the Mac. Headless, at the default 7 workers, the hill slide runs at 98.9-100 % of real time, and the AREA01 fire at 91-96 %. The pacer drops the time a late tick loses, but those late ticks only lose 1-9 %. "Really slow" fits only (a) the 3-worker iPhone default, measured at 74-83 % speed in AREA11 and 50-57 % near the fire on M1 performance cores, or (b) the windowed path, which was not measured. Each frame takes a drawable from nextDrawable at frame start and holds the previous one for a tick. IOS.md already measured waits of about 15 ms per step there. This should be ranked first, not last.

@@ -950,34 +950,75 @@ static const u32 VF0[4] = {0, 0, 0, F_ONE};
 
 /* One corner: ACC = m0 * px.y; ACC += m1 * py.z; ACC += m2 * pz.w;
  * vf3 = ACC + m3 * vf0.w (the four-instruction chain at 001D5598 and its
- * seven siblings), then its clip flags. */
-static int corner(S *s, const u32 m[4][4], const u32 *px, const u32 *py, const u32 *pz, u32 *flags)
+ * seven siblings), then its clip flags.
+ *
+ * (docs/PERFORMANCE.md P19) The eight corners share their parts: px, py and
+ * pz each take one of two vectors, so there are 2 distinct VMULAbc results,
+ * 2 + 2 + 1 distinct products of the three VMADD(A)bc steps, 4 distinct
+ * sums after the second step and 8 after the third. Each part is computed
+ * once with the form's own lane rule (em_vu_form_lane_bits: the clamps,
+ * then the product, then the ACC clamp and the sum in the form's NaN
+ * order), so every lane is the same value the chain gives corner by corner.
+ * The chain has no side effect but its clip flags, which are read corner by
+ * corner in the original order: the first faulting corner faults first. */
+typedef struct { em_vu_form mula, madda_z, madda_w, madd_w; int ok; } CornerForms;
+
+static const CornerForms *corner_forms(void)
 {
-    u32 acc[4] = {0, 0, 0, 0}, out[4] = {0, 0, 0, 0};
-    if (em_vu_vec_bits(EM_VU_MULABC, 15, 1, m[0], px, 0, NULL, acc) != EM_EE_FLOAT_OK ||
-        em_vu_vec_bits(EM_VU_MADDABC, 15, 2, m[1], py, 0, acc, acc) != EM_EE_FLOAT_OK ||
-        em_vu_vec_bits(EM_VU_MADDABC, 15, 3, m[2], pz, 0, acc, acc) != EM_EE_FLOAT_OK ||
-        em_vu_vec_bits(EM_VU_MADDBC, 15, 3, m[3], VF0, 0, acc, out) != EM_EE_FLOAT_OK)
-        return fault(s, 0x001D5370u, EM_RC_FAULT_UNMEASURED);
-    if (em_render_context_clipw(out, flags) < 0) return fault(s, 0x001D5370u, EM_RC_FAULT_UNMEASURED);
-    return 0;
+    static CornerForms f;
+    static int resolved;
+    if (!resolved) {
+        f.ok = em_vu_form_lookup(EM_VU_MULABC, 15, 1, &f.mula) == EM_EE_FLOAT_OK &&
+               em_vu_form_lookup(EM_VU_MADDABC, 15, 2, &f.madda_z) == EM_EE_FLOAT_OK &&
+               em_vu_form_lookup(EM_VU_MADDABC, 15, 3, &f.madda_w) == EM_EE_FLOAT_OK &&
+               em_vu_form_lookup(EM_VU_MADDBC, 15, 3, &f.madd_w) == EM_EE_FLOAT_OK;
+        resolved = 1;
+    }
+    return &f;
+}
+
+/* em_vu_form_lane_bits's VMADD(A)bc lane, split at the product. */
+static inline u32 madd_product(const em_vu_form *f, u32 s, u32 t)
+{
+    if (f->clamp_fs) s = em_eei_saturate(s);
+    if (f->clamp_ft) t = em_eei_saturate(t);
+    return em_eei_vu_mul_raw(s, t);
+}
+
+static inline u32 madd_sum(const em_vu_form *f, u32 acc, u32 product)
+{
+    if (f->clamp_acc) acc = em_eei_saturate(acc);
+    return f->product_nan_first ? em_eei_vu_add_raw(product, acc) : em_eei_vu_add_raw(acc, product);
 }
 
 /* Two runs of four corners, each read back as one 24-bit CLIP word (the
  * register shifts six bits per test, so a read after four tests holds the
  * first corner in bits 18..23 and the last in bits 0..5). Run A keeps the
- * z source at vf1 (lo), run B at vf2 (hi). */
+ * z source at vf1 (lo), run B at vf2 (hi). Corner c takes px = v[c & 1],
+ * py = v[c >> 1 & 1], pz = v[c >> 2 & 1] (v[0] = vf1, v[1] = vf2). */
 static int clip8(S *s, const u32 m[4][4], const u32 v1[4], const u32 v2[4], u32 *lo, u32 *hi)
 {
+    const CornerForms *cf = corner_forms();
+    if (!cf->ok) return fault(s, 0x001D5370u, EM_RC_FAULT_UNMEASURED);
+    const u32 *v[2] = {v1, v2};
+    u32 a0[2][4], p1[2][4], p2[2][4], p3[4], a1[4][4], a2[8][4], out[8][4];
+    for (unsigned k = 0; k < 4; ++k) {
+        for (unsigned i = 0; i < 2; ++i) {
+            a0[i][k] = em_vu_form_lane_bits(&cf->mula, m[0][k], v[i][1], 0);
+            p1[i][k] = madd_product(&cf->madda_z, m[1][k], v[i][2]);
+            p2[i][k] = madd_product(&cf->madda_w, m[2][k], v[i][3]);
+        }
+        p3[k] = madd_product(&cf->madd_w, m[3][k], VF0[3]);
+        for (unsigned xy = 0; xy < 4; ++xy)
+            a1[xy][k] = madd_sum(&cf->madda_z, a0[xy & 1][k], p1[xy >> 1][k]);
+        for (unsigned c = 0; c < 8; ++c) {
+            a2[c][k] = madd_sum(&cf->madda_w, a1[c & 3][k], p2[c >> 2][k]);
+            out[c][k] = madd_sum(&cf->madd_w, a2[c][k], p3[k]);
+        }
+    }
     u32 f[8];
-    TRY(corner(s, m, v1, v1, v1, &f[0]));
-    TRY(corner(s, m, v2, v1, v1, &f[1]));
-    TRY(corner(s, m, v1, v2, v1, &f[2]));
-    TRY(corner(s, m, v2, v2, v1, &f[3]));
-    TRY(corner(s, m, v1, v1, v2, &f[4]));
-    TRY(corner(s, m, v2, v1, v2, &f[5]));
-    TRY(corner(s, m, v1, v2, v2, &f[6]));
-    TRY(corner(s, m, v2, v2, v2, &f[7]));
+    for (unsigned c = 0; c < 8; ++c)
+        if (em_render_context_clipw(out[c], &f[c]) < 0) return fault(s, 0x001D5370u, EM_RC_FAULT_UNMEASURED);
     *lo = (f[0] << 18 | f[1] << 12 | f[2] << 6 | f[3]) & 0xFFFFFFu;
     *hi = (f[4] << 18 | f[5] << 12 | f[6] << 6 | f[7]) & 0xFFFFFFu;
     return 0;

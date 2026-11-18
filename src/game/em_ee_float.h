@@ -66,6 +66,19 @@
 _Static_assert(sizeof(float) == 4 && FLT_RADIX == 2 && FLT_MANT_DIG == 24 && FLT_MAX_EXP == 128,
                "em_ee_float.h needs IEEE binary32 float");
 
+/* (docs/PERFORMANCE.md P19) The VU0 lane path is forced inline: nearly every
+ * em_vu_vec_bits call names a constant (op, dest, bc), so the form lookup,
+ * the lane switch and the dest mask fold away at the call site. The rare
+ * operands (a denormal, Inf or NaN) take an out-of-line slow path. Inlining
+ * changes no value: it is the same C evaluated in the same order. */
+#if defined(__GNUC__) || defined(__clang__)
+#define EM_EEI_HOT static inline __attribute__((always_inline))
+#define EM_EEI_COLD static __attribute__((noinline, cold, unused))
+#else
+#define EM_EEI_HOT static inline
+#define EM_EEI_COLD static
+#endif
+
 #define EM_EE_SIGN       UINT32_C(0x80000000)
 #define EM_EE_MAX        UINT32_C(0x7F7FFFFF) /* every saturation lands here */
 #define EM_EE_INF        UINT32_C(0x7F800000)
@@ -109,7 +122,7 @@ static inline uint32_t em_ee_int_word(int32_t value)
 
 /* ---------------------------------------------------------- internals --- */
 
-static inline unsigned em_eei_exp(uint32_t b) { return (unsigned)(b >> 23) & 0xFFu; }
+EM_EEI_HOT unsigned em_eei_exp(uint32_t b) { return (unsigned)(b >> 23) & 0xFFu; }
 static inline int em_eei_is_nan(uint32_t b) { return em_eei_exp(b) == 0xFFu && (b & UINT32_C(0x7FFFFF)) != 0; }
 static inline int em_eei_is_inf(uint32_t b) { return (b & UINT32_C(0x7FFFFFFF)) == EM_EE_INF; }
 static inline int em_eei_is_zero(uint32_t b) { return em_eei_exp(b) == 0; } /* after DAZ */
@@ -117,7 +130,7 @@ static inline uint32_t em_eei_daz(uint32_t b) { return em_eei_exp(b) == 0 ? b & 
 static inline uint32_t em_eei_quiet(uint32_t b) { return b | UINT32_C(0x00400000); }
 
 /* Instruction-result saturation: any NaN -> +MAX, +-Inf -> +-MAX. */
-static inline uint32_t em_eei_saturate(uint32_t b)
+EM_EEI_HOT uint32_t em_eei_saturate(uint32_t b)
 {
     if (em_eei_is_nan(b)) return EM_EE_MAX;
     if (em_eei_is_inf(b)) return (b & EM_EE_SIGN) | EM_EE_MAX;
@@ -131,18 +144,18 @@ static inline uint32_t em_eei_saturate_signed(uint32_t b)
 }
 
 /* Finite DAZ-applied operand: value = sig * 2**uexp (sig 0 for zeros). */
-static inline uint32_t em_eei_sig(uint32_t b)
+EM_EEI_HOT uint32_t em_eei_sig(uint32_t b)
 {
     return em_eei_exp(b) == 0 ? 0 : (b & UINT32_C(0x7FFFFF)) | UINT32_C(0x800000);
 }
 
-static inline int em_eei_uexp(uint32_t b)
+EM_EEI_HOT int em_eei_uexp(uint32_t b)
 {
     return em_eei_exp(b) == 0 ? 0 : (int)em_eei_exp(b) - 150;
 }
 
 /* The bit length of v (0 for 0). */
-static inline int em_eei_bitlen64(uint64_t v)
+EM_EEI_HOT int em_eei_bitlen64(uint64_t v)
 {
 #if defined(__GNUC__) || defined(__clang__)
     return v ? 64 - __builtin_clzll(v) : 0;
@@ -196,7 +209,7 @@ static inline uint32_t em_eei_pack(uint32_t sign, uint64_t mag, int exp, int nea
  * always borrows exactly one unit from them. Every value in (0, 2**38] has
  * that same effect, so it is replaced by 1 and the truncated result is
  * exactly the model's big-integer sum. */
-static inline uint32_t em_eei_exact_sum(uint32_t a, uint32_t b)
+EM_EEI_HOT uint32_t em_eei_exact_sum(uint32_t a, uint32_t b)
 {
     uint32_t ma = em_eei_sig(a), mb = em_eei_sig(b);
     if (ma == 0 && mb == 0) return ((a & b) >> 31) ? EM_EE_SIGN : 0; /* -0 only for (-0)+(-0) */
@@ -224,7 +237,7 @@ static inline uint32_t em_eei_exact_sum(uint32_t a, uint32_t b)
  * uexp(a) + uexp(b), 0, 0) with its shift known. Both significands are in
  * [2**23, 2**24), so the product is in [2**46, 2**48): its bit length is 47
  * or 48 and truncation keeps the top 24 bits (no carry can follow). */
-static inline uint32_t em_eei_exact_product(uint32_t a, uint32_t b)
+EM_EEI_HOT uint32_t em_eei_exact_product(uint32_t a, uint32_t b)
 {
     uint32_t ma = em_eei_sig(a), mb = em_eei_sig(b), sign = (a ^ b) >> 31;
     if (ma == 0 || mb == 0) return sign << 31;
@@ -427,14 +440,13 @@ static inline int em_ee_c_le(float fs, float ft) { return em_ee_c_le_bits(em_ee_
 /* Both operands normal (exponent field 1..254): DAZ leaves them, and no NaN
  * or Inf rule applies (the lane functions' fast path; docs/PERFORMANCE.md
  * P18). */
-static inline int em_eei_both_normal(uint32_t x, uint32_t y)
+EM_EEI_HOT int em_eei_both_normal(uint32_t x, uint32_t y)
 {
     return em_eei_exp(x) - 1u < 254u && em_eei_exp(y) - 1u < 254u;
 }
 
-static inline uint32_t em_eei_vu_add_raw(uint32_t x, uint32_t y)
+EM_EEI_COLD uint32_t em_eei_vu_add_slow(uint32_t x, uint32_t y)
 {
-    if (em_eei_both_normal(x, y)) return em_eei_exact_sum(x, y);
     x = em_eei_daz(x);
     y = em_eei_daz(y);
     if (em_eei_is_nan(x)) return em_eei_quiet(x);
@@ -445,9 +457,14 @@ static inline uint32_t em_eei_vu_add_raw(uint32_t x, uint32_t y)
     return em_eei_exact_sum(x, y);
 }
 
-static inline uint32_t em_eei_vu_sub_raw(uint32_t x, uint32_t y)
+EM_EEI_HOT uint32_t em_eei_vu_add_raw(uint32_t x, uint32_t y)
 {
-    if (em_eei_both_normal(x, y)) return em_eei_exact_sum(x, y ^ EM_EE_SIGN);
+    if (em_eei_both_normal(x, y)) return em_eei_exact_sum(x, y);
+    return em_eei_vu_add_slow(x, y);
+}
+
+EM_EEI_COLD uint32_t em_eei_vu_sub_slow(uint32_t x, uint32_t y)
+{
     x = em_eei_daz(x);
     y = em_eei_daz(y);
     if (em_eei_is_nan(x)) return em_eei_quiet(x);
@@ -455,9 +472,14 @@ static inline uint32_t em_eei_vu_sub_raw(uint32_t x, uint32_t y)
     return em_eei_vu_add_raw(x, y ^ EM_EE_SIGN);
 }
 
-static inline uint32_t em_eei_vu_mul_raw(uint32_t x, uint32_t y)
+EM_EEI_HOT uint32_t em_eei_vu_sub_raw(uint32_t x, uint32_t y)
 {
-    if (em_eei_both_normal(x, y)) return em_eei_exact_product(x, y);
+    if (em_eei_both_normal(x, y)) return em_eei_exact_sum(x, y ^ EM_EE_SIGN);
+    return em_eei_vu_sub_slow(x, y);
+}
+
+EM_EEI_COLD uint32_t em_eei_vu_mul_slow(uint32_t x, uint32_t y)
+{
     x = em_eei_daz(x);
     y = em_eei_daz(y);
     if (em_eei_is_nan(x)) return em_eei_quiet(x);
@@ -467,6 +489,12 @@ static inline uint32_t em_eei_vu_mul_raw(uint32_t x, uint32_t y)
         return ((x ^ y) & EM_EE_SIGN) | EM_EE_INF;
     }
     return em_eei_exact_product(x, y);
+}
+
+EM_EEI_HOT uint32_t em_eei_vu_mul_raw(uint32_t x, uint32_t y)
+{
+    if (em_eei_both_normal(x, y)) return em_eei_exact_product(x, y);
+    return em_eei_vu_mul_slow(x, y);
 }
 
 /* The lane-table instructions (ee_float_model.VU_FORMS). The ACC-writing
@@ -495,15 +523,15 @@ typedef struct em_vu_form {
     unsigned char product_nan_first; /* VMADD: the product's NaN wins over ACC's */
 } em_vu_form;
 
-static inline int em_vu_op_is_bc(em_vu_op op)
+EM_EEI_HOT int em_vu_op_is_bc(em_vu_op op)
 {
     return op == EM_VU_ADDBC || op == EM_VU_SUBBC || op == EM_VU_MULBC || op == EM_VU_MULABC ||
            op == EM_VU_MADDBC || op == EM_VU_MADDABC;
 }
 
-static inline int em_vu_op_is_q(em_vu_op op) { return op == EM_VU_ADDQ || op == EM_VU_MULQ; }
+EM_EEI_HOT int em_vu_op_is_q(em_vu_op op) { return op == EM_VU_ADDQ || op == EM_VU_MULQ; }
 
-static inline int em_vu_op_reads_acc(em_vu_op op)
+EM_EEI_HOT int em_vu_op_reads_acc(em_vu_op op)
 {
     return op == EM_VU_MADDBC || op == EM_VU_MADDABC || op == EM_VU_OPMSUB;
 }
@@ -520,7 +548,7 @@ static inline int em_vu_op_reads_acc(em_vu_op op)
 #define EM_VU_FORM_MEASURED 0x10u
 #define EM_VU_FORM_ROW(op, dest, bc, cs, ct, ca, order) \
     [EM_VU_FORM_KEY(op, dest, bc)] = (unsigned char)(EM_VU_FORM_MEASURED | (cs) | (ct) << 1 | (ca) << 2 | (order) << 3)
-static inline int em_vu_form_lookup(em_vu_op op, unsigned dest, int bc, em_vu_form *form)
+EM_EEI_HOT int em_vu_form_lookup(em_vu_op op, unsigned dest, int bc, em_vu_form *form)
 {
     /* columns: op, dest, bc, clamp fs, clamp ft, clamp acc, product NaN first */
     static const unsigned char table[EM_VU_FORM_KEY(EM_VU_OP_COUNT, 0, -1)] = {
@@ -602,7 +630,7 @@ static inline int em_vu_form_lookup(em_vu_op op, unsigned dest, int bc, em_vu_fo
 /* One written lane of a resolved form. `t` is the already-selected ft lane
  * (broadcast lane, Q, or the swizzled lane for VOPMULA/VOPMSUB); `acc` is the
  * ACC lane (read only by VMADDbc, VMADDAbc and VOPMSUB). */
-static inline uint32_t em_vu_form_lane_bits(const em_vu_form *form, uint32_t s, uint32_t t, uint32_t acc)
+EM_EEI_HOT uint32_t em_vu_form_lane_bits(const em_vu_form *form, uint32_t s, uint32_t t, uint32_t acc)
 {
     if (form->clamp_fs) s = em_eei_saturate(s);
     if (form->clamp_ft) t = em_eei_saturate(t);
@@ -634,7 +662,7 @@ static inline uint32_t em_vu_form_lane_bits(const em_vu_form *form, uint32_t s, 
 }
 
 /* Lookup + one lane. On EM_EE_FLOAT_UNMEASURED *out is untouched. */
-static inline int em_vu_lane_bits(em_vu_op op, unsigned dest, int bc, uint32_t s, uint32_t t, uint32_t acc,
+EM_EEI_HOT int em_vu_lane_bits(em_vu_op op, unsigned dest, int bc, uint32_t s, uint32_t t, uint32_t acc,
                                   uint32_t *out)
 {
     em_vu_form form;
@@ -651,7 +679,7 @@ static inline int em_vu_lane_bits(em_vu_op op, unsigned dest, int bc, uint32_t s
  *   dst:    in/out destination: vd, or ACC for VMULAbc/VMADDAbc/VOPMULA.
  *           Lanes outside the dest mask keep their value.
  * Any argument may alias any other. VOPMULA/VOPMSUB compute fs.yzx * ft.zxy. */
-static inline int em_vu_vec_bits(em_vu_op op, unsigned dest, int bc, const uint32_t fs[4], const uint32_t ft[4],
+EM_EEI_HOT int em_vu_vec_bits(em_vu_op op, unsigned dest, int bc, const uint32_t fs[4], const uint32_t ft[4],
                                  uint32_t q, const uint32_t acc[4], uint32_t dst[4])
 {
     static const unsigned char op_s[3] = {1, 2, 0}, op_t[3] = {2, 0, 1};

@@ -58,11 +58,26 @@ void em_area01_actor_view_reset(EmArea01ActorView *v, EmActorPool *pool,
     v->pool = pool; v->project = project; v->rebind = rebind; v->ctx = ctx;
 }
 
+/* The lowest touched record at or above `from`, or -1: the bitmap read at
+ * each step, so a record touched during a commit is visited when the
+ * index scan over every record would reach it. */
+static int next_touched(const EmArea01ActorView *v, unsigned from)
+{
+    for (unsigned w = from / 64u; w < EM_ACTOR_POOL_CAPACITY / 64u; ++w) {
+        uint64_t bits = v->touched_bits[w];
+        if (w == from / 64u) bits &= ~UINT64_C(0) << (from % 64u);
+        if (bits) return (int)(w * 64u + (unsigned)__builtin_ctzll(bits));
+    }
+    return -1;
+}
+
 int em_area01_actor_view_begin(EmArea01ActorView *v)
 {
     if (!v || v->fault) return -1;
     if (!v->pool || v->active) return fail(v, EM_ACTOR_POOL_BASE, 1);
-    for (unsigned i = 0; i < EM_ACTOR_POOL_CAPACITY; ++i) v->record[i].touched = 0;
+    for (int i = next_touched(v, 0); i >= 0; i = next_touched(v, (unsigned)i + 1u))
+        v->record[i].touched = 0;
+    memset(v->touched_bits, 0, sizeof v->touched_bits);
     v->active = 1;
     return 0;
 }
@@ -85,6 +100,7 @@ static int refresh(EmArea01ActorView *v, unsigned index)
     memset(r->written, 0, sizeof r->written);
     r->generation = a->generation;
     r->touched = 1;
+    v->touched_bits[index / 64u] |= UINT64_C(1) << (index % 64u);
     return 0;
 }
 
@@ -185,7 +201,8 @@ int em_area01_actor_view_commit(EmArea01ActorView *v)
 {
     if (!v || v->fault) return -1;
     if (!v->active || !v->pool) return fail(v, EM_ACTOR_POOL_BASE, 1);
-    for (unsigned index = 0; index < EM_ACTOR_POOL_CAPACITY; ++index) {
+    for (int at = next_touched(v, 0); at >= 0; at = next_touched(v, (unsigned)at + 1u)) {
+        const unsigned index = (unsigned)at;
         EmArea01ActorRecordView *r = &v->record[index];
         if (!r->touched) continue;
         EmActor *a = &v->pool->records[index];

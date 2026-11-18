@@ -151,6 +151,13 @@ typedef struct EmSceneWorkers {
     int (*w_001C40B0)(void *ctx, int a0, int a1); /* item give */
     int (*w_00225A00)(void *ctx);
     int (*w_00225AC0)(void *ctx, int a0); /* the card screen; original result: != 0 when done */
+    /* 001ACA20 (the attract demo, lane PORT-DEMO; docs/ATTRACT_DEMO.md). */
+    int (*w_00122BA8)(void *ctx, uint32_t a0); /* rand() seed (D_0024295C +0x58) */
+    int32_t (*r_0028A564)(void *ctx);          /* loader slot 0x35 (lw) */
+    int (*w_00200830)(void *ctx, int32_t a0);  /* the DMA chain send */
+    int (*w_001D19D0)(void *ctx);              /* library model 0x16's fade weights */
+    int (*w_001B5BC0)(void *ctx, int a0);      /* one recorded pad record into D_00810E5x..E7x */
+    int (*s_70003B64)(void *ctx, int32_t value); /* the main-loop counter (sw) */
 } EmSceneWorkers;
 
 /* Call protocol for the cores. Before calling worker `present` (non-zero

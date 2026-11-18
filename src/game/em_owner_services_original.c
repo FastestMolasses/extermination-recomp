@@ -38,7 +38,7 @@ static const u32 VF0[4] = {0, 0, 0, EM_EE_ONE};
 /* One VU0 macro instruction on 4-lane registers. `*st` is sticky: once an
  * instruction reports a nonzero status, nothing later is executed and the
  * routine's caller faults. */
-static void vu(int *st, em_vu_op op, unsigned dest, int bc, const u32 fs[4], const u32 ft[4], u32 q,
+static inline __attribute__((always_inline)) void vu(int *st, em_vu_op op, unsigned dest, int bc, const u32 fs[4], const u32 ft[4], u32 q,
                const u32 acc[4], u32 dst[4])
 {
     if (*st != EM_EE_FLOAT_OK) return;

@@ -45,8 +45,9 @@ the title's OPTIONS, and no game formats a float or calls calloc.
 | 0x001ABC60 | boot | 428 | frame_main | unverified | em_startup.c boot_tick major 3 (module 0x29, logo B, bank 0x1B) | As above |
 | 0x001ABE10 | boot | 380 | frame_main | unverified | em_startup.c boot_tick major 4 (logo C, bank 0x1C) | As above |
 | 0x001AC3B0 | boot | 196 | frame_main | unverified | em_startup.c movie_tick (001AC070 state 1: sound stop, the E900 movie, its skip) | As above; em_frontend's begin_movie plays it (docs/STARTUP.md) |
-| 0x001ACA20 | boot | 1104 | frame_main | stand-in | em_frontend.c EM_STARTUP_ATTRACT: a black screen that serves only the demo's button exit (attract_abort) | The attract demo (001AC070 state 3 after 1200 idle ticks on the title, alternating with the intro movie): AREA06, AREA13 (sub 8) or AREA03 (sub 1) by the counter D_00275BD4, 0xE10 frames of recorded pad (001B5BC0). Its state-0 exit (any of 0x9F0 held returns 2) is executed for every held bit by `make test-title-menu-reference`; the demo itself is not ported (WP-17 residue). **Player visible: the idle title shows black instead of the demo** |
-| 0x001ACE70 | boot | 80 | frame_main | stand-in | the same | The demo's per-frame exit test (anim_frame_top_a state 4 sub 1); covered by the same stand-in |
+| 0x001ACA20 | boot | 1104 | frame_main | live | em_sf_001ACA20 (em_scene_task.c), run by em_scene_attract_001ACA20 from em_frontend's attract_tick (lane PORT-DEMO) | The attract demo (001AC070 state 3 after 1200 idle ticks, alternating with the intro movie): AREA06, AREA13 entry 8 or AREA03 sub 1 by D_00275BD4, 0xE10 records of module 0x36's recorded pads (001B5BC0). `make test-scene-task-reference` executes the original over every arm (616 runs); `make test-attract-demo` compares demo 0 with the original's capture (records 1..300 equal, CROSS exit). Demo 2 is 3600/3600 equal, demo 0 2429/3600 (rand() first differs at record 2430 in the crawl); demo 1 faults at record 1436 (aim/fire 00183AC0) and keeps the black stand-in (docs/ATTRACT_DEMO.md) |
+| 0x001ACE70 | boot | 80 | frame_main | live | em_sf_001ACE70 (em_scene_task.c) | The demo's per-record exit test (001ACA20 state 4 sub 1); executed inside 001ACA20 by `make test-scene-task-reference` and run every record of the live demos |
+| 0x001B5BC0 | boot | 200 | input_io | live | em_pad_record_001B5BC0 (em_input.c) through em_frame_pad_record_001B5BC0 and the bindings' w_001B5BC0 (lane PORT-DEMO) | The demo's recorded pad: record a0 of demo D_00275BD4 from D_0028A6AC (module 0x36) into D_00810E70..76, E64, E65, E57. No original-instruction oracle; the original's capture checks it: the fed pad equals the capture on every compared record of demos 0 and 2 (`make test-attract-demo`, docs/ATTRACT_DEMO.md) |
 | 0x001AE900 | boot | 324 | frame_main | boundary | em_frame.c frame_screen_fade_draw and em_fade (the native fade layer) | The boot's build of the 2x2 letterbox / fade display blocks at D_0028A7B0 (GS packets) and their counters: the native renderer draws the same two 32-line bands |
 | 0x001AEA50 | boot | 268 | frame_main | boundary | the same | Called only by the boot reset 001AB430 (from 001AAE40's start-up). The build of the two fade GIF packets at D_0028A8E0 and the zeroed fade state D_0028A9A0..A4 (the native fade starts clear), then 001AE900 |
 | 0x0011DB10 | boot | 72 | lowmem | boundary | the host C library; em_options_live's sprintf 00122D10 (conversions d and s only, any other faults) | newlib isinf, called only by the SDK's vfprintf 00123750 (class C) for a float conversion; no game format the port serves has one |
@@ -83,19 +84,101 @@ already tested.
 
 ## 3. Remaining player-visible gaps of this lane (next steps)
 
-1. **The title's OPTIONS (00200A40)**: done by lane PORT-OPTIONS (section 4
+1. **The title's OPTIONS (00200A40)**: done by lane PORT-OPTIONS (section 5
    below; OPTIONS.md section 4.5). Left: its moving background (0020A7A0)
-   draws black on the boot title, see section 4.
-2. **The attract demo (001ACA20, 001ACE70)** shows black. Porting it means
-   running AREA06 / AREA13 / AREA03 from the demo's seeds with the recorded
-   pad of 001B5BC0 (census group input_io) for 0xE10 frames.
+   draws black on the boot title, see section 5.
+2. **The attract demo (001ACA20, 001ACE70)** is ported (lane PORT-DEMO,
+   docs/ATTRACT_DEMO.md). Open: demo 1 (AREA13) faults at record 1436 in
+   aim/fire 00183AC0 and keeps the black stand-in; demo 0 (AREA06) diverges
+   in rand() at record 2430 (the duct crawl).
 3. The boot logos (001AB9D0, 001ABC60, 001ABE10) and the movie state
    (001AC3B0) are translated without an original run: an oracle in the style
    of test-title-menu-reference (which runs 001AC480 against em_startup) would
    make them verified. The same oracle could execute 0022A460 against
    em_memcard's answers.
 
-## 4. Lane PORT-OPTIONS (2026-11-18): the title's OPTIONS
+## 4. Lane GAP-1 (2026-11-18): list (A) and the small (B) groups
+
+List (A) of the census (executed by a recording, not credited) was, apart
+from AREA00's three, translations named without their address. Each row
+names the translation, where it is bound, and the oracle. `unreachable`
+(class D) marks a function whose only static reach was a data word that is
+not a pointer. A `missing` row on an address the census saw only as a
+constant in code overrides that mechanical "bound" credit (the camera aim
+host's sight drawers: their addresses are callee addresses that
+em_camera_live's aim_call does not serve, so they fault).
+
+| Runtime | Region | Bytes | Group | Status | Port owner | Evidence |
+|---|---|---:|---|---|---|---|
+| 0x00162080 | boot | 268 | actor_anim | live | em_player_climb.c area11_vault_target, inside em_player_climb_vault_tick (00162190) | test-player-climb-reference: 00162190 runs as original code with 00162080, 0017D940, 0017DAF0, 0017DC80 and 0017DE20 unhooked inside it; the vault tick is player state 3 (em_player_closure_live set1 0x03, em_player_climb_live_state) |
+| 0x00162190 | boot | 2220 | actor_anim | live | em_player_climb.c em_player_climb_vault_tick (player state 3) | the same |
+| 0x0017D940 | boot | 420 | actor_anim | live | em_player_climb.c vault_setup form 0 | the same |
+| 0x0017DAF0 | boot | 388 | actor_anim | live | em_player_climb.c vault_setup form 1 | the same |
+| 0x0017DC80 | boot | 404 | actor_anim | live | em_player_climb.c vault_setup form 2 | the same |
+| 0x0017DE20 | boot | 140 | actor_anim | live | em_player_climb.c vault_step | the same |
+| 0x00162A40 | boot | 876 | actor_anim | live | em_player_recovery.c em_player_recovery_hang_entry (em_player_recovery_state4, set1 0x04) | test-player-recovery-reference: 00162A40 (HANG) executed and compared; state4 equals the direct routine on the record |
+| 0x001645D0 | boot | 508 | actor_anim | unverified | em_player_closure_ledge.inc hang_up_state (set1 0x0A) | Read from the byte-matched C; no original-instruction run. The user's run1 reaches it at vsync 120001 and plays to its end in the port (watch_takes), positions compared per tick |
+| 0x00180004 | boot | 60 | actor_anim | live | em_player_closure_0e_18.c em_player_closure_00180000 (00180000's body) | test-player-closure-0e-18-reference executes 00180000/00180004 |
+| 0x00187EA0 | boot | 20 | frame_update | live | em_player_floor.c em_player_first_contact case 0x5C; bound in em_player.c (live_contact_001FB9F0) | test-player-floor-reference: the first-contact one-shots 00187DC0 / 00187EA0 executed |
+| 0x001CB070 | boot | 184 | anim_runtime | unverified | em_area01_model_draw.c (method 0x001CB130: +0x80..+0x88 = 1.0) then em_owner_draw_live_method (mode 4, 001C7420, the 001D40E0 list, RET, 001CAAC0) | The kind-9 unit's VU1 program is checked against the original microcode (test-object-method-reference); the EE packet build has no original-instruction run. Live in AREA19 (g11) |
+| 0x00825040 | AREA04 | 376 | overlay AREA04 | live | em_level16_boot.c a04_825040, called by a04_824EF0 (em_level16_boot_a04_00824EF0, bound for D_00810700 == 4 in em_scene_bindings) | test-level16-boot-reference runs 0x825040 inside its caller 0x824EF0 |
+| 0x008251C0 | AREA04 | 180 | overlay AREA04 | live | em_level16_boot.c a04_8251C0 (the same caller) | the same |
+| 0x00825280 | AREA04 | 656 | overlay AREA04 | live | em_level16_boot.c a04_825280 and a04_825310 (the slot holds two functions; em_level16_boot_a04_00825310 bound for area 4) | test-level16-boot-reference runs 0x825280 inside 0x825310 |
+| 0x00823C20 | AREA07 | 380 | overlay AREA07 | live | em_area08_route.c em_area08_route_a07_00823C20 (half_both, called by the terminal 0x823990, bound in em_area01_runtime_area08.inc and em_scene_bindings for area 7) | test-area08-route-reference FUNCS07 executes 0x823C20 |
+| 0x008247C0 | AREA00 | 8 | overlay AREA00 | missing | none | The empty callback 0x8247D0 stores in its record (+0x34). On the AREA00 boss chain (g34), lane a00boss2 |
+| 0x008247D0 | AREA00 | 992 | overlay AREA00 | missing | none (not in area01_rebind's sub-2 list) | A debris behaviour of the boot prototype table (0x2593AC): matrix, velocity through it, two packets, stops on 0019A570. Executed in g34; lane a00boss2 |
+| 0x008260B0 | AREA00 | 64 | overlay AREA00 | missing | none | Script 0x82B080's op09 record 0x82B400 callback: two 001EFD20 registrations, returns 1. Executed in g34; lane a00boss2 |
+| 0x0017D080 | boot | 1920 | actor_anim | live | em_player_recovery.c em_player_recovery_ledge_catch, bound as 00162DB0's test_0017D080 worker (em_player_closure_live w_ledge_catch) | test-player-recovery-reference CATCH executes 0017D080 |
+| 0x001DEDF0 | boot | 140 | weapon_equip | live | em_render_context.c em_render_context_001DEDE0 (the jump target written inline), run at the render context's load (em_render_context_live) | test-render-context-reference executes 001DEDE0, which jumps into 001DEDF0 |
+| 0x001B5790 | boot | 76 | input_io | boundary | the platform pad layer and em_input (the 001B5940 pad-block translation) | 001AAE40's start-up only (before the frame loop): libpad port open and the pad record's initial bytes; the port's pad block starts from em_input's own model |
+| 0x001B5860 | boot | 216 | input_io | boundary | the same | Called only by 001B5790 |
+| 0x001F9780 | boot | 148 | unknown_03 | boundary | the host audio thread (em_sfx / em_audio) | 001AAE40's start-up: creates and starts the sound thread (entry 001FB0C0) |
+| 0x00225CC0 | boot | 48 | ui_screens | boundary | the port's zeroed card-screen record (em_card_original) and host file reads | 001AAE40's start-up: clears D_00810040 (0xD4 bytes) and starts the CD stream service 001FE910 (class C) |
+| 0x002032C0 | boot | 144 | iop_services | boundary | host file reads of the exported assets (em_frontend's file table note) | Called only by the CD stream service 001FEE60 (class C): fills the 9-entry disc file table D_00821010 through the IOP |
+| 0x0021B860 | boot | 128 | area_state | boundary | em_render_context_live.c load (RENDER_CONTEXT.md section 8) | The boot builder's fog pair and the +0xA0 copies; the area load rewrites them before a bound routine reads them (the +0x100 copy is read only by 001D2730(0, 0)) |
+| 0x00140004 | boot | 1080 | entity_logic | unreachable | none needed | Its only static reach is three overlay words (AREA03 0x827A20, AREA04 0x82A680 / 0x82B5B0) that sit right after a placement record's behaviour pointer: record fields (halfwords 4 and 0x14), not a pointer. No call or code constant reaches it |
+| 0x00199770 | boot | 592 | init_io | missing | none: em_camera_aim calls it (FN_99770) and em_camera_live's aim_call faults | The missile-launcher sight's companion (D_00810CA4 == 2) |
+| 0x001DB830 | boot | 404 | weapon_equip | missing | the same (FN_DB830) | Sight set-up for the missile launcher and the night-vision sight |
+| 0x001DB9D0 | boot | 724 | weapon_equip | missing | the same (FN_DB9D0) | Sight set-up for modes 0 / 1 and the tactical sight |
+| 0x001DBCB0 | boot | 148 | weapon_equip | missing | the same (FN_DBCB0) | The tactical sight's zoom read-out |
+| 0x001DBD50 | boot | 208 | weapon_equip | missing | the same (FN_NIGHT) | The night-vision sight (D_00810CA7 == 9) |
+| 0x001DBE20 | boot | 212 | weapon_equip | missing | the same (FN_MISSILE) | The missile-launcher sight (D_00810CA4 == 2) |
+| 0x001DBF00 | boot | 280 | weapon_equip | missing | the same (FN_DELTA) | The auto-sight (D_00810CA4 == 0) |
+| 0x001DC020 | boot | 1512 | weapon_equip | missing | the same (FN_DC020) | Mode 0's zoom drawing |
+| 0x001DC610 | boot | 636 | weapon_equip | missing | the same (FN_DC610) | Mode 1's sight |
+| 0x001DC890 | boot | 204 | weapon_equip | missing | the same (FN_DC890) | Mode 1's zoom drawing |
+| 0x001DC960 | boot | 992 | weapon_equip | missing | the same (FN_TACTICAL) | The tactical sight (D_00810CA7 == 8) |
+| 0x001DCD40 | boot | 504 | weapon_equip | missing | none | 2D lines of the night-vision and missile sights (001D1F80, then 00207F80 per line) |
+| 0x001DCF40 | boot | 168 | weapon_equip | missing | none | 2D marks of the night-vision and tactical sights |
+| 0x001DCFF0 | boot | 376 | weapon_equip | missing | none | The scope ring (002082B0) of the auto-sight and mode 1 |
+| 0x001E3620 | boot | 8 | weapon_equip | missing | none | The empty callback 001E3630 stores |
+| 0x001E3630 | boot | 1764 | weapon_equip | missing | none | The beam of the kind-0x0D prototype table (0x258740); no placement record names it and its runtime spawner is unknown (decomp CURIOSITIES) |
+| 0x001ECE70 | boot | 124 | hud_objects | missing | none: em_effects_live faults at an untranslated handler | Effect handler (its word at 0x2554B4 in the boot handler table) (001CFB50, then 001CFBE0) |
+| 0x001EE830 | boot | 868 | hud_objects | missing | the same | Effect handler (its word at 0x255574): a periodic particle re-seed, sibling of 001EF1C0 (translated in em_level14_port) |
+| 0x00823590 | AREA07 | 988 | overlay AREA07 | missing | none | A debris behaviour of the boot prototype table (0x25955C), AREA07's twin of AREA00's 0x8247D0 |
+| 0x001F1AA0 | boot | 808 | fx_render | missing | none | The behaviour of boot prototype record whose behaviour word is at 0x25850C: a random spread of particles (seed * 37 + 11) |
+| 0x001B9FF0 | boot | 144 | math_vector | missing | none | The function word at 0x24D8A0 of a boot command table: turn toward the player when the command's +8 is 1 (001B1240, 001B12B0) |
+| 0x001B73A0 | boot | 708 | unknown_02 | missing | none | The function word at 0x24D8E4 of a boot command table: a scripted animation / aim step (ids 0..5; id 2 turns the entity and starts a clip) |
+
+### 4.1 What remains (next steps)
+
+1. **The weapon sights (14 functions, ~7.0 KB).** Aiming with the
+   auto-sight, the missile launcher, mode 1, the tactical sight or the
+   night-vision sight runs em_camera_aim's 001999C0, whose drawers
+   em_camera_live's aim_call does not serve: the port faults
+   ("aim camera callee ... has no binding"). The census had credited them
+   as bound because their addresses are constants in em_camera_aim.c. They
+   are 2D draws (00207F80 lines, 002082B0 rings) through the em_gfx 2D
+   layer; the next lane translates them with an oracle and serves them in
+   aim_call.
+2. AREA00's 0x8247C0 / 0x8247D0 / 0x8260B0 are on the boss chain (g34):
+   lane a00boss2.
+3. Effects and prototypes never seen in a recording: 001ECE70, 001EE830,
+   001F1AA0, AREA07 0x823590, 001E3630 (with 001E3620), and the script
+   commands 001B9FF0 / 001B73A0. Each faults where it would be reached.
+4. 001645D0 and 001CB070 are translated but have no original-instruction run.
+
+## 5. Lane PORT-OPTIONS (2026-11-18): the title's OPTIONS
 
 00200A40 and its list 00201290 are translated (rows in section 1) and bound;
 the title's OPTIONS now opens, walks its seven rows, opens each page, changes

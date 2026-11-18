@@ -36,7 +36,7 @@ static float f_bits(uint32_t bits) { return em_ee_float(bits); }
 
 /* ---- The SDK vector routines 0019ED80 and 001A4030 call (VU0 macro) ------- */
 
-static int vu(em_vu_op op, unsigned dest, int bc, const float fs[4], const float ft[4], float dst[4])
+static inline __attribute__((always_inline)) int vu(em_vu_op op, unsigned dest, int bc, const float fs[4], const float ft[4], float dst[4])
 {
     uint32_t s[4], t[4], d[4];
     memcpy(s, fs, sizeof s);

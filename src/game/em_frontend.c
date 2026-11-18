@@ -56,6 +56,10 @@ static struct {
     int switch_boot;     /* EM_NEW_GAME=1 booted without the title */
     unsigned cursor;
     uint32_t attract_serial;
+    int attract_demo;      /* D_00275BD4 of the running demo (the event's id) */
+    int attract_exit;      /* state 3 left this tick: its 001FBC50 / 001D2880 */
+    int attract_exit_seen; /* EM_STARTUP_TEST=attract: a demo has ended */
+    int attract_ended;     /* EM_STARTUP_TEST=attract: demos ended so far */
     unsigned movie_frames;
     uint64_t movie_picture;
     double movie_pts;
@@ -105,6 +109,7 @@ static uint32_t le32(const unsigned char *p)
 }
 
 static void load_test_block(const char *when);
+static int attract_test(void);
 static void load_pad_release(void);
 
 static void fail(const char *message)
@@ -344,7 +349,7 @@ static int movie_pump(void *unused)
      * player's to watch or skip. */
     if (!f.reinstalled && ((f.start_at && !f.new_game_movie) ||
                            (f.test && (strcmp(f.test, "skip") == 0 || new_game_test(f.test) || f.load_test ||
-                                     options_test()))) &&
+                                       attract_test() || options_test()))) &&
         f.movie_pts >= 2.0)
         held |= EM_PAD_START;
     /* EM_NEW_GAME=1: START is held from the movie's first picture, so the
@@ -416,17 +421,78 @@ static int native_storage_ready(void)
     return em_memcard_boot_check();
 }
 
-/* anim_frame_top_a states 0/1/3/4 return 2 while D_00810E70 & 0x9F0
- * (EM_STARTUP_ATTRACT_EXIT); 001AC070 state 3 then tears down and
- * re-enters the title. The demo's other exits (0xE10 demo frames,
- * 001ACE70, death/pause at fade 2) need the demo itself. */
-static void attract_abort(void)
+/* 001AC070 state 3: one anim_frame_top_a (001ACA20, em_scene_attract_001ACA20
+ * over this task's record) per tick; 2 (a button of 0x9F0 held, or 001ACE70)
+ * or 3 (the 0xE10 recorded pads played, or the world's request at fade 2)
+ * ends the demo, and em_startup leaves state 3 (docs/ATTRACT_DEMO.md). */
+/* EM_STARTUP_TEST=attract (tools/test_attract_demo.py): the boot's title
+ * idles into the demo; one row per 001ACA20 call; EM_ATTRACT_EXIT_AT=N holds
+ * CROSS (0x40 of the held word the gate reads) at the call whose record
+ * counter +0x16 is N; the run quits when the title is back. */
+static int attract_test(void) { return f.test && strcmp(f.test, "attract") == 0; }
+
+static int attract_rc = -100; /* this frame's 001ACA20 result; -100: no call */
+
+/* The frame tail (em_frame_set_frame_tail): the row of this frame's call,
+ * after the frame's fade step, as the capture reads it at the loop top. */
+static void attract_row_tail(void)
 {
-    if (!f.attract_serial ||
-        !(em_frame_input()->held & EM_STARTUP_ATTRACT_EXIT)) return;
+    if (attract_rc == -100) return;
+    int rc = attract_rc;
+    attract_rc = -100;
+    const EmTask *t = em_task_slot(0);
+    const EmSceneState *sc = em_scene_state();
+    const EmPadUnpack *pad = em_frame_pad_block();
+    char task[64] = "";
+    for (int i = 0; t && i < 16; ++i)
+        snprintf(task + 2 * i, sizeof task - 2 * (size_t)i, "%02x", t->user[i]);
+    printf("attract row demo %d task %s area %02x%02x%02x%02x pad %04x %02x %02x %02x pos %.5f %.5f %.5f "
+           "yaw %.5f fade %d rand %08x rc %d\n", f.attract_demo, task, sc->d810700, sc->d810701, sc->d810702,
+           sc->progress.bytes[3], pad->held, pad->lx, pad->ly, pad->gait, (double)g.pos[0], (double)g.pos[1],
+           (double)g.pos[2], (double)g.yaw, (int)em_frame_transition()->substate, (unsigned)em_random_peek(), rc);
+}
+
+/* The demos the port runs (docs/ATTRACT_DEMO.md section 4): demo 0 (AREA06)
+ * and demo 2 (AREA03) play to their end. Demo 1 (AREA13) stops at its
+ * record 1436 on an aim/fire fault, so it keeps the stand-in (a black screen
+ * that serves only the state-0 gate's button exit) unless EM_ATTRACT_ALL=1
+ * (comparison runs). */
+static int attract_live(int demo)
+{
+    const char *all = getenv("EM_ATTRACT_ALL");
+    return demo == 0 || demo == 2 || (all && all[0] == '1');
+}
+
+static void attract_tick(int begin)
+{
+    if (!f.attract_serial) return;
+    if (!attract_live(f.attract_demo)) {
+        if (!(em_frame_input()->held & EM_STARTUP_ATTRACT_EXIT)) return;
+        uint32_t serial = f.attract_serial;
+        f.attract_serial = 0;
+        f.attract_exit_seen = 1;
+        em_startup_complete(&f.flow, serial, 2);
+        return;
+    }
+    if (attract_test()) {
+        const EmTask *t = em_task_current();
+        const char *at = getenv("EM_ATTRACT_EXIT_AT");
+        if (t && at && at[0] && t->user[1] == 4 && t->user[3] == 1 &&
+            (unsigned)(t->user[0x16 - 8] | t->user[0x17 - 8] << 8) == (unsigned)atoi(at))
+            em_scene_state()->d810E70 |= 0x40;
+    }
+    int r = em_scene_attract_001ACA20(f.attract_demo, begin);
+    if (attract_test()) attract_rc = r;
+    if (r < 0) {
+        fail("001ACA20: the attract demo faulted");
+        return;
+    }
+    if (r != 2 && r != 3) return;
     uint32_t serial = f.attract_serial;
     f.attract_serial = 0;
-    em_startup_complete(&f.flow, serial, 2);
+    f.attract_exit = 1;
+    f.attract_exit_seen = 1;
+    em_startup_complete(&f.flow, serial, r);
 }
 
 /* The boot resources the title reads: the composed screens and the title
@@ -795,6 +861,15 @@ static void notify(void *unused, const EmStartupEvent *event)
         em_frame_fade_start(1, event->value);
         return;
     case EM_STARTUP_AUDIO_STOP:
+        if (f.attract_exit) {
+            /* 001AC070 state 3's exit: 001FBC50, then 001D2880 (the render
+             * context); its 001AEDB0(0) is the FADE_FULL that follows. */
+            f.attract_exit = 0;
+            em_startup_audio_stop();
+            if (em_scene_bindings_001FBC50() < 0 || em_rcl_001D2880() < 0)
+                fail("001AC070 state 3: 001FBC50 / 001D2880");
+            return;
+        }
         /* 001AC3B0 state 0: 001FBC50 (em_sfx_stop_all and its two 00119828
          * calls) and 001FABB0 on the stream lanes. */
         em_startup_audio_stop();
@@ -847,11 +922,13 @@ static void notify(void *unused, const EmStartupEvent *event)
         em_game_install_new();
         return;
     case EM_STARTUP_ATTRACT:
-        /* anim_frame_top_a (the attract demo) is not ported (WP-17
-         * residue): the screen stays black and only its button exit is
-         * served, see attract_abort. */
+        /* The attract demo, D_00275BD4 = id: its first 001ACA20 call is
+         * this tick's (the state-0 gate can end it at once). */
         f.attract_serial = event->serial;
-        attract_abort();
+        f.attract_demo = event->id;
+        if (attract_test() && getenv("EM_ATTRACT_DEMO_ID"))
+            f.attract_demo = atoi(getenv("EM_ATTRACT_DEMO_ID")); /* constructed: another demo first */
+        attract_tick(1);
         return;
     case EM_STARTUP_LOAD_GAME:
         load_begin(event->serial);
@@ -1451,11 +1528,19 @@ static void startup_task(void)
     const EmFrameInput *pad = em_frame_input();
     EmStartupInput input = {pad->held, pad->pressed,
                             em_frame_transition()->substate, 0, em_scene_state()->d275BDC};
-    attract_abort();
+    attract_tick(0);
     int expected_cursor = -1;
     /* The fixtures drive the boot's title only; after a death the player's
      * pad (the level smoke's driver) drives it. */
-    if ((f.test || f.start_at) && !f.reinstalled && em_startup_view(&f.flow, &input).interactive) {
+    if (f.attract_exit_seen && attract_test() && em_startup_view(&f.flow, &input).interactive) {
+        /* EM_ATTRACT_DEMOS=N (default 1): quit once N demos have ended. */
+        const char *n = getenv("EM_ATTRACT_DEMOS");
+        f.attract_exit_seen = 0;
+        printf("startup test: attract: the title is back at engine frame %u\n", em_frame_counter());
+        if (++f.attract_ended >= (n && n[0] ? atoi(n) : 1)) em_frame_request_quit();
+    }
+    if ((f.test || f.start_at) && !attract_test() && !f.reinstalled &&
+        em_startup_view(&f.flow, &input).interactive) {
         /* End-to-end fixture: exercise the rendered menu through the same
          * state-machine input boundary as the frame's unpacked pad. */
         input.held = input.pressed = 0;
@@ -1506,7 +1591,9 @@ static void startup_task(void)
     }
     EmGfx *gfx = em_frame_gfx();
     const float black[4] = {0, 0, 0, 1};
-    em_gfx_overlay_rect(gfx, 0, 0, EM_GFX_OVERLAY_W, EM_GFX_OVERLAY_H, black);
+    /* The demo's world frame draws itself (001AE5E0 / 001AE6B0). */
+    if (!f.attract_serial || !attract_live(f.attract_demo))
+        em_gfx_overlay_rect(gfx, 0, 0, EM_GFX_OVERLAY_W, EM_GFX_OVERLAY_H, black);
     int screen = -1;
     if (view.screen >= EM_STARTUP_SCREEN_LOGO_A && view.screen <= EM_STARTUP_SCREEN_LOGO_C)
         screen = view.screen - EM_STARTUP_SCREEN_LOGO_A;
@@ -1545,7 +1632,8 @@ static void startup_task(void)
     /* The level smoke drives the title after a death with the pad (its
      * after-frame hook, as at every world frame's close-out). */
     if (f.reinstalled) em_level_smoke_test_after_frame();
-    if (view.interactive && !f.reinstalled && ++f.menu_ticks == 30 && f.test && !options_test()) {
+    if (view.interactive && !f.reinstalled && ++f.menu_ticks == 30 && f.test && !attract_test() &&
+        !options_test()) {
         unsigned required = (1u << EM_STARTUP_SCREEN_LOGO_A) |
             (1u << EM_STARTUP_SCREEN_LOGO_B) | (1u << EM_STARTUP_SCREEN_LOGO_C) |
             (1u << EM_STARTUP_SCREEN_MOVIE) | (1u << EM_STARTUP_SCREEN_TITLE);
@@ -1573,6 +1661,7 @@ int em_frontend_install_001AC070(void)
     f.texture_screen = -1;
     f.previous_screen = -1;
     f.attract_serial = 0;
+    f.attract_exit = 0;
     if (!em_task_replace_current(startup_task)) return -1;
     printf("startup: 001AC070 again (D_00275BDC = %u), engine frame %u\n",
            (unsigned)em_scene_state()->d275BDC, em_frame_counter());
@@ -1616,6 +1705,7 @@ void em_frontend_install(void)
     f.installed = 1;
     f.capture_dir = getenv("EM_STARTUP_CAPTURE_DIR");
     f.test = getenv("EM_STARTUP_TEST");
+    if (attract_test()) em_frame_set_frame_tail(attract_row_tail);
     f.load_test = f.test && strcmp(f.test, "loadgame") == 0;
     /* Test input only (EM_STARTUP_TEST runs, and a replay, whose saves must
      * not reach the player's card): the host card folder for the whole run,
