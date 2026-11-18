@@ -234,7 +234,7 @@ static int mid_area(unsigned area, unsigned sub)
      * export_area00s2_assets.py, docs/AREA14_PORT.md) keeps its folder
      * assets/area00/sub2 in the later areas' layout. */
     return (area == 0u && sub == 2u) || ((area == 0x16u || area == 6u || area == 0x0Du || area == 0x0Eu || area == 0x11u) && sub == 0) ||
-           ((area == 0x0Fu || area == 0x13u) && sub <= 1) || (area == 3u && sub <= 2) || (area == 4u && sub == 1) ||
+           ((area == 0x0Fu || area == 0x13u || area == 0x10u) && sub <= 1) || (area == 3u && sub <= 2) || (area == 4u && sub == 1) ||
            ((area == 8u || area == 7u) && (sub == 0 || sub == 2 || sub == 3));
 }
 /* AREA15 keeps one folder per sub, AREA03's subs and AREA04 sub 1 live in the
@@ -252,7 +252,7 @@ static const char *mid_file(unsigned area, const char *name)
         snprintf(out, sizeof path[0], "assets/levels/%02u/sub%u%s%s", area, s_state.d810701, name[0] ? "/" : "", name);
     else
         snprintf(out, sizeof path[0], "assets/area%02u/sub%u%s%s", area,
-                 (area == 0x0Fu || area == 8u || area == 7u || area == 0u) ? s_state.d810701 : 0u,
+                 (area == 0x0Fu || area == 8u || area == 7u || area == 0u || area == 0x10u) ? s_state.d810701 : 0u,
                  name[0] ? "/" : "", name);
     return out;
 }
@@ -2895,7 +2895,9 @@ static int arrival_scene(void)
            strcmp(g.scene_dir, "assets/area07/sub3") == 0 ||
            strcmp(g.scene_dir, "assets/area00/sub2") == 0 ||
            strcmp(g.scene_dir, "assets/area14/sub0") == 0 ||
-           strcmp(g.scene_dir, "assets/area17/sub0") == 0;
+           strcmp(g.scene_dir, "assets/area17/sub0") == 0 ||
+           strcmp(g.scene_dir, "assets/area16/sub0") == 0 ||
+           strcmp(g.scene_dir, "assets/area16/sub1") == 0;
 }
 
 /* A scene with the original's world: its collision world, live camera,

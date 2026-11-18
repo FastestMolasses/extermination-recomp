@@ -2,9 +2,9 @@
 
 Lane PORT-A16, 2026-11-17, branch `a16`. AREA16 (area byte 0x10, overlay
 id 0x0D, `OVERLAY/AREA16.BIN`; subs 0 and 1) is behind AREA06 sub 1's door
-[3] (SECOND_HALF_AREAS.md section 4). No recording of it exists, so nothing
-here has run live: the translations are proven against the original
-instructions, not against a run of the area.
+[3] (SECOND_HALF_AREAS.md section 4). The translations are proven against
+the original instructions over designed states; since lane PORT-LIVE-A16 the
+area also loads live from Claude's guided run (section "Live").
 
 ## What is translated
 
@@ -77,15 +77,90 @@ behaviours and the two op09 callbacks when the area byte is 0x10, with
 each entry's original frame (widened by the helper an owner calls); the
 hook adapters are `a16o_hooks` in `em_mid_route_bridge.inc`
 (`tools/gen_mid_route_bridge.py`). AREA16's boot behaviours already bind
-through the later areas' dispatch. AREA16 cannot load live yet: its
-`export_second_half_common.SUBS` rows, the level / collision / cells /
-textures and the CREATURES / FLAG_RULES rules (0x8273F0's 001A2370 calls,
-0x825800's 0019C6F0 calls) wait for a recording of the area
-(SECOND_HALF_AREAS.md section 2).
+through the later areas' dispatch. Its exports, cards and live run:
+section "Live".
 
 ## Open
 
-- A recording of AREA16 (none planned yet): the capture kinds, the start
-  card and the beats; then the live nodes as oracle cases.
+- The live run (section "Live"): the water grid 001DAFA0 .. 001DB480 for
+  sub 0, a live 001BAD40 worker for sub 1's booth, g66's divergence; then
+  the guided states' live nodes as oracle cases.
 - 0x823580's group records: the +0x94 values they carry.
 - The five unreached effect functions (above).
+
+## Live (lane PORT-LIVE-A16, 2026-11-17)
+
+Branch `live-a16`. AREA16 loads live in the shared composition from start
+cards made of Claude's guided run (the pattern of AREA17_PORT.md "Live").
+One sub-1 beat passes its end check; sub 0 stops at an untranslated boot
+function on its first frame.
+
+**Capture source.** `tools/capture_from_take.py --set
+guided-20261117/s87/route_g16 g59_area01_area06 .. g67_area16_out` (decomp
+`build/fork_refs/`, ignored, disc-derived): each folder is a take's END.
+g59 ends in AREA06 sub 1 (the capture before sub 0's load); g60 (the
+arrival, at control) and g61 (the water barrier passed) end in sub 0; g62
+.. g66 end in sub 1 (one load: the room moves between them keep it, and the
+load map cursor 0x13C9280 is the same in all five); g67 ends in AREA06.
+
+**Exports** (`export_second_half_common`):
+- SUBS[('area16', 0)] = g60, g61, previous g59; SUBS[('area16', 1)] = g62
+  .. g66, previous g61.
+- CREATURES 0x8273F0 with its own matrix rule (MATRIX_RULES, which
+  replaces MATRIX_AT_NODE): the C passes D_00275B40[2] + 0x90 with
+  D_00275B40 a char ** = node + 0x110, so the word at node + 0x118 plus
+  0x90 (not export_area13_level's node + 0x11C). With it the original
+  001A2370 reproduces hull 14 byte for byte in g60 and g61 (node + 0xD0 and
+  node + 0x90 do not). The rule is installed as export_area13_level's own
+  owner_matrix, so the level kind's install() keeps it (a wrap of
+  export_area01_level's, as PORT-LIVE2 had it, was undone by that call).
+- FLAG_RULES `area16_flag_calls` from 0x825800's C (the only 0019C6F0
+  caller; the only writer of D_0081078B): with D_0081078B not 0xFF before
+  the load, a live node in state 1 made (0x28, 1), one in state 0xC8 or 2
+  made (0x28, 1), (0x28, 0); with 0xFF before it, state 2 and no call;
+  anything else refused. g60: state 1; g61: state 2 (D_0081078B 0 in g59).
+- EXPLICIT_MODELS: [11] 0x8261A0 state 2 = model 0x10 (its state 1 sets it
+  through 001CA6E0 and leaves +0x0D 0xF); 0x828200 state 1 = the last id of
+  the part table its +0x0D selects (6: 0x82C2A0 [3]; 0x25: 0x82C2F0 [3];
+  0x14: 0x82C340 [15]): it draws every part through 001CA5E0, so +0x44 is
+  the last part's model at a frame's end. export_area13_tables takes a
+  callable model id for that.
+- `--kind all` passes for both subs: sub 0 610 objects, dynamic list 44
+  entries, cells 24 uids (moved 14, 18, 19); sub 1 723 objects, dynamic
+  list 24 entries, cells 69 uids, no flag call; roster 18 / 73 placements,
+  10 script chains, messages, world models 26 / 55, sound (group 3 bank 0
+  is the fitted attachment's in both subs; sub 0's 4.2 is a freed handle).
+  `--kind place`: assets/area16/, 41 files.
+- Profile 16 (level_asset_profiles, subs 0 and 1): world textures (379 /
+  533 fixed, 2 / 5 exact GS freezes), shadow receivers (610 / 723), player
+  texture variants (captures with AREA16's overlay resident). These
+  exporters refuse an asset tree holding a symlink: in a linked worktree
+  they ran over an empty assets/ and the result was moved in.
+- sfx scopes (0x10, 0), (0x10, 1) after AREA17's; export_streams adds
+  AREA16 (D_00264DD0[0x11], its spawn music).
+
+**Runtime.** Area 0x10 as a mid area with both subs (assets/area16/sub0,
+sub1) and a later area for the boot dispatch, bound by
+em_area01_runtime_bind_area; 001BAC00's data window 0x828480 .. 0x82C500;
+the arrival scene list, shadow receivers and world textures of profile 16.
+
+**Start cards** g61 .. g67 (`build_start_saves.py`, the source state of
+each take; `em_start_at.c`), beats g61 .. g67 in `mid_route_beats.py`.
+
+**Where it stands** (`python3 tools/mid_route_beats.py --single <beat>`):
+- g63 (sub 1 entry 0: the slider, the stairs, door [3], the recharger [6],
+  back out) PASSES: the run from the card ends at the recording's end
+  position (116.8, 123.5, 160.5), area 10 01 06, with the progress block
+  D_00810700 equal to the original's (the beat's end check; rows are not
+  compared frame by frame).
+- g61 (and g62, the same sub-0 load) fail-stops on its first frame: [10]
+  0x825800's state 0 calls 001DAFA0, the water grid's init. The family
+  001DAFA0, 001DB240, 001DB250, 001DB040 (NEARMISS), 001DB480 (the grid's
+  GS display list, twin of 001DDE10) and 001DAE10 has no port translation.
+- g64 fail-stops at 001BAD40, called by 0x824E10 (the booth's group
+  owner): em_sdf_001BAD40 exists, but only AREA11's opening binds it (with
+  its own workers); there is no live worker for an overlay owner's node.
+- g66 diverges: at pad frame 1000 the player has health 25, then the game
+  returns to the title (001AC070 again, engine frame 3950) and the beat
+  times out (900 s). Not investigated.
+- g65 and g67 were not run.

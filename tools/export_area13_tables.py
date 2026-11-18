@@ -205,7 +205,8 @@ def run_time_words(disc, base, ram, records, writers=None):
 # 0x826850 in state 2 (func_overlay_AREA13_00826810.c: when its script ends it
 # sets the model func_001C6120(D_0028A59C, 0xD) through 001CA6E0 and leaves
 # +0x0D as it was). {behaviour: (state, model id)}; checked by
-# explicit_model_problems instead of the generic rule.
+# explicit_model_problems instead of the generic rule (a callable model id
+# takes (ram, node)).
 EXPLICIT_MODELS = {0x826850: (2, 0xD)}
 
 
@@ -227,6 +228,8 @@ def explicit_model_problems(ram, name):
     table = C.u32(ram, 0x28A59C)
     for slot, a in explicit_model_nodes(ram):
         ident = EXPLICIT_MODELS[C.u32(ram, a + 0x10)][1]
+        if callable(ident):                # a model id the node's own fields select (ram, node) -> id
+            ident = ident(ram, a)
         model = table + (C.s32(ram, table + 4 + 4 * ident) >> 2 << 2)
         if C.u32(ram, a + 0x44) != model:
             out.append(f'{name} slot {slot}: +0x44 != 001C6120(table, {ident:#x})')
