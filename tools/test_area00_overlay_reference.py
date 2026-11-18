@@ -161,6 +161,12 @@ FUNCS = {
     0x823C50: ('em_area00_ovl_00823C50', 0xA0, 'owner_sp'),
     0x823E10: ('em_area00_ovl_00823E10', 0xA0, 'owner'),
     0x823CF0: ('em_area00_ovl_00823CF0', 0x120, 'owner'),
+    # the arc effect node (lane PORT-A00-BOSS2)
+    0x824BB0: ('em_area00_ovl_00824BB0', 0x248, 'owner_sp'),
+    # census (A) entries g34 reaches: the shot node, its empty +0x34 routine, 0x8260B0
+    0x8247C0: ('em_area00_ovl_008247C0', 0x8, 'owner'),
+    0x8247D0: ('em_area00_ovl_008247D0', 0x3E0, 'owner_sp'),
+    0x8260B0: ('em_area00_ovl_008260B0', 0x40, 'op09'),
 }
 # 0x825E80 and 0x825FC0 are 0x825D70's (it calls them); they have no
 # placement of their own, so their capture cases are 0x825D70's nodes.
@@ -244,6 +250,10 @@ HOOKS = [
     ('w_001EFD90', 0x1EFD90, [(I, 4), (U, 5), (U, 6)], None),
     ('w_00102C58', 0x102C58, [(U, 4), (U, 5), (U, 6)], None),
     ('w_001D04B0', 0x1D04B0, [(U, 4), (I, 5), (U, 6), (F, 12), (F, 13)], None),
+    ('w_00102BB0', 0x102BB0, [(U, 4), (U, 5), (F, 12)], None),
+    ('w_001CFB50', 0x1CFB50, [(U, 4), (I, 5), (U, 6), (F, 12), (F, 13), (F, 14), (F, 15), (F, 16)], None),
+    ('w_001CFAE0', 0x1CFAE0, [(U, 4), (I, 5), (U, 6), (F, 12), (F, 13), (F, 14), (F, 15)], None),
+    ('w_0019A570', 0x19A570, [(U, 4), (U, 5), (I, 6), (I, 7)], I),
 ]
 # Stack bytes a function writes itself and a callee then reads: appended to
 # that callee's arguments at its first call in the entry (both sides), as
@@ -260,7 +270,7 @@ BY_ADDRESS = {address: (name, args, result) for name, address, args, result in H
 # Callees that run as original code inside the oracle (writes replayed to
 # the native side). Pure helpers only: none of them reaches hardware.
 RUN = {0x1026A0, 0x1028B8, 0x1028D0, 0x102948, 0x102958, 0x1029C0, 0x122BB8, 0x1281C0, 0x1BA1A0, 0x1CFA60,
-       0x102738, 0x102760, 0x102C58}
+       0x102738, 0x102760, 0x102C58, 0x102BB0}
 
 # The two dispatchers' step tables (runtime addresses), keyed by the
 # runtime address of their jump.
@@ -1979,6 +1989,51 @@ def targeted_sub2(add):
     for rnd in (0, 1, 0x7FFFFFFF, -1, -0x80000000):
         add('s2 puff rand %X' % (rnd & MASK), beat, 0x823CF0, [spark], pbase + [(spark + 4, b8(0))],
             queues={0x122BB8: [rnd]}, run_set=RUN - {0x122BB8})
+    # 0x824BB0, the arc effect node: every state, the scale around the 2.0 end, seeds and random words
+    abase = [(spark, b8(1)), (spark + 0x10, w32(0x824BB0))]
+    for state in (0, 1, 2, 3, 5):
+        add('s2 arc s%d' % state, beat, 0x824BB0, [spark, STACK_TOP], abase + [(spark + 4, b8(state)),
+            (spark + 0x1F0, f32b(0.5)), (spark + 0x1F4, w32(7)), (spark + 0x1F8, w32(0x12345678))])
+    for scale in (0.2, 1.988, 1.9879999, 1.9880001, 2.0, 2.5, -3.0):
+        for seed in (0, 0xFFFFFFFF, 0x7FFF0000, 0x80000000):
+            if scale != 1.988 and seed:
+                continue
+            add('s2 arc %r %X' % (scale, seed), beat, 0x824BB0, [spark, STACK_TOP], abase + [(spark + 4, b8(1)),
+                (spark + 0x1F0, f32b(scale)), (spark + 0x1F8, w32(seed))])
+    for rnd in (0, 1, 0x7FFFFFFF, -1, -0x80000000):
+        add('s2 arc rand %X' % (rnd & MASK), beat, 0x824BB0, [spark, STACK_TOP], abase + [(spark + 4, b8(0))],
+            queues={0x122BB8: [rnd]}, run_set=RUN - {0x122BB8})
+    # 0x8247D0, the shot node (link +0x14 = the spark node): states, t around the 1.0 cap and the 1.2
+    # end, t2 around 1.5, the wall test's result, seeds; 0x8247C0 and 0x8260B0
+    shot = free_node(ram)
+    tbase = [(shot, b8(1)), (shot + 0x10, w32(0x8247D0)), (shot + 0x14, w32(spark)),
+             (shot + 0xB0, struct.pack('<4f', -94.0, -47.5, -1543.0, 1.0)),
+             (shot + 0xC0, struct.pack('<4f', 0.25, -1.5, 0.0, 1.0)),
+             (shot + 0x1F0 + 0x20, struct.pack('<4f', 0.1, -0.2, 0.3, 1.0)),
+             (shot + 0x1F0 + 0x14, w32(0x9E3779B9))]
+    for state in (0, 1, 2, 3, 4, 5):
+        add('s2 shot s%d' % state, beat, 0x8247D0, [shot, STACK_TOP], tbase + [(shot + 4, b8(state)),
+            (shot + 0x1F0 + 0x18, f32b(0.5)), (shot + 0x1F0 + 0x1C, f32b(0.5))], queues={0x19A570: [0]})
+    for t in (0.0, 1.0, 1.0000001, 1.1933333, 1.1933334, 1.2, 1.3, -2.0):
+        for hit in (0, 1, -1, 0x100):
+            if t != 0.0 and hit:
+                continue
+            add('s2 shot t%r %d' % (t, hit), beat, 0x8247D0, [shot, STACK_TOP], tbase + [(shot + 4, b8(1)),
+                (shot + 0x1F0 + 0x18, f32b(t))], queues={0x19A570: [hit]})
+    for t2 in (0.0, 1.485, 1.4999999, 1.5, 2.0):
+        for state in (1, 2):
+            add('s2 shot t2 %r s%d' % (t2, state), beat, 0x8247D0, [shot, STACK_TOP], tbase + [
+                (shot + 4, b8(state)), (shot + 0x1F0 + 0x18, f32b(0.25)), (shot + 0x1F0 + 0x1C, f32b(t2))],
+                queues={0x19A570: [0]})
+    for seed in (0, 0xFFFFFFFF, 0x7FFF0000, 0x80000000):
+        add('s2 shot seed %X' % seed, beat, 0x8247D0, [shot, STACK_TOP], tbase + [(shot + 4, b8(2)),
+            (shot + 0x1F0 + 0x14, w32(seed))], queues={0x19A570: [0]})
+    for rnd in (0, -1, 0x7FFFFFFF):
+        add('s2 shot rand %X' % (rnd & MASK), beat, 0x8247D0, [shot, STACK_TOP], tbase + [(shot + 4, b8(0))],
+            queues={0x122BB8: [rnd], 0x19A570: [0]}, run_set=RUN - {0x122BB8})
+    for state in (0, 1, 3):
+        add('s2 shot empty s%d' % state, beat, 0x8247C0, [shot], tbase + [(shot + 4, b8(state))])
+    add('s2 8260B0', beat, 0x8260B0, [n28, n28 + 0x1F0, 0x82D1F0])
 
 
 def reachable_words(ram, entry, size):
@@ -2230,6 +2285,17 @@ def hook_contract_site(site):
         restore(buffers, ram, spad, replay, oracle)
     for target in targets:
         if isinstance(target, tuple):   # ('bytes', entry)
+            if not flat:   # an entry with no memory access (0x8247C0, 0x8260B0) never asks `bytes`
+                replay, status, fault, result = run()
+                plain = replay.i
+                restore(buffers, ram, spad, replay, oracle)
+                replay, status, fault, result = run(null='bytes')
+                got = (status, fault.address, fault.code, replay.i)
+                if got != (0, 0, 0, plain) or replay.errors or replay.broken or replay.requests:
+                    problems.append((label, 'bytes NULL (no access)', 'want', (0, 0, 0, plain), 'got', got,
+                                     replay.errors[:1]))
+                restore(buffers, ram, spad, replay, oracle)
+                continue
             replay, status, fault, result = run(null='bytes')
             expect('bytes NULL', replay, status, fault, result, (-1, flat[0][1], 5, flat[0][0]))
             restore(buffers, ram, spad, replay, oracle)

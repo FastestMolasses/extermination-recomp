@@ -181,6 +181,14 @@ typedef struct {
     /* the effect node 0x823CF0 (effect 1, which 0x823C50 spawns) */
     int (*w_00102C58)(void *ctx, uint32_t dst, uint32_t a, uint32_t b);
     int (*w_001D04B0)(void *ctx, uint32_t matrix, int32_t count, uint32_t table, float f12, float f13);
+    /* the arc effect node 0x824BB0 */
+    int (*w_00102BB0)(void *ctx, uint32_t dst, uint32_t src, float angle);
+    int (*w_001CFB50)(void *ctx, uint32_t dst, int32_t a1, uint32_t matrix, float f12, float f13, float f14,
+                      float f15, float f16);
+    /* the shot node 0x8247D0 */
+    int (*w_001CFAE0)(void *ctx, uint32_t dst, int32_t a1, uint32_t matrix, float f12, float f13, float f14,
+                      float f15);
+    int (*w_0019A570)(void *ctx, uint32_t a0, uint32_t a1, int32_t a2, int32_t a3, int32_t *result);
 
     /* ---- the actor's own callback: the function at actor +0x4C, called with the actor */
     int (*w_callback)(void *ctx, uint32_t function, uint32_t actor);
@@ -229,6 +237,18 @@ int em_area00_ovl_00823C50(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp
 int em_area00_ovl_00823E10(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
 /* The effect node 0x823CF0 (effect 1, the one 0x823C50 spawns through 001EFD90). */
 int em_area00_ovl_00823CF0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
+/* The arc effect node 0x824BB0: a 0x60-byte packet local in its frame
+ * (sp - 0x60), which only its callees 001CFB50 / 001CFBE0 read and write. */
+int em_area00_ovl_00824BB0(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault);
+/* 0x8247C0: an empty routine (the shot node's +0x34). */
+int em_area00_ovl_008247C0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
+/* The shot node 0x8247D0: a 0x60-byte packet local in its 0xB0-byte frame
+ * (sp - 0x60), which only its callees 001CFAE0 / 001CFBE0 read and write. */
+int em_area00_ovl_008247D0(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault);
+/* 0x8260B0: 001EFD20(0x8000005D, 0x82B780), 001EFD20(0x80000004, 0xAC2D40);
+ * *result = 1. The original takes no arguments; a0..a2 are the caller's. */
+int em_area00_ovl_008260B0(const EmArea00OvlHooks *h, uint32_t a0, uint32_t a1, uint32_t a2, int32_t *result,
+                           EmArea00OvlFault *fault);
 /* Script 0x82D070's op09 callback 0x826CB0 (a0 = [28]): its +0x2EC = 2 (the
  * count to 824 starts), *result = 1. */
 int em_area00_ovl_00826CB0(const EmArea00OvlHooks *h, uint32_t a0, uint32_t block, uint32_t a2,

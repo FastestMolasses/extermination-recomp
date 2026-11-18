@@ -300,3 +300,35 @@ ticks in the original and 360 in the port. That wait ends with the message start
 0x827330: 13 voiced lines whose D_008106F4 goes 2 -> 1 -> 0 per line (the original's start latencies
 11, 24, 71, 16, 55, 15, 13, 34, 11, 40, 11, 22 and 35 ticks), then a 177-tick tail. Which of those the
 port shortens (the drive-timing switch's start latency or the tail) was not traced.
+
+**Segment 914 closed, the boss's camera next (lane PORT-A00-BOSS2, 2026-11-18).** The op14 nodes'
+pose is not the cause: a hidden fork replay of g33 (table of nodes 0x7B87C0 .. 0x7BA240 and their
+bone records 0x7EB900.., every tick to 2130) against a port trace of the same eight nodes gives the
+same state, clip frame, scale (+0x18 / +0x1C / +0x20) and position (+0xC0..) on every tick 1908 ..
+2129; D_00275B40 is node + 0x110 at each call (area01_select's 001CB5B0). The scale stays 0 until
+the clip reaches frame 240 (take tick 2090 for 0x823C50's nodes). The stop was 001F00A0 itself:
+now bound (AREA00_OVERLAY_PORT.md "001F00A0 in the live composition"), its first call in the port
+falls on the original's first (take tick 2416 in the table's numbering, 2415 in the probe's). With
+0x824BB0, 0x8247D0, 0x8247C0 and 0x8260B0 translated and bound (same doc, "The arc, the shot and
+0x8260B0"):
+
+Chain now: segments 0 .. 914 exact but for segment 454's last tick (364,513 ticks compared, 363,640
+on the recording); segment 914 (g33's boss cutscene, 827 ticks) is exact. **Next divergence**:
+segment 915 (g33 `area00_boss` gameplay, AREA00 sub 2, original counter 378,961) leaves at offset 5
+(0.00 away, heading 0.036 off) because the camera faults at 00194DB0: 0018B9C0's area arm calls it
+for AREA00 when D_00810701 == 2 and D_00810803 == 3 (the boss fight), and em_camera_live leaves
+`w_00194DB0` NULL (fail-stop). 00194DB0 is byte-matched C in the decomp (the arena camera: the yaw
++0xAC eased toward a goal from the player's z through 001B12B0, the eye on a circle round (-142,
+-1577), then 0018C0C0, 0018D7B0(5), 0018C6A0, 0018C4B0); it needs a translation with an
+original-instruction oracle (em_area06_port's 001944B0 is the pattern: its hooks already cover
+every callee but 0018C0C0).
+
+**Segment 454's two ticks, traced.** Per line of the 13-line message (the byte at 0x8106F5 goes
+2 -> 1 -> 0 in both; D_002821B4 2 at the end) the original's start latencies are 11, 24, 71, 16,
+55, 15, 13, 34, 11, 40, 11, 22, 35 and the port's 10, 22, 72, 15, 55, 15, 13, 34, 10, 38, 10, 20,
+37 (-7 in all); the lines then play 0, +2, 0, +1, 0, 0, 0, 0, +1, +2, +1, 0, -2 ticks longer in the
+port (+5); the 177-tick tail is equal. Both are the stream drive: watch_takes and guided_chain
+already run with EM_PS2_DISC_DRIVE_TIMING=1, and the drive model serves one seek value per
+distance class, while the original's per-read busy polls vary (IOP_STREAM.md "Drive replay").
+Exact timing needs a drive replay of the guided takes (tools/record_drive_replay.py's sampling of
+001FA0D0 on each take's fork replay, then EM_PS2_DRIVE_REPLAY in watch_takes); not done.

@@ -13,6 +13,7 @@
 int em_area01_effects_services_call(const EmArea01RuntimeHost *host, EmArea01Call *call);
 typedef struct {
     uint32_t function, id, f12;
+    uint32_t owner;   /* 001F00A0's a3, stored at node +0x38 */
     int has_position;
     float position[4], rotation[4];
     /* 001EFEB0(id, m) (byte-matched C): 001EF9D0(id, m + 0x30, 1.0) and,

@@ -32,6 +32,21 @@ int em_area01_effects_services_prepare(const EmArea01RuntimeHost *h, const EmAre
         s->has_position = 1;
         return 0;
     }
+    if (c->function == 0x001F00A0u) {
+        /* 001F00A0(id, pos, dir, owner) (byte-matched C; em_area00_fx's
+         * translation is the oracle-checked one): 001EF9D0(id, pos, dir +0xC)
+         * and, with a node, the quadwords node +0xB0 = pos and +0xC0 = dir,
+         * then the words +0xBC = 1.0 and +0x38 = owner. Both vectors are
+         * read here, before the allocation (which writes only the new node). */
+        if (c->na != 4 || c->nf) return -1;
+        memset(s, 0, sizeof *s);
+        s->function = c->function; s->id = (uint32_t)c->a[0]; s->owner = (uint32_t)c->a[3];
+        if (vector(h, (uint32_t)c->a[1], s->position) < 0 || vector(h, (uint32_t)c->a[2], s->rotation) < 0)
+            return -1;
+        memcpy(&s->f12, &s->rotation[3], 4);
+        s->has_position = 1;
+        return 0;
+    }
     if (c->function != 0x001EFD90u && c->function != 0x001EF9D0u && c->function != 0x001EFD20u)
         return 1;
     if (c->na != (c->function == 0x001EFD90u ? 3u : 2u) ||
@@ -60,6 +75,20 @@ int em_area01_effects_services_invoke(const EmArea01EffectsSpawn *s, EmArea01Cal
     } else if (c->function == 0x001EFD20u)
         rc = p ? em_effects_live_001EFD20_result(s->id, p, &node) : -1;
     else if (c->function == 0x001EF9D0u) rc = em_effects_live_001EF9D0(s->id, p, s->f12, &node);
+    else if (c->function == 0x001F00A0u) {
+        rc = p ? em_effects_live_001EF9D0(s->id, p, s->f12, &node) : -1;
+        if (rc >= 0 && node) {
+            uint8_t *pos = em_effects_live_node_field(node + 0xB0u, 16, 1);
+            uint8_t *rot = em_effects_live_node_field(node + 0xC0u, 16, 1);
+            uint8_t *tail = em_effects_live_node_field(node + 0x38u, 4, 1);
+            const uint32_t one = 0x3F800000u;
+            if (!pos || !rot || !tail) return -1;
+            memcpy(pos, s->position, 16);
+            memcpy(rot, s->rotation, 16);
+            memcpy(pos + 0x0C, &one, 4);
+            memcpy(tail, &s->owner, 4);
+        }
+    }
     else if (c->function == 0x001EFEB0u) {
         rc = em_effects_live_001EF9D0(s->id, p, s->f12, &node);
         if (rc >= 0 && node) {

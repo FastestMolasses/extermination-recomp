@@ -4078,6 +4078,8 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
         case 0x008241B0u:   /* the effect node 0014D260 spawns */
         case 0x00823EB0u: case 0x00824130u:   /* script 0x82D070's group 0x82CDD0 */
         case 0x00823CF0u:   /* effect 1's node (0x823C50's 001EFD90, script 0x82ABC0) */
+        case 0x00824BB0u:   /* the arc effect node (g33 node 0x7A64F0) */
+        case 0x008247D0u:   /* the shot node (g34) */
             if (s_state.d810701 == 2) goto bind;
             return -1;
         default:
