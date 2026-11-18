@@ -58,6 +58,17 @@ int em_sf_001AD740(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w);
 int em_sf_001AD4E0(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w);
 int em_sf_001AD010(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w);
 int em_sf_001AD140(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w);
+/* 001ACA20 anim_frame_top_a (byte-matched): the attract demo, run by the
+ * title task 001AC070 in its state 3 over the same record (+9 its state,
+ * +A / +B steps, +0x16 the u16 pad-record counter, +0x1A cleared).
+ * `d275BD4` is the demo counter D_00275BD4 (0..2; the title owns it). Returns
+ * 0 (still running), 2 (a button of 0x9F0 held, or 001ACE70 != 0), 3 (the
+ * 0xE10 records played, or the world's fade-complete / death request at
+ * fade 2), or -1 with the fault latched. docs/ATTRACT_DEMO.md. */
+int em_sf_001ACA20(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w, int32_t d275BD4);
+/* 001ACE70 (byte-matched): 3 when D_008106CE != 0, else 2 when D_008106C5
+ * or D_008106B0 != 0, else 0. No callees, no stores. */
+int em_sf_001ACE70(const EmSceneState *s);
 /* 001ADF00 and 001AFCF0 do not touch the task record. */
 int em_sf_001ADF00(EmSceneState *s, const EmSceneWorkers *w);
 int em_sf_001AFCF0(EmSceneState *s, const EmSceneWorkers *w);

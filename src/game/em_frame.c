@@ -251,6 +251,27 @@ static void frame_screen_fade_draw(void)
 const EmFrameInput *em_frame_input(void){ return &s_frame.input; }
 const EmPadUnpack *em_frame_pad_block(void) { return &s_frame.pad_block; }
 
+static void frame_input_from_block(void)
+{
+    const EmPadUnpack *block = &s_frame.pad_block;
+    EmFrameInput *in = &s_frame.input;
+    in->lx       = block->lx;
+    in->ly       = block->ly;
+    in->rx       = block->rx;
+    in->ry       = block->ry;
+    in->held     = em_pad_swap(block->held);
+    in->pressed  = em_pad_swap(block->pressed);
+    in->released = em_pad_swap((uint16_t)(block->prev_held & ~block->held));
+}
+
+void em_frame_pad_record_001B5BC0(const uint8_t rec[5], const uint8_t *prev)
+{
+    em_pad_record_001B5BC0(&s_frame.pad_block, rec, prev);
+    frame_input_from_block();
+}
+
+void em_frame_store_counter_70003B64(uint32_t value) { s_frame.counter = value; }
+
 /* D_00810E6A, the pad block's +0x2A halfword: 001B5F40's read-time mode id
  * (7: the DualShock's analog mode). Read only (the options screen). */
 uint16_t em_frame_d810E6A(void) { return (uint16_t)(s_frame.pad_2A[0] | s_frame.pad_2A[1] << 8); }
@@ -488,15 +509,7 @@ static int frame_input_read(void)
         return -1;
     pad_image_store(image);
 
-    const EmPadUnpack *block = &s_frame.pad_block;
-    EmFrameInput *in = &s_frame.input;
-    in->lx       = block->lx;
-    in->ly       = block->ly;
-    in->rx       = block->rx;
-    in->ry       = block->ry;
-    in->held     = em_pad_swap(block->held);
-    in->pressed  = em_pad_swap(block->pressed);
-    in->released = em_pad_swap((uint16_t)(block->prev_held & ~block->held));
+    frame_input_from_block();
     return 0;
 }
 

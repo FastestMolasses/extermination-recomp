@@ -44,8 +44,9 @@ the title's OPTIONS, and no game formats a float or calls calloc.
 | 0x001ABC60 | boot | 428 | frame_main | unverified | em_startup.c boot_tick major 3 (module 0x29, logo B, bank 0x1B) | As above |
 | 0x001ABE10 | boot | 380 | frame_main | unverified | em_startup.c boot_tick major 4 (logo C, bank 0x1C) | As above |
 | 0x001AC3B0 | boot | 196 | frame_main | unverified | em_startup.c movie_tick (001AC070 state 1: sound stop, the E900 movie, its skip) | As above; em_frontend's begin_movie plays it (docs/STARTUP.md) |
-| 0x001ACA20 | boot | 1104 | frame_main | stand-in | em_frontend.c EM_STARTUP_ATTRACT: a black screen that serves only the demo's button exit (attract_abort) | The attract demo (001AC070 state 3 after 1200 idle ticks on the title, alternating with the intro movie): AREA06, AREA13 (sub 8) or AREA03 (sub 1) by the counter D_00275BD4, 0xE10 frames of recorded pad (001B5BC0). Its state-0 exit (any of 0x9F0 held returns 2) is executed for every held bit by `make test-title-menu-reference`; the demo itself is not ported (WP-17 residue). **Player visible: the idle title shows black instead of the demo** |
-| 0x001ACE70 | boot | 80 | frame_main | stand-in | the same | The demo's per-frame exit test (anim_frame_top_a state 4 sub 1); covered by the same stand-in |
+| 0x001ACA20 | boot | 1104 | frame_main | live | em_sf_001ACA20 (em_scene_task.c), run by em_scene_attract_001ACA20 from em_frontend's attract_tick (lane PORT-DEMO) | The attract demo (001AC070 state 3 after 1200 idle ticks, alternating with the intro movie): AREA06, AREA13 entry 8 or AREA03 sub 1 by D_00275BD4, 0xE10 records of module 0x36's recorded pads (001B5BC0). `make test-scene-task-reference` executes the original over every arm (616 runs); `make test-attract-demo` compares demo 0 with the original's capture (records 1..300 equal, CROSS exit). Demo 2 is 3600/3600 equal, demo 0 2429/3600 (rand() first differs at record 2430 in the crawl); demo 1 faults at record 1436 (aim/fire 00183AC0) and keeps the black stand-in (docs/ATTRACT_DEMO.md) |
+| 0x001ACE70 | boot | 80 | frame_main | live | em_sf_001ACE70 (em_scene_task.c) | The demo's per-record exit test (001ACA20 state 4 sub 1); executed inside 001ACA20 by `make test-scene-task-reference` and run every record of the live demos |
+| 0x001B5BC0 | boot | 200 | input_io | live | em_pad_record_001B5BC0 (em_input.c) through em_frame_pad_record_001B5BC0 and the bindings' w_001B5BC0 (lane PORT-DEMO) | The demo's recorded pad: record a0 of demo D_00275BD4 from D_0028A6AC (module 0x36) into D_00810E70..76, E64, E65, E57. No original-instruction oracle; the original's capture checks it: the fed pad equals the capture on every compared record of demos 0 and 2 (`make test-attract-demo`, docs/ATTRACT_DEMO.md) |
 | 0x001AE900 | boot | 324 | frame_main | boundary | em_frame.c frame_screen_fade_draw and em_fade (the native fade layer) | The boot's build of the 2x2 letterbox / fade display blocks at D_0028A7B0 (GS packets) and their counters: the native renderer draws the same two 32-line bands |
 | 0x001AEA50 | boot | 268 | frame_main | boundary | the same | Called only by the boot reset 001AB430 (from 001AAE40's start-up). The build of the two fade GIF packets at D_0028A8E0 and the zeroed fade state D_0028A9A0..A4 (the native fade starts clear), then 001AE900 |
 | 0x0011DB10 | boot | 72 | lowmem | boundary | the host C library; em_options_live's sprintf 00122D10 (conversions d and s only, any other faults) | newlib isinf, called only by the SDK's vfprintf 00123750 (class C) for a float conversion; no game format the port serves has one |
@@ -88,9 +89,10 @@ already tested.
    00201290 (census group unknown_04), and bind it on the title the way LOAD
    GAME's card screen is bound (SAVE_GAME.md section 6.4: the screen module's
    upload, here 0x2B).
-2. **The attract demo (001ACA20, 001ACE70)** shows black. Porting it means
-   running AREA06 / AREA13 / AREA03 from the demo's seeds with the recorded
-   pad of 001B5BC0 (census group input_io) for 0xE10 frames.
+2. **The attract demo (001ACA20, 001ACE70)** is ported (lane PORT-DEMO,
+   docs/ATTRACT_DEMO.md). Open: demo 1 (AREA13) faults at record 1436 in
+   aim/fire 00183AC0 and keeps the black stand-in; demo 0 (AREA06) diverges
+   in rand() at record 2430 (the duct crawl).
 3. The boot logos (001AB9D0, 001ABC60, 001ABE10) and the movie state
    (001AC3B0) are translated without an original run: an oracle in the style
    of test-title-menu-reference (which runs 001AC480 against em_startup) would
