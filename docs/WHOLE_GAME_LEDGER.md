@@ -152,9 +152,9 @@ em_camera_live's aim_call does not serve, so they fault).
 | 0x001DCD40 | boot | 504 | weapon_equip | missing | none | 2D lines of the night-vision and missile sights (001D1F80, then 00207F80 per line) |
 | 0x001DCF40 | boot | 168 | weapon_equip | missing | none | 2D marks of the night-vision and tactical sights |
 | 0x001DCFF0 | boot | 376 | weapon_equip | missing | none | The scope ring (002082B0) of the auto-sight and mode 1 |
-| 0x001E3620 | boot | 8 | weapon_equip | missing | none | The empty callback 001E3630 stores |
-| 0x001E3630 | boot | 1764 | weapon_equip | missing | none | The beam of the kind-0x0D prototype table (0x258740); no placement record names it and its runtime spawner is unknown (decomp CURIOSITIES) |
-| 0x001ECE70 | boot | 124 | hud_objects | missing | none: em_effects_live faults at an untranslated handler | Effect handler (its word at 0x2554B4 in the boot handler table) (001CFB50, then 001CFBE0) |
+| 0x001E3620 | boot | 8 | weapon_equip | verified-unbound | em_effect_001E3620, accepted by both +0x34 contact dispatchers (em_area11_bindings, em_scene_bindings) | The empty contact callback 001E3630 stores at +0x34; test-effect-001E3630-reference runs the original (it returns at once, storing nothing). Bound in the live path, but no recording reaches it |
+| 0x001E3630 | boot | 1764 | weapon_equip | verified-unbound | em_effect_001E3630 through em_aim_fire_burst (row 0x1E3630 of em_area11_bindings, every area) | The flamethrower's burst: 00188630 mode 4 (sub-weapon 4, the fuel counter D_00810CAE) spawns 0x80000039, whose record names this behaviour. test-effect-001E3630-reference runs the original over every state and branch. Bound in the live path, but no recording reaches it (EFFECT_MANAGER.md section 8.2) |
+| 0x001ECE70 | boot | 124 | hud_objects | verified-unbound | em_effects_live handler_001ECE70 (em_effect_001E3630's translation) | Effect handler of 0x8000001A (subtype 0x10), whose one spawner is 001E3630's retry window: 001CFB50, then 001CFBE0 of D_00257000. test-effect-001E3630-reference runs the original. Bound in the live path, but no recording reaches it |
 | 0x001EE830 | boot | 868 | hud_objects | missing | the same | Effect handler (its word at 0x255574): a periodic particle re-seed, sibling of 001EF1C0 (translated in em_level14_port) |
 | 0x00823590 | AREA07 | 988 | overlay AREA07 | missing | none | A debris behaviour of the boot prototype table (0x25955C), AREA07's twin of AREA00's 0x8247D0 |
 | 0x001F1AA0 | boot | 808 | fx_render | missing | none | The behaviour of boot prototype record whose behaviour word is at 0x25850C: a random spread of particles (seed * 37 + 11) |
@@ -174,7 +174,9 @@ em_camera_live's aim_call does not serve, so they fault).
    aim_call.
 2. AREA00's 0x8247C0 / 0x8247D0 / 0x8260B0 are on the boss chain (g34):
    lane a00boss2.
-3. Effects and prototypes never seen in a recording: 001ECE70, 001EE830,
-   001F1AA0, AREA07 0x823590, 001E3630 (with 001E3620), and the script
-   commands 001B9FF0 / 001B73A0. Each faults where it would be reached.
+3. Effects and prototypes never seen in a recording: 001EE830, 001F1AA0,
+   AREA07 0x823590, and the script commands 001B9FF0 / 001B73A0. Each
+   faults where it would be reached. 001E3630 (with 001E3620) and 001ECE70
+   are translated and bound since lane GAP-3 (2026-11-18; the flamethrower's
+   burst, spawned by 00188630 mode 4), still unseen in a recording.
 4. 001645D0 and 001CB070 are translated but have no original-instruction run.

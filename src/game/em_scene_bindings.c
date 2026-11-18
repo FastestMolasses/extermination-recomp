@@ -99,6 +99,7 @@
 #include "game/em_area01_collision_view.h"
 #include "game/em_aim_fire_world_live.h"
 #include "game/em_area02_misc.h"
+#include "game/em_effect_001E3630.h"
 #include "game/em_area01_terminal_status.h"
 
 #include <stddef.h>
@@ -4696,6 +4697,9 @@ static int area01_contact(void *ctx, uint32_t function, uint32_t entry, uint32_t
     /* The ring 001E4610's: 001E4600, an empty function (byte-matched C). */
     if (function == 0x001E4600u && player == EM_AREA01_PLAYER_BASE && player_b0 == player + 0xB0u)
         return 0;
+    /* The flamethrower burst 001E3630's: 001E3620, empty (byte-matched C). */
+    if (function == EM_EFFECT_001E3620_CONTACT && player == EM_AREA01_PLAYER_BASE && player_b0 == player + 0xB0u)
+        return em_effect_001E3620();
     /* 0x823B10: AREA06's contact word (0x823B50's record +0x34; another
      * overlay's code at the address never reaches here: only AREA06
      * records hold it). */

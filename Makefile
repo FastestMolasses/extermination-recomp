@@ -95,7 +95,7 @@ COMMON  := src/main.c src/em_model.c src/em_input.c src/em_settings.c \
            src/game/em_aim_fire_control.c src/game/em_aim_fire_machines.c src/game/em_aim_fire_pose.c \
            src/game/em_aim_fire_target.c src/game/em_aim_fire_shots.c src/game/em_aim_fire_reticle.c \
            src/game/em_aim_fire_tables.c src/game/em_aim_fire_leaves.c \
-           src/game/em_aim_fire_live.c src/game/em_aim_fire_marker.c src/game/em_aim_fire_projectile.c src/game/em_aim_fire_flash.c src/game/em_aim_fire_trail.c src/game/em_aim_fire_burst.c src/game/em_bone_burst.c src/game/em_effect_001F77B0.c src/game/em_aim_fire_binding.c src/game/em_aim_fire_soft_float.c \
+           src/game/em_aim_fire_live.c src/game/em_aim_fire_marker.c src/game/em_aim_fire_projectile.c src/game/em_aim_fire_flash.c src/game/em_aim_fire_trail.c src/game/em_aim_fire_burst.c src/game/em_bone_burst.c src/game/em_effect_001F77B0.c src/game/em_effect_001E3630.c src/game/em_aim_fire_binding.c src/game/em_aim_fire_soft_float.c \
            src/game/em_aim_fire_lamp.c \
            src/game/em_aim_fire_render_live.c src/game/em_aim_fire_world_live.c src/game/em_aim_fire_runtime.c \
            src/game/em_aim_fire_sdk_memory.c src/game/em_aim_fire_cable_live.c src/game/em_area11_gun_live.c src/game/em_area06_port_strip.c \
@@ -2418,6 +2418,10 @@ test-area21-creature-c-reference:
 .PHONY: test-area00s2-creature-reference
 test-area00s2-creature-reference:
 	python3 tools/test_area00s2_creature_reference.py
+.PHONY: test-effect-001E3630-reference
+test-effect-001E3630-reference:
+	python3 tools/test_effect_001E3630_reference.py
+
 .PHONY: test-area14-overlay-reference
 test-area14-overlay-reference:
 	python3 tools/test_area14_overlay_reference.py

@@ -93,6 +93,7 @@
 #include "game/em_manager_008257A0.h"
 #include "game/em_game_internal.h"
 #include "game/em_aim_fire_burst.h"
+#include "game/em_effect_001E3630.h"
 #include "game/em_opening_runtime.h"
 #include "game/em_pickup_original.h"
 #include "game/em_player.h"
@@ -1372,6 +1373,9 @@ static int flame_behaviour(void *ctx, uint32_t fn, uint32_t entry, uint32_t play
      * functions (byte-matched C). */
     if ((fn == 0x001E49F0u || fn == 0x001E4600u) && player == EM_SCENE_D_008102B0)
         return 0;
+    /* The flamethrower burst 001E3630's: 001E3620, empty (byte-matched C). */
+    if (fn == EM_EFFECT_001E3620_CONTACT && player == EM_SCENE_D_008102B0)
+        return em_effect_001E3620();
     EmPlayerLiveActor *pl = player_states_actor_mut();
     if (fn != EM_AREA11_EFFECT_CONTACT || player != EM_SCENE_D_008102B0 || !pl || !s_pool ||
         entry < EM_ACTOR_POOL_BASE || (entry - EM_ACTOR_POOL_BASE) % EM_ACTOR_RECORD_SIZE != 0 ||
@@ -2304,6 +2308,8 @@ static const Binding k_bindings[] = {
      NULL},
     {0x001E4CE0u, "burst: em_area02_misc 001E4CE0 (em_aim_fire_burst, em_effects_live)", tick_effect_node, NULL},
     {0x001E4610u, "burst ring: em_level11_port 001E4610 (em_aim_fire_burst, em_effects_live)", tick_effect_node, NULL},
+    {0x001E3630u, "flamethrower burst: em_effect_001E3630 (em_aim_fire_burst, em_effects_live)", tick_effect_node,
+     NULL},
     {0x0022BBC0u, "bone burst: em_area01_ui 0022BBC0 (em_bone_burst, em_effects_live)", tick_effect_node, NULL},
     {0x001E2E80u, "spat hazard: em_area00_hud 001E2E80 (em_aim_fire_world_live, em_effects_live)",
      tick_effect_node, NULL},
