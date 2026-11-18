@@ -1121,6 +1121,11 @@ void em_scene_creature_trace(FILE *f, int t, const float pos[3], const float *he
     fprintf(f, "{\"t\": %d, \"pos\": [%.5f, %.5f, %.5f], \"hp\": %.2f, \"inf\": %.2f, \"a\": 0, \"rand\": %u, ",
             t, pos[0], pos[1], pos[2], vit[0], vit[1], em_random_peek());
     if (heading) fprintf(f, "\"yaw\": %.6f, ", *heading);
+    /* The frame machine's state (task 0's +0xB, 0x1AE040) and D_00275BD8:
+     * take.rec's tb and bd8 columns, read at the same point of the frame. */
+    const EmTask *t0 = em_task_slot(0);
+    fprintf(f, "\"c\": %u, \"tb\": %u, \"bd8\": %u, ", (unsigned)em_frame_counter(), t0 ? (unsigned)t0->user[0x0B - EM_SCENE_TASK_FIRST] : 0u,
+            (unsigned)s_state.d275BD8);
     fprintf(f, "\"area\": \"%02x%02x%02x\", \"n\": [", s_state.d810700, s_state.d810701, s_state.d810702);
     /* EM_START_AT_TRACE_KINDS=<hex>,<hex>,...: the behaviours listed
      * (default the bugs 0012A5D0 and the creatures 0013D2D0, 00147390). */

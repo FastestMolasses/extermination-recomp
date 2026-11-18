@@ -175,6 +175,28 @@ unsigned long em_status_background_live_steps(void)
     return s_steps;
 }
 
+int em_status_background_live_restore(const unsigned char bytes[96])
+{
+    if (!bytes)
+        return 0;
+    for (int i = 0; i < 3; ++i) {
+        EmStatusBackgroundLayer *e = &s_state.layer[i];
+        const unsigned char *b = bytes + i * 0x20;
+        uint32_t w[8];
+        for (int k = 0; k < 8; ++k)
+            w[k] = (uint32_t)b[k * 4] | (uint32_t)b[k * 4 + 1] << 8 | (uint32_t)b[k * 4 + 2] << 16 |
+                   (uint32_t)b[k * 4 + 3] << 24;
+        memcpy(&e->x, &w[0], 4);
+        memcpy(&e->y, &w[1], 4);
+        memcpy(&e->phase, &w[2], 4);
+        e->timer = (int32_t)w[3];
+        for (int k = 0; k < 4; ++k)
+            memcpy(&e->rgba[k], &w[4 + k], 4);
+    }
+    s_ready = 1;
+    return 1;
+}
+
 void em_status_background_live_state(EmStatusBackground *out)
 {
     if (!out)

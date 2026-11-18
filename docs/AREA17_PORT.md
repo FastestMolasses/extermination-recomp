@@ -362,16 +362,80 @@ pad alone):
   LOAD-GAME intro problem (its card reruns [30]'s intro) is gone in the
   chain: the take continues from g46 with no load.
 - **g48**: not reached yet (its freed record 39 at pad ~19590 is still to
-  check in the chain).
+  check in the chain). (All three: lane PORT-A17-NEXT below.)
+
+### Lane PORT-A17-NEXT (2026-11-17, branch `a17next`)
+
+`tools/guided_chain.py g17 --steer g45` now plays **g46, g47 and g48 on
+the row** (position and heading of every compared frame): g46 1964 of
+1964, g47 6524 of 6524 (Roger's heal at row 327, the original's hit at
+row 663), g48 19489 of 19489 to row 19587, the frame its [38] 0x825470
+asks for AREA11 entry 3 (the original's area bytes change at row 19588).
+The run then stops in the AREA11 load (below).
+
+- **The one-frame offset after g46's page close** (rows 2278..2293) was the
+  chain's clock, not a translation. The frontend steps the script at a world
+  frame's head in play, but at the frame's end on a status page (states 3
+  and 5 run no world frame), and a page's open (the r == 2 frame and state
+  3's step 0) and close (state 5) step neither. So at the open the script's
+  clock fell two frames behind (until a page load's anchor reset it), and an
+  end-of-frame step's pad (rows f <= t - 2) was read by the very next frame,
+  one frame sooner than a head step's: the page closed a frame early and the
+  world resumed a frame early, which carried into g47's rand() from row 0.
+  Evidence: take.rec's tb (task 0's +0xB) and bd8 columns, now also in the
+  port's trace (`tb`, `bd8`, engine counter `c`): with the fix they equal the
+  rows on every traced frame of g46 .. g48; before it the port's tb led by a
+  frame at the open, the load request and the close. Fix:
+  `EM_START_AT_FRAMES=1` (docs/STARTUP.md; guided_chain sets it).
+- **g47's hit at row 662/663**: no creature fault. The world ran a frame early
+  after the close, so the creature's timing differed; with the clock fixed
+  the hit comes at the original's row. The hit rows themselves were placed one
+  row early by `capture_from_take`: threats.json's `c` is the counter of the
+  monitor's previous snapshot (decomp tools/guided_run/threats.py logs
+  `self.last.counter`; one snapshot per tick), so the loss shows in row
+  c + 1. All hits moved one row (g46 766 / 1510 / 1858, g47 663); the port's
+  per-frame trace reported them there all along.
+- **g48 from row 0**: its first stick (read at its row 1) was clamped to
+  input f = 0 by capture_from_take (a lone beat cannot start before row 0);
+  in a chain it belongs to the previous take's last row. capture_from_take
+  now keeps each input's row `k` and guided_chain places it at k - 2.
+- **g48's freed record**: [38] 0x825470 frees itself (001AFC10) the frame
+  after its script 0x8284F0 ends, and its script actor 001BB0E0 (state 1)
+  still reads the owner's +0x2E done mask on the next frame. In the original
+  that reads what 001AFC10 left (it clears +0..+0xF, +0x36, +0x90, +0x98 and
+  +0x1F0.., not +0x2E). The runtime read the owner's first 0x30 bytes (the
+  pool links included) and the view refused a freed record: it now reads only
+  the halfword 001BB0E0 reads, and the actor view serves a freed record's
+  +0x20..+0x9F from the pool's image (what the free left).
+- **The status background** D_002655A0 (0020A7A0, every page frame; its
+  pulse timers draw rand()) is initialised once from .data and never reset,
+  so a card from boot differs from the recording: `EM_START_AT_STATUS_BG`
+  (comparison only) restores it from the card's source state. A residual
+  remains: the port steps it two more times per page visit with two loads
+  (333 against the original's 331 in g46's visit, from the end states' layer
+  0 scroll; g47 463 against 459, about one per page load), so one background
+  draw comes 2 (g46 row 2251) and 4 (g47 row 260) frames early. Which frame
+  near a page load the original does not step is not shown by the take
+  (no per-frame record of the page's sub-state); open.
+
+Where it stands: g45 as before (row 248, the card's AREA14 effect timers);
+g46, g47, g48 on the row to the area change; rand() words equal on every
+compared frame but the background draw above and g48's cable ride from row
+12782 (an owner drawing once a frame for 16 frames in the original only, on
+the Cross at that row, then a periodic 001F4D40 effect owner drifts); the run
+stops in the AREA11 entry-3 load from AREA17: the screen-module loader
+faults at 001FFCD0 (code 2) after "world textures: AREA11/0: no verified
+catalog for this delivery".
 
 ## Not done
 
 - **The live area** (section "Live"; 001F1F60 and 001BAD40 done by
   PORT-FX; 001D6B10 and 0x810835 by PORT-WORKERS; the continuous chain by
-  PORT-CHAIN): g47 in the chain (the one-frame offset after the status
-  page's close at g46 row ~2278, the missing hit at row 662), g48's freed
-  record 39 at pad ~19590, drawing the haze list on the chain page. g46's
-  op07 sub 0xC wait is the drive timing (PORT-CHAIN), not a card fault.
+  PORT-CHAIN; g46 .. g48 on the row by PORT-A17-NEXT): the AREA11 entry-3
+  load at g48 row 19588 (001FFCD0 code 2), g48's extra original draws from
+  row 12782, the status background's extra steps near page loads, drawing
+  the haze list on the chain page. g46's op07 sub 0xC wait is the drive
+  timing (PORT-CHAIN), not a card fault.
 - The other live-only bindings AREA14 needed (AREA14_PORT.md "Pieces the
   live run needed") but the muzzle node 001F5040 are not checked for AREA17.
 - 0x8235E0 and 0x823860, and the group holding 0x823580 / 0x8236F0 /

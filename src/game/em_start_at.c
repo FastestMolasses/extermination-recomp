@@ -1,6 +1,7 @@
 /* EM_START_AT=<name> (em_start_at.h; docs/STARTUP.md "Developer switches"). */
 #define _POSIX_C_SOURCE 200809L
 #include "game/em_start_at.h"
+#include "game/em_status_background.h"
 #include "game/em_frame.h"
 #include "game/em_random.h"
 #include "em_input.h"
@@ -309,6 +310,21 @@ static struct {
      * slides two units; AREA13's ladders and door edges want 0.3 and 0.03):
      * tools/mid_route_beats.py sets it for AREA13's later beats. */
     int fine;
+    /* EM_START_AT_FRAMES=1: the script's clock follows the engine's frames
+     * where the frontend steps no hook, and a hook at a frame's end
+     * delivers the pad the next frame reads (comparison only:
+     * tools/guided_chain.py; docs/STARTUP.md). The hook runs at the world
+     * frame's head (001AE5E0 / 001AE6B0) in play, and at the frame's end
+     * where no world frame runs (frame-machine states 3 and 5, a status
+     * page): the head hook labels its own frame t, the end hook the next
+     * frame. A status page's open (the r == 2 frame and state 3's step 0)
+     * and its close (state 5) step neither, so without this the clock
+     * falls two frames behind the recording at the open and is set again
+     * only at a page load's anchor; and an end hook's pad (rows f <= t - 2)
+     * reached the page a frame sooner than a head hook's does, so the
+     * page closed a frame early (g46 row 2278). */
+    int frames, frames_seen;
+    unsigned frames_prev;
 } pad;
 
 static int refuse(const char *why, const char *detail)
@@ -746,6 +762,8 @@ int em_start_at_check(void)
             }
             if (g) fclose(g);
         }
+        const char *frames = getenv("EM_START_AT_FRAMES");
+        pad.frames = frames && frames[0] == '1';
         const char *sync = getenv("EM_START_AT_SYNC");
         if (sync && sync[0]) {
             if (sscanf(sync, "%x:%x:%d", &pad.sync_address, &pad.sync_value, &pad.sync_f) != 3)
@@ -841,6 +859,26 @@ void em_start_at_pad_control(unsigned counter)
     /* Without EM_START_AT_FADE the script starts at control, as a level
      * smoke or a short test script expects. */
     pad.fade_wait = pad.fade_given;
+    /* EM_START_AT_STATUS_BG=<ram image> (comparison only): the status
+     * pages' shared background state D_002655A0 takes the image's bytes.
+     * 0020A7A0 steps it on every status-page frame and its pulse timers
+     * draw rand(); it is initialised once from the ELF's .data and never
+     * reset (a LOAD GAME keeps it), so a card started from boot holds the
+     * .data image where the recording holds what its earlier pages left
+     * (tools/guided_chain.py passes the card's source state). */
+    {
+        const char *bg = getenv("EM_START_AT_STATUS_BG");
+        if (bg && bg[0]) {
+            unsigned char bytes[96];
+            FILE *g = fopen(bg, "rb");
+            const int ok = g && fseek(g, 0x2655A0L, SEEK_SET) == 0 && fread(bytes, 1, sizeof bytes, g) == sizeof bytes;
+            if (g) fclose(g);
+            if (ok && em_status_background_live_restore(bytes))
+                printf("startup: EM_START_AT_STATUS_BG: D_002655A0 from %s (comparison only)\n", bg);
+            else
+                printf("startup: EM_START_AT_STATUS_BG: %s has no D_002655A0: not restored\n", bg);
+        }
+    }
     if (!pad.fade_wait && pad.rand_set) {
         em_random_seed(pad.rand_state);
         printf("startup: EM_START_AT_RAND: rand() state %08x at control (comparison only)\n", pad.rand_state);
@@ -858,7 +896,8 @@ void em_start_at_trace_position(const float pos[3], float heading)
     trace_pos_set = 1;
 }
 
-int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[3], const float *heading)
+int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[3], const float *heading,
+                          int at_frame_end)
 {
     if (!pad.active) return 0;
     /* The level smoke's rule: a recorded command is submitted two frames
@@ -881,7 +920,19 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
     /* With EM_START_AT_SYNC the script's clock is the recording's: the two
      * or three frames the frame machine's state changes step no hook (a
      * status page's open and close) pass on it too. */
-    if (pad.sync_address && pad.sync_done && pad.sync_counter && counter - pad.sync_counter - 1u <= 2u)
+    if (pad.frames) {
+        /* The frame this hook's step stands for: its own (a head hook) or
+         * the next (an end hook). A gap of up to 8 frames is a status
+         * page's open or close; a longer one is a load (EM_START_AT_PHASES
+         * anchors it). */
+        const unsigned frame = counter + (at_frame_end ? 1u : 0u);
+        if (pad.frames_seen && frame - pad.frames_prev >= 2u && frame - pad.frames_prev <= 8u)
+            pad.t += (int)(frame - pad.frames_prev - 1u);
+        pad.frames_prev = frame;
+        pad.frames_seen = 1;
+    }
+    if (!pad.frames && pad.sync_address && pad.sync_done && pad.sync_counter &&
+        counter - pad.sync_counter - 1u <= 2u)
         pad.t += (int)(counter - pad.sync_counter - 1u);
     pad.sync_counter = counter;
     if (!pad.sync_done) {
@@ -1089,7 +1140,8 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
         printf("startup: EM_START_AT_PAD: the script ended at engine frame %u\n", counter);
         return 1;
     }
-    for (unsigned i = 0; i < pad.count && pad.row[i].f <= t - 2; ++i)
+    const int read = pad.frames && at_frame_end ? t - 3 : t - 2;
+    for (unsigned i = 0; i < pad.count && pad.row[i].f <= read; ++i)
         pad.now = (EmPadState){pad.row[i].buttons, (pad.row[i].lx - 128) / 128.0f,
                                (pad.row[i].ly - 128) / 128.0f, 0, 0};
     const float m = sqrtf(pad.now.lx * pad.now.lx + pad.now.ly * pad.now.ly);

@@ -506,10 +506,15 @@ static int rv_001BB0E0(EmArea01Runtime *r, EmArea01Call *c)
      * state 2, the fork pool probe), and the original reads nothing of it. */
     uint8_t entry_copy[EM_SDF_ENTRY_SIZE], owner_copy[0x30];
     memset(owner_copy, 0, sizeof owner_copy);
+    /* Only that halfword: the owner may have freed itself on the frame
+     * before while this actor is still in state 1 (AREA17's [38] 0x825470
+     * at the end of its script 0x8284F0, g48 row 19587); the original then
+     * reads the +0x2E 001AFC10 left (em_area01_actor_view's freed-record
+     * reads). */
     if (a.image[4] <= 1u) {
-        const uint8_t *owner_bytes = bytes(r, owner_address, 0x30, 0);
-        if (!owner_bytes) return fail(r, owner_address);
-        memcpy(owner_copy, owner_bytes, sizeof owner_copy);
+        const uint8_t *owner_bytes = bytes(r, owner_address + 0x2Eu, 2, 0);
+        if (!owner_bytes) return fail(r, owner_address + 0x2Eu);
+        memcpy(owner_copy + 0x2E, owner_bytes, 2);
     }
     memcpy(entry_copy, entry, sizeof entry_copy);
     const EmSlgScriptActorWorkers w = {&a,          rv_slg_001BAD40, rv_slg_001C5C90, rv_slg_001C68C0,

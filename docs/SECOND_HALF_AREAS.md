@@ -588,7 +588,17 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   0xC wait is disc timing, not a card difference. [6]'s ride 0x825C40 no
   longer fails the player view (00183010's w-lane adds). g45 leaves the
   rows at 248 from the card's effect timers (the beasts' draws); g47 stops
-  at row ~1617 (a hit the original did not take); g48 not reached. g16
+  at row ~1617 (a hit the original did not take); g48 not reached. Lane
+  PORT-A17-NEXT (AREA17_PORT.md): g46, g47 and g48 are on the row to g48's
+  area change at row 19587 (g47's hit at the original's row 663, Roger's
+  heal; g48's cable ride): the chain's clock now follows the engine's frames
+  across a status page's hookless frames and an end-of-frame step's pad is
+  read a frame later (EM_START_AT_FRAMES; it was the page-close offset),
+  capture_from_take places hits one row later (threats.json's c is the
+  snapshot before the loss) and keeps each input's row (g48's first stick),
+  a script actor 001BB0E0 reads only its freed owner's +0x2E (g48's record
+  39), and EM_START_AT_STATUS_BG restores the pages' background D_002655A0.
+  The run stops in the AREA11 entry-3 load (001FFCD0 code 2). g16
   (card g61) stops on its first frame at 001CAE30, as the card beat did;
   a start before AREA16 (card g60, AREA06 sub 1) needs AREA06 sub 1
   exported (assets and the module pack's room (0x06, 1)). AREA16's owners now bind in the live composition too (area 0x10:
