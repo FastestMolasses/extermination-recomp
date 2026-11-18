@@ -42,6 +42,7 @@ int em_render_kick_background(EmGfx *gfx);
 /* The level smoke's view (the tick log's "background"). */
 typedef struct {
     uint32_t frame;            /* em_frame_counter() of the last draw        */
+    uint32_t serial;           /* em_frame_serial() of the last draw         */
     uint32_t draws;            /* cumulative                                 */
     uint32_t start;            /* the last list's start (+0x1D8)             */
     uint32_t prims;            /* its triangles                              */

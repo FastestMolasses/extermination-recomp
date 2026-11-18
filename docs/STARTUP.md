@@ -1124,8 +1124,8 @@ Sync answer from them; loading a game reads the card's files
 memory-card screen after a death (docs/OPTIONS.md section 4.3) and on the
 boot's title (on the title's own binding, docs/SAVE_GAME.md section 6.4). The title's
 attract demo (001AC070 state 3) runs 001ACA20 on the recorded pads of module 0x36
-(docs/ATTRACT_DEMO.md): demos 0 (AREA06) and 2 (AREA03) are live, and demo 1 (AREA13)
-keeps the black stand-in with the button exit until its aim/fire fault is fixed.
+(docs/ATTRACT_DEMO.md): all three demos (AREA06, AREA13 entry 8, AREA03 sub 1) are
+live and equal to the original's capture on all 3600 records each.
 `EM_STARTUP_TEST=attract` (`make test-attract-demo`) idles into demo 0 and compares
 it with the original's capture. The Option service remains pending
 rather than manufacturing an outcome. Windows/Linux movie backends and

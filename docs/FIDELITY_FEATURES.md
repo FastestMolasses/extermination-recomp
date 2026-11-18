@@ -3027,6 +3027,19 @@ Game+ bonuses, two closing pictures and the card screen's clear save.
   microcode's, pixels not compared with an original frame); E46S4's feed_end is derived,
   not probed.
 
+### The title's attract demo (VERIFIED for the fed pad, position, heading, action, fade and rand())
+
+Left idle on the title, the port plays the original's three recorded-pad
+gameplay demos in the original's order (AREA06, AREA13 entry 8 with the
+flamethrower, AREA03 sub 1), 001ACA20 over module 0x36's records. Each demo's
+3600 records equal the original's fork capture (decomp
+`build/demo_ref/run1`): the pad 001B5BC0 fed, the area, the player's position,
+yaw and action word, the fade and the rand() state (`make test-attract-demo`,
+`EM_TEST_FULL=1` for all three to their end; `make
+test-scene-task-reference` and `make test-pad-record-reference` run the
+original 001ACA20 and 001B5BC0). The demo's pictures are not compared.
+docs/ATTRACT_DEMO.md; lanes PORT-DEMO and PORT-DEMO2, 2026-11-18.
+
 ### A person's own play, from the title (VERIFIED for position, heading and area)
 
 The user's own 49-minute take on the original (`run1`, recorded with the decomp's

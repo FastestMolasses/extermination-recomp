@@ -4,6 +4,7 @@
  */
 #include "game/em_memcard.h"
 #include "game/em_frontend.h"
+#include "game/em_camera_live.h"
 #include "game/em_random.h"
 #include "game/em_start_at.h"
 #include "game/em_area01_terminal_status.h"
@@ -431,6 +432,16 @@ static int native_storage_ready(void)
  * counter +0x16 is N; the run quits when the title is back. */
 static int attract_test(void) { return f.test && strcmp(f.test, "attract") == 0; }
 
+/* The player record's word at `offset` (D_008102B0, the camera view's
+ * player bytes), little-endian as the capture reads it. */
+static uint32_t attract_player_word(unsigned offset)
+{
+    const uint8_t *p = em_camera_live_player_bytes();
+    if (!p) return 0;
+    return (uint32_t)p[offset] | (uint32_t)p[offset + 1] << 8 | (uint32_t)p[offset + 2] << 16 |
+           (uint32_t)p[offset + 3] << 24;
+}
+
 static int attract_rc = -100; /* this frame's 001ACA20 result; -100: no call */
 
 /* The frame tail (em_frame_set_frame_tail): the row of this frame's call,
@@ -447,33 +458,17 @@ static void attract_row_tail(void)
     for (int i = 0; t && i < 16; ++i)
         snprintf(task + 2 * i, sizeof task - 2 * (size_t)i, "%02x", t->user[i]);
     printf("attract row demo %d task %s area %02x%02x%02x%02x pad %04x %02x %02x %02x pos %.5f %.5f %.5f "
-           "yaw %.5f fade %d rand %08x rc %d\n", f.attract_demo, task, sc->d810700, sc->d810701, sc->d810702,
+           "yaw %.5f fade %d rand %08x rc %d act %08x\n", f.attract_demo, task, sc->d810700, sc->d810701, sc->d810702,
            sc->progress.bytes[3], pad->held, pad->lx, pad->ly, pad->gait, (double)g.pos[0], (double)g.pos[1],
-           (double)g.pos[2], (double)g.yaw, (int)em_frame_transition()->substate, (unsigned)em_random_peek(), rc);
-}
-
-/* The demos the port runs (docs/ATTRACT_DEMO.md section 4): demo 0 (AREA06)
- * and demo 2 (AREA03) play to their end. Demo 1 (AREA13) stops at its
- * record 1436 on an aim/fire fault, so it keeps the stand-in (a black screen
- * that serves only the state-0 gate's button exit) unless EM_ATTRACT_ALL=1
- * (comparison runs). */
-static int attract_live(int demo)
-{
-    const char *all = getenv("EM_ATTRACT_ALL");
-    return demo == 0 || demo == 2 || (all && all[0] == '1');
+           (double)g.pos[2], (double)g.yaw, (int)em_frame_transition()->substate, (unsigned)em_random_peek(), rc,
+           (unsigned)attract_player_word(0x1F0));
 }
 
 static void attract_tick(int begin)
 {
+    /* All three demos play (docs/ATTRACT_DEMO.md section 4: 3600 of 3600
+     * records equal to the original's capture each). */
     if (!f.attract_serial) return;
-    if (!attract_live(f.attract_demo)) {
-        if (!(em_frame_input()->held & EM_STARTUP_ATTRACT_EXIT)) return;
-        uint32_t serial = f.attract_serial;
-        f.attract_serial = 0;
-        f.attract_exit_seen = 1;
-        em_startup_complete(&f.flow, serial, 2);
-        return;
-    }
     if (attract_test()) {
         const EmTask *t = em_task_current();
         const char *at = getenv("EM_ATTRACT_EXIT_AT");
@@ -1595,7 +1590,7 @@ static void startup_task(void)
      * frame is the overlay pass's bottom fill, under the backdrop quads:
      * the load screen's and the OPTIONS' 0020A7A0 background draws there
      * (an overlay rect would cover it; docs/OPTIONS.md section 4.5). */
-    if (!f.attract_serial || !attract_live(f.attract_demo))
+    if (!f.attract_serial)
         em_gfx_overlay_backdrop_fill(gfx, black);
     int screen = -1;
     if (view.screen >= EM_STARTUP_SCREEN_LOGO_A && view.screen <= EM_STARTUP_SCREEN_LOGO_C)

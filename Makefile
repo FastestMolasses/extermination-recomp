@@ -429,6 +429,12 @@ test-title-menu-reference:
 test-attract-demo: all
 	python3 tools/test_attract_demo.py
 
+# 001B5BC0, the attract demo's recorded-pad step, vs the original instructions
+# (docs/ATTRACT_DEMO.md section 4).
+.PHONY: test-pad-record-reference
+test-pad-record-reference:
+	python3 tools/test_pad_record_reference.py
+
 .PHONY: test-random-seed-reference
 test-random-seed-reference:
 	python3 tools/test_random_seed_reference.py

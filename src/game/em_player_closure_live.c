@@ -2612,10 +2612,16 @@ static int c0e_hit_surface(void *c, uint8_t *surface)
     *surface = (uint8_t)h.node;
     return 0;
 }
+/* 0016B790 state 3's 001607D0(p): the action machine over the weapon
+ * states' scene view, refreshed first as lw_actions does (the held word
+ * D_00810E70 and the pad masks 0x70003B74..7E of this tick; a stale view
+ * missed the held 3B7C at +1F0 = 0x27 and left the stance for 0x26 where
+ * the original enters +5 = 0x1F, the attract demo 0's record 2427). */
+static int lw_actions(void *c, EmPlayerLiveActor *a, int *result);
 static int c0e_use_test(void *c, EmPlayerLiveActor *a, int *result)
 {
-    (void)c; IN3A20();
-    int r = em_player_weapon_001607D0(&L.wa, a, result);
+    IN3A20();
+    int r = lw_actions(c, a, result);
     OUT3A20(); return r;
 }
 static int c0e_sweep(void *c, EmPlayerLiveActor *a, const uint32_t from[4], const uint32_t to[4],

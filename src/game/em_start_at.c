@@ -676,7 +676,7 @@ static int fixture_set(char *name, size_t size)
         "EM_STARTUP_MENU_WAIT", "EM_LEVEL_SMOKE_UNTIL", "EM_AIM_PAD_SCRIPT", "EM_A01_ARRIVAL_TICKS",
         "EM_AREA01_EXPLORE_SCRIPT", "EM_AREA01_EXPLORE_PHASE", "EM_CLIP_DEMO", "EM_CONTROL_LOW_GAIT",
         "EM_MOVE_LEGS", "EM_MOVE_EXPECT", "EM_RAND_REPLAY", "EM_ATTRACT_EXIT_AT", "EM_ATTRACT_DEMOS",
-        "EM_ATTRACT_DEMO_ID", "EM_ATTRACT_ALL"};
+        "EM_ATTRACT_DEMO_ID"};
     for (char **e = environ; e && *e; ++e) {
         const char *v = *e;
         const char *eq = strchr(v, '=');

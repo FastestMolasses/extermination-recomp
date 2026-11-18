@@ -108,6 +108,7 @@ static struct {
     EmArea00HudVu vu;
     int vf23_valid;
     uint32_t self_word[EM_ACTOR_POOL_CAPACITY]; /* original pointer encodings */
+    uint8_t b9F[EM_ACTOR_POOL_CAPACITY];        /* +9F read copies (pool_field) */
     EmPoseRegion bss[32];
     uint32_t piece_start;                /* 001F3E30 mode 2: its unit's start */
     int piece_model;
@@ -165,6 +166,13 @@ static void *pool_field(uint32_t address,size_t size,int write)
     FIELD(b98,0x98); FIELD(b99,0x99); FIELD(table_index,0x9A);
     FIELD(b9C,0x9C); FIELD(b9D,0x9D); FIELD(b9E,0x9E); FIELD(pos,0xB0); FIELD(rot,0xC0);
 #undef FIELD
+    /* 00183AC0 / 00183B80 read a class-2 model 6's +9F (00142070 copies
+     * its control record's +78 there each tick: the 00141D20 creatures).
+     * The byte is the live area's original-layout record (read only, a
+     * copy taken at the read; the attract demo 1 aims at them in AREA13
+     * from its record 1436). */
+    if (!write && (p=span(address,size,base+0x9F,1,&R.b9F[index])))
+        return em_scene_bindings_actor_snapshot(address,1,p)==0 ? p : NULL;
     {
         AimRecord *r=&R.rec[index];
         if (r->used && r->generation==a->generation) {

@@ -36,7 +36,7 @@ def port_rows(path, demo):
         n = task[0x16 - 8] | task[0x17 - 8] << 8
         out.setdefault(n, dict(area=f[7], held=int(f[9], 16), lx=int(f[10], 16), ly=int(f[11], 16), gait=int(f[12], 16),
                       pos=tuple(float(x) for x in f[14:17]), yaw=float(f[18]), fade=int(f[20]),
-                      rand=int(f[22], 16), rc=int(f[24])))
+                      rand=int(f[22], 16), rc=int(f[24]), act=int(f[26], 16) if len(f) > 26 else None))
     return out
 
 
@@ -56,7 +56,8 @@ def capture_rows(path, demo):
                                ly=pad[0x15], gait=pad[0x07], pos=struct.unpack_from('<3f', pl, 0),
                                yaw=struct.unpack_from('<f', pl, 0x24)[0],
                                fade=struct.unpack_from('<h', bytes.fromhex(r['fade']), 0)[0],
-                               rand=struct.unpack_from('<I', bytes.fromhex(r['rand']), 0)[0]))
+                               rand=struct.unpack_from('<I', bytes.fromhex(r['rand']), 0)[0],
+                               act=struct.unpack_from('<I', bytes.fromhex(r['action']), 0)[0]))
     return out
 
 
@@ -76,7 +77,7 @@ def main():
     if not keys:
         print('compare_attract_demo: no common records')
         return 1
-    fields = ('area', 'held', 'lx', 'ly', 'gait', 'pos', 'yaw', 'fade', 'rand')
+    fields = ('area', 'held', 'lx', 'ly', 'gait', 'pos', 'yaw', 'fade', 'rand', 'act')
     first = {}
     equal = 0
     for n in keys:
@@ -87,6 +88,8 @@ def main():
                 same = all(math.isclose(a, b, abs_tol=args.tol) for a, b in zip(p[k], c[k]))
             elif k == 'yaw':
                 same = math.isclose(p[k], c[k], abs_tol=1e-3)
+            elif k == 'act' and p[k] is None:
+                same = True      # a port log without the action word
             else:
                 same = p[k] == c[k]
             if not same:
