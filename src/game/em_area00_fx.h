@@ -27,6 +27,10 @@
  *   the trail effect 0x8000000D (em_area00_fx_trail.c)
  *     001F18C0(node)          its node callback; 001F1550 (bone slots) and
  *                     001F15F0 (the strip packet) are its helpers
+ *   the six-slot particle burst, effect ids 0x80000037 / 0x80000038
+ *   (em_area00_fx_burst.c)
+ *     001F1F60(node)          its node callback; 001F1DD0(node, work,
+ *                     point) starts one particle at point
  *   the debris effects (em_area00_fx_debris.c)
  *     001F2BA0(node)          node callback of effect ids 0x8000000A..C,
  *                     0x21, 0x31, 0x32, 0x36, 0x4C, 0x4D, 0x5E, 0x6E;
@@ -127,6 +131,10 @@ int em_area00_fx_001F02C0(EmArea00Fx *s, uint64_t p, uint64_t id, uint32_t f12);
 int em_area00_fx_001F1550(EmArea00Fx *s, uint64_t node, uint64_t count, uint64_t *v0);
 int em_area00_fx_001F15F0(EmArea00Fx *s, uint64_t node, uint64_t slot, uint64_t row);
 int em_area00_fx_001F18C0(EmArea00Fx *s, uint64_t node);
+
+/* em_area00_fx_burst.c */
+int em_area00_fx_001F1DD0(EmArea00Fx *s, uint64_t node, uint64_t work, uint64_t point);
+int em_area00_fx_001F1F60(EmArea00Fx *s, uint64_t node);
 
 /* em_area00_fx_debris.c */
 int em_area00_fx_001F2BA0(EmArea00Fx *s, uint64_t node);

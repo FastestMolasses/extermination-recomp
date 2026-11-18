@@ -42,6 +42,10 @@ extern "C" {
 
 #define EM_AIM_FIRE_TRAIL_CALLBACK 0x001F18C0u
 #define EM_AIM_FIRE_DEBRIS_CALLBACK 0x001F2BA0u
+/* The six-slot particle burst (effects 0x80000037 / 0x80000038):
+ * em_area00_fx_001F1F60, whose state 0 pops six slots (001F1550(node, 6))
+ * and keeps its particles in their bytes as the trail does. */
+#define EM_AIM_FIRE_BURST6_CALLBACK 0x001F1F60u
 
 int em_aim_fire_trail_attach(EmActorPool *pool, EmSceneState *scene);
 uint32_t em_aim_fire_trail_fault(void);

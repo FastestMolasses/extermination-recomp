@@ -87,6 +87,13 @@ test follows the render lane's rule (DAZ, then magnitude compares against
 | 001F15F0(node, slot, row) | NEARMISS | The strip packet. The page is 001CCF70(*(node +0x1F0) + 0x30); 0xFFFFFF returns. 001CB5F0(D_007635C0, page, 0x3E) gives the block, which gets a zero quadword, the DIRECT word 0x5000003D and the GIF tag 0x402640000000800F / 0x4141. It then walks 15 samples from (slot, row): row −= 2, and below 0 it wraps to 8 with slot − 1 (below 0 it wraps to 2), until (slot, row) returns. Each sample scales +0x220 / +0x230 by the sample's age / 10 (00102900 into 0x70003600 / 0x70003610, then 00102990 into the packet) and projects the history points row and row + 1. An age of at most 0 sets the ADC bit 0x8000 in the **next** block's +0x1C / +0x2C words (the cursor has already moved on); otherwise the age drops by 1. It ends with 001CB900(…, page, 2). |
 | 001F18C0(node) | byte-matched C | The node callback. States 2 / 3 call 001AFC10. State 0 runs 001F1550(node, 3); on success it zeroes the ages of the three 10-sample histories, seeds every history point pair with 001026A0 (the bone matrix at +0x1F0, the offsets +0x200 / +0x210), clears the row and slot words and falls into state 1. State 1 sets the current sample's age to 10.0, seeds its pair, draws with 001F15F0, and moves the row by 2 (wrapping at 10 into the next slot, and at 3 slots back to 0). |
 
+### the six-slot burst, effects 0x80000037 / 0x80000038 (`em_area00_fx_burst.c`, lane PORT-FX 2026-11-17)
+
+| addr | decomp source | what it does |
+|---|---|---|
+| 001F1F60(node) | byte-matched C | The node callback; +0x24 is the parent (001EFE00's; the creatures' spit 001373B0 / 00153540 / 0018AF50 spawn 0x37, 0018B3E0 spawns 0x38), +0x0D the mode (0 or 1). **State 0** runs 001F1550(node, 6); on success it marks the 60 particles dead (age +0xA0.. = −1.0 in each of the six slots), copies the parent's +0x100 to work +0x20, clears work +0 / +4 / +0x10, seeds work +8 with rand() and sets the ring scale work +0x14 = 0.2, then state 1. **States 1 / 2** end (state 3) when the parent's +4 is 3. State 1 only: on its first frame (work +0x10 = 0) the node matrix +0xD0 is built by 001029C0 and 00102760 from the parent's +0xC0 (mode 0) or +0x70 (mode 1) through 001CD390, and +0x100 = +0xB0; then 001F1DD0 starts a particle at the parent's +0x100 (mode 0 also one at 2·(new − old) + new through 001028D0 / 00102870 / 001028B8), and work +0x20 takes the new point. Then every live particle (age not below 0) is drawn: grey 192 / 80 with alpha 48·(1 − age) or 80·(1 − age²) packed by four 00128250 calls, size 2 + 2·age or 2 + 3·age, one 001CD520(0, 1, quad, …); its age grows by 0.08 / 0.02; an age above 1.0 (or −1.0) counts as dead. The LCG work +0x0C (reset from +8 each frame, w·37 + 11) gives each slot's 0x70003A24 phase and the ring's jitter. While the ring scale is below 1.5: mode 0 one ring sprite (001CCF70 of +0x100, 001CFA60, 001CFBE0(…, D_0025A0F0, …)), +0.06; mode 1 four sprites turned 45°, 135°, −45°, −135° about a 110° tilt (00102B08, 00102A60, 001026D0, 001CCF70 of 0x70003710, 001CFBE0(…, D_0025A180, …)), +0.04. State 2 ends when all 60 are dead and the ring is done; state 1 with mode 1 draws one more sprite at the parent (size 2 + rand/2³¹). State 3 calls 001AFC10. |
+| 001F1DD0(node, work, point) | byte-matched C | 0x70003A20 = 0.4 (mode 0) or 0.6 (mode 1). Advances the particle (work +4, wraps at 10 into the slot work +0, which wraps at 6), sets the phase 0x70003A24 = 2π·rand/2³¹ − π, copies `point` into that particle's quadword and moves its x by 0x70003A20·0011E2A8(phase) and its y by 0x70003A20·0011DE90(phase); its age becomes 0. |
+
 ### the debris effects (`em_area00_fx_debris.c`)
 
 The node callback of effects 0x8000000A..C, 0x21, 0x31, 0x32, 0x36, 0x4C,
@@ -204,7 +211,7 @@ access rules are imported from `tools/test_area01_render_reference.py`.
   is identical in all 16 AREA01 and 12 AREA00 route states (scratch
   `build/area00/fx/tlbcmp.py`: 1 distinct TLB over 28 states).
 - **Callee policy.** The start-up checks that the set of direct call targets
-  of the 28 routines is exactly the policy plus the two inline copies. Every
+  of the 30 routines is exactly the policy plus the two inline copies. Every
   policy is checked against RegScan (`tools/test_area01_sys_reference.py`,
   imported unchanged). A callee reading a register outside its policy fails
   the test, except for these exceptions, each enforced exactly:
@@ -254,7 +261,7 @@ every branch outcome, plus a fixed-seed sample of each group):
   the first, second, middle and last call; full mode fails every call (every
   7th, with the last, past 40 calls).
 
-**Branch coverage.** Every conditional branch of the 28 routines must be seen
+**Branch coverage.** Every conditional branch of the 30 routines must be seen
 both ways: 179 branches, 358 outcomes. Nine outcomes are not reachable, and
 the test asserts that none of them is ever seen:
 - 001AA840's second count test;
@@ -420,6 +427,14 @@ before binding:
 
 No port file defines 001AA7A0, 001EEEB0 or 001D3990. The first-level port's
 copies of the VU0 leaves (0010xxxx) are also candidates.
+
+The burst 001F1F60 (lane PORT-FX) is bound in the shared composition as
+the trail and the debris are: em_area11_bindings' tick_effect_node,
+em_aim_fire_runtime's other_tick (em_aim_fire_trail holds its six slots),
+em_aim_fire_world_live's dispatch; its parent's +0x00..+0x13 (the pool's
+fields) and +0x70..+0x10F (a read-only copy) are views for that call, and
+its SDK callees read them through em_aim_fire_runtime's external_map
+(em_aim_fire_world_live_owner_view, read only, last).
 
 Wiring order: the debris effect (001F2BA0) and the glow (001F6FB0) are the
 a00_09 content; the exit effect (001F5040) is a00_10's. Each needs its

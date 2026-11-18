@@ -220,13 +220,43 @@ e.g. the skip's frame and the walk at frames 172..176); EM_START_AT_CLOCK
 - g48: runs to pad frame ~12200 of 26829, then 001BAD40 (unbound),
   called by 0x8251B0 (group 0x827F40 [4]).
 
+### Lane PORT-FX (2026-11-17, branch `fx`)
+
+- **001F1F60 / 001F1DD0** (the six-slot burst of effects 0x80000037 /
+  0x80000038): translated in em_area00_fx_burst.c from the instructions
+  (both byte-matched in the decomp), with oracle groups `burst` (56 cases)
+  and `001F1DD0` (12) in tools/test_area00_fx_reference.py: every branch
+  outcome of both is seen but the ring loop's unreachable default (listed),
+  full sweep and fault group pass. Bound: em_area11_bindings'
+  tick_effect_node entry, em_aim_fire_runtime's other_tick (with the trail
+  and the debris), em_aim_fire_trail's slots (6 for this callback),
+  em_aim_fire_world_live's dispatch, which maps the parent's (+0x24) pool
+  fields +0x00..+0x13 and a read-only copy of +0x70..+0x10F for the call;
+  em_aim_fire_runtime's external_map lets the SDK callees read those views
+  (em_aim_fire_world_live_owner_view, read only, last). It draws rand()
+  (state 0, mode 1's per-frame sprite, 001F1DD0), so the port's rand()
+  stream now has these draws.
+- **001BAD40 from an overlay owner**: 0x8251B0 (decomp
+  func_overlay_AREA17_00825170) calls it directly with its +0x20 entry;
+  em_area01_runtime's rv_001BAD40 runs em_sdf_001BAD40 over the node with
+  the workers rv_001BB0E0's 001BAD40 already uses (the node synced around
+  each callee; frame 0x60).
+- **Where the beats stand**: g46 runs to pad frame ~1180: the positions
+  follow the rows (pad frame 1000: port (228.45, 260, 403.00), row
+  (229.0, 260, 403.41)), but the spit hits the player four times (health
+  35 -> 5) and the game returns to the title; the original's take used
+  item 0x22 and ends at health 35, so whether it took the same hits is
+  not shown by the rows (no health column). g47 runs to pad frame ~2600,
+  then 00133E30's 001D6B10 (its haze texture, em_area17_creature_haze)
+  has no live worker. g48 runs to pad frame ~18800 (past 0x8251B0's
+  001BAD40), then the player closure 0016BC40 faults (code 5 at
+  0x810835).
+
 ## Not done
 
-- **The live area** (section "Live"): translate 001F1F60 and 001F1DD0
-  into em_area00_fx (the knife trail's slot framework: 001F1550 holds 6
-  slots here, em_aim_fire_trail's slots_max) with oracle cases, bind the
-  callback in the composition (em_aim_fire_runtime other_tick,
-  em_aim_fire_world_live); then 001BAD40 for g48; then the beats g46 .. g48.
+- **The live area** (section "Live"; 001F1F60 and 001BAD40 done by
+  PORT-FX): g46's spit hits (compare with a capture that records health),
+  g47's 001D6B10 live worker, g48's 0016BC40 fault at 0x810835.
 - The other live-only bindings AREA14 needed (AREA14_PORT.md "Pieces the
   live run needed") but the muzzle node 001F5040 are not checked for AREA17.
 - 0x8235E0 and 0x823860, and the group holding 0x823580 / 0x8236F0 /

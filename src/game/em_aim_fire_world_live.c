@@ -221,6 +221,10 @@ typedef struct Bridge {
     EmPoseRegion glow_view[6];
     unsigned glow_views;
     uint8_t glow_matrix[64], glow_block[0x100];
+    /* The six-slot burst 001F1F60's parent (its +0x24): +0x70..+0x10F, a
+     * read-only copy (the two matrices +0x70 / +0xC0 and the point +0x100
+     * it reads; it writes none of the parent). */
+    uint8_t burst_parent[0xA0];
     uint32_t point[4];
     /* The published class-4 list (D_00275B7C / D_00275B84, base D_0028AE30)
      * as views: 001AA840 walks it (the knife's reach). */
@@ -668,7 +672,7 @@ static int world_call(void *context,EmAimFireLive *h,EmAimFireTargetCall *c,Brid
        c->function!=0x00189FE0u && c->function!=0x0018A180u && c->function!=0x001EFF10u &&
        c->function!=0x0022BBC0u && c->function!=0x001F0190u && c->function!=0x001F0290u &&
        c->function!=0x001CD070u && c->function!=0x001CD2B0u && c->function!=0x001F2BA0u &&
-       c->function!=0x001C6200u &&
+       c->function!=0x001C6200u && c->function!=0x001F1F60u &&
        c->function!=0x001E2E80u && c->function!=0x001F02C0u && c->function!=0x001F6FB0u &&
        c->function!=0x001DEE80u && c->function!=0x001DEEC0u && c->function!=0x001DF5A0u &&
        c->function!=0x001DF9D0u)return -1;
@@ -719,6 +723,22 @@ static int world_call(void *context,EmAimFireLive *h,EmAimFireTargetCall *c,Brid
         if(w->actor_snapshot(w->context,parent+0x1F0u,0x100,b.glow_block)<0)
             return fault(h,c->function,parent+0x1F0u);
         b.glow_view[b.glow_views++]=(EmPoseRegion){parent+0x1F0u,0x100,b.glow_block,0};
+    }
+    /* 001F1F60 reads its parent (node +0x24) in its states 0, 1 and 2:
+     * the state byte +4 and +0x70..+0x10F. State 3 only frees the node; any
+     * other state returns at once. */
+    const uint8_t *burst_state=c->function==0x001F1F60u ? em_aim_fire_live_map(h,a+4u,1,0) : NULL;
+    if(c->function==0x001F1F60u && !burst_state)return fault(h,c->function,a+4u);
+    if(c->function==0x001F1F60u && *burst_state<=2u) {
+        const uint8_t *pp=em_aim_fire_live_map(h,a+0x24u,4,0);
+        if(!pp)return fault(h,c->function,a+0x24u);
+        const uint32_t parent=(uint32_t)pp[0]|(uint32_t)pp[1]<<8|(uint32_t)pp[2]<<16|(uint32_t)pp[3]<<24;
+        void *q=em_aim_fire_live_map(h,parent,0x14,0);
+        if(!q)return fault(h,c->function,parent+4u);
+        b.glow_view[b.glow_views++]=(EmPoseRegion){parent,0x14,q,0};
+        if(!w->actor_snapshot || w->actor_snapshot(w->context,parent+0x70u,0xA0,b.burst_parent)<0)
+            return fault(h,c->function,parent+0x70u);
+        b.glow_view[b.glow_views++]=(EmPoseRegion){parent+0x70u,0xA0,b.burst_parent,0};
     }
     if(refresh(&b)<0) {
         fprintf(stderr,"aim/fire world: %08X refresh failed (%u views)\n",
@@ -881,6 +901,10 @@ static int world_call(void *context,EmAimFireLive *h,EmAimFireTargetCall *c,Brid
         else if(c->function==0x001F18C0u)
             /* The knife's trail node (em_aim_fire_trail holds its slots). */
             status=em_area00_fx_001F18C0(&s,c->a[0]);
+        else if(c->function==0x001F1F60u)
+            /* The six-slot burst 0x80000037 / 0x80000038 (em_aim_fire_trail
+             * holds its slots; its 001F1DD0 runs inside). */
+            status=em_area00_fx_001F1F60(&s,c->a[0]);
         else if(c->function==0x001F2BA0u)
             /* A box's debris node (em_aim_fire_trail holds its slots). */
             status=em_area00_fx_001F2BA0(&s,c->a[0]);

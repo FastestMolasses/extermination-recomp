@@ -237,6 +237,10 @@ static void *external_map(void *context,uint32_t a,size_t n,int write)
      * the live camera's own word, read only. */
     if (!p && !write && a>=0x008105D0u && (uint64_t)a+n<=0x008105E0u)
         p=em_camera_live_bytes(a,(uint32_t)n);
+    /* Last, read only: the running region-only owner's own views (the
+     * burst 001F1F60's SDK callees read its parent's +0x100 point, a
+     * read-only copy em_aim_fire_world_live made for that call). */
+    if (!p && !write) p=em_aim_fire_world_live_owner_view(a,n,0);
     return p;
 }
 static int append(EmPoseRegion *out,unsigned capacity,unsigned *count,
@@ -994,9 +998,12 @@ static int other_tick(void *context,uint32_t node,uint32_t callback)
      * pieces of the bank at slot 0x43). */
     R.d28A59C=em_area11_boxes_world_bank_word();
     if (callback==EM_EFFECT_001F77B0_CALLBACK) return death_decal_tick(node);
-    if (callback==EM_AIM_FIRE_TRAIL_CALLBACK || callback==EM_AIM_FIRE_DEBRIS_CALLBACK) {
-        /* The knife's trail node 001F18C0 and a box's debris node 001F2BA0
-         * (em_area00_fx through the composition), with D_00275B40 = its
+    if (callback==EM_AIM_FIRE_TRAIL_CALLBACK || callback==EM_AIM_FIRE_DEBRIS_CALLBACK ||
+        callback==EM_AIM_FIRE_BURST6_CALLBACK) {
+        /* The knife's trail node 001F18C0, a box's debris node 001F2BA0 and
+         * the six-slot burst 001F1F60 (effects 0x80000037 / 0x80000038, the
+         * creatures' spit; em_area00_fx through the composition), with
+         * D_00275B40 = its
          * +0x110 (the walk's 001CB590); 1 while its record stays allocated,
          * 0 once it freed itself. */
         EmActor *a=pool_actor(node);

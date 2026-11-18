@@ -10,6 +10,7 @@ Translated routines (each run as ORIGINAL code on the oracle side):
   packets  001CD940 001D6DD0 001D7510 001D7A80 001F4A00 001F4E20
   spawn    001AA840 001EF510 001EFF10 001EFFD0 001F0060 001F00A0 001F02C0
   trail    001F1550 001F15F0 001F18C0
+  burst    001F1DD0 001F1F60
   debris   001F2BA0 001F2E90 001F2F90 001F3340 001F3620 001F3E30
   exit     001F4F40 001F4F90 001F5040 001F5490 001F5F60
   glow     001F6FB0
@@ -38,7 +39,7 @@ starts (the "setup"; not compared), and node callbacks then run for several
 frames as case steps, with the pool's per-callback words (D_00275B44 /
 48 / 40) set as the pool sets them.
 
-Every conditional branch of the 28 routines must be taken both ways except
+Every conditional branch of the 30 routines must be taken both ways except
 the ones docs/AREA00_FX.md section 3 lists as unreachable. EM_TEST_FULL=1
 runs every generated case; the default runs a covering sample. At most four
 worker processes (EM_TEST_JOBS=1: serial).
@@ -78,6 +79,7 @@ SIZES = {  # the translated routines (original bytes)
     0x1F02C0: 0x4C, 0x1F1550: 0x9C, 0x1F15F0: 0x2D0, 0x1F18C0: 0x1E0, 0x1F2BA0: 0x2E4, 0x1F2E90: 0xF4,
     0x1F2F90: 0x3AC, 0x1F3340: 0x2D8, 0x1F3620: 0x80C, 0x1F3E30: 0x16C, 0x1F4F40: 0x48, 0x1F4F90: 0xB0,
     0x1F5040: 0x450, 0x1F5490: 0x44, 0x1F5F60: 0x2AC, 0x1F6FB0: 0x800,
+    0x1F1DD0: 0x190, 0x1F1F60: 0x968,
 }
 TRPC = frozenset(pc for a, n in SIZES.items() for pc in range(a, a + n, 4))
 INLINE = {0x102948, 0x102958}
@@ -109,6 +111,10 @@ WSPEC = {
     0x001EEEB0: ((A0, A1), (), None), 0x001EF9D0: ((A0, A1), (12,), 'v0'), 0x001EFD20: ((A0, A1), (), None),
     0x001EFD90: ((A0, A1, A2), (), None), 0x001F4BF0: ((A0, A1), (), 'v0'),
     0x001F4D40: ((A0, A1), (12, 13), 'v0'), 0x001FBD50: ((A0, A1, A2), (12,), None),
+    # the burst 001F1F60's (its 001CD520 result is not used)
+    0x00102760: ((A0, A1), (), None), 0x00102870: ((A0, A1), (12,), None),
+    0x00102A60: ((A0, A1), (12,), None), 0x00102B08: ((A0, A1), (12,), None),
+    0x00128250: ((), (12,), 'v0'), 0x001CD520: ((A0, A1, A2, A3, T0), (12, 13, 14), None),
 }
 INDIRECT = ((A0,), (), None)     # 001F5040's call through the node's +0x4C
 
@@ -116,10 +122,14 @@ INDIRECT = ((A0,), (), None)     # 001F5040's call through the node's +0x4C
 # with why none is an input here (enforced exactly: a new one fails).
 REG_READ_EXCEPTIONS = {
     0x001CFBE0: ({16, 17}, set(), 's0 / s1 when its a1 is 7 or more (its switch bound, the case the AREA01 SYS '
-                                  'lane lists); both lane call sites (001EF510, 001F6FB0) pass a1 = 1'),
+                                  'lane lists); every lane call site (001EF510, 001F6FB0, 001F1F60) passes '
+                                  'a1 = 1'),
     0x00102BB0: (set(), {'vf4.y', 'vf4.z', 'vf4.w'}, 'through 001029E8, which multiplies vf4.yzw by vf0.x (0) and '
                                                     'then overwrites vf4.y; 00102BB0 subtracts vf4.zw from itself'),
     0x00102C58: (set(), {'vf4.y', 'vf4.z', 'vf4.w'}, 'the same leaf 001029E8 (through 00102BB0)'),
+    0x00102A60: (set(), {'vf4.y', 'vf4.z', 'vf4.w'}, 'the same leaf 001029E8, then vf4.zw less itself (the '
+                                                    'burst 001F1F60\'s ring turns)'),
+    0x00102B08: (set(), {'vf4.y', 'vf4.z', 'vf4.w'}, 'the same leaf 001029E8, then vf4.zw less itself'),
     0x001CD390: (set(), {'vf6.w'}, 'through the cross-product leaf 00102718, which reads vf6.w only to subtract it '
                                   'from itself'),
 }
@@ -304,10 +314,11 @@ ENTRIES = {
     0x1F3620: ('rr', None), 0x1F3E30: ('rrrrr', None),
     0x1F4F40: ('r', 'v0'), 0x1F4F90: ('rf', None), 0x1F5040: ('r', None), 0x1F5490: ('r', 'v0'),
     0x1F5F60: ('rrrr', None), 0x1F6FB0: ('r', None),
+    0x1F1DD0: ('rrr', None), 0x1F1F60: ('r', None),
 }
 assert set(ENTRIES) == set(SIZES)
 SOURCES = ['src/game/em_area00_fx_gs.c', 'src/game/em_area00_fx_spawn.c', 'src/game/em_area00_fx_trail.c',
-           'src/game/em_area00_fx_debris.c', 'src/game/em_area00_fx_exit.c', 'src/game/em_area00_fx_glow.c']
+           'src/game/em_area00_fx_burst.c', 'src/game/em_area00_fx_debris.c', 'src/game/em_area00_fx_exit.c', 'src/game/em_area00_fx_glow.c']
 
 
 def build_native(sources=None, tag='area00_fx'):
@@ -948,6 +959,111 @@ def strip_case(item):
 
 
 
+# ---- the six-slot burst 0x80000037 / 0x80000038 (001F1F60, 001F1DD0) ------
+
+BURST_IDS = (0x80000037, 0x80000038)       # mode (+0x0D) 0 and 1
+
+
+def burst_node(ram, spad, effect, parent):
+    node, _ = setup_call(ram, spad, 0x1EFE00, (effect, parent))
+    node &= MASK
+    assert node and w32(ram, node + 0x10) == 0x1F1F60, ('burst node', hex(effect), hex(node))
+    return node
+
+
+def burst_running(ram, spad, effect, parent, frames_before):
+    """A burst node run by ORIGINAL code (not compared) from its spawn for
+    `frames_before` frames (the first one takes the slots: state 0 -> 1)."""
+    node = burst_node(ram, spad, effect, parent)
+    for _ in range(frames_before):
+        for at, val in ((0x275B44, node), (0x275B48, node), (0x275B40, node + 0x110)):
+            put(ram, at, val)
+        setup_call(ram, spad, 0x1F1F60, (node,))
+    return node
+
+
+def burst_parent(ram, rng):
+    """The player, or a live pool node, as the burst's parent (+0x24)."""
+    nodes = pool_nodes(ram, {0x128C10}) + [PLAYER]
+    return rng.choice(nodes)
+
+
+def burst_items():
+    items = [(b, e, 'cap', n) for b in (FXB, PAD) for e in BURST_IDS for n in (1, 3)]
+    items += [(MAIN[s % len(MAIN)], BURST_IDS[s % 2], s, 2 + s % 3) for s in range(48)]
+    return items
+
+
+def burst_case(item):
+    beat, effect, seed, n = item
+    ram, spad = case(beat)
+    rng = random.Random(repr(item))
+    parent = burst_parent(ram, rng)
+    if seed == 'cap':
+        node = burst_node(ram, spad, effect, parent)
+        return run_both(item, spad, frames(node, 0x1F1F60, n))
+    k = seed % 8
+    if k == 0:                                                         # too few bone slots
+        put(ram, 0x275BCC, rng.choice([0, 3, 5]), 2)
+        node = burst_node(ram, spad, effect, parent)
+        n = 2                                                          # state 3, then freed
+    elif k == 1:
+        node = burst_node(ram, spad, effect, parent)
+        put(ram, node + 4, rng.choice([4, 5, 0x80, 0xFF]), 1)          # no state of its own
+        n = 1
+    else:
+        node = burst_running(ram, spad, effect, parent, 1 + seed % 5)
+        w = node + 0x1F0
+        if k == 2:
+            put(ram, parent + 4, 3, 1)                                 # the parent ends
+        elif k == 3:
+            put(ram, node + 0xD, rng.choice([2, 3, 0x10]), 1)          # a mode with no draw
+            put(ram, w + 0x10, 0 if (seed // 8) % 3 != 2 else 1)       # the first state-1 frame
+            put(ram, node + 4, (1, 2)[(seed // 8) % 2], 1)
+        elif k == 4:                                                   # state 2: the end test
+            put(ram, node + 4, 2, 1)
+            put(ram, w + 0x14, F(rng.choice([1.4, 1.5, 1.6, 1.46])))
+            for i in range(6):
+                life = w32(ram, node + 0x110 + 4 * i)
+                for j in range(10):
+                    put(ram, life + 0xA0 + 4 * j, F(rng.choice([-1.0, -1.0, -1.0, 0.95, 1.0, 1.01, -0.5, 0.5])))
+        elif k == 5:                                                   # 001F1DD0's wraps
+            put(ram, w + 4, rng.choice([8, 9]))
+            put(ram, w, rng.choice([4, 5]))
+            if rng.random() < 0.5:
+                put(ram, w + 0x10, 0)
+        elif k == 6:                                                   # state 2, all dead, ring done
+            put(ram, node + 4, 2, 1)
+            put(ram, w + 0x14, F((1.5, 1.52, 1.0)[(seed // 8) % 3]))     # 1.0: the ring still runs
+            for i in range(6):
+                life = w32(ram, node + 0x110 + 4 * i)
+                for j in range(10):
+                    put(ram, life + 0xA0 + 4 * j, F(-1.0))
+            n = 3                                                      # 3, then freed
+        else:                                                          # a longer run
+            n = 6
+    return run_both(item, spad, frames(node, 0x1F1F60, n))
+
+
+def burst_direct_items():
+    return [('1dd0', b, s) for b in (FXB, PAD) for s in range(6)]
+
+
+def burst_direct_case(item):
+    """001F1DD0 direct, from a running burst: every mode and both wraps."""
+    _, beat, seed = item
+    ram, spad = case(beat)
+    rng = random.Random(repr(item))
+    parent = burst_parent(ram, rng)
+    node = burst_running(ram, spad, BURST_IDS[seed % 2], parent, 1 + seed % 3)
+    w = node + 0x1F0
+    put(ram, node + 0xD, (0, 1, 2)[seed % 3], 1)
+    put(ram, w + 4, rng.choice([0, 3, 9]))
+    put(ram, w, rng.choice([0, 2, 5]))
+    point = rng.choice([parent + 0x100, 0x700038A0])
+    return run_both(item, spad, callback_pokes(node) + [('call', 0x1F1DD0, (sx(node), sx(w), sx(point)))])
+
+
 # ---- the debris effects (001F2BA0 and its helpers) ------------------------
 
 DEBRIS_IDS = [0x8000000A, 0x8000000B, 0x8000000C, 0x80000021, 0x80000031, 0x80000032, 0x80000036, 0x8000004C,
@@ -1457,6 +1573,8 @@ GROUPS = [   # (name, items, quick-mode sample beyond the pins, case)
     ('001EF510', ef510_items, 1, ef510_case),
     ('trail', trail_items, 1, trail_case),
     ('001F15F0', strip_items, 1, strip_case),
+    ('burst', burst_items, 2, burst_case),
+    ('001F1DD0', burst_direct_items, 1, burst_direct_case),
     ('debris', debris_items, 0, debris_case),
     ('pieces', piece_items, 2, piece_case),
     ('glow', glow_items, 0, glow_case),
@@ -1470,6 +1588,17 @@ GROUPS = [   # (name, items, quick-mode sample beyond the pins, case)
 # cover` prints this set: a small set of items reaching every branch outcome the full
 # sweep reaches, cheapest first)
 QUICK_PINS = {
+    "('a00_03_padlock', 2147483703, 'cap', 3)",
+    "('a00_03_padlock', 2147483704, 'cap', 3)",
+    "('a00_08_switch', 2147483703, 30, 2)",
+    "('a00_02_south_route', 2147483704, 35, 4)",
+    "('1dd0', 'a00_03_padlock', 0)",
+    "('a00_01_door51_locked', 2147483704, 1, 3)",
+    "('a00_02_south_route', 2147483703, 46, 3)",
+    "('a00_00_descend', 2147483703, 0, 2)",
+    "('a00_03_padlock', 2147483703, 36, 2)",
+    "('a00_10_progression_exit', 2147483703, 10, 3)",
+    "('1dd0', 'a00_03_padlock', 5)",
     "('2ba0_mode4', 'a00_09_ne_room_out', 0)",
     "('2f90', 'a00_00_descend', 55)",
     "('2f90', 'a00_02_south_route', 35)",
@@ -1594,6 +1723,7 @@ UNREACHED = {
                        'after 0019A570 / 001031E0 (their stores in every case run: the scratchpad and '
                        'their stack) and the lane\'s own stores to +0x50..+0x6F',
     (0x1F3B58, False): 'the sound dispatch runs only for kinds 9, 8, 7 and 3 (its enclosing test)',
+    (0x1F2648, False): 'the burst\'s ring loop index runs 0..3: past the tests for 3, 2 and 1 it is 0',
 }
 
 
@@ -1680,6 +1810,7 @@ FAULT_PLANS = [
     (0x1F4F40, 'exit_direct_case', ('4f40', EXB, 0)), (0x1F4F90, 'exit_direct_case', ('4f90', EXB, 0)),
     (0x1F5040, 'exit_case', (EXB, 0, 'fresh', 18)), (0x1F5490, 'exit_direct_case', ('5490', EXB, 0)),
     (0x1F5F60, 'exit_direct_case', ('5f60', EXB, 0)), (0x1F6FB0, 'glow_case', (FXB, 0, 'cap', 2)),
+    (0x1F1DD0, 'burst_direct_case', ('1dd0', FXB, 0)), (0x1F1F60, 'burst_case', (FXB, 0x80000037, 7, 6)),
 ]
 NO_MEMORY = {0x1F4A00, 0x1F4E20, 0x1F5490}      # entries that make calls and nothing else of their own
 FAULT_CALLS = {}
