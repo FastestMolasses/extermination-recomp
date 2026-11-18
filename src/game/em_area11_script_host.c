@@ -62,6 +62,10 @@ static struct {
      * records are mutated in place). */
     EmScriptImage opening;
     int opening_tried;
+    /* The cable ride's scene 0x828BE0..0x828F30 (its list and the script
+     * 0x828C70; the same exporter), dropped with the opening's. */
+    EmScriptImage cable;
+    int cable_tried;
     Owner owner[OWNERS];
     EmAreaScriptWorkers workers;
     /* The four-lane views (see the header) and the bytes with no port
@@ -87,6 +91,12 @@ static struct {
     EmCinematicProjection projection;
     EmCinematicPlayback playback;
     int track_tried, track_loaded, projection_tried, projection_loaded, playing;
+    /* The cable ride's scene's track (bank 0x97's clip 0) and its event
+     * window 0x26AB98..0x26ADB0 (scene 0x1A's +0x84 and +0x80 tables). */
+    EmCinematicCamera cable_track;
+    EmCinematicEvents cable_events;
+    float cable_event_words[EM_AREA11_CABLE_EVENTS_WORDS];
+    int cable_track_tried, cable_track_loaded;
     /* op0F's bytes (001B7A30; Roger's departure 0x828A10): the views of the
      * stream lanes' read phase D_00282157 and of the movie service's
      * D_00275C78 / D_00821058 (movie_view_load / movie_view_store). */
@@ -440,6 +450,23 @@ static int track_ready(void)
     return 0;
 }
 
+/* The cable ride's scene (bank 0x97's clip 0, scene 0x1A) and its event
+ * window (tools/export_cable_scene.py). */
+static int cable_track_ready(void)
+{
+    if (H.cable_track_loaded) return 0;
+    if (H.cable_track_tried) return -1;
+    H.cable_track_tried = 1;
+    if (em_cinematic_camera_load(&H.cable_track, EM_AREA11_CABLE_CAMERA_PATH) != 0 ||
+        em_cinematic_events_load(&H.cable_events, H.cable_event_words,
+                                 sizeof H.cable_event_words / sizeof H.cable_event_words[0],
+                                 EM_AREA11_CABLE_EVENTS_BASE, EM_AREA11_CABLE_EVENTS_PATH) != 0)
+        return report("no valid " EM_AREA11_CABLE_CAMERA_PATH " / " EM_AREA11_CABLE_EVENTS_PATH
+                      " (tools/export_cable_scene.py)");
+    H.cable_track_loaded = 1;
+    return 0;
+}
+
 static int projection_ready(void)
 {
     if (H.projection_loaded) return 0;
@@ -496,8 +523,8 @@ static int w_0022EC30(void *ctx, uint32_t camera)
         return area_after(H.area.camera(H.area.ctx, 0x0022EC30u, camera));
     }
     if (camera != EM_AREA_SCRIPT_D_008101E0) return -1;
-    uint32_t opening, roger;
-    if (bank_clip0(0x98, &opening) < 0 || bank_clip0(0x96, &roger) < 0) return -1;
+    uint32_t opening, roger, cable;
+    if (bank_clip0(0x98, &opening) < 0 || bank_clip0(0x96, &roger) < 0 || bank_clip0(0x97, &cable) < 0) return -1;
     const EmCinematicCamera *track = NULL;
     const EmCinematicEvents *events = NULL;
     if (g.cam.cine_track == opening) {
@@ -509,8 +536,12 @@ static int w_0022EC30(void *ctx, uint32_t camera)
     } else if (g.cam.cine_track == roger) {
         if (track_ready() < 0) return -1;
         track = &H.track;
+    } else if (g.cam.cine_track == cable) {
+        if (cable_track_ready() < 0) return -1;
+        track = &H.cable_track;
+        events = &H.cable_events;
     } else {
-        return report("0022EC30: the camera track is neither bank 0x96's nor bank 0x98's clip 0 (no export)");
+        return report("0022EC30: the camera track is not bank 0x96's, 0x97's or 0x98's clip 0 (no export)");
     }
     if (g.cam.cine_head != track->duration)
         return report("0022EC30: the track head is not the exported track's duration");
@@ -581,6 +612,8 @@ static int w_001C64F0(void *ctx, uint32_t actor, float dt, int32_t *result)
  * record's +0x14 names in the opening image and the pool's 001AFA90
  * (em_area11_bindings_001BAC00). A record outside that image has no bound
  * list (fail-stop). */
+static EmScriptImage *scene_image(uint32_t address);
+
 static int w_001BAC00(void *ctx, uint32_t actor, uint32_t script, uint32_t record, int32_t *result)
 {
     (void)ctx;
@@ -589,11 +622,11 @@ static int w_001BAC00(void *ctx, uint32_t actor, uint32_t script, uint32_t recor
         return area_after(H.area.record(H.area.ctx, 0x001BAC00u, actor, script, record, result));
     }
     Owner *o = owner_at(actor);
-    const unsigned char *rec = H.opening.bytes ? em_script_image_read(&H.opening, record, EM_SCRIPT_RECORD_SIZE)
-                                                : NULL;
+    EmScriptImage *im = scene_image(record);
+    const unsigned char *rec = im ? em_script_image_read(im, record, EM_SCRIPT_RECORD_SIZE) : NULL;
     if (!o || script != actor + 0x1F0u || !rec)
-        return report("001BAC00 outside the opening's image or on an owner without a script");
-    const EmSdfImage image = {H.opening.bytes, H.opening.base, H.opening.length};
+        return report("001BAC00 outside the opening's and the cable scene's images or on an owner without a script");
+    const EmSdfImage image = {im->bytes, im->base, im->length};
     if (view_store() < 0) return -1;
     int rc = em_area11_bindings_001BAC00(o->actor, rec, &image, result);
     view_load();
@@ -1133,6 +1166,8 @@ void em_area11_script_host_reset(EmActorPool *pool, EmSceneState *scene)
     if (H.images_loaded) em_area11_scripts_free(&H.images);
     em_script_image_free(&H.door_program);
     em_script_image_free(&H.opening);
+    em_script_image_free(&H.cable);
+    if (H.cable_track_loaded) em_cinematic_camera_free(&H.cable_track);
     memset(&H, 0, sizeof H);
     H.pool = pool;
     H.scene = scene;
@@ -1169,9 +1204,34 @@ static EmScriptImage *opening_image(void)
     return &H.opening;
 }
 
+/* The cable ride's scene's image (see H.cable), or NULL (reported). */
+static EmScriptImage *cable_image(void)
+{
+    if (H.cable.bytes) return &H.cable;
+    if (H.cable_tried) return NULL;
+    H.cable_tried = 1;
+    if (!em_script_image_load(&H.cable, EM_AREA11_CABLE_IMAGE_PATH) ||
+        H.cable.base != EM_AREA11_CABLE_IMAGE_BASE || H.cable.entry != EM_AREA11_CABLE_IMAGE_ENTRY ||
+        H.cable.length != EM_AREA11_CABLE_IMAGE_END - EM_AREA11_CABLE_IMAGE_BASE) {
+        em_script_image_free(&H.cable);
+        report("no valid " EM_AREA11_CABLE_IMAGE_PATH " (tools/export_area11_opening.py)");
+        return NULL;
+    }
+    return &H.cable;
+}
+
+/* The scene image (the opening's or the cable scene's) holding `address`,
+ * or NULL. */
+static EmScriptImage *scene_image(uint32_t address)
+{
+    if (address >= EM_AREA11_OPENING_IMAGE_BASE && address < EM_AREA11_OPENING_IMAGE_END) return opening_image();
+    if (address >= EM_AREA11_CABLE_IMAGE_BASE && address < EM_AREA11_CABLE_IMAGE_END) return cable_image();
+    return NULL;
+}
+
 const uint8_t *em_area11_script_host_opening_bytes(uint32_t address, uint32_t size)
 {
-    EmScriptImage *image = opening_image();
+    EmScriptImage *image = scene_image(address);
     return image ? em_script_image_read(image, address, size) : NULL;
 }
 
@@ -1226,8 +1286,9 @@ int em_area11_script_host_start(EmActor *actor, uint32_t entry)
         image = H.area.image(H.area.ctx, entry);
     } else if (entry >= EM_AREA11_DOOR_PROGRAM_BASE && entry < EM_AREA11_DOOR_PROGRAM_END) {
         image = em_area11_script_host_door_program();
-    } else if (entry >= EM_AREA11_OPENING_IMAGE_BASE && entry < EM_AREA11_OPENING_IMAGE_END) {
-        image = opening_image();
+    } else if ((entry >= EM_AREA11_OPENING_IMAGE_BASE && entry < EM_AREA11_OPENING_IMAGE_END) ||
+               (entry >= EM_AREA11_CABLE_IMAGE_BASE && entry < EM_AREA11_CABLE_IMAGE_END)) {
+        image = scene_image(entry);
     } else {
         if (images_ready() < 0) return -1;
         image = em_area11_scripts_image(&H.images, entry);
@@ -1332,6 +1393,12 @@ static int camera_emit(void *context, EmCinematicPlaybackEvent event, const EmCi
         return em_rcl_001D2830(2, 0) < 0 ? 0 : 1;
     case EM_CINEMATIC_CAMERA_FLAG_ON:
         return em_rcl_001D2830(2, 1) < 0 ? 0 : 1;
+    case EM_CINEMATIC_CAMERA_SCENE26_CUE: {
+        uint8_t *flags = em_scene_req_at(H.scene, 0x008106C8u);
+        if (!flags) return 0;
+        *flags |= 0x40u;                                   /* D_008106C8 |= 0x40 (its low byte) */
+        return em_rcl_001D2830(8, 0) < 0 || em_rcl_001C1DC0() < 0 ? 0 : 1;
+    }
     case EM_CINEMATIC_CAMERA_RUMBLE:
         return em_pad_actuator_001B1E20(pb->arg[0], pb->arg[1]) < 0 ? 0 : 1;
     case EM_CINEMATIC_CAMERA_FADE_OUT:

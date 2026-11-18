@@ -504,14 +504,60 @@ Where it stands:
   0019AA80, 0011E520 and 001E2BA0 bound. g50 .. g58 are not reached yet:
   no furthest frame and no divergence to report for them.
 
+### Lane PORT-CABLESCENE (2026-11-17, branch `cablescene`): the cable ride's scene
+
+The g17 chain now plays the scene after the cable ride (AREA11 entry 3,
+script 0x828C70 of the flag-0x30 manager 00823CE0) to its end:
+**g48 26395 of 26395 compared rows on the row, the port reaches row 26791**
+(the scene is rows 19889 .. 26789), then stops on the security gun's
+return-visit lifecycle (00825B74 code 1, lane PORT-GUNREVISIT's work).
+
+- **The image** 0x828BE0..0x828F30 (the placement list 0x828BE0 and the
+  script 0x828C70): tools/export_area11_opening.py now writes it too
+  (assets/scene_snow/cable_scene.emsc, beside opening.emsc; the same bounds
+  checks). em_area11_script_host resolves starts, op14 and the actors'
+  entries in either image (scene_image).
+- **The camera timeline**: op00 sub 6 starts 0022EC30 on bank
+  D_0028A490[0x97]'s clip 0, scene 0x1A (duration 3436). tools/
+  export_cable_scene.py writes assets/scene_snow/cable_scene/camera.emcc
+  (f12_id44 +0x60000) and events.emfx (the ELF's event words 0x26AB98 ..
+  0x26ADB0: scene 0x1A's +0x84 letterbox table D_0026AB98 and +0x80 fade
+  table D_0026ADA0), both checked against g48's end RAM.
+  em_cinematic_playback admits scene 0x1A (both tables bound at the start,
+  the cue at the cursor 2670.0: D_008106C8 |= 0x40, 001D2830(8, 0),
+  001C1DC0()). **Evidence:** test_cinematic_playback_reference.py runs the
+  original 0022EC30 / 0022EEF0 for scene 0x1A (quick: the start, the cue,
+  the letterbox on / off, the fade and the end; EM_TEST_FULL=1: all 6880
+  ticks, every call, its arguments, the state at each call and
+  D_008106C8's write) and the start of every scene id with the right
+  window.
+- **The two actors** (001BAC00 class 9, command 0, keys 0x50 / 0x5A, bank
+  0x97 clips 2 / 3, 20 nodes each): em_area11_roger's pairs 2 and 3 (one
+  body each) beside the opening's pair 1, chosen by the entry's list;
+  001DA6A0 now takes the record's +0x0C node count (em_shadow_live admits
+  19 .. 21 for the NPC kinds). Their models are AREA11 resident bytes
+  just below the region of f18_id94; export_cable_scene.py extends that
+  region of roger/resources.emrs down to D_0028A490[0x50] (the disc's
+  resident bytes; both models checked equal to g48's end RAM at the
+  load's +0x13DC0). The draw is 001CAA00 over the bank model, as for
+  Roger. **Not checked against a capture:** no original frame of the
+  scene is recorded (the evidence is the chain's rows: the player's
+  position, heading, area bytes and vitals every frame, and op01's final
+  placement at (460, 269, 424)).
+- **The chain's AREA11 rows**: em_scene_creature_trace now writes AREA11
+  frames (no creature list there), so guided chains compare AREA11 rows;
+  mid_route_beats.FAULT no longer stops a run on the AREA11 load's
+  legacy-mode notes 00199C50 / 001CB590 (the New Game prints them too).
+
 ## Not done
 
 - **The live area** (section "Live"; 001F1F60 and 001BAD40 done by
   PORT-FX; 001D6B10 and 0x810835 by PORT-WORKERS; the continuous chain by
   PORT-CHAIN; g46 .. g48 on the row by PORT-A17-NEXT; the AREA11 load by
-  PORT-CHAIN2): the cable ride's scene 0x828C70 at g48 row 19886 and the
-  security gun's return-visit lifecycles at g49 row 0 (lane PORT-CHAIN2
-  above), g48's extra original draws from row 12782, the status
+  PORT-CHAIN2): the security gun's return-visit lifecycles right after the
+  cable ride's scene (g48 row 26791; at g49 row 0 from card g49; lanes
+  PORT-CHAIN2 and PORT-CABLESCENE above), a capture of the scene's frames
+  to check its draw, g48's extra original draws from row 12782, the status
   background's extra steps near page loads, drawing the haze list on the
   chain page. g46's op07 sub 0xC wait is the drive timing (PORT-CHAIN),
   not a card fault.

@@ -12,7 +12,10 @@
  * start clock.
  *
  * Admitted scenes: 0x22 (the AREA11 opening, bank 0x98's clip 0: the +0x80
- * table D_0026AE00 and the cue 001B1E20(6, 0) at the cursor 1.0) and the
+ * table D_0026AE00 and the cue 001B1E20(6, 0) at the cursor 1.0), 0x1A (the
+ * scene after AREA17's cable ride, bank 0x97's clip 0: the +0x80 table
+ * D_0026ADA0, the +0x84 table D_0026AB98 and the cue at the cursor 2670.0,
+ * D_008106C8 |= 0x40, 001D2830(8, 0) and 001C1DC0()) and the
  * scenes whose start binds no table and which have no cue (0, 1, 3, 4, 9,
  * 11, 14, 18, 36; the first level starts scene 1, Roger's encounter on bank
  * 0x96's clip 0; docs/CAMERA_LIVE.md section 5). Every other scene binds
@@ -52,8 +55,12 @@ int em_cinematic_events_load(EmCinematicEvents *events, float *storage, size_t c
 
 enum {
     EM_CINEMATIC_SCENE_ROGER = 1,       /* bank 0x96's clip 0 */
-    EM_CINEMATIC_SCENE_OPENING = 0x22   /* bank 0x98's clip 0 */
+    EM_CINEMATIC_SCENE_OPENING = 0x22,  /* bank 0x98's clip 0 */
+    EM_CINEMATIC_SCENE_CABLE = 0x1A     /* bank 0x97's clip 0 */
 };
+/* 0022EC30's scene-0x1A tables: +0x80 D_0026ADA0, +0x84 D_0026AB98. */
+#define EM_CINEMATIC_CABLE_FADES 0x0026ADA0u
+#define EM_CINEMATIC_CABLE_LETTERBOX 0x0026AB98u
 /* 0022EC30's scene-0x22 table for +0x80: D_0026AE00. */
 #define EM_CINEMATIC_OPENING_EVENTS 0x0026AE00u
 
@@ -84,7 +91,9 @@ typedef enum {
     EM_CINEMATIC_CAMERA_EFFECT,       /* 0021B9A0(5, 0.0, value): +0x7C */
     EM_CINEMATIC_CAMERA_EFFECT_GREY,  /* 0021BA80(0x80, 0x80, 0x80): +0x7C */
     EM_CINEMATIC_CAMERA_EFFECT_CLOCK, /* 0021BA70(start_clock): +0x7C */
-    EM_CINEMATIC_CAMERA_FLAG_ON       /* 001D2830(2, 1): +0x84 */
+    EM_CINEMATIC_CAMERA_FLAG_ON,      /* 001D2830(2, 1): +0x84 */
+    EM_CINEMATIC_CAMERA_SCENE26_CUE   /* scene 0x1A at the cursor 2670.0: D_008106C8 |= 0x40,
+                                         001D2830(8, 0), then 001C1DC0() */
 } EmCinematicPlaybackEvent;
 typedef int (*EmCinematicPlaybackEmit)(void *, EmCinematicPlaybackEvent,
                                       const EmCinematicPlayback *);
