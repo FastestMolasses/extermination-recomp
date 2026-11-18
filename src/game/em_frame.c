@@ -36,6 +36,12 @@
 #include "game/em_startup_load_gaps.h"
 #include "game/em_task.h"
 
+/* em_frame_set_frame_tail: a comparison hook (EM_START_AT's end-of-frame
+ * script step) run once the whole frame has run, before the counter moves;
+ * it changes nothing the game computes. */
+static void (*s_frame_tail)(void);
+void em_frame_set_frame_tail(void (*fn)(void)) { s_frame_tail = fn; }
+
 static struct {
     EmWindow    *win;
     EmGfx       *gfx;
@@ -652,6 +658,7 @@ movie_phase:
     if (s_frame.step_w && s_frame.step_w(s_frame.step_vw_context, field) < 0)
         s_frame.quit = true;
     s_frame.movie_frame = false;
+    if (s_frame_tail) s_frame_tail();
     s_frame.counter++;
     return !s_frame.quit;
 }
@@ -660,6 +667,7 @@ static int (*s_timing_probe)(void *ctx, EmFrameGsCost *out);
 static void *s_timing_probe_ctx;
 
 static void (*s_after_step)(void);
+
 void em_frame_set_after_step(void (*fn)(void)) { s_after_step = fn; }
 
 void em_frame_set_timing_probe(int (*probe)(void *ctx, EmFrameGsCost *out), void *ctx)

@@ -601,6 +601,12 @@ recording-derived and stay in the ignored `build/`.
   pad is read in the frame after it). Without it the clock fell two frames
   behind at a page's open and its pad reached the page a frame early, so g46's
   page closed a frame before the original's (AREA17_PORT.md "Lane PORT-A17-NEXT").
+  The end-of-frame step runs at the frame's very end (em_frame's frame tail,
+  after the task table and steps H .. W), as the recording's loop-top row
+  samples it: run inside slot 0's render it came before slot 2's loader
+  cleared D_00275BD8, so a page load looked a frame longer and
+  EM_START_AT_PHASES anchored its end a frame late (g79 row 416, g76 row
+  6385; AREA21_PORT.md "Final phase").
   The trace then also holds the engine counter `c`, the frame machine's state
   `tb` (task 0's +0xB) and D_00275BD8 `bd8`, take.rec's tb / bd8 columns.
   `EM_START_AT_STATUS_BG=<ram image>` (comparison only) puts the image's

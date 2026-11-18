@@ -995,17 +995,34 @@ static void start_at_pad_mark(void)
     fflush(stdout);
 }
 
+/* A frame whose head stepped no hook (a status page: frame-machine states
+ * 3 and 5 run no world frame) steps the script at the frame's end. That
+ * step samples what a recording's row samples at the next loop top, so it
+ * waits until the frame's later tasks have run (em_frame calls
+ * em_frontend_start_at_after_tasks after the task table): the screen
+ * loader in slot 2 clears D_00275BD8 after slot 0's page tick, and a
+ * sample taken between the two saw the load one frame longer than the
+ * recording (g79 row 416: EM_START_AT_PHASES anchored the load's end a
+ * frame late, so the page's close and its music cue came a row early). */
+static int start_at_end_pending;
+
 void em_frontend_start_at_after_frame(void)
 {
     if (f.start_at && lt.phase == 6) em_start_at_frame_end(em_frame_counter(), g.pos, g.yaw);
-    if (f.start_at && lt.phase == 6 && !start_at_pad_stepped) {
-        em_start_at_trace_position(g.pos, g.yaw);
-        if (em_start_at_pad_frame(em_frame_counter(), NULL, g.cam.fwd, NULL, 1) == 1)
-            start_at_pad_end();
-        else
-            start_at_pad_mark();
-    }
+    start_at_end_pending = f.start_at && lt.phase == 6 && !start_at_pad_stepped;
     start_at_pad_stepped = 0;
+}
+
+void em_frontend_start_at_after_tasks(void)
+{
+    if (!start_at_end_pending) return;
+    start_at_end_pending = 0;
+    if (!f.start_at || lt.phase != 6) return;
+    em_start_at_trace_position(g.pos, g.yaw);
+    if (em_start_at_pad_frame(em_frame_counter(), NULL, g.cam.fwd, NULL, 1) == 1)
+        start_at_pad_end();
+    else
+        start_at_pad_mark();
 }
 
 void em_frontend_load_test_before_frame(void)
@@ -1325,6 +1342,7 @@ void em_frontend_install(void)
      * loaded area's control. */
     if (em_start_at_name()) {
         f.start_at = 1;
+        em_frame_set_frame_tail(em_frontend_start_at_after_tasks);
         em_memcard_set_root(em_start_at_card_root());
         em_memcard_set_read_only(1);
         em_frame_set_unpaced(1);
