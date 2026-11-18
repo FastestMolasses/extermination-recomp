@@ -90,11 +90,41 @@ recording of AREA21 is still needed to show the owners in a run.
 - `src/game/em_scene_bindings.c`: AREA21's translated overlay behaviours
   bind (0x8243B0 included); any other overlay address of AREA21 does not.
 
+## Live (lane PORT-LIVE-A2021, 2026-11-18, branch `live2021`)
+
+AREA21 is exported from the guided run and loads live through the real area
+change from AREA20 (chain g20, AREA20_PORT.md "Live"); it does not play yet.
+
+- **Exports**: SUBS[('area21', 0)] = g75 (entry 3 after the movie and the
+  arrival script 0x82B240), g76 (the prep), g77 / g78 (phases 1 and 2), one
+  load (cursor 0x1351F80 in all), previous g74. g79's end is left out: its
+  background asset differs from the other four (not modelled).
+  CREATURES 0x8297C0 and OWNER_MATRIX 0x82A1D0 (both self + 0xD0, byte-
+  identical C); FLAG_RULES `area21_flag_calls` from the C of [58] 0x827CD0
+  (nine (n, 1) calls once its +5 is 2) and [45]'s 0x826840 ((0x1C, 0) on the
+  way past D_0081080E 1: 0x10, 0x11 or 0xFF in the capture). EXPLICIT_MODELS
+  0x827E70 state 1 (model 9 from +5 4); ORPHANS_UNPROVEN drum uid 19 (freed in
+  the fight); WRITERS: [52] 0x8243B0's eight data words (each pair holds one
+  of its products 48c / 8a / 20b / 10b). Shared fixes: export_area15_level
+  reads the cell directory across the two files id 0x46 spans (chunk25 f10's
+  tail, f11's head); export_render_context.RUNTIME adds D_0027569C (001E1E60's
+  handle) and D_002512E0's fields 001CEEE0 stores (AREA21's rounds 0x825C70).
+  `--kind all` / `place` pass (692 objects, 3788 level and 116 dynamic kicks,
+  cells 69 uids, roster 63, 7 chains, 33 world models, sound); profile 21,
+  sfx scope (0x15, 0), stream cues (D_00264DD0[0x16]).
+- **Runtime**: area 0x15 as a mid / later area (boot owners bound), data
+  window 0x82A380 .. 0x82DC80, receivers, textures, arrival scene list.
+- **Blocker**: on AREA21's first frame the static world faults: 001E1E60's
+  flag-0x23 branch (AREA21 sets render flag 0x23) calls 00122BB8, 001D73A0,
+  001D72D0, 001D75E0 and 001CEFD0, which em_render_context_live's swc_setup
+  leaves unbound ("static world fault in module 6 at 00122BB8"). 001D72D0 and
+  001D75E0 are byte-matched (VU0 asm), 001D73A0 is C, 001CEFD0 a NEARMISS
+  (95.71%); each needs a translation with an original-instruction oracle
+  before g75's last 2000 rows and g76 .. g79 can run.
+
 ## Next
 
-1. A recording of AREA21 (the guided run's kept stretches): then its SUBS
-   row, the capture kinds, the 001A2370 rules (0x8297C0, 0x82A1D0) and the
-   0019C6F0 rules (0x826840, 0x827CD0), and `--profile 21` assets.
+1. 001E1E60's flag-0x23 workers (above), then chain g20 through g75 .. g79.
 2. Run the live owners of that recording through these oracles (as
    test_area14_overlay_reference's `live/` cases).
 3. (done) 0x8243B0, [52], lane PORT-A21-52.

@@ -225,6 +225,18 @@ static const struct {
     {"g56", 0x13},
     {"g57", 0x13},
     {"g58", 0x04},
+    /* The endgame (lane PORT-LIVE-A2021, route_g20): the source state of g72 (g71's end, AREA13
+     * entry 7: the chained start g20), g73 (g72's end, AREA04 sub 1 entry 7), g74 and g75 (AREA20),
+     * g76 .. g80 (AREA21) */
+    {"g72", 0x0D},
+    {"g73", 0x04},
+    {"g74", 0x14},
+    {"g75", 0x14},
+    {"g76", 0x15},
+    {"g77", 0x15},
+    {"g78", 0x15},
+    {"g79", 0x15},
+    {"g80", 0x15},
 };
 
 static struct {
@@ -264,6 +276,11 @@ static struct {
      * put in place then, so the world's draws start with the script. */
     int fade_given, fade_wait;
     unsigned fade_level;
+    /* EM_START_AT_SCENE_WAIT=1 (comparison only): after the fade, the script's row 0 also waits
+     * while 0x70003B8D is not 0: a scene the card's LOAD GAME runs that the recording's source
+     * state had already played (the guided g72's end: AREA04 sub 1 entry 7, the lift [10]'s
+     * arrival scene, recorded in g72 rows 9404 .. 9662, runs again from a card there). */
+    int scene_given, scene_wait;
     /* EM_START_AT_RANDS=<file> ("f state" lines, f increasing): the
      * recording's state word at those script frames (comparison only). */
     unsigned rands, rand_next;
@@ -667,7 +684,7 @@ int em_start_at_check(void)
                              "a22_02, a01u, a01u_01, a01u_02, a01u_s0, area06, a06_01 .. a06_05, a06b, "
                              "a06b_01, a01v, a01v_01, a01v_02, a22b, a22b_01, a04_00 .. a04_05, a04b_00 .. "
                              "a04b_04, boss, area13, a13_01 .. a13_05, a13b_01 .. a13b_05, "
-                             "a13c_00 .. a13c_06, a13d_00 .. a13d_07, k01_01 .. k01_05, area14k, g45 .. g48, g49 .. g58, g59 .. g67)", NULL);
+                             "a13c_00 .. a13c_06, a13d_00 .. a13d_07, k01_01 .. k01_05, area14k, g45 .. g48, g49 .. g58, g59 .. g67, g72 .. g80)", NULL);
     }
     const char *ng = getenv("EM_NEW_GAME");
     if (ng && ng[0] && strcmp(ng, "0") != 0)
@@ -834,6 +851,11 @@ int em_start_at_check(void)
             pad.fade_level = (unsigned)v;
             pad.fade_given = 1;
         }
+        const char *scene = getenv("EM_START_AT_SCENE_WAIT");
+        if (scene && scene[0] && strcmp(scene, "0") != 0) {
+            if (!pad.loaded) return refuse("EM_START_AT_SCENE_WAIT works with EM_START_AT_PAD only", scene);
+            pad.scene_given = 1;
+        }
         const char *marks = getenv("EM_START_AT_MARKS");
         if (marks && marks[0] && !pad.loaded)
             return refuse("EM_START_AT_MARKS works with EM_START_AT_PAD only", marks);
@@ -910,7 +932,8 @@ void em_start_at_pad_control(unsigned counter)
            pad.last, counter);
     /* Without EM_START_AT_FADE the script starts at control, as a level
      * smoke or a short test script expects. */
-    pad.fade_wait = pad.fade_given;
+    pad.fade_wait = pad.fade_given || pad.scene_given;
+    pad.scene_wait = pad.scene_given;
     /* EM_START_AT_STATUS_BG=<ram image> (comparison only): the status
      * pages' shared background state D_002655A0 takes the image's bytes.
      * 0020A7A0 steps it on every status-page frame and its pulse timers
@@ -961,8 +984,10 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
      * presses stay where the recording made them. */
     if (pad.fade_wait) {
         const EmTransitionFade *fade = em_frame_transition();
-        if (em_frame_fade_active() && fade && (fade->substate != 1 || (unsigned)fade->level > pad.fade_level))
+        if (pad.fade_given && em_frame_fade_active() && fade &&
+            (fade->substate != 1 || (unsigned)fade->level > pad.fade_level))
             return 0;
+        if (pad.scene_wait && em_scene_state()->spad3B8D != 0) return 0;
         pad.fade_wait = 0;
         printf("startup: EM_START_AT_PAD: the script starts at engine frame %u (level %u)\n", counter,
                fade ? (unsigned)fade->level : 0u);

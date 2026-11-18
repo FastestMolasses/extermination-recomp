@@ -100,6 +100,8 @@ K01_ROUTE = 'levels-recordings-20261102-1/s87/route_k01'
 G17_ROUTE = 'guided-20261117/s87/route_g17'
 # AREA16 from the same run (lane PORT-LIVE-A16): the kept takes g59 .. g68 as a route set
 G16_ROUTE = 'guided-20261117/s87/route_g16'
+# The endgame from the same run (lane PORT-LIVE-A2021): the kept takes g72 .. g80 as a route set
+G20_ROUTE = 'guided-20261117/s87/route_g20'
 # beat: (start card, route recording, beat folder). A group's first beat
 # starts from the group's arrival card; a01u_s1 starts where a01u_00 does.
 BEATS = {
@@ -280,6 +282,14 @@ BEATS = {
     'g65': ('g65', G16_ROUTE, 'g65_area16_vaccine'),
     'g66': ('g66', G16_ROUTE, 'g66_area16_bed'),
     'g67': ('g67', G16_ROUTE, 'g67_area16_out'),
+    'g72': ('g72', G20_ROUTE, 'g72_area13_area04'),
+    'g73': ('g73', G20_ROUTE, 'g73_area04_area20'),
+    'g74': ('g74', G20_ROUTE, 'g74_area20_tag8'),
+    'g75': ('g75', G20_ROUTE, 'g75_area20_area21'),
+    'g76': ('g76', G20_ROUTE, 'g76_area21_prep'),
+    'g77': ('g77', G20_ROUTE, 'g77_area21_phase1'),
+    'g78': ('g78', G20_ROUTE, 'g78_area21_phase2'),
+    'g79': ('g79', G20_ROUTE, 'g79_area21_phase3'),
 }
 GROUPS = {'a22': ('a22_',), 'a01u': ('a01u_',), 'a06': ('a06_',), 'a06b': ('a06b_',), 'a01v': ('a01v_',),
           'a22b': ('a22b_',), 'a04b': ('a04b_0',), 'boss': ('a04b_s',), 'bossg': ('a04b_g',),

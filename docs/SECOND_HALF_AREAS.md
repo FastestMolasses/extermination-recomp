@@ -667,9 +667,9 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   the beats k01_02 .. k01_05 pass from their cards (AREA14_PORT.md). The capture
   kinds of AREA18 and AREA17 wait for their SUBS rows: the guided run
   recorded both (g41 .. g48); AREA16's takes g59 .. g67 are its recording
-  (its bullet above); AREA21 has none yet. AREA20's owners (lane PORT-A20) are proven by their oracles only:
-  the guided run's g73 .. g75 AREA20 tries are not kept recordings (the
-  chain was forked at g69), so its SUBS row still waits.
+  (its bullet above); AREA21 has none yet. AREA20's owners (lane PORT-A20) are proven by their oracles; since
+  lane PORT-LIVE-A2021 (last bullet) AREA20 and AREA21 have SUBS rows from
+  the re-recorded kept takes g73 .. g79.
 - AREA21 (lane PORT-A21, docs/AREA21_PORT.md): every overlay owner the
   placements, groups, scripts and spawns name, [52] 0x8243B0 included
   (lane PORT-A21-52, NEARMISS C), is translated from the decomp C into em_area21_overlay (the Gatling
@@ -682,7 +682,8 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   recording exists) with every reachable word. They are bound in
   dispatch_second_half and em_scene_bindings for area 0x15, but AREA21
   has not loaded live: its SUBS row, capture kinds and 001A2370 /
-  0019C6F0 rules (section 2) wait for a recording. Section 4's blocks list them by module.
+  0019C6F0 rules (section 2) wait for a recording (done since lane
+  PORT-LIVE-A2021, last bullet). Section 4's blocks list them by module.
 - No other of these areas has loaded live: their module pack rows, state and
   script windows are checked only by the oracle and the static export.
 
@@ -791,6 +792,20 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   (tools/record_drive_replay.py, IOP_STREAM.md "Drive replay") can serve
   it. rand() still differs (no position change) at g49 row 1 (g11's card
   only) / row 127 (g17), g51 row 1984 (g17: 1056), g53 row 3987.
+
+- The endgame live (lane PORT-LIVE-A2021, AREA20_PORT.md and AREA21_PORT.md
+  "Live"): route set route_g20 (capture_from_take g71 .. g80; movie rows now
+  left out and listed), SUBS rows area20:0 (g73, g74) and area21:0 (g75 ..
+  g78) with their 001A2370 / 0019C6F0 rules from the C, profiles 20 / 21,
+  sfx scopes (0x14, 0) / (0x15, 0), stream cues, movie selector 8 (E64S5),
+  cards g72 .. g80 and chain g20 from card g73 (AREA04 sub 1, its LOAD GAME's
+  lift scene skipped by EM_START_AT_SCENE_WAIT). g73 is on the row for 4191
+  of 4192 compared rows with the real area change into AREA20, g74 for all
+  3736 with the original's three hits, g75 for all 1858 to row 2240 (script
+  0x8270B0, the movie, the real load of AREA21). AREA21's first frame then
+  faults in 001E1E60's flag-0x23 branch (00122BB8, 001D73A0, 001D72D0,
+  001D75E0, 001CEFD0 unbound in the static world composition): the next
+  blocker.
 
 ## 6. Boot translations (lane BOOT2)
 

@@ -198,8 +198,17 @@ def export_doors(elf, ov, caps, placements):
     read = C.static_reader(elf, ov)
     rows = [C.u32(read(D_0024E140 + 4 * k, 4), 0) for k in range(0x17)]
     row = rows[C.AREA]
-    # the row ends where the next address the table names (or the table) begins
-    end = min(p for p in set(rows) | {D_0024E140} if p > row)
+    # the row ends where the next address the table names (or the table) begins; the highest
+    # row (AREA20's 0x27560C: no named address above it) ends after the last record a door
+    # placement indexes (001BC150 reads row + 4 * (id & 0x7F), nothing past it)
+    above = [p for p in set(rows) | {D_0024E140} if p > row]
+    if above:
+        end = min(above)
+    else:
+        ids = [rec[3] & 0x7F for rec in placements if C.u32(rec, 0x24) in (0x1BC350, 0x1BB860, 0x823580)]
+        if not ids:
+            raise SystemExit(f'door row {row:#x}: no address above it and no door placement')
+        end = row + 4 * (max(ids) + 1)
     data = read(row, end - row)
     for cap in caps:
         if cap.ram[row:end] != data:

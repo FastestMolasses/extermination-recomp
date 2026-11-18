@@ -321,6 +321,13 @@ START_POINTS = {
     **{f'g{k}': {'route': 'guided-20261117/s87/route_g49', 'first': f'g{k}_', 'area': a}
        for k, a in ((49, 0x0B), (50, 0x01), (51, 0x02), (52, 0x04), (53, 0x03), (54, 0x03), (55, 0x03),
                     (56, 0x13), (57, 0x13), (58, 0x04))},
+    # The endgame (lane PORT-LIVE-A2021): route_g20 (tools/capture_from_take.py g71 .. g80); the
+    # source state of g72 (g71's end: AREA13 entry 7 in play, the g20 chain's start: AREA04 sub 1
+    # and AREA20 then come in through real area changes), g73 (g72's end: AREA04 sub 1 entry 7),
+    # g74 / g75 (AREA20) and g76 .. g80 (AREA21)
+    **{f'g{k}': {'route': 'guided-20261117/s87/route_g20', 'first': f'g{k}_', 'area': a}
+       for k, a in ((72, 0x0D), (73, 0x04), (74, 0x14), (75, 0x14), (76, 0x15), (77, 0x15), (78, 0x15), (79, 0x15),
+                    (80, 0x15))},
 }
 
 

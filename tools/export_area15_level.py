@@ -98,7 +98,13 @@ def export_dynamic(el, elf, out_root, iso, skip_collision, target='area15'):
     hit = image.locate(cells_table)
     if hit is None:
         raise SystemExit(f'cell directory {cells_table:#x} outside the load map')
-    _count, _hulls, cells_size = L.cell_directory(image.read(cells_table, hit[0] + hit[3] - cells_table), 0)
+    # the id 0x46 block may continue in the next file of the load map (AREA21's: chunk25 f10's tail,
+    # then f11's head): read to the end of its contiguous rows
+    end = hit[0] + hit[3]
+    for a, _path, _off, size, label in image.map:
+        if a == end and label == hit[4]:
+            end += size
+    _count, _hulls, cells_size = L.cell_directory(image.read(cells_table, end - cells_table), 0)
     load_rows = {}
     for cap in caps:
         rows = C.compare_load_map(image, cap, allow=[(cells_table, cells_table + cells_size)])

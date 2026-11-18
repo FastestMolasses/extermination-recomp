@@ -241,6 +241,9 @@ int em_shadow_live_select_area(unsigned area, unsigned subarea)
     /* --profile 16 (AREA16 subs 0 and 1, the guided run's captures) */
     if (area == 0x10 && subarea == 0) path = "assets/levels/16/sub0/shadow_receivers.emsr";
     if (area == 0x10 && subarea == 1) path = "assets/levels/16/sub1/shadow_receivers.emsr";
+    /* --profile 20 / 21 (AREA20, AREA21, the guided run's captures) */
+    if (area == 0x14 && subarea == 0) path = "assets/levels/20/sub0/shadow_receivers.emsr";
+    if (area == 0x15 && subarea == 0) path = "assets/levels/21/sub0/shadow_receivers.emsr";
     if (!path || S.fault) return -1;
     for (u32 k = 0; k < S.pass_count; ++k)
         if (S.pass[k].cmd_count && S.pass_frame == em_frame_counter()) return -1;
