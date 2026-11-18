@@ -146,6 +146,10 @@ int main(void)
     assert(em_interaction_runtime_claim_scripted(&runtime, &panel) && frame.selector == 2);
     assert(!em_interaction_runtime_claim_scripted(&runtime, &elevator));
     assert(em_interaction_runtime_release(&runtime) && !runtime.owner);
+    /* A player admitted with no owner (3B8F = 1) serves the next script. */
+    frame.player_ready = 1;
+    assert(em_interaction_runtime_claim_scripted(&runtime, &panel));
+    assert(em_interaction_runtime_release(&runtime) && !runtime.owner);
     puts("Shared interaction token, frame, 001B9A00 sub 0 / sub 3 on the player record, release "
          "and faults: PASS");
     return 0;

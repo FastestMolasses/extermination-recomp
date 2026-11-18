@@ -864,6 +864,7 @@ static struct {
     uint32_t word;
     float pos[3], heading;
     int set, has_pos;
+    uint8_t s8d;                       /* 0x70003B8D */
 } frame_start;
 
 void em_start_at_frame_end(unsigned counter, const float pos[3], float heading)
@@ -873,6 +874,7 @@ void em_start_at_frame_end(unsigned counter, const float pos[3], float heading)
     frame_start.has_pos = pos != NULL;
     if (pos) memcpy(frame_start.pos, pos, sizeof frame_start.pos);
     frame_start.heading = heading;
+    frame_start.s8d = em_scene_state()->spad3B8D;
     frame_start.set = 1;
 }
 
@@ -1071,7 +1073,8 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
                 tp = frame_start.pos;
                 th = &frame_start.heading;
             }
-            em_scene_creature_trace(trace, t, tp, th, start_known ? frame_start.word : em_random_peek());
+            em_scene_creature_trace(trace, t, tp, th, start_known ? frame_start.word : em_random_peek(),
+                                    start_known ? frame_start.s8d : -1);
             fflush(trace);
         }
     }
