@@ -25,7 +25,7 @@ original's; no instruction of the original is reproduced here.
 | Quit | 0022B420 (No: back; Yes: r == 3, 001AD140 as the death does) | live; Yes is bound but no recording plays it | test-options-reference; opt_08 |
 | Closing | r == 1: 001AF1C0 (the settings into the progress block, 001AF470), the cue 0xD, 001FAE70(0) | live | test-options-reference; opt_00..08 |
 | The title's LOAD GAME after a death | 001AC070 state 2's 00225A00 and D_00275BE0 = 1, state 5's 00225AC0(0) every tick, its r == 2: 001AF150 and state 4's loaded game | live (section 4.3; the loaded game: SAVE_GAME.md section 6.3); on the boot's title too, on the title's own binding (SAVE_GAME.md section 6.4) | test-title-menu-reference, test-options-reference; dmg_load, dmg_load_game; test-title-load-game |
-| The title's OPTIONS | 001AC070 state 6: 00200A40 every tick (its list 00201290, the row screens 00201720 / 00201C50 / 00201F70 / 00202BA0 / 00202D10 over the seven-row table D_00264EC0, screen module 0x2B at its entry), back to the menu when it returns 1 | live since lane PORT-OPTIONS (2026-11-18; section 4.5); its moving background draws black on the boot title | test-options-reference (group title), test-title-options (the fork capture build/options_ref) |
+| The title's OPTIONS | 001AC070 state 6: 00200A40 every tick (its list 00201290, the row screens 00201720 / 00201C50 / 00201F70 / 00202BA0 / 00202D10 over the seven-row table D_00264EC0, screen module 0x2B at its entry), back to the menu when it returns 1 | live since lane PORT-OPTIONS (2026-11-18; section 4.5); its moving background since lane PORT-TITLE-BG | test-options-reference (group title), test-title-options (the fork capture build/options_ref) |
 | Saving | 00225AC0(1) from 0020CDC0 (request 6) and 001AD740 | unreachable in AREA11 (section 7); live from a save terminal since 2026-11-01 (SAVE_GAME.md section 6.5); 001AD740 not wired | test-options-card-live; the original's own save (SAVE_GAME.md 6.2) |
 
 ## 2. Opening and closing
@@ -207,10 +207,16 @@ masks, the fade, the committed mono byte) equal in order, 29 with the
 capture's exact lengths, the others ending on a press (pad latencies differ)
 or module 0x2B's load (host speed). The page pictures
 (build/title_options/*.bmp beside the capture's original.png) match in the
-rows, values and legend; **the moving background (0020A7A0, texture TBP
-0x2180 and its CLUT) draws black on the boot title**: the boot title's
-binding starts from cleared GS memory and the CLUT is not in module 0x2B's
-upload (WHOLE_GAME_LEDGER.md section 4).
+rows, values and legend, and since lane PORT-TITLE-BG the moving
+background (0020A7A0, PSMT4 texture TBP 0x2180 with CLUT CBP 0x21A9, both
+in module 0x2B's upload 0x1D00..0x21FF, which equals the capture's GS
+memory block for block). It drew black because em_frontend's black frame
+was an overlay rect over the backdrop layer; it is now the overlay pass's
+bottom fill. The boot title's LOAD GAME (00225AC0, TBP 0x21E0 / CBP 0x2260
+in module 0x2A's upload) had the same cause and fix; its original picture
+is build/title_load_ref (tools/capture_title_load.py, policy
+"title_load_v1"). Per-page picture comparison: WHOLE_GAME_LEDGER.md
+section 6.
 
 ## 5. The memory card (platform boundary)
 

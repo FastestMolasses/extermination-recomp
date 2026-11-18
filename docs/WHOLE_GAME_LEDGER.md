@@ -85,8 +85,8 @@ already tested.
 ## 3. Remaining player-visible gaps of this lane (next steps)
 
 1. **The title's OPTIONS (00200A40)**: done by lane PORT-OPTIONS (section 5
-   below; OPTIONS.md section 4.5). Left: its moving background (0020A7A0)
-   draws black on the boot title, see section 5.
+   below; OPTIONS.md section 4.5). Its moving background (0020A7A0) draws
+   since lane PORT-TITLE-BG (section 6).
 2. **The attract demo (001ACA20, 001ACE70)** is ported (lane PORT-DEMO,
    docs/ATTRACT_DEMO.md). Open: demo 1 (AREA13) faults at record 1436 in
    aim/fire 00183AC0 and keeps the black stand-in; demo 0 (AREA06) diverges
@@ -259,10 +259,40 @@ options (0022A650) and the saves use, so the effects (vibration, mono, the
 screen offset, the button masks) are the in-game options' (OPTIONS.md
 section 1); no launcher option or host setting conflicts.
 
-Known visible difference: on the boot's title the moving background behind
-the rows (0020A7A0's texture TBP 0x2180 with its CLUT) draws black. The boot
-title's binding starts from cleared GS memory (the status pages' EMSP holds
-the in-game GS state, not the title's), and the texture's CLUT is not in
-module 0x2B's upload. The rows, values and legend match the capture's
-pictures. The fix needs the title's own resident GS state (an export of the
-boot uploads), shared with the boot title's LOAD GAME screen.
+The moving background (lane PORT-TITLE-BG, 2026-11-18). It drew black on
+the boot title's OPTIONS and LOAD GAME screens (and on the title's LOAD
+GAME after a death). The cause was not GS memory: em_frontend drew its
+black frame as an overlay rect every title tick, and overlay rects draw
+over the backdrop layer that 0020A7A0's sprites use, so the rect covered
+them. The black is now the overlay pass's bottom fill (the one the status
+pages' em_status_background_frame queues), under the backdrop.
+The earlier reading (the texture's CLUT missing from module 0x2B, the
+title needing its own resident GS state) was wrong, checked against the
+captures' GS memory:
+- 00200A40 calls 0020A7A0 (TEX0 0x200435259D422180: PSMT4 128 x 64 at
+  TBP 0x2180, CLUT CBP 0x21A9) only from its state 3, after its
+  001FF080(0, 0x2B) load has finished; 00225AC0 calls it (TBP 0x21E0,
+  CBP 0x2260) only in its states 1 and 2, after its module 0x2A load.
+- Module 0x2B's upload writes blocks 0x1D00..0x21FF, texture and CLUT
+  included; the EMSP's 0x2B step equals the OPTIONS capture's GS memory
+  (build/options_ref/menu) in all 1,280 blocks. Module 0x2A's step
+  (0x1D00..0x227F) equals the new boot-title LOAD GAME capture's
+  (build/title_load_ref, tools/capture_title_load.py) in all 1,408.
+- Before those loads the title's GS memory in 0x1D00..0x247F is the
+  library module 0x1B the boot uploads (001AB7E0 step 3): build/options_ref
+  /title_start equals assets/gs_library.emgm there block for block. No
+  screen samples it before the module load replaces it, so the boot
+  title's binding still starts from cleared memory, and no export is
+  added.
+Pictures (the port's GPU overlay, 1920 x 1440 box-filtered to the
+capture's 512 x 224, against original.png; the overlay is not the GS
+frame, so no GS-exact gate applies): OPTIONS menu, p0..p5 and the boot
+title's LOAD GAME show the background; the mean brightness of a
+background-only region is the capture's within 1-2 levels. Per page,
+pixels within 24 levels: menu 96.0%, p0 98.1%, p1 99.5%, p2 95.9%, p3
+94.1%, p4 90.7%, p5 95.8%, LOAD GAME 96.9%. The differences are the
+background's scroll phase (the port reaches each picture 2 to 9
+0020A7A0 calls after the original's, the documented press-latency and
+host-speed load differences: L0 x 217 against 216 at p0 ... 76.5 against
+73 at the menu, where the original's layer-1 pulse has already re-armed)
+and the GPU overlay's filtering of the glyphs and sprites.

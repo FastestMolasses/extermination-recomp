@@ -2003,8 +2003,11 @@ layout.
   OPTIONS.md section 4.5): every page from the boot title, checked by
   `make test-options-reference` (group title, the original instructions)
   and `make test-title-options` (56 distinct states equal to a fork
-  capture's, in order). Caveat: its moving background draws black on the
-  boot title (the title's resident GS state is not exported).
+  capture's, in order). Its moving background draws since 2026-11-18
+  (lane PORT-TITLE-BG; also on the title's LOAD GAME): the pictures match
+  the fork captures' (build/options_ref, build/title_load_ref) up to the
+  background's scroll phase and the GPU overlay's filtering
+  (WHOLE_GAME_LEDGER.md section 6).
 - Status: **PARTIAL**. Proven: the state above relative to the PCSX2
   recordings. Not proven or not covered: the screen modules 0x2A / 0x2B
   load at host speed (about 10 ticks against the recordings' 23 rows); the
