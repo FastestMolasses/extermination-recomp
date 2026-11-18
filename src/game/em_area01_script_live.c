@@ -267,6 +267,9 @@ static int record(void *ctx,uint32_t fn,uint32_t actor,uint32_t block,
     case 0x008238C0u: case 0x00825C40u: /* AREA14's: scripts 0x826800 / 0x828120 (em_area14_overlay) */
         if (s->area!=0x0E) return -1;
         break;
+    case 0x00825630u: case 0x00826C20u: /* AREA16's: scripts 0x829970 / 0x82A1C0, 0x82A3C0 (em_area16_overlay) */
+        if (s->area!=0x10) return -1;
+        break;
     case 0x00823F70u: case 0x00824280u: /* AREA17's: script 0x8270A0 (em_area17_overlay) */
         if (s->area!=0x11) return -1;
         break;

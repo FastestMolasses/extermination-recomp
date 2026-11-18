@@ -713,6 +713,8 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
         return dispatch_area19(r, c);
     if ((r->area == 0x0E || r->area == 0x11 || r->area == 0x15) && dispatch_second_half(r, c, &rc))
         return rc;
+    if (r->area == 0x10 && dispatch_second_half(r, c, &rc)) /* AREA16 (lane PORT-A16) */
+        return rc;
     if (r->area == 0x14 && dispatch_second_half(r, c, &rc)) /* AREA20 (lane PORT-A20) */
         return rc;
     /* The creature family's boot entries and the script actors serve AREA13,

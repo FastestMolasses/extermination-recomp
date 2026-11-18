@@ -4061,6 +4061,24 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
     }
     if (s_state.d810700 == 0x11 && fn < 0x00823500u && fn && fn != 0x001F5040u)
         goto bind;
+    /* AREA16's owners (lane PORT-A16, docs/AREA16_PORT.md): every
+     * placement's and group's overlay behaviour (decomp
+     * tools/area_overview.py --area 16) and the two child behaviours
+     * 0x825260 / 0x828200 run through the runtime's dispatch_second_half
+     * (em_area16_overlay). Its boot owners bind as the later areas' do. */
+    if (s_state.d810700 == 0x10 && fn >= 0x00823500u) {
+        switch (fn) {
+        case 0x00823580u: case 0x00824440u: case 0x00824690u: case 0x00824E10u: case 0x00825260u:
+        case 0x00825310u: case 0x00825800u: case 0x008261A0u: case 0x008263D0u: case 0x00826C50u:
+        case 0x00827030u: case 0x008273F0u: case 0x00827B70u: case 0x00827CE0u: case 0x00827FA0u:
+        case 0x00828200u:
+            goto bind;
+        default:
+            return -1;
+        }
+    }
+    if (s_state.d810700 == 0x10 && fn < 0x00823500u && fn && fn != 0x001F5040u)
+        goto bind;
     /* AREA00 sub 2's boot owners (its placements', groups' and spawns'), as
      * the later areas' below: the runtime's owners or its fallback
      * (em_area01_runtime_later); an untranslated one faults at its address
@@ -4402,6 +4420,8 @@ static int area01_missing_worker(void *ctx, EmArea01Call *call)
         return area_spawn_deferred(call, 7u, 0x00825B80u, 0x00828080u);
     if (s_state.d810700 == 0x0E && call->function == 0x001B6660u)   /* AREA14: [5] 0x823760's group 0x8265A0 */
         return area_spawn_deferred(call, 0x0Bu, 0x00826180u, 0x00828480u);
+    if (s_state.d810700 == 0x10 && call->function == 0x001B6660u)   /* AREA16: [10] 0x825800 */
+        return area_spawn_deferred(call, 0x0Du, 0x00828480u, 0x0082C500u);
     if (s_state.d810700 == 0x11 && call->function == 0x001B6660u)   /* AREA17: [30], 0x824280, [34] */
         return area_spawn_deferred(call, 0x0Eu, 0x00826280u, 0x00828E80u);
     if ((s_state.d810700 == 8 || s_state.d810700 == 7) && call->function == 0x001B0460u && call->na >= 1)
