@@ -29,6 +29,13 @@
  *                           001AF470 (0x1AE040 state 2, r == 1)
  *     001AF150()            the progress block into the settings and the
  *                           screen offset, then 001AF470 (r == 2)
+ *   the title's OPTIONS (001AC070 state 6, on the title task's record
+ *   *0x70003B6C: the same +0xC / +0xD / +0x12 / +0x13 / +0x1C / +0x1E)
+ *     00200A40()            the screen: seven rows (the action table
+ *                           D_00264EC0, colours D_00264EA0), screen module
+ *                           0x2B loaded at its entry; returns 1 once its
+ *                           fade-out is done, else 0
+ *     00201290(w, row, open) its list: the title, seven rows, their values
  *   their text (the help container *D_0028A498, group by group)
  *     001FCBD0(x, y, group, line, style)  one line; group 8 splices a
  *                           two-digit hex token into a copy of the line
@@ -76,6 +83,8 @@ extern "C" {
 /* All entries: 0, or -1 on a (latched) fault. *result is the original's
  * v0 where it has one. */
 int em_options_0022A650(EmArea01Ui *s, uint32_t *result);
+int em_options_00200A40(EmArea01Ui *s, uint32_t *result);
+int em_options_00201290(EmArea01Ui *s, uint32_t w, int32_t row, int32_t open);
 int em_options_0022A590(EmArea01Ui *s, uint32_t *result);
 int em_options_0022AEA0(EmArea01Ui *s, uint32_t w, int32_t row, int32_t open);
 int em_options_00201720(EmArea01Ui *s, uint32_t w, int32_t x, uint32_t colours, uint32_t actions,

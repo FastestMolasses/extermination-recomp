@@ -83,7 +83,7 @@ int pfr_run(uint8_t *ram,EmArea02MathWorker call,void(*observe)(uint32_t,unsigne
     EmArea02MathRegion regions[5]={{current,0x14,header},{current+0xB0,16,header+0xB0},
                                  {0x1E00000,16,ram+0x1E00000}};
     for(unsigned i=0;i<count;++i)regions[3+i]=(EmArea02MathRegion){model[i].address,model[i].size,model[i].bytes};
-    EmArea02Math m={regions,3+count,call,NULL,0x7F0F0000,0,0,0};
+    EmArea02Math m={regions,3+count,call,NULL,0x7F0F0000,0,0,0,NULL};
     trace=observe;int r=em_area02_math_00183C40(&m,current,0x1E00000);trace=NULL;
     *fault=m.fault_address;return r;
 }

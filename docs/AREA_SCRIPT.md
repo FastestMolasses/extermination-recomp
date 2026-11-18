@@ -43,7 +43,12 @@ D_00810813 = 1 the director's beat 0 waits for.
   counting rec +0x10 down from (float) rec +0x14 over the phase byte; values
   outside the 7-entry table advance without a call); 001B7B30 op0D
   subs 1–8; 001B7A30 op0F; 001B7840 op10; 001B6FA0 op15; 001B6E40 op16;
-  001B6BF0 op18; 001B81D0 (face attach, inline, with 001CA700/001D06D0 workers).
+  001B6BF0 op18; 001B81D0 (face attach, inline, with 001CA700/001D06D0 workers);
+  since 2026-11-18 001B73A0 op19, every id (id 2 turns the owner and never
+  finishes, id 5 turns the player and finishes on D_008104B0 bit 0x1000, the
+  rest only call 001C64F0(owner, 1.0)); the disc's only op19 record is AREA15
+  script 0x8290E0's id 5 (owner 0x824C90, +0xD 0x5A). Oracle: 14 `op19 ...`
+  cases of `make test-area-script-reference` over test-generated records.
 - Also translated here, from the original instructions (0011E2A8, 0011D770 and
   0011CCC8 are asm-void in the decomp; 0011C7B0 is NEARMISS): the SDK sine
   0011E2A8 over |x| ≤ 0x4016CBE3 as `em_area_script_sin_0011E2A8` /
@@ -52,7 +57,8 @@ D_00810813 = 1 the director's beat 0 waits for.
   is the `w_001BAC00` worker (001BA1F0's arguments: the owner, its script block,
   the record), bound to em_sdf_001BAC00 over the pool (OPENING_ORIGINAL.md); its
   result is the command result.
-- **Not admitted (fault):** opcodes 03, 05, 08, 0E, 11–13, 17, 19, 1A; op00/op01
+- **Not admitted (fault):** opcodes 03, 05, 08, 0E, 11–13, 17, 1A (08 is used by
+  no script on the disc); op00/op01
   kind 8 (settle/orbit: 0018C6A0/0018C4B0/0011DE90; `em_pickup_camera_settle`
   is the module to delegate op00 kind 8 to when a script needs it); op0A sub8
   (001798D0); out-of-range kinds. Of the AREA11

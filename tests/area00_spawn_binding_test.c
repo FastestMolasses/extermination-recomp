@@ -45,6 +45,16 @@ static int area01_behavior(EmActor *actor, void *ctx)
 static int area01_rebind(void *ctx, EmActor *actor, uint32_t callback)
 { (void)ctx; (void)actor; (void)callback; return -1; }
 
+/* The player-record workers of the extracted worker (0015C700 / 0015C750) are
+ * outside this test's spawn scope. */
+static int area01_player_0015C700(EmArea01Call *call) { (void)call; return -1; }
+static int area01_player_0015C750(EmArea01Call *call) { (void)call; return -1; }
+int em_area01_runtime_later(EmArea01Runtime *r, EmArea01Call *c, int *rc)
+{ (void)r; (void)c; (void)rc; return 0; }
+int em_area11_script_host_001B0460(int a0) { (void)a0; return -1; }
+int em_area11_script_host_001B81D0(uint32_t actor) { (void)actor; return -1; }
+int em_owner_draw_live_light_mode(int32_t mode) { (void)mode; return -1; }
+
 #include "scene_spawn_under_test.inc"
 
 static EmActor *prepare(void)
@@ -105,7 +115,7 @@ int main(int argc, char **argv)
         if (bad == 0) module[4] = 2;
         if (bad == 1) missing = 0x00827A5Cu; /* actual terminator */
         if (bad == 2) call.a[0] = 0x00826F7Fu;
-        if (bad == 3) call.na = 2;
+        if (bad == 3) call.na = 0; /* extra argument registers are not read (area_spawn_deferred) */
         if (bad == 4) call.nf = 1;
         if (bad == 5) s_state.d810700 = 1;
         assert(area01_missing_worker(NULL, &call) < 0 && call.v0 == 0xCAFE);

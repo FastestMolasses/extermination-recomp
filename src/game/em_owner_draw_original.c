@@ -60,7 +60,7 @@ static void put16(uint8_t *p, u32 v)
  * ==================================================================== */
 
 /* One VU0 macro instruction; `*st` is sticky (see em_owner_services). */
-static void vu(int *st, em_vu_op op, unsigned dest, int bc, const u32 fs[4], const u32 ft[4],
+static inline __attribute__((always_inline)) void vu(int *st, em_vu_op op, unsigned dest, int bc, const u32 fs[4], const u32 ft[4],
                const u32 acc[4], u32 dst[4])
 {
     if (*st != EM_EE_FLOAT_OK) return;

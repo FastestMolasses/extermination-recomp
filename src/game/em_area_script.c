@@ -1173,6 +1173,107 @@ static EmScriptCommandResult op15(Op *o)
     return EM_SCRIPT_WAIT;
 }
 
+/* 001B73A0 (ftab_0024D880[25]): scripted turn toward a point (byte-matched
+ * src/func_001B73A0.c). The record word +0x08 selects the subject; the
+ * phase byte is the handler's own sub-state.
+ *   2, the owner: phase 0 keeps the owner's yaw (+0xC4) at rec +0x10 and
+ *     starts clip rec +0x18 when 001B1380(rec +0x30, owner +0xB0, yaw) is
+ *     nonzero, else rec +0x14 (001C67E0 at 20.0, 0.0), sets phase 1 and
+ *     stays without advancing the animation. Phase 1: with a nonzero rate
+ *     rec +0x24 the target is 001B1240(owner +0xB0, rec +0x30, rec +0x38)
+ *     and the yaw becomes 001B12B0(target, yaw, rate); with rate 0.0 the
+ *     target is the yaw. Once they are equal it starts clip rec +0x1C at
+ *     30.0 (every tick: id 2 never finishes).
+ *   5, the player: the same over D_00810350 / D_00810360 / D_00810374,
+ *     publishing the clip at D_008104A2 with speed D_008104A8 (20.0 then
+ *     30.0) and blend D_008104A4 1.0; phase 1 moves on to phase 2, which
+ *     finishes when D_008104B0 has bit 0x1000.
+ *   0, 1, 3, 4 and any other value: nothing.
+ * Every path that does not return early advances the owner's clock one
+ * frame (anim_advance_time 001C64F0(owner, 1.0), its result unused) and
+ * stays. The disc's one user is AREA15's script 0x8290E0 (id 5; owner
+ * 0x824C90 with +0xD 0x5A). */
+static EmScriptCommandResult op19(Op *o)
+{
+    const EmAreaScriptWorld *w = o->w;
+    float t, v;
+    int32_t hit, flags;
+    switch (s32(o->rec, 8)) {
+    case 2:
+        NEED(w->s0B0, 0x1B73A000u); NEED(w->s0C0, 0x1B73A000u);
+        switch (phase(o)) {
+        case 0:
+            WORKER(w_001B1380, 0x001B1380u); WORKER(w_001C67E0, 0x001C67E0u);
+            putf(o->rec, 0x10, w->s0C0[1]);
+            CALL(0x001B1380u, o->k->w_001B1380(o->ctx, rv(o->rec, 0x30), w->s0B0, w->s0C0[1], &hit));
+            CALL(0x001C67E0u, o->k->w_001C67E0(o->ctx, w->self,
+                 s16(o->rec, hit ? 0x18 : 0x14), 20.0f, 0.0f));
+            set_phase(o, 1);
+            return EM_SCRIPT_WAIT;
+        case 1:
+            WORKER(w_001B1240, 0x001B1240u); WORKER(w_001B12B0, 0x001B12B0u);
+            WORKER(w_001C67E0, 0x001C67E0u);
+            if (em_ee_c_eq(f32(o->rec, 0x24), 0.0f)) {
+                t = w->s0C0[1];
+            } else {
+                CALL(0x001B1240u, o->k->w_001B1240(o->ctx, w->s0B0, f32(o->rec, 0x30),
+                                                   f32(o->rec, 0x38), &t));
+                CALL(0x001B12B0u, o->k->w_001B12B0(o->ctx, t, w->s0C0[1], f32(o->rec, 0x24), &v));
+                w->s0C0[1] = v;
+            }
+            if (em_ee_c_eq(w->s0C0[1], t))
+                CALL(0x001C67E0u, o->k->w_001C67E0(o->ctx, w->self, s16(o->rec, 0x1C), 30.0f, 0.0f));
+            break;
+        default:
+            break;
+        }
+        break;
+    case 5:
+        switch (phase(o)) {
+        case 0:
+            NEED(w->p0A0, 0x00810350u); NEED(w->p0C0, 0x00810370u);
+            NEED(w->p1F2, 0x008104A2u); NEED(w->p1F4, 0x008104A4u); NEED(w->p1F8, 0x008104A8u);
+            WORKER(w_001B1380, 0x001B1380u);
+            CALL(0x001B1380u, o->k->w_001B1380(o->ctx, rv(o->rec, 0x30), w->p0A0, w->p0C0[1], &hit));
+            *w->p1F2 = s16(o->rec, hit ? 0x18 : 0x14);
+            *w->p1F8 = 20.0f;
+            *w->p1F4 = 1.0f;
+            set_phase(o, 1);
+            break;
+        case 1:
+            NEED(w->p0B0, 0x00810360u); NEED(w->p0C0, 0x00810370u);
+            NEED(w->p1F2, 0x008104A2u); NEED(w->p1F8, 0x008104A8u);
+            WORKER(w_001B1240, 0x001B1240u); WORKER(w_001B12B0, 0x001B12B0u);
+            if (em_ee_c_eq(f32(o->rec, 0x24), 0.0f)) {
+                t = w->p0C0[1];
+            } else {
+                CALL(0x001B1240u, o->k->w_001B1240(o->ctx, w->p0B0, f32(o->rec, 0x30),
+                                                   f32(o->rec, 0x38), &t));
+                CALL(0x001B12B0u, o->k->w_001B12B0(o->ctx, t, w->p0C0[1], f32(o->rec, 0x24), &v));
+                w->p0C0[1] = v;
+            }
+            if (em_ee_c_eq(w->p0C0[1], t)) {
+                *w->p1F2 = s16(o->rec, 0x1C);
+                *w->p1F8 = 30.0f;
+                set_phase(o, 2);
+            }
+            break;
+        case 2:
+            NEED(w->p200, 0x008104B0u);
+            if (*w->p200 & 0x1000) return EM_SCRIPT_ADVANCE;
+            break;
+        default:
+            break;
+        }
+        break;
+    default:
+        break;
+    }
+    WORKER(w_001C64F0, 0x001C64F0u);
+    CALL(0x001C64F0u, o->k->w_001C64F0(o->ctx, w->self, 1.0f, &flags));
+    return EM_SCRIPT_WAIT;
+}
+
 /* 001B6E40 (ftab_0024D880[22]): take the scripted frame. */
 static EmScriptCommandResult op16(Op *o)
 {
@@ -1380,6 +1481,7 @@ static EmScriptCommandResult execute(void *context, EmScript *script, unsigned c
     case 0x15: return op15(&o);
     case 0x16: return op16(&o);
     case 0x18: return op18(&o);
+    case 0x19: return op19(&o);
     case 0x03: if (o.k->handler) return external_handler(&o, 0x001B8AB0u); break;
     case 0x0E: if (o.k->handler) return external_handler(&o, 0x001B7F90u); break;
     case 0x05: if (o.k->handler) return external_handler(&o, 0x001B9CF0u); break;
@@ -1393,10 +1495,11 @@ static EmScriptCommandResult execute(void *context, EmScript *script, unsigned c
     case 0x1A: if (o.k->handler) return external_handler(&o, 0x001B6AE0u); break;
     default: break;
     }
-        /* Opcodes 03, 05, 08, 0E, 11..13, 17, 19, 1A: not used by the
+        /* Opcodes 03, 05, 08, 0E, 11..13, 17, 1A: not used by the
          * AREA11 scripts this host admits (docs/AREA_SCRIPT.md); 03, 05,
          * 0E, 11, 12, 13, 17 and 1A run only through an area binding's handler
-         * (the existing original-handler owners). */
+         * (the existing original-handler owners). 08 stays unbound: no
+         * script on the disc (boot ELF and the 19 overlays) uses it. */
     return fault(&o, 0x0024D880u + 4u * (u32(record, 0) & 0xFFF));
 }
 

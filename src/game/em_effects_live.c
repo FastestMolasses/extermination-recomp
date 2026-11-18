@@ -38,6 +38,7 @@
 #include "game/em_module_loader.h"
 #include "game/em_owner_draw_live.h"
 #include "game/em_scene_workers.h"
+#include "game/em_effect_001E3630.h"
 #include "game/em_sdk_math_original.h"
 #include "game/em_sdk_vu0.h"
 #include "game/em_sfx.h"
@@ -407,6 +408,10 @@ uint8_t *em_effects_live_window_mutable(uint32_t address, uint32_t size)
     /* 0015A750's sparks rewrite their descriptor D_00248200 +0x10..+0x3C and
      * the mode D_00248280 before each 001CFBE0 (AREA07's flames). */
     if (size && address >= 0x00248200u && address <= 0x00248290u - size)
+        return (uint8_t *)(uintptr_t)em_effects_live_window(address, size);
+    /* The flamethrower burst 001E3630 rewrites D_00253BC0..D_00253BCC (its
+     * first 001CFBE0 source's parameter row) before each submit. */
+    if (size && address >= 0x00253BC0u && address <= 0x00253BD0u - size)
         return (uint8_t *)(uintptr_t)em_effects_live_window(address, size);
     if (!size || address < 0x002542D0u || address > 0x00254F30u - size) return NULL;
     return (uint8_t *)(uintptr_t)em_effects_live_window(address, size);
@@ -1419,6 +1424,48 @@ static int handler_001ECEF0(EmEffectOriginalNode *node, int32_t depth, EmEffectO
     return 0;
 }
 
+/* 001ECE70 (byte-matched decomp C; effect-driver subtype 0x10, handle
+ * 0x8000001A, whose one spawner is the flamethrower burst 001E3630's retry
+ * window): em_effect_001E3630's translation (test_effect_001E3630_reference):
+ * one 001CFB50 of the node's matrix with the work block's accumulator +0x244
+ * and fraction +0x24C (through D_00275C34), 1.0, 0.1 and 9.0, then 001CFBE0
+ * kind 1 of D_00257000 (the boot constants' copy). Views and workers as
+ * handler_001ECEF0's. */
+typedef struct { u32 base[4]; uint8_t *bytes[3]; EmEffectOriginalNode *node; } Ece70View;
+static uint8_t *ece70_view(void *ctx, uint32_t a, uint32_t n, int write)
+{
+    const Ece70View *v = ctx;
+    for (unsigned i = 0; i < 3; ++i)
+        if (a >= v->base[i] && n <= 4u && a - v->base[i] <= 4u - n && !write) return v->bytes[i] + (a - v->base[i]);
+    return NULL;
+}
+static int ece70_001CFB50(void *ctx, uint32_t a0, int32_t a1, uint32_t a2, const uint32_t f[5])
+{
+    const Ece70View *v = ctx;
+    if (a2 != v->base[3]) return -1;
+    return w_001CFB50(NULL, a0, (u32)a1, v->node->matrix, f[0], f[1], f[2], f[3], f[4]);
+}
+static int ece70_001CFBE0(void *ctx, int32_t a0, int32_t a1, uint32_t a2, uint32_t a3, int32_t t0)
+{
+    (void)ctx;
+    return w_001CFBE0(NULL, a0, a1, a2, a3, t0);
+}
+static int handler_001ECE70(EmEffectOriginalNode *node, int32_t depth, EmEffectOriginalWork *work)
+{
+    Slot *slot=slot_of_node(node);
+    if(!slot || !work || work!=&node->work)return fail(0x001ECE70u,"effect 001ECE70 without its node");
+    u32 at=em_actor_pool_address(S.pool,actor_of(slot)), pointer=at+0x1F0u;
+    Ece70View v={{0x00275C34u,at+0x244u,at+0x24Cu,at+0xD0u},
+        {(uint8_t *)&pointer,(uint8_t *)&work->accumulator,(uint8_t *)&work->fraction},node};
+    EmEffect001E3630Hooks h;
+    memset(&h,0,sizeof h);
+    h.ctx=&v;h.bytes=ece70_view;h.w_001CFB50=ece70_001CFB50;h.w_001CFBE0=ece70_001CFBE0;
+    EmEffect001E3630Fault f={0,0};
+    if(em_effect_001ECE70(&h,at+0xD0u,depth,&f)<0)
+        return fail(f.address?f.address:0x001ECE70u,"effect 001ECE70 fault (em_effect_001E3630)");
+    return 0;
+}
+
 /* 001EC5F0 (AREA02 a02_03): em_area02_misc's translation
  * (test_area02_misc_reference.py): three seeded passes (seed at the work
  * block's +0x1F4, advanced by each; the accumulator +0x244 and 5.0) with
@@ -1763,6 +1810,7 @@ static int w_handler(void *ctx, u32 handler, EmEffectOriginalNode *node, int32_t
     if (handler == 0x001EF510u) return handler_001EF510(node, depth, work);
     if (handler == 0x001EDAF0u) return handler_001EDAF0(node, depth, work);
     if (handler == 0x001ECEF0u) return handler_001ECEF0(node, depth, work);
+    if (handler == 0x001ECE70u) return handler_001ECE70(node, depth, work);
     if (handler == 0x001EC9A0u) return handler_001EC9A0(node, depth, work);
     if (handler == 0x001EC5F0u) return handler_001EC5F0(node, depth, work);
     if (handler == 0x001EC820u) return handler_001EC820(node, depth, work);
@@ -1845,6 +1893,7 @@ static int w_001CFBE0(void *ctx, int32_t id, int32_t kind, u32 source, u32 xf, i
                               source == 0x00256EE0u || source == 0x00256F70u ||
                               source == 0x00257360u || source == 0x002573F0u || source == 0x00257480u ||
                               source == 0x00257090u || source == 0x00257120u || /* 001ECEF0's */
+                              source == 0x00257000u ||                          /* 001ECE70's */
                               source == 0x00256D30u ||                          /* 001EC9A0's */
                               source == 0x00256A60u || source == 0x00256AF0u || /* 001EC5F0's */
                               source == 0x00256B80u ||
