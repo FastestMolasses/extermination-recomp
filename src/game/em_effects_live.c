@@ -1688,6 +1688,37 @@ static int handler_001EB440(u32 handler, EmEffectOriginalNode *node, int32_t dep
     return 0;
 }
 
+/* 001EE4E0 (the Gatling's hit spray, AREA21 g77 row 4534): the same
+ * translation module over the work block (+4 the seed copy, +8 the step,
+ * +0x54 the accumulator) and the three records D_002576C0 / D_00257750 /
+ * D_002577E0 whose parameter rows it rewrites (the exported window, the one
+ * storage of those bytes; export_area00_runtime_tables.py
+ * AREA21_EFFECT_WINDOWS). */
+static uint8_t *ee4e0_bytes(void *ctx, u32 address, u32 size, int write)
+{
+    if (address >= 0x002576C0u && size <= 0x1B0u && address - 0x002576C0u <= 0x1B0u - size)
+        return (uint8_t *)(uintptr_t)em_effects_live_window(address, size);
+    return eb440_bytes(ctx, address, size, write);
+}
+static int handler_001EE4E0(EmEffectOriginalNode *node, int32_t depth, EmEffectOriginalWork *work)
+{
+    Slot *slot = slot_of_node(node);
+    if (!slot || !work || work != &node->work) return fail(0x001EE4E0u, "001EE4E0 without its node");
+    u32 at = em_actor_pool_address(S.pool, actor_of(slot)), pointer = at + 0x1F0u;
+    EmArea02MiscRegion regions[] = {
+        {0x00275C34u, 4, (uint8_t *)&pointer},
+        {at + 0x1F4u, 4, (uint8_t *)&work->seed_copy},
+        {at + 0x1F8u, 4, (uint8_t *)&work->step},
+        {at + 0x244u, 4, (uint8_t *)&work->accumulator},
+    };
+    EB440 v = {node, at, regions, sizeof regions / sizeof *regions};
+    const EmEffect001EB440Hooks h = {&v, ee4e0_bytes, eb440_fog, eb440_001CFB50, eb440_001CFBE0};
+    EmEffect001EB440Fault f = {0, 0};
+    if (em_effect_001EE4E0(&h, at + 0xD0u, depth, &f) < 0)
+        return fail(f.address ? f.address : 0x001EE4E0u, "001EE4E0 fault (em_effect_001EB440)");
+    return 0;
+}
+
 static int w_handler(void *ctx, u32 handler, EmEffectOriginalNode *node, int32_t depth,
                      EmEffectOriginalWork *work)
 {
@@ -1717,6 +1748,7 @@ static int w_handler(void *ctx, u32 handler, EmEffectOriginalNode *node, int32_t
     if (handler == 0x001EF780u) return handler_001EF780(node, depth, work);
     if (handler == 0x001EB440u || handler == 0x001EB250u || handler == 0x001EB600u)
         return handler_001EB440(handler, node, depth, work);
+    if (handler == 0x001EE4E0u) return handler_001EE4E0(node, depth, work);
     if (splash_handler(handler)) return handler_splash(handler, node, depth, work);
     return fail(handler, "untranslated effect handler");
 }
@@ -1801,6 +1833,8 @@ static int w_001CFBE0(void *ctx, int32_t id, int32_t kind, u32 source, u32 xf, i
                               source == 0x00255C50u || source == 0x00255CE0u || /* 001EB440's */
                               source == 0x00255B30u || source == 0x00255BC0u || /* 001EB250's */
                               source == 0x00255D70u || source == 0x00255E00u || /* 001EB600's */
+                              source == 0x002576C0u || source == 0x00257750u || /* 001EE4E0's */
+                              source == 0x002577E0u ||
                               source == 0x00257510u || source == 0x002575A0u || /* 001EDAF0's middle row */
                               source == 0x00257630u || source == 0x00257870u ||
                               source == 0x00257900u || source == 0x002571B0u || source == 0x00257240u ||

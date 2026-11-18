@@ -353,9 +353,60 @@ point), then from about row 1450 y rises (35.01 to 39.80): a climb.
   take's rows around that page (EM_START_AT_STATUS_BG restores it only at
   the card).
 
+## The Gatling seat (lane PORT-A21-GATLING, 2026-11-18, branch `a21gatling`)
+
+- **001741D0** (0015B130's state[0x23], byte-identical C) in
+  `em_player_running_jump` beside 001747F0: with +1F0 0x38 the Gatling
+  seat (walk to +290 at 0.4 a frame along the blend of the approach and the
+  record's facing, snap within 1.0, turn to +218 by 12 degrees a frame
+  through 001B12B0, sit, wait for the dismount press D_00810E74 &
+  0x70003B76 or +302, stand up, back to +5 0 through 00174A50(16)); any
+  other +1F0 the 0x4A placement's step-on / step-off. Its leaves 001028D0,
+  00102760, 00103200 and 001B12B0 run inside the module; new workers
+  `row_request` (00174A50), `root_word0` (*(*D_00275B40 + 0)) and `buttons`.
+  Bound as state[0x23] in em_player_closure_live.
+- **The rest of the seated frame**, each the original's own: camera
+  action 14 (00198AF0, em_camera_aim) now binds under the area runtime's
+  host too (it was bound only outside it, so the seat's first frame
+  faulted there: the "00198AF0" of the earlier stop was this, not the
+  state callback); 001B5DC0 (the stick ring, em_effect_original_001B5DC0)
+  and 00207F80 (the gauge bars into the slot-1 packets, em_sgp_00207F80)
+  in the runtime's worker switch; the muzzle node 001F5040 is allowed in
+  AREA21 (em_scene_bindings); 001F4010 routes to the revisit's ring-slot
+  translation in AREA21; 001CEEE0 (the rounds' draw, byte-identical C: the
+  D_002512E0 stores, then 001026A0 / 001CCF70 / 001CFA60 / 001CFBE0 by
+  address) and 001B41F0 (em_area00_world's hit application, new view
+  entry) in em_area01_runtime; the hit spray handler 001EE4E0 in
+  `em_effect_001EB440` with a new exported window (0x2576C0, 0x1B0:
+  export_area00_runtime_tables.py AREA21_EFFECT_WINDOWS).
+- **Evidence**: `make test-player-running-jump-reference` (001741D0 joins
+  the oracle as the entry `state23`: designed modes, steps 0..6 and past,
+  seats around the 1.0 bound, headings within a turn step, pad words,
+  +224 / +22C / +F / +302; every branch of 001741D0 both ways; the leaves
+  run as original code; 857 of 7706 quick cases); `make
+  test-stick-ring-reference` (new: 001B5DC0 over every low byte under six
+  high patterns); `make test-area21-use-reference`
+  (test_effect_001EB440_reference covers 001EE4E0: step at 0.02 and one
+  ulp either side; 570 of 570 words). Mutants caught: the turn step (one
+  ulp), the 1.0 bound (< for <=), the 0.4 lane, the 0x174 clip, the -0.2
+  sign, the 0x38 test, the 001EE4E0 kinds, floor and a row value.
+  Equivalent: swapping the blend's operands (t = 0.5); a 0.02 + 1 ulp in
+  001EE4E0's ease survives the full sweep. Not oracle-tested: the
+  runtime's 001CEEE0 composition (its callees are the existing
+  translations) and the 00207F80 / 001F4010 / 001B41F0 routing.
+- **Chain g20** (card g73): g73 4191 / 4192, g74 3736 / 3736, g75 3864 /
+  3864, g76 6383 / 6383, **g77 5894 / 5894 to row 5893** (hit at row 3533
+  matched). It stops at row 5893: 0014EC00's 001EFD90 starts an effect
+  node whose behaviour is the overlay's **0x825B00** (decomp
+  func_overlay_AREA21_00825AC0; listed above as "not translated, no static
+  reference"): untranslated, fail-stop. g78 .. g80 not reached.
+
 ## Next
 
-1. (done) 001E1E60's flag-0x23 workers (Far light); (done) 001E1AD0's
+0. Next: **0x825B00** (g77 row 5893, the effect node 0014EC00 starts),
+   then chain g20 on through g78 .. g80; the rand() word at g76 row 6386.
+1. (done) 001741D0 and the seated frame's workers (The Gatling seat).
+   (done) 001E1E60's flag-0x23 workers (Far light); (done) 001E1AD0's
    flag-0x22 path (Grid); (done) 001AAC00 with its tests, 001EB440 /
    001EB250 (Use and the boss effects); (done) 0x824FE0, 0x824CF0,
    001EB600 and cue 0xC (The boss fight). Next: **001741D0** (+5 0x23,

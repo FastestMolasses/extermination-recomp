@@ -92,8 +92,11 @@ REVISIT_EFFECT_WINDOWS = ((0x00257090, 0x120),)
 # AREA21's effect handlers 001EB250, 001EB440 and 001EB600 (byte-matched
 # decomp C; the boss fight, the guided run's g77): their 001CFBE0 source
 # records D_00255B30 / D_00255BC0, D_00255C50 / D_00255CE0 and D_00255D70 /
-# D_00255E00, one window, only read.
-AREA21_EFFECT_WINDOWS = ((0x00255B30, 0x360),)
+# D_00255E00, one window, only read. The Gatling's hit spray 001EE4E0
+# (byte-matched decomp C; g77 row 4534) submits D_002576C0 / D_00257750 /
+# D_002577E0 and rewrites their parameter rows +0x20 .. +0x3C first: a second
+# window (between the 0x257510 and 0x257870 ones), written in place.
+AREA21_EFFECT_WINDOWS = ((0x00255B30, 0x360), (0x002576C0, 0x1B0))
 # AREA02 (a02_01 / a02_02, the car's run after switch [31]): the effect
 # handler 001EC9A0's source block D_00256D30 (one 0x90-byte record); the
 # burst emitter 001E4CE0 / 001E4A00 the car spawns: the frame doublewords

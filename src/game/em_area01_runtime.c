@@ -842,6 +842,11 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
         return r->host.worker(r->host.ctx, c);
     if (dispatch_revisit(r, c, &rc))
         return rc;
+    if (c->function == 0x001F4010u && r->area == 0x15)
+        /* AREA21's Gatling [62] 0x8297C0: its shot's 001F4010(3, 0x700036A0)
+         * (the muzzle frame it builds), the same ring slot translation as
+         * the AREA01 revisit's (rv_ring_001F4010; guided g77 row 4520). */
+        return rv_ring_001F4010(r, c);
     if (c->function == 0x001F4E40u) {
         /* 001F4E40(pos, colour, rate; f12): em_area02_misc's translation
          * over this runtime's bytes (0x70003B68 and the scratch blocks). */
@@ -967,6 +972,67 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
         if (!out) return fail(r, (uint32_t)c->a[0]);
         memcpy(out, &angle, 4);
         c->v0 = 1;
+        break;
+    }
+    case 0x001B41F0u: {
+        /* 001B41F0(victim, hit, dir, flags, p5, p6) (byte-matched C; the
+         * hit application, em_area00_world's translation) over this
+         * runtime's bytes: AREA21's rounds 0x825C70 (guided g77 row 4534). */
+        if (!creatures) return r->host.worker(r->host.ctx, c);
+        if (c->na != 6 || c->nf) return fail(r, c->function);
+        EmArea00World w = {.call = rv_world_worker, .ctx = r, .sp = c->sp};
+        rc = em_area00_world_view_001B41F0(&w, bytes, r, (uint32_t)c->a[0], (uint32_t)c->a[1], (uint32_t)c->a[2],
+                                           (uint32_t)c->a[3], (uint32_t)c->a[4], (uint32_t)c->a[5], &i32);
+        if (rc < 0 || w.fault) return fail(r, w.fault_address ? w.fault_address : c->function);
+        c->v0 = (uint64_t)(int64_t)i32;
+        break;
+    }
+    case 0x001CEEE0u: {
+        /* 001CEEE0(m, a, b, n; f12 s, f13 t, f14 u) (byte-matched C, frame
+         * 0xA0): D_002512E0's +0x20 = *a and +0x30 = *b (quadwords, each
+         * read then stored), +0x08 = s, +0x40 / +0x44 = t, +0x50 / +0x54 = u,
+         * +0x80 = n; v = (0, 0, s, 1) at sp + 0x30, 001026A0(v, m, v),
+         * k = 001CCF70(v), 001CFA60(sp + 0x40, m; 1.0, 0.1), then
+         * 001CFBE0(k, 1, D_002512E0, sp + 0x40, 1). AREA21's rounds 0x825C70
+         * (the Gatling's shots; guided g77 row 4520). */
+        if (!creatures) return r->host.worker(r->host.ctx, c);
+        if (c->na != 4 || c->nf != 3) return fail(r, c->function);
+        const uint32_t blk = 0x002512E0u, sp = c->sp - 0xA0u, v = sp + 0x30u, frame = sp + 0x40u;
+        for (unsigned k = 0; k < 2; ++k) {
+            const uint8_t *from = bytes(r, (uint32_t)c->a[1 + k], 16, 0);
+            if (!from) return fail(r, (uint32_t)c->a[1 + k]);
+            uint8_t q[16];
+            memcpy(q, from, 16);
+            uint8_t *to = bytes(r, blk + 0x20u + 0x10u * k, 16, 1);
+            if (!to) return fail(r, blk + 0x20u + 0x10u * k);
+            memcpy(to, q, 16);
+        }
+        static const struct { uint32_t at; int f; } kStores[] = {
+            {0x08u, 0}, {0x40u, 1}, {0x44u, 1}, {0x50u, 2}, {0x54u, 2}};
+        for (unsigned k = 0; k < sizeof kStores / sizeof kStores[0]; ++k) {
+            uint8_t *to = bytes(r, blk + kStores[k].at, 4, 1);
+            if (!to) return fail(r, blk + kStores[k].at);
+            memcpy(to, &c->f[kStores[k].f], 4);
+        }
+        uint8_t *count = bytes(r, blk + 0x80u, 4, 1), *pv = bytes(r, v, 16, 1);
+        if (!count) return fail(r, blk + 0x80u);
+        if (!pv) return fail(r, v);
+        const uint32_t n = (uint32_t)c->a[3], vw[4] = {0, 0, c->f[0], 0x3F800000u};
+        memcpy(count, &n, 4);
+        memcpy(pv, vw, 16);
+        EmArea01Call apply = {.function = 0x001026A0u, .sp = sp, .na = 3, .nf = 0};
+        apply.a[0] = v; apply.a[1] = c->a[0]; apply.a[2] = v;
+        if ((rc = em_area01_runtime_call(r, &apply)) < 0) break;
+        EmArea01Call key = {.function = 0x001CCF70u, .sp = sp, .na = 1, .nf = 0};
+        key.a[0] = v;
+        if ((rc = em_area01_runtime_call(r, &key)) < 0) break;
+        EmArea01Call local = {.function = 0x001CFA60u, .sp = sp, .na = 2, .nf = 2};
+        local.a[0] = frame; local.a[1] = c->a[0]; local.f[0] = 0x3F800000u; local.f[1] = 0x3DCCCCCDu;
+        if ((rc = em_area01_runtime_call(r, &local)) < 0) break;
+        EmArea01Call queue = {.function = 0x001CFBE0u, .sp = sp, .na = 5, .nf = 0};
+        queue.a[0] = (uint64_t)(int64_t)(int32_t)key.v0; queue.a[1] = 1; queue.a[2] = blk;
+        queue.a[3] = frame; queue.a[4] = 1;
+        rc = em_area01_runtime_call(r, &queue);
         break;
     }
     case 0x001B15D0u: {

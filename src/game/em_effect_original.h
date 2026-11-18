@@ -47,6 +47,8 @@ extern "C" {
 
 /* Shared original integer absolute-value leaf. */
 int32_t em_effect_original_0011E860(int32_t value);
+/* 001B5DC0(a0): the ring 0..3 of the pad axis byte a0 & 0xFF around 0x80. */
+int32_t em_effect_original_001B5DC0(int32_t a0);
 
 #define EM_EFFECT_ORIGINAL_DRIVER 0x001EA240u      /* entity +0x0C for the puff types */
 #define EM_EFFECT_ORIGINAL_TABLE_BASE 0x00257C90u  /* *(D_00259C70): first record */

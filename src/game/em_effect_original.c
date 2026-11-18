@@ -536,6 +536,15 @@ static int32_t float_to_int_bits(uint32_t b)
 /* 0011E860: abs on the low word (INT_MIN stays INT_MIN). */
 int32_t em_effect_original_0011E860(int32_t v) { return v >= 0 ? v : (int32_t)(0u - (uint32_t)v); }
 
+/* 001B5DC0(a0) (byte-matched C): the stick ring of a pad axis byte,
+ * n = 0011E860((a0 & 0xFF) - 0x80), then 0 below 0x31, 1 below 0x59, 2
+ * below 0x7B, else 3. */
+int32_t em_effect_original_001B5DC0(int32_t a0)
+{
+    const int32_t n = em_effect_original_0011E860((int32_t)((uint32_t)a0 & 0xFFu) - 0x80);
+    return n < 0x31 ? 0 : n < 0x59 ? 1 : n < 0x7B ? 2 : 3;
+}
+
 /* ---- public wrappers (floats <-> raw words) ---- */
 static void to_quads(Quad q[4], const float *f) { memcpy(q, f, 64); }
 static void from_quads(float *f, const Quad q[4]) { memcpy(f, q, 64); }

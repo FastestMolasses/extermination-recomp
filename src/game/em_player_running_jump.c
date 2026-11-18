@@ -19,7 +19,9 @@
 #include "game/em_player_running_jump.h"
 #include "game/em_ee_float.h"
 #include "game/em_owner_services_original.h"
+#include "game/em_effect_original.h"
 #include "game/em_player_fall.h"
+#include "game/em_script_host_workers.h"
 #include "game/em_sdk_vu0.h"
 
 #include <stddef.h>
@@ -60,6 +62,10 @@ typedef uint32_t F;
 #define K_6_3        UINT32_C(0x40C9999A)
 #define K_M0_03      UINT32_C(0xBCF5C28F)
 #define K_M0_2       UINT32_C(0xBE4CCCCD)
+#define K_HALF       UINT32_C(0x3F000000)
+#define K_0_4        UINT32_C(0x3ECCCCCD)
+#define K_16         UINT32_C(0x41800000)
+#define K_TURN12     UINT32_C(0x3E567750)   /* 0.20943952: 12 degrees a frame */
 
 /* D_002489E0: the forward probe point (x, y, z, w) in actor space. */
 static const F kForward[4] = { UINT32_C(0x00000000), UINT32_C(0x3F800000), UINT32_C(0x40C00000),
@@ -227,7 +233,7 @@ int em_player_running_jump_workers_bound(const EmPlayerRunningJumpWorkers *w)
            w->target_radius && w->target_sight && w->heading && w->request && w->arbiter &&
            w->clip_frames && w->sound && w->translate && w->strafe && w->quadrant && w->react &&
            w->grab && w->dust && w->land && w->surface5d && w->teleport && w->probes && w->floor &&
-           w->fall_check && w->root_clock;
+           w->fall_check && w->root_clock && w->row_request && w->root_word0 && w->buttons;
 }
 
 /* ---- 0015EC50 ----------------------------------------------------------- */
@@ -787,6 +793,237 @@ int em_player_running_jump_state24_tick(EmPlayerLiveActor *a, const EmPlayerRunn
     return 0;
 }
 
+/* ---- 001741D0 ----------------------------------------------------------- */
+
+/* 001028D0(out, a, b): VSUB.xyzw. */
+static int vsub_001028D0(F out[4], const F a[4], const F b[4])
+{
+    return em_vu_vec_bits(EM_VU_SUB, 15, EM_VU_NO_BC, a, b, 0, NULL, out) == EM_EE_FLOAT_OK ? 0 : -1;
+}
+
+/* 00102760(out, v): xyz scaled by 1 / |xyz| through Q, w = 0
+ * (em_effect_original's translation; out may alias v). */
+static void normalize_00102760(F out[4], const F v[4])
+{
+    float in[4], r[4];
+    memcpy(in, v, sizeof in);
+    em_effect_original_00102760(r, in);
+    memcpy(out, r, sizeof r);
+}
+
+/* 00103200(out, v0, v1, t): vf7.x = vf0.x + vf0.w (1), vf8.x = 1 - t,
+ * ACC.xyz = v0.xyz * t, out.xyz = ACC + v1.xyz * (1 - t), out.w = v0.w. */
+static int blend_00103200(F out[4], const F v0[4], const F v1[4], F t)
+{
+    static const F vf0[4] = { 0, 0, 0, K_ONE };
+    F vf6[4] = { t, 0, 0, 0 }, vf7[4] = { 0, 0, 0, 0 }, vf8[4] = { 0, 0, 0, 0 };
+    F acc[4] = { 0, 0, 0, 0 }, r[4] = { 0, 0, 0, v0[3] };
+    if (em_vu_vec_bits(EM_VU_ADDBC, 8, 3, vf0, vf0, 0, NULL, vf7) != EM_EE_FLOAT_OK) return -1;
+    if (em_vu_vec_bits(EM_VU_SUB, 8, EM_VU_NO_BC, vf7, vf6, 0, NULL, vf8) != EM_EE_FLOAT_OK) return -1;
+    if (em_vu_vec_bits(EM_VU_MULABC, 14, 0, v0, vf6, 0, NULL, acc) != EM_EE_FLOAT_OK) return -1;
+    if (em_vu_vec_bits(EM_VU_MADDBC, 14, 0, v1, vf8, 0, acc, r) != EM_EE_FLOAT_OK) return -1;
+    memcpy(out, r, sizeof r);
+    return 0;
+}
+
+static void record_vec(const EmPlayerLiveActor *a, unsigned at, F v[4])
+{
+    for (unsigned i = 0; i < 4; ++i) v[i] = ld(a, at + 4 * i);
+}
+
+static int pad_test(const EmPlayerRunningJumpWorkers *w, int *hit)
+{
+    uint16_t pressed = 0, mask = 0;
+    FAULT(w->buttons(w->context, &pressed, &mask));                    /* D_00810E74, 0x70003B76 */
+    *hit = (pressed & mask) != 0;
+    return 0;
+}
+
+/* +1F0 = 0x38: the Gatling seat, a six-way switch on +6 (table
+ * D_0026D6E0; +6 >= 6 runs no case), then the common tail. */
+static int mount_step(EmPlayerLiveActor *a, const EmPlayerRunningJumpWorkers *w)
+{
+    EmPlayerRunningJumpScratch *s = w->scratch;
+    F *va = s->s38A0, *vb = s->s38A0 + 4, *vc = s->s38A0 + 8, *vd = s->s38A0 + 12;
+    unsigned st6 = u8(a, 6);
+    switch (st6) {
+    case 0:   /* start: the mount clip */
+        put8(a, 6, st6 + 1);
+        put8(a, 7, 0);
+        FAULT(w->request(w->context, a, 2, 1, float_of(K_ZERO)));
+        put8(a, 0x302, 0);
+        break;
+    case 1: { /* walk to the seat point +290 */
+        F seat[4], at[4];
+        record_vec(a, 0x290, seat);
+        record_vec(a, 0xB0, at);
+        FAULT(vsub_001028D0(va, seat, at));                            /* 0x700038A0 = +290 - +B0 */
+        F d = distance(w, va[0], va[2]);                               /* sqrt(x*x + z*z), MULA / MADD */
+        s->s3A20 = d;
+        if (le(d, K_ONE)) {                                            /* within 1.0: snap */
+            st(a, 0xB0, ld(a, 0x290));
+            st(a, 0xB8, ld(a, 0x298));
+            FAULT(w->request(w->context, a, 0, 0, float_of(K_4)));
+            put8(a, 6, u8(a, 6) + 1);
+        } else {
+            F m[16];
+            normalize_00102760(va, va);
+            vd[0] = K_ZERO; vd[1] = K_ZERO; vd[2] = K_ONE; vd[3] = K_ZERO;
+            record_matrix(a, m);
+            FAULT(apply_001026A0(m, vd, vb));                          /* 0x700038B0 = M(+D0) * (0, 0, 1, 0) */
+            FAULT(blend_00103200(vc, va, vb, K_HALF));                 /* 0x700038C0 */
+            normalize_00102760(vc, vc);
+            st(a, 0xB0, add(ld(a, 0xB0), mul(K_0_4, vc[0])));
+            st(a, 0xB8, add(ld(a, 0xB8), mul(K_0_4, vc[2])));
+            st(a, 0xC4, bits_of(w->atan2(w->context, float_of(vc[0]), float_of(vc[2]))));
+        }
+        break;
+    }
+    case 2: { /* turn to the gun's heading +218 by 12 degrees a frame (001B12B0) */
+        F yaw = 0;
+        FAULT(em_script_host_001B12B0(NULL, ld(a, 0x218), ld(a, 0xC4), K_TURN12, &yaw));
+        st(a, 0xC4, yaw);
+        if (em_ee_c_eq_bits(ld(a, 0x218), ld(a, 0xC4))) {
+            put8(a, 6, u8(a, 6) + 1);
+            FAULT(w->request(w->context, a, 0x170, 0, float_of(K_8)));
+        }
+        break;
+    }
+    case 3:   /* sit: at the clip's end, seated (+1F1 = 1) */
+        if (ld(a, 0x200) & 0x1000u) {
+            FAULT(w->request(w->context, a, 0x171, 0, float_of(K_ONE)));
+            put8(a, 6, u8(a, 6) + 1);
+            put8(a, 0x1F1, 1);
+            put8(a, 0, 1);
+        }
+        break;
+    case 4: { /* seated: the dismount press, or +302 set (thrown off) */
+        int hit = 0;
+        FAULT(pad_test(w, &hit));
+        if (hit) {
+            put8(a, 6, st6 + 1);
+            put8(a, 0x1F1, 2);
+            FAULT(w->request(w->context, a, 0x172, 0, float_of(K_ONE)));
+            put8(a, 0, u8(a, 0) | 2);
+        } else if (u8(a, 0x302) != 0) {
+            put8(a, 0xF, 6);
+            put8(a, 0, u8(a, 0) | 2);
+            put8(a, 0x1F1, 2);
+        }
+        break;
+    }
+    case 5:   /* stand up: at the clip's end, back to +5 = 0 */
+        if (ld(a, 0x200) & 0x1000u) {
+            put8(a, 5, 0);
+            put8(a, 6, 0);
+            put8(a, 0x1F0, 0);
+            FAULT(w->row_request(w->context, a, float_of(K_16)));
+            put8(a, 0, 1);
+        }
+        break;
+    default:
+        break;
+    }
+    st(a, 0xB4, add(ld(a, 0xB4), K_M0_2));
+    int contact = 0;
+    return w->floor(w->context, a, 1, &contact) < 0 ? -1 : 0;           /* 00175900(p, 1) */
+}
+
+/* Any other +1F0: the 0x4A placement, a compare chain on +6 (3, 2, 1, 0). */
+static int place_step(EmPlayerLiveActor *a, const EmPlayerRunningJumpWorkers *w)
+{
+    unsigned st6 = u8(a, 6);
+    F clock = 0;
+    switch (st6) {
+    case 0: {
+        put8(a, 6, st6 + 1);
+        put8(a, 7, 0);
+        st(a, 0xB0, ld(a, 0x290));
+        st(a, 0xB4, ld(a, 0x294));
+        st(a, 0xB8, ld(a, 0x298));
+        F yaw = 0;
+        int clip;
+        if (em_live_u16(a, 0x2E) == 0) {
+            FAULT(wrap(add(K_HALF_PI, ld(a, 0x218)), &yaw));
+            clip = 0x173;
+        } else {
+            FAULT(wrap(sub(ld(a, 0x218), K_HALF_PI), &yaw));
+            clip = 0x174;
+        }
+        st(a, 0xC4, yaw);
+        FAULT(w->request(w->context, a, clip, 0, float_of(K_ZERO)));
+        st(a, 0x21C, K_ZERO);
+        break;
+    }
+    case 1:
+        if (ld(a, 0x200) & 0x1000u) {
+            put8(a, 6, st6 + 1);
+            put8(a, 0x1F1, 1);
+            put8(a, 0, 1);
+            st(a, 0xC4, ld(a, 0x218));
+            return w->request(w->context, a, 0x175, 0, float_of(K_ZERO)) < 0 ? -1 : 0;
+        }
+        FAULT(w->root_clock(w->context, &clock));
+        st(a, 0x38, sub(clock, ld(a, 0x21C)));
+        FAULT(w->root_clock(w->context, &clock));
+        st(a, 0x21C, clock);
+        FAULT(w->translate(w->context, a, 0));                         /* 00178B90(p, 0) */
+        break;
+    case 2: {
+        if (!em_ee_c_eq_bits(ld(a, 0x224), K_ZERO) || !em_ee_c_eq_bits(ld(a, 0x22C), K_ZERO) ||
+            (u8(a, 0xF) & 2)) {                                        /* knocked off: the fallback pose */
+            put8(a, 4, 2);
+            put8(a, 5, 0x15);
+            put8(a, 6, 0);
+            put8(a, 0x1F1, 2);
+            st(a, 0xB0, UINT32_C(0x42C7999A));                         /* 99.8 */
+            st(a, 0xB4, UINT32_C(0x427C0000));                         /* 63.0 */
+            st(a, 0xB8, UINT32_C(0x42B10000));                         /* 88.5 */
+            return 0;
+        }
+        int hit = 0;
+        FAULT(pad_test(w, &hit));
+        if (hit) {
+            put8(a, 6, st6 + 1);
+            FAULT(w->request(w->context, a, 0x176, 0, float_of(K_ONE)));
+            put8(a, 0x1F1, 2);
+            put8(a, 0, u8(a, 0) | 2);
+            st(a, 0x21C, K_ZERO);
+        }
+        break;
+    }
+    case 3:
+        if (ld(a, 0x200) & 0x1000u) {
+            put8(a, 5, 0);
+            put8(a, 6, 0);
+            put8(a, 0x1F0, 0);
+            FAULT(w->row_request(w->context, a, float_of(K_16)));
+            put8(a, 0, 1);
+            return 0;
+        }
+        FAULT(w->root_word0(w->context, &clock));
+        st(a, 0x38, sub(clock, ld(a, 0x21C)));
+        FAULT(w->root_word0(w->context, &clock));
+        st(a, 0x21C, clock);
+        {
+            F c = bits_of(w->cosine(w->context, float_of(ld(a, 0xC4))));
+            st(a, 0xB0, add(ld(a, 0xB0), mul(ld(a, 0x38), c)));
+            F n = bits_of(w->sine(w->context, float_of(ld(a, 0xC4))));
+            st(a, 0xB8, sub(ld(a, 0xB8), mul(ld(a, 0x38), n)));
+        }
+        break;
+    default:
+        break;
+    }
+    return 0;
+}
+
+int em_player_running_jump_state23_tick(EmPlayerLiveActor *a, const EmPlayerRunningJumpWorkers *w)
+{
+    if (!a || !em_player_running_jump_workers_bound(w)) return -1;
+    return u8(a, 0x1F0) == 0x38 ? mount_step(a, w) : place_step(a, w);
+}
+
 /* ---- Binding adapters ------------------------------------------------------ */
 
 static int live_ready(const EmPlayerRunningJumpLive *l, const EmPlayerLiveActor *a)
@@ -826,6 +1063,14 @@ int em_player_running_jump_state24(void *context, EmPlayerLiveActor *actor)
     if (!live_ready(l, actor)) return -1;
     load_shared(l);
     return store_shared(l, em_player_running_jump_state24_tick(actor, &l->workers));
+}
+
+int em_player_running_jump_state23(void *context, EmPlayerLiveActor *actor)
+{
+    const EmPlayerRunningJumpLive *l = context;
+    if (!live_ready(l, actor)) return -1;
+    load_shared(l);
+    return store_shared(l, em_player_running_jump_state23_tick(actor, &l->workers));
 }
 
 int em_player_running_jump_use_probe(void *context, EmPlayerLiveActor *actor, int *result)

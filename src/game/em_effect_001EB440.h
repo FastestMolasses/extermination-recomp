@@ -45,6 +45,14 @@ int em_effect_001EB250(const EmEffect001EB440Hooks *h, uint32_t a0, int32_t a1,
                        EmEffect001EB440Fault *fault);
 int em_effect_001EB600(const EmEffect001EB440Hooks *h, uint32_t a0, int32_t a1,
                        EmEffect001EB440Fault *fault);
+/* 001EE4E0(a0, a1) (the hit spray of the Gatling's rounds, g77 row 4534):
+ * no fog; rewrites the three records' parameter blocks D_002576E0 /
+ * D_00257770 / D_00257800 (12, 12, 16, 0 x5; twice 32, 32, 64, 96, 16, 16,
+ * 64, 0), runs the pass with the records D_002576C0 / D_00257750 /
+ * D_002577E0, kinds 1, 6, 1 and copy 1, then eases w[+8] toward 0.02 by a
+ * tenth of the gap, floored at 0.02. */
+int em_effect_001EE4E0(const EmEffect001EB440Hooks *h, uint32_t a0, int32_t a1,
+                       EmEffect001EB440Fault *fault);
 #ifdef __cplusplus
 }
 #endif
