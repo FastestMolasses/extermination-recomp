@@ -491,7 +491,8 @@ recording-derived and stay in the ignored `build/`.
   `EM_IOP_TICK_PHASE`, the GS head's `EM_GS_BANDS`, `EM_GS_EARLY_OPS`,
   `EM_GS_EARLY_PARSE`, `EM_GS_LIST`, `EM_GS_SPEC`, `EM_GS_SPEC_CHECK`,
   `EM_GS_TEXCACHE`, `EM_GS_THREADS` (the same bytes); the presentation's
-  `EM_HUD_FORCE`, `EM_HUD_HOVER` and the data path `EM_AIM_FIRE_TABLES`;
+  `EM_HUD_FORCE`, `EM_HUD_HOVER`, `EM_SLOT1_FIELD` (world frames' slot 1 left undrawn, an A/B
+  switch: GS_EXACT.md section 9 "Slot 1") and the data path `EM_AIM_FIRE_TABLES`;
   the observers (traces, dumps, counters, captures) `EM_AREA_CHANGE_LOG`,
   `EM_BOX_DUMP`, `EM_CAMERA_TRACE`, `EM_CAM_PRINT`, `EM_COLL_WORLD_DUMP`,
   `EM_CONTROL_TRACE`, `EM_DIAG_DIGESTS`, `EM_FB_CAPTURE_TICKS`,

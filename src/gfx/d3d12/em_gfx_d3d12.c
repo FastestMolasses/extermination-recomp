@@ -121,6 +121,8 @@ int em_gfx_gs_head(EmGfx *gfx, const void *env, size_t env_bytes, const void *cl
                    uint64_t dispfb)
 { (void)gfx; (void)env; (void)env_bytes; (void)clear; (void)clear_bytes; (void)dispfb; return 0; }
 void em_gfx_present_tag(EmGfx *gfx, uint64_t tag) { (void)gfx; (void)tag; }
+int em_gfx_gs_world_gif(EmGfx *gfx, const void *gif, size_t bytes) { (void)gfx; (void)gif; (void)bytes; return -1; }
+int em_gfx_gs_world_tail(EmGfx *gfx, const void *gif, size_t bytes) { (void)gfx; (void)gif; (void)bytes; return -1; }
 const char *em_gfx_gs_world_fault(EmGfx *gfx) { (void)gfx; return NULL; }
 int em_gfx_gs_field_read(EmGfx *gfx, uint8_t *rgba, uint64_t *frame) { (void)gfx; (void)rgba; (void)frame; return -1; }
 int em_gfx_gs_world_cost(EmGfx *gfx, EmGfxGsCost *out) { (void)gfx; (void)out; return -1; }

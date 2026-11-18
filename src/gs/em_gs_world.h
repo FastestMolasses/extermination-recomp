@@ -204,6 +204,21 @@ int em_gs_world_list_frame(EmGsWorld *w, const EmGfxGsPrim *prims, const EmGfxGs
 int em_gs_world_gif_frame(EmGsWorld *w, const void *gif, size_t bytes, uint64_t display_frame,
                           uint64_t display_scissor);
 
+/* 1 when `gif` is whole GIF packets of register data only (PACKED tags, no
+ * A+D write of a transfer register): what em_gs_world_gif takes. */
+int em_gs_gif_registers_only(const void *gif, size_t bytes);
+
+/* The GIF data a kicked world frame's list sends after the recorded body
+ * that the recording cannot take (transfers: the slot-1 packets' glyph
+ * uploads; REGLIST and IMAGE packets): right after em_gs_world_kick, waits
+ * until the workers have drawn the body, checks the stream as
+ * em_gs_world_gif_frame does, runs it on the model that holds the GS
+ * registers (they go on from the body's end), on the calling thread, and
+ * reads the field again. The frame then counts as waited for (no
+ * pipelining for it). 0, or -1 (the fault latched; also when no world frame
+ * was kicked before it). */
+int em_gs_world_tail(EmGsWorld *w, const void *gif, size_t bytes);
+
 /* Waits until the workers have drawn the frame handed to them (if any) and
  * checks it: 0, or -1 (a refused primitive, a span fault, a malformed
  * packet: the fault latched). */

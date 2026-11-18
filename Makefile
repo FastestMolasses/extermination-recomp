@@ -1910,6 +1910,15 @@ test-sight-reference:
 test-sight-live: all
 	python3 tools/test_sight_live.py
 
+.PHONY: test-slot1-field
+# A world frame's slot-1 packets in the Original profile's GS field
+# (docs/GS_EXACT.md section 9 "Slot 1"): the zoom scope's start point with
+# and without slot 1 (EM_SLOT1_FIELD=0); the pixels slot 1 draws equal the
+# original's displayed field at the three captured frames (decomp
+# build/sights_ref/zoom), ~15 s.
+test-slot1-field: all
+	python3 tools/test_slot1_field.py
+
 .PHONY: test-aim-fire-marker-reference
 # The round's impact marker 0018ABA0 (em_aim_fire_marker.c, bound in
 # ordinary play; AIM_FIRE.md section 3) against the original instructions

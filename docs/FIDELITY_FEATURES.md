@@ -3077,10 +3077,17 @@ recording one pi/8 turn step ahead: the tool fed a guided take's pad one tick ea
   page, g66's end) on all 21,443 bytes the original writes at zoom 0, 1.0
   and 0.5; the other four run live from constructed start points without a
   fault (no recording owns their items, so no capture).
-- Status: **PARTIAL**. The packets are the original's, but the Original
-  profile does not draw a gameplay frame's slot-1 packets yet, so the
-  sight is not on the picture. 00199770's lock mark 001DD170 (the missile
-  launcher with a class-2 target in range) is a fail-stop.
+- On the picture (lane PORT-SLOT1-2D, 2026-11-18): the Original profile
+  draws a world frame's slot-1 segment after the world and the chain page,
+  as the original's 001D2300 kicks it (docs/GS_EXACT.md section 9 "Slot
+  1"). `make test-slot1-field`: at the three captured frames (zoom 0, 1.0,
+  0.5) the pixels the sight draws equal the original's displayed field
+  (64,975 of 64,976, 65,507 of 65,509, 65,301 of 65,453; the rest is the
+  port's world under the scope's glass), relative to PCSX2's software GS.
+- Status: **PARTIAL**. The zoom scope is verified on the picture; the
+  other four sights draw through the same path with no capture to compare.
+  00199770's lock mark 001DD170 (the missile launcher with a class-2 target
+  in range) is a fail-stop.
 
 ### Watching Claude's run
 

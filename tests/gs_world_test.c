@@ -1223,11 +1223,12 @@ static void own_clut_cases(int full)
  * transfer makes block 0x2800 resident (a later GIF frame reads it); a
  * sprite reading unwritten memory, and a GIF frame inside a recording,
  * fault. */
+static uint32_t g_stream_fbp = 0x38;   /* the stream's FRAME_1 (world_tails: the kicked field) */
 static size_t gif_stream(uint8_t *out, uint32_t tbp, int transfer)
 {
     size_t n = 0;
     const uint64_t envw[][2] = {
-        { EM_GS_FRAME_1, FRAME_FIELD(0x38) }, { EM_GS_ZBUF_1, 0x101000070ull },
+        { EM_GS_FRAME_1, FRAME_FIELD(g_stream_fbp) }, { EM_GS_ZBUF_1, 0x101000070ull },
         { EM_GS_XYOFFSET_1, (uint64_t)(1792 * 16) | (uint64_t)(1936 * 16 + 8) << 32 },
         { EM_GS_SCISSOR_1, 511ull << 16 | 223ull << 48 }, { EM_GS_PRMODECONT, 1 }, { EM_GS_COLCLAMP, 1 },
         { EM_GS_DTHE, 0 }, { EM_GS_TEST_1, 0x30000 }, { EM_GS_PRIM, 0x6 },
@@ -1361,6 +1362,99 @@ static void gif_frames(void)
     n = gif_stream(gif, 0x2800, 1);
     CHECK(em_gs_world_gif_frame(w, gif, n, FRAME_FIELD(0x38), 223ull << 48) < 0);
     CHECK(strstr(em_gs_world_fault(w), "inside a recorded world frame"));
+    em_gs_world_destroy(w);
+}
+
+/* World frames' tails (em_gs_world_tail, a world frame's slot-1 packets
+ * with transfers; GS_EXACT.md section 9 "Slot 1"): a world frame kicked,
+ * then gif_stream into its own field (a transfer to block 0x2800 and
+ * sprites from it) as the tail. Memory and the field read again equal the
+ * world frame's memory with the stream run on one EmGs; 1, 2, 3 and 8
+ * workers alike; the next world frame draws on; a tail without a kicked
+ * world frame and one inside a recording fault. */
+static unsigned g_tail_px;
+static void tail_run(unsigned workers, uint8_t *mem_out)
+{
+    char nb[8];
+    snprintf(nb, sizeof nb, "%u", workers);
+    setenv("EM_GS_THREADS", nb, 1);
+    static uint8_t gif[8192];
+    uint8_t env[512], clr[512];
+    size_t env_n, clr_n;
+    /* the expected memory: the world frame alone, then the stream on one EmGs */
+    EmGsWorld *w = em_gs_world_create();
+    CHECK(w && em_gs_world_memory_load(w, image_one) == 0);
+    record_world(w, 23u, 0, 0);
+    head(env, &env_n, clr, &clr_n, 0, 0);
+    CHECK(em_gs_world_kick(w, env, env_n, clr, clr_n) == 0);
+    uint8_t *ref = malloc(EM_GS_MEM_BYTES);
+    CHECK(ref);
+    memcpy(ref, em_gs_world_memory(w), EM_GS_MEM_BYTES);
+    em_gs_world_destroy(w);
+    g_stream_fbp = 0;
+    const size_t n = gif_stream(gif, 0x2800, 1);
+    EmGs g;
+    em_gs_init(&g, ref);
+    g.strict = 1;
+    CHECK(em_gs_gif(&g, gif, n) == n);
+    em_gs_flush(&g);
+    CHECK(g.refusals == 0 && g.refused_prims == 0 && g.span_faults == 0);
+    em_gs_release(&g);
+    /* the same world frame with the stream as its tail */
+    w = em_gs_world_create();
+    CHECK(w && em_gs_world_workers(w) == workers && em_gs_world_memory_load(w, image_one) == 0);
+    record_world(w, 23u, 0, 0);
+    CHECK(em_gs_world_kick(w, env, env_n, clr, clr_n) == 0);
+    CHECK(em_gs_world_tail(w, gif, n) == 0);
+    CHECK(!em_gs_world_busy(w) && em_gs_world_resident(w, 0x2800));
+    uint32_t fw, fh;
+    const uint8_t *fld = em_gs_world_field(w, &fw, &fh, NULL);
+    CHECK(fld && fw == 512 && fh == 224);
+    g_tail_px = 0;
+    for (uint32_t y = 0; y < 224; ++y)
+        for (uint32_t x = 0; x < 512; ++x) {
+            uint32_t a, b;
+            memcpy(&a, ref + 4u * em_gs_addr32(0, 8, x, y, 0), 4);
+            memcpy(&b, fld + 4u * (y * 512u + x), 4);
+            CHECK(a == b);
+            g_tail_px += (a & 0xFFFFFFu) != 0x102030u;
+        }
+    CHECK(memcmp(em_gs_world_memory(w), ref, EM_GS_MEM_BYTES) == 0);
+    /* the next world frame */
+    record_world(w, 24u, 0, 0);
+    CHECK(em_gs_world_kick(w, env, env_n, clr, clr_n) == 0);
+    CHECK(em_gs_world_wait(w) == 0);
+    memcpy(mem_out, em_gs_world_memory(w), EM_GS_MEM_BYTES);
+    em_gs_world_destroy(w);
+    free(ref);
+    g_stream_fbp = 0x38;
+}
+
+static void world_tails(void)
+{
+    uint8_t *m[4];
+    const unsigned counts[4] = { 1, 2, 3, 8 };
+    for (unsigned i = 0; i < 4; ++i) {
+        m[i] = malloc(EM_GS_MEM_BYTES);
+        CHECK(m[i]);
+        tail_run(counts[i], m[i]);
+    }
+    for (unsigned i = 1; i < 4; ++i) CHECK(memcmp(m[i], m[0], EM_GS_MEM_BYTES) == 0);
+    for (unsigned i = 0; i < 4; ++i) free(m[i]);
+    CHECK(g_tail_px > 1000);
+    setenv("EM_GS_THREADS", "1", 1);
+    static uint8_t gif[8192];
+    const size_t n = gif_stream(gif, 0x2800, 1);
+    EmGsWorld *w = em_gs_world_create();
+    CHECK(w && em_gs_world_memory_load(w, image_one) == 0);
+    CHECK(em_gs_world_tail(w, gif, n) < 0);
+    CHECK(strstr(em_gs_world_fault(w), "without the world frame kicked"));
+    em_gs_world_destroy(w);
+    w = em_gs_world_create();
+    CHECK(w && em_gs_world_memory_load(w, image_one) == 0);
+    em_gs_world_begin(w);
+    CHECK(em_gs_world_tail(w, gif, n) < 0);
+    CHECK(strstr(em_gs_world_fault(w), "before its kick"));
     em_gs_world_destroy(w);
 }
 
@@ -1662,6 +1756,9 @@ int main(void)
     z_reach();
     head_probe();
     gif_frames();
+    world_tails();
+    printf("gs_world_test: world frames' tails: a transfer and its texture after the kicked body (%u field pixels "
+           "drawn), equal to the stream on one EmGs, with 1, 2, 3 and 8 workers; 2 refusals\n", g_tail_px);
     raster_skip();
     printf("gs_world_test: the raster skip: three frames handed over as drawn (the same fields, draw offsets "
            "and %u parsed primitives), no pixel drawn, one worker; a parser refusal alike; the switch's seven "

@@ -25,6 +25,7 @@
 #define ARENA 0x0028F700u
 #define SLOT1_BASE (ARENA + 0xC9000u) /* 001D1AE0's +0x14 cursor for index 0 */
 #define SLOT1_SIZE 0x95760u           /* the index stride: slot 2's buffer follows */
+#define GLYPH_RUNS_MAX 256u
 
 _Static_assert(sizeof(EmStatusBackground) == 0x60, "D_002655A0 is three 0x20-byte blocks");
 
@@ -47,8 +48,16 @@ static struct {
     /* the GS field of the bound pages (Original profile) */
     int field_on;          /* the GS frame draws the bound pages */
     int field;             /* this frame is drawn by the GS model */
+    int slot1_off;         /* EM_SLOT1_FIELD=0: world frames leave slot 1 undrawn */
     uint8_t *vif, *gif;    /* the kicked list's VIF stream and its GIF data */
     size_t vif_cap, gif_cap;
+    /* a world frame's slot-1 packets (em_sgp_world_slot1): the cursor
+     * ranges the message service's glyph runs filled this frame (the GPU
+     * overlay draws them), and the stream left for after the kick */
+    uint32_t glyph_runs[GLYPH_RUNS_MAX][2];
+    unsigned glyph_run_count;
+    int glyph_runs_over;
+    size_t tail_bytes;
 } G;
 
 static uint32_t rd32(const uint8_t *p)
@@ -135,6 +144,28 @@ static EmMessageTextStyle style_of(uint64_t record)
 
 /* ---- the glyph runs' workers: 001CC8A0(1, ...) and 001CC3B0 ------------- */
 
+static int slot1_cursor(uint32_t *cursor);
+
+/* The slot-1 range a glyph run's packet took (from `before` to the cursor
+ * now), kept for em_sgp_world_slot1: the message service's strips are still
+ * drawn by the GPU overlay over a world frame's field (em_message_live_render),
+ * as are the letterbox bars and the fade they must stay ordered with. A
+ * frame with more runs than the list holds marks it full (its slot 1 is
+ * then refused, never drawn with a run in it). Returns ok. */
+static int glyph_run(int known, uint32_t before, int ok)
+{
+    uint32_t after = 0;
+    if (!ok || !known || !slot1_cursor(&after) || after <= before) return ok;
+    if (G.glyph_run_count && G.glyph_runs[G.glyph_run_count - 1][1] == before)
+        G.glyph_runs[G.glyph_run_count - 1][1] = after;
+    else if (G.glyph_run_count < GLYPH_RUNS_MAX) {
+        G.glyph_runs[G.glyph_run_count][0] = before;
+        G.glyph_runs[G.glyph_run_count++][1] = after;
+    } else
+        G.glyph_runs_over = 1;
+    return ok;
+}
+
 static int glyph_upload(void *ctx, const EmMessageGlyphUpload *up)
 {
     (void)ctx;
@@ -143,7 +174,9 @@ static int glyph_upload(void *ctx, const EmMessageGlyphUpload *up)
     EmUip u;
     if (!uip(&u)) return 0;
     G.frame_any = 1;
-    return done(&u, em_uip_001CC8A0(&u, 1, up->x, up->y, (int32_t)up->offset), "001CC8A0");
+    uint32_t before = 0;
+    const int known = slot1_cursor(&before);
+    return glyph_run(known, before, done(&u, em_uip_001CC8A0(&u, 1, up->x, up->y, (int32_t)up->offset), "001CC8A0"));
 }
 
 static int glyph_flush(void *ctx, const EmMessageGlyphFlush *f)
@@ -154,8 +187,12 @@ static int glyph_flush(void *ctx, const EmMessageGlyphFlush *f)
     EmUip u;
     if (!uip(&u)) return 0;
     G.frame_any = 1;
-    return done(&u, em_uip_001CC3B0(&u, f->slot, f->x, f->y, f->u_end, f->v_end, f->width, f->height, f->style),
-                "001CC3B0");
+    uint32_t before = 0;
+    const int known = f->slot == 1 && slot1_cursor(&before);
+    return glyph_run(known, before,
+                     done(&u, em_uip_001CC3B0(&u, f->slot, f->x, f->y, f->u_end, f->v_end, f->width, f->height,
+                                              f->style),
+                          "001CC3B0"));
 }
 
 static const EmMessageGlyphWorkers k_glyph_sink = {NULL, glyph_upload, glyph_flush};
@@ -571,6 +608,129 @@ int em_sgp_kick(EmGfx *gfx)
     return 0;
 }
 
+/* ---- a world frame's slot-1 packets (GS_EXACT.md section 9 "Slot 1") ----- */
+
+static int in_glyph_run(uint32_t t)
+{
+    for (unsigned i = 0; i < G.glyph_run_count; ++i)
+        if (t >= G.glyph_runs[i][0] && t < G.glyph_runs[i][1]) return 1;
+    return 0;
+}
+
+/* The VIF stream of the kicked list's slot-1 segment of buffer `index`
+ * (001D2300 NEXTs from the main list to D_0028F700 + 0xC9000 + index *
+ * 0x95760 and 001D2160 NEXTs back at its end: the walk ends at the first
+ * NEXT that leaves the buffer), the glyph runs' tags left out, then its GIF
+ * data. Tags as list_gif takes them; a CALL / RET / END inside the segment
+ * is refused (001D2300's segments hold none). 0, or -1 (reported). */
+static int slot1_gif(uint32_t index, size_t *gif_bytes)
+{
+    char at[64];
+    const uint32_t base = SLOT1_BASE + index * SLOT1_SIZE;
+    uint32_t t = base;
+    size_t vn = 0;
+    for (unsigned tags = 0;; ++tags) {
+        snprintf(at, sizeof at, "tag %08X", (unsigned)t);
+        if (tags >= 0x40000u) return refuse("a world frame's slot-1 segment does not end", at);
+        const uint8_t *tag = em_rcl_bytes(t, 16);
+        if (!tag) return refuse("a slot-1 DMA tag is not in the render context's storage", at);
+        const uint64_t lo = (uint64_t)rd32(tag) | (uint64_t)rd32(tag + 4) << 32;
+        const uint32_t qwc = (uint32_t)lo & 0xFFFFu, id = (uint32_t)(lo >> 28) & 7u;
+        const uint32_t addr = (uint32_t)(lo >> 32) & 0x7FFFFFFFu;
+        if (lo >> 63) return refuse("a slot-1 DMA tag names scratchpad memory", at);
+        uint32_t data, next;
+        switch (id) {
+        case 1: data = t + 16u; next = t + 16u + 16u * qwc; break;   /* CNT */
+        case 2: data = t + 16u; next = addr; break;                  /* NEXT */
+        case 3: case 4: data = addr; next = t + 16u; break;          /* REF, REFS */
+        default: return refuse("a slot-1 DMA tag other than CNT / NEXT / REF / REFS", at);
+        }
+        if (qwc && !in_glyph_run(t)) {
+            const uint8_t *p = em_rcl_bytes(data, 16u * qwc);
+            if (!p) return refuse("data slot 1 sends is not in the render context's storage", at);
+            if (!grow(&G.vif, &G.vif_cap, vn + 16u * qwc)) return refuse("a world frame's slot 1 is too long", at);
+            memcpy(G.vif + vn, p, 16u * qwc);
+            vn += 16u * qwc;
+        }
+        if (id == 2 && (next < base || next - base >= SLOT1_SIZE)) break;
+        if (next < base || next - base >= SLOT1_SIZE)
+            return refuse("a slot-1 DMA tag leads out of the buffer before the segment's end", at);
+        t = next;
+    }
+    size_t used = 0;
+    if (!grow(&G.gif, &G.gif_cap, vn ? vn : 16u) || em_gs_vif_direct(G.vif, vn, 0, G.gif, G.gif_cap, &used) < 0)
+        return refuse("a world frame's slot 1 sends VIF codes other than NOP / FLUSH / DIRECT", NULL);
+    *gif_bytes = used;
+    return 0;
+}
+
+/* Whether GIF data draw or transfer: a vertex kick (XYZ2 / XYZF2, PACKED
+ * or A+D, or REGLIST) or a REGLIST / IMAGE packet. */
+static int gif_draws(const uint8_t *p, size_t bytes)
+{
+    size_t off = 0;
+    while (off + 16u <= bytes) {
+        const uint64_t lo = (uint64_t)rd32(p + off) | (uint64_t)rd32(p + off + 4) << 32;
+        const uint64_t hi = (uint64_t)rd32(p + off + 8) | (uint64_t)rd32(p + off + 12) << 32;
+        off += 16u;
+        const unsigned nloop = (unsigned)(lo & 0x7FFFu), flg = (unsigned)((lo >> 58) & 3u);
+        unsigned nreg = (unsigned)(lo >> 60);
+        if (!nreg) nreg = 16u;
+        if (flg != 0u) {
+            if (nloop) return 1;
+            continue;
+        }
+        for (unsigned l = 0; l < nloop; ++l)
+            for (unsigned r = 0; r < nreg; ++r, off += 16u) {
+                const unsigned desc = (unsigned)(hi >> (4u * r)) & 15u;
+                if (off + 16u > bytes) return 1;
+                const unsigned reg = desc == 0xEu ? p[off + 8] : desc;
+                if (reg == 4u || reg == 5u || (desc == 0xEu && reg >= 0x50u && reg <= 0x54u)) return 1;
+            }
+    }
+    return 0;
+}
+
+int em_sgp_world_slot1(EmGfx *gfx)
+{
+    G.tail_bytes = 0;
+    if (!G.field_on || G.slot1_off || G.field || !gfx || !em_gfx_gs_world_recording(gfx)) return 0;
+    if (G.fault) return -1;
+    if (G.glyph_runs_over) return refuse("a world frame with more glyph runs than the slot-1 walk keeps", NULL);
+    uint32_t context, index;
+    const uint8_t *c4 = em_rcl_bytes(0x008106C4u, 1);
+    if (!word(D_00275670, &context) || !word(context + 0x9Cu, &index) || index > 1u || !c4)
+        return refuse("no render context for a world frame's slot 1", NULL);
+    size_t bytes = 0;
+    if (slot1_gif(index, &bytes) < 0) return -1;
+    if (c4[0]) {
+        /* 001D2300 with D_008106C4 set kicks slot 1 BEFORE slot 0 and the
+         * page; the recorded body cannot take it there. Its state blocks
+         * alone draw nothing; anything more stops the game. */
+        if (gif_draws(G.gif, bytes))
+            return refuse("a world frame whose slot 1 draws, kicked before the world (D_008106C4 set)", NULL);
+        return 0;
+    }
+    if (!bytes) return 0;
+    if (em_gs_gif_registers_only(G.gif, bytes)) {
+        if (em_gfx_gs_world_gif(gfx, G.gif, bytes) < 0)
+            return refuse("the GS frame refused a world frame's slot 1", em_gfx_gs_world_fault(gfx));
+        return 0;
+    }
+    G.tail_bytes = bytes;
+    return 0;
+}
+
+int em_sgp_world_tail(EmGfx *gfx)
+{
+    const size_t bytes = G.tail_bytes;
+    G.tail_bytes = 0;
+    if (!bytes) return 0;
+    if (em_gfx_gs_world_tail(gfx, G.gif, bytes) < 0)
+        return refuse("the GS frame refused a world frame's slot 1 (after the kick)", em_gfx_gs_world_fault(gfx));
+    return 0;
+}
+
 /* ---- install, frame hooks ------------------------------------------------- */
 
 int em_sgp_install(const char *font_path)
@@ -599,6 +759,10 @@ int em_sgp_install(const char *font_path)
      * 001CCB10 then reaches its local memory too. */
     EmGfx *gfx = em_frame_gfx();
     G.field_on = gfx && em_gfx_gs_world_enabled(gfx) && !em_settings()->gpu_renderer;
+    /* EM_SLOT1_FIELD=0 (developer / test A-B switch): a world frame's slot-1
+     * packets are not drawn (the field as before GS_EXACT.md 9 "Slot 1") */
+    const char *slot1 = getenv("EM_SLOT1_FIELD");
+    G.slot1_off = slot1 && slot1[0] == '0';
     if (G.field_on && em_sgp_001CCB10(gfx) != 0) {
         fprintf(stderr, "status GS page: the GS model refused 001CCB10's uploads: %s\n",
                 em_gfx_gs_world_fault(gfx) ? em_gfx_gs_world_fault(gfx) : "?");
@@ -622,6 +786,9 @@ void em_sgp_frame_begin(void)
 {
     G.frame_page = G.frame_any = G.frame_item = G.frame_pages = G.bg_seen = 0;
     G.field = 0;
+    G.glyph_run_count = 0;
+    G.glyph_runs_over = 0;
+    G.tail_bytes = 0;
     if (!G.installed || !em_rcl_bound() || !slot1_cursor(&G.frame_start)) G.frame_start = 0;
 }
 

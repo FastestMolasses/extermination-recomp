@@ -76,6 +76,7 @@ COMPATIBLE = {
     'EM_GS_BANDS', 'EM_GS_EARLY_OPS', 'EM_GS_EARLY_PARSE', 'EM_GS_LIST', 'EM_GS_SPEC', 'EM_GS_SPEC_CHECK',
     'EM_GS_TEXCACHE', 'EM_GS_THREADS',                                    # the GS head (the same bytes)
     'EM_HUD_FORCE', 'EM_HUD_HOVER', 'EM_AIM_FIRE_TABLES',                 # presentation; a data path
+    'EM_SLOT1_FIELD',                                                     # the A/B of slot 1's draw (pictures only)
     'EM_AREA_CHANGE_LOG', 'EM_BOX_DUMP', 'EM_CAMERA_TRACE', 'EM_CAM_PRINT', 'EM_COLL_WORLD_DUMP',
     'EM_CONTROL_TRACE', 'EM_DIAG_DIGESTS', 'EM_FB_CAPTURE_TICKS', 'EM_FRAME_TIMING', 'EM_FRAME_TRACE',
     'EM_GS_LIST_COUNTERS', 'EM_GS_SPEC_COUNTERS', 'EM_GS_TC_COUNTERS', 'EM_GS_TEX_COUNTERS',
