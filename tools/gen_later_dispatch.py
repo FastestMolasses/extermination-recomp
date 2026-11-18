@@ -50,6 +50,7 @@ SOURCES = (('em_area04_port.h', 'm04', 'EmArea04PortHooks', 'EmArea04PortFault')
            ('em_level16_boot.h', 'm16x', 'EmLevel16BootHooks', 'EmLevel16BootFault'),
            ('em_level17_boot.h', 'm17x', 'EmLevel17BootHooks', 'EmLevel17BootFault'),
            ('em_area17_creature.h', 'a17c', 'EmArea17CreatureHooks', 'EmArea17CreatureFault'),
+           ('em_area16_water.h', 'a16w', 'EmArea16WaterHooks', 'EmArea16WaterFault'),
            ('em_area21_boot.h', 'a21x', 'EmArea21BootHooks', 'EmArea21BootFault'),
            ('em_area21_creature_b.h', 'a21cb', 'EmArea21CreatureBHooks', 'EmArea21CreatureBFault'),
            ('em_area21_creature_c.h', 'a21cc', 'EmArea21CreatureCHooks', 'EmArea21CreatureCFault'),
