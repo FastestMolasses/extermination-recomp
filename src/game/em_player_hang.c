@@ -27,6 +27,7 @@
 #define K_8       UINT32_C(0x41000000)
 #define K_9       UINT32_C(0x41100000)
 #define K_10_5    UINT32_C(0x41280000)
+#define K_12      UINT32_C(0x41400000)
 #define K_16      UINT32_C(0x41800000)
 #define K_18      UINT32_C(0x41900000)
 #define K_20      UINT32_C(0x41A00000)
@@ -672,4 +673,62 @@ static int hang_dispatch(void *context, EmPlayerLiveActor *actor)
 int em_player_hang_state(void *context, EmPlayerLiveActor *actor)
 {
     return hang_dispatch(context, actor) < 0 ? -1 : 0;
+}
+
+/* ---- 001645D0 ------------------------------------------------------------ */
+
+/* The +6 switch of 001645D0 (state +5 = 0x0A, the climb up from a hang). Only
+ * the two callees it makes are required: 001749A0 (request) and 001FBD50
+ * (sound); both return values are discarded by the original. The three
+ * per-step deltas are (target - pose) / 12.0 with EE sub.s / div.s. */
+int em_player_hang_up_state(void *context, EmPlayerLiveActor *a)
+{
+    const EmPlayerHangWorkers *w = context;
+    if (!w || !a || !w->request || !w->sound) return -1;
+    const uint8_t st = u8(a, 6);
+    switch (st) {
+    case 0:
+        set8(a, 6, (uint8_t)(st + 1));
+        set8(a, 7, 0);
+        FAULT(w->request(w->context, a, 0x70, 0, fl(K_1)));
+        set8(a, 0x25F, 1);
+        break;
+    case 1:
+        if (w32(a, 0x200) & 0x1000u) set8(a, 6, (uint8_t)(st + 1));
+        break;
+    case 2:
+        FAULT(w->request(w->context, a, 0x71, 0, fl(K_1)));
+        set8(a, 6, (uint8_t)(u8(a, 6) + 1));         /* +6 re-read after the call */
+        em_live_set_u16(a, 0x28, 0xC);
+        for (unsigned k = 0; k < 3; ++k)
+            set32(a, 0x2E0 + 4 * k,
+                  em_ee_div_bits(em_ee_sub_bits(w32(a, 0x290 + 4 * k), w32(a, 0xB0 + 4 * k)), K_12));
+        break;
+    case 3: {
+        const uint16_t t = em_live_u16(a, 0x28);
+        em_live_set_u16(a, 0x28, (uint16_t)(t - 1));
+        if (t == 0) {
+            set8(a, 6, (uint8_t)(u8(a, 6) + 1));
+            for (unsigned k = 0; k < 3; ++k) set32(a, 0xB0 + 4 * k, w32(a, 0x290 + 4 * k));
+            FAULT(w->request(w->context, a, 0x7A, 0, fl(K_1)));
+            FAULT(w->sound(w->context, a, 0xFE, 0, fl(K_300)));
+        } else {
+            for (unsigned k = 0; k < 3; ++k)
+                set32(a, 0xB0 + 4 * k, em_ee_add_bits(w32(a, 0xB0 + 4 * k), w32(a, 0x2E0 + 4 * k)));
+        }
+        break;
+    }
+    case 4:
+        if (w32(a, 0x200) & 0x1000u) {
+            FAULT(w->request(w->context, a, 0x7B, 0, fl(K_1)));
+            set8(a, 5, 9);
+            set8(a, 6, 0);
+            set8(a, 0x1F0, 0x10);
+            set8(a, 0xD, 1);
+        }
+        break;
+    default:
+        break;
+    }
+    return 0;
 }

@@ -168,7 +168,7 @@ static int to_int_cb(void *ctx, uint32_t x, int32_t *out)
 }
 int shim_method_list(int which, uint32_t model, uint32_t w04, uint32_t ctx_0c, uint32_t ctx_9c, uint32_t arena,
                      uint32_t buffer, const uint32_t *rgb, const uint8_t *copy, const uint8_t *xy,
-                     const uint8_t *colours, const uint8_t *d241010, uint32_t address, uint8_t *out, uint32_t room)
+                     uint8_t *colours, const uint8_t *d241010, uint32_t address, uint8_t *out, uint32_t room)
 {
     static EmLoadVeilParticles v;
     uint32_t cursor[4] = {0, 0, 0, address}, ctx50[4] = {0, 0, 0, 0}, words[3] = {buffer, buffer, buffer};
@@ -564,10 +564,13 @@ def part_e(lib, stats):
             want = bytes(oracle.ram[at:end])
             rgbw = (C.c_uint32 * 3)(*[f32(x) for x in rgb])
             out = C.create_string_buffer(room)
+            colours = C.create_string_buffer(bytes(ram[rows:rows + 64]), 64)
             n = lib.shim_method_list(which, model, w04, 0 if fog_off else 1, M.u32(ram, ctx + 0x9C), arena,
                                      M.u32(ram, 0x275678), rgbw, bytes(base[data:data + 16]),
-                                     bytes(base[data + 16:data + 80]), bytes(base[rows:rows + 64]),
+                                     bytes(base[data + 16:data + 80]), colours,
                                      bytes(base[0x241010:0x241018]), at, out, room)
+            if rows and colours.raw != bytes(oracle.ram[rows:rows + 64]):
+                fail(f'list {which}: the colour rows (the D_00251BE0 / D_00251C20 stores) differ')
             if n != len(want) or out.raw[:n] != want:
                 diff = next((i for i in range(min(n, len(want))) if out.raw[i] != want[i]), None)
                 fail(f'list {which}: {n:#x} bytes, the original {len(want):#x}; first difference {diff}')
