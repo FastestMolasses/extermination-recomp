@@ -312,7 +312,12 @@ translated by lane PORT-A16 (`em_area16_overlay*.c`,
 `make test-area16-overlay-reference`: the original AREA16.BIN over a
 capture's arena with designed states, every reachable word) and bound in
 `dispatch_second_half` for area byte 0x10. The effect functions 0x8237A0 ..
-0x824110 are reached by nothing in the area. AREA16_PORT.md.
+0x824110 have no static reference, but they are reached at run time: an
+effect node's behaviour comes from its effect id (001EFD20 -> 001EF9D0),
+and in the live run [13] 0x8263D0's 001EFD20(4, ..) makes a node whose
+behaviour is 0x824110 (lane PORT-WATER, g61). The water grid [10] calls
+(001DAFA0 .. 001DB480) is translated in `em_area16_water` (section 6).
+AREA16_PORT.md.
 
 ### AREA17
 
@@ -558,9 +563,16 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   0x8273F0 with its node + 0x118 matrix rule (MATRIX_RULES), FLAG_RULES
   from 0x825800's C, two explicit models; all kinds, profile 16, sfx
   scopes (0x10, 0) / (0x10, 1) and its stream cues are exported; cards and
-  beats g61 .. g67. g63 passes (end position and progress block); sub 0
-  fail-stops at 001DAFA0 (the untranslated water grid), g64 at 001BAD40
-  (no live worker for overlay owners), g66 returns to the title.
+  beats g61 .. g67. g63 passes (end position and progress block); g64
+  fail-stops at 001BAD40 (no live worker for overlay owners), g66 returns
+  to the title.
+- AREA16's water grid (lane PORT-WATER, AREA16_PORT.md "Water grid"):
+  001DAFA0, 001DB240, 001DB250, 001DB040, 001DB480 (with 001DAE10 /
+  001DAC90) in `em_area16_water`, bound through the fallback dispatch, the
+  grid block 0x818000 .. 0x81C03F mapped live. g61 now passes [10]'s state
+  0 and fail-stops on the same frame at 0x824110 (effect 4 of [13]
+  0x8263D0, untranslated); g62 plays in sub 0 to pad frame 3000 with no
+  fault, then returns to the title (engine frame 8105) before sub 1.
 - Every boot behaviour of the six areas is now in a census ledger or
   defined (section 6 for the six BOOT2 added); those marked only "defined"
   by an earlier lane still need their oracle named before they count. The
@@ -622,6 +634,7 @@ with hook adapters in `em_mid_route_bridge.inc` (tools/gen_mid_route_bridge.py).
 | `em_area21_boot` | 001283D0, 0014C220 .. 0014D1E0 (12 shared helpers), 00137830 with 00137920 .. 001381D0 (00137EB0 NEARMISS) | `make test-area21-boot-reference`: 648 / 1351 cases, every word |
 | `em_area21_creature_b` | 0014EC00 and 17 functions it reaches, 0014ED10 .. 001513B0 (00150F40 NEARMISS) | `make test-area21-creature-b-reference`: 1030 / 1696 cases, every word |
 | `em_area21_creature_c` | 00151590 and 17 functions it reaches, 001516B0 .. 00153770 | `make test-area21-creature-c-reference`: 621 / 1287 cases, every word |
+| `em_area16_water` (lane PORT-WATER) | AREA16 sub 0's water grid: 001DAFA0, 001DB240, 001DB250, 001DB040 (NEARMISS C), 001DB480 with 001DAE10 and 001DAC90 (NEARMISS C) nested; over Claude's guided-run captures g60 / g61 (route_g16), not a03b_03_item2a | `make test-area16-water-reference`: 44 / 81 cases, every word (001DB480's fail-stop contract under EM_TEST_FULL=1) |
 
 **Twins** (section 4's "twin of" rows), each compared word for word with the
 relocated fields unmasked, then bound in the shared composition

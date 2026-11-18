@@ -4228,6 +4228,61 @@ static int dispatch_later(EmArea01Runtime *r, EmArea01Call *c, int *out)
         has = 1;
         break;
     }
+    case 0x001DAFA0u: {
+        EmArea16WaterHooks h;
+        EmArea16WaterFault f = {0, 0};
+        if (c->na < 0u || c->nf < 0u || c->sp < 0x0u + EIGHTH_NEST) goto refused;
+        a16w_hooks(r, &h);
+        r->sp = c->sp - 0x0u - EIGHTH_NEST;
+        rc = em_area16_water_001DAFA0(&h, &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001DB040u: {
+        EmArea16WaterHooks h;
+        EmArea16WaterFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x30u + EIGHTH_NEST) goto refused;
+        a16w_hooks(r, &h);
+        r->sp = c->sp - 0x30u - EIGHTH_NEST;
+        rc = em_area16_water_001DB040(&h, (uint32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001DB240u: {
+        EmArea16WaterHooks h;
+        EmArea16WaterFault f = {0, 0};
+        if (c->na < 1u || c->nf < 0u || c->sp < 0x0u + EIGHTH_NEST) goto refused;
+        a16w_hooks(r, &h);
+        r->sp = c->sp - 0x0u - EIGHTH_NEST;
+        rc = em_area16_water_001DB240(&h, (int32_t)c->a[0], &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001DB250u: {
+        EmArea16WaterHooks h;
+        EmArea16WaterFault f = {0, 0};
+        if (c->na < 0u || c->nf < 0u || c->sp < 0x10u + EIGHTH_NEST) goto refused;
+        a16w_hooks(r, &h);
+        r->sp = c->sp - 0x10u - EIGHTH_NEST;
+        rc = em_area16_water_001DB250(&h, &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
+    case 0x001DB480u: {
+        EmArea16WaterHooks h;
+        EmArea16WaterFault f = {0, 0};
+        if (c->na < 0u || c->nf < 0u || c->sp < 0xE0u + EIGHTH_NEST) goto refused;
+        a16w_hooks(r, &h);
+        r->sp = c->sp - 0xE0u - EIGHTH_NEST;
+        rc = em_area16_water_001DB480(&h, c->sp, &f);
+        where = f.address;
+        code = f.code;
+        break;
+    }
     case 0x001DE920u: {
         EmLevel9PortHooks h;
         EmLevel9PortFault f = {0, 0};

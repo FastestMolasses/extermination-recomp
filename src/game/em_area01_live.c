@@ -105,6 +105,14 @@ static uint8_t *d2668A0(void)
 #define D81F970_BASE 0x0081F970u
 #define D81F970_SIZE 0x500u
 static uint8_t s_d81F970[D81F970_SIZE];
+/* D_00818000..D_0081C03F: AREA16 sub 0's water grid (em_area16_water:
+ * 001DAFA0, 001DB240, 001DB250, 001DB040, 001DB480; no other decomp
+ * function names an address in it): 32 x 32 cells of 0x10 bytes and the
+ * 0x40-byte block after them. Boot BSS starts zero and an area change never
+ * resets it: one process-lifetime block. */
+#define D818000_BASE 0x00818000u
+#define D818000_SIZE 0x4040u
+static uint8_t s_d818000[D818000_SIZE];
 /* D_00275CA8: the word AREA13's [45] 0x827150 publishes its block in each
  * frame and its step functions read (only AREA13's overlay names it). Boot
  * BSS, zero until then and never reset. */
@@ -287,6 +295,8 @@ uint8_t *em_area01_live_bytes(EmArea01Live *l,uint32_t a,uint32_t n,int write)
         return contains(a,n,D822CF0_BASE,D822CF0_SIZE) ? s_d822CF0+(a-D822CF0_BASE) : NULL;
     if(overlaps(a,n,D81F970_BASE,D81F970_SIZE))
         return contains(a,n,D81F970_BASE,D81F970_SIZE) ? s_d81F970+(a-D81F970_BASE) : NULL;
+    if(overlaps(a,n,D818000_BASE,D818000_SIZE))
+        return contains(a,n,D818000_BASE,D818000_SIZE) ? s_d818000+(a-D818000_BASE) : NULL;
     if(overlaps(a,n,D2668A0_BASE,D2668A0_SIZE))
         return contains(a,n,D2668A0_BASE,D2668A0_SIZE) && d2668A0() ? s_d2668A0+(a-D2668A0_BASE) : NULL;
     /* D_00275CA0: the car's side AREA03's lift scripts toggle (0x826860, a

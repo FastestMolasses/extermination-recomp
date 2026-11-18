@@ -46,6 +46,7 @@ SOURCES = (('src/game/em_area22_port.h', 'EmArea22PortHooks', 'm22'),
            ('src/game/em_level16_boot.h', 'EmLevel16BootHooks', 'm16x'),
            ('src/game/em_level17_boot.h', 'EmLevel17BootHooks', 'm17x'),
            ('src/game/em_area17_creature.h', 'EmArea17CreatureHooks', 'a17c'),
+           ('src/game/em_area16_water.h', 'EmArea16WaterHooks', 'a16w'),
            ('src/game/em_area21_boot.h', 'EmArea21BootHooks', 'a21x'),
            ('src/game/em_area21_creature_b.h', 'EmArea21CreatureBHooks', 'a21cb'),
            ('src/game/em_area21_creature_c.h', 'EmArea21CreatureCHooks', 'a21cc'),
@@ -72,7 +73,9 @@ OWN_INCLUDES = ('src/game/em_area00s2_creature.h', 'src/game/em_area14_overlay.h
                 'src/game/em_area20_overlay.h',
                 # lane PORT-A21
                 'src/game/em_area21_overlay.h', 'src/game/em_area21_owners.h', 'src/game/em_area21_doors.h',
-                'src/game/em_area21_groups.h')
+                'src/game/em_area21_groups.h',
+                # lane PORT-WATER
+                'src/game/em_area16_water.h')
 HOOK = re.compile(r'int \(\*w_([0-9A-F]{8}|callback)\)\(void \*ctx(?:, )?([^)]*)\);')
 
 
