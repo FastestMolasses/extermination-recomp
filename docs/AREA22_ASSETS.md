@@ -97,7 +97,7 @@ grid block (0x152E500 .. 0x15397FC).
 | `sub0/area22.emcl` (+ `scene.txt` from export_collision.py) | grid collision with node class, rank and axis sections | `em_collision_load` |
 | `sub0/area22_cells.bin` | the cell directory `*0x70003250` (disc rest state) | `em_actor_cells_load` (accepts it) |
 | `sub0/roster.emro` | placements 0x823A20 and the deferred group 0x8236B0 | `em_actor_roster_load` |
-| `sub0/message_data.emmd` | EMMD v1 for area 0x16: 54 global records, 0 area records, 36 stream rows, the global bank, no area bank | `em_message_live_install`, which **refuses** it (finding 2) |
+| `sub0/message_data.emmd` | EMMD v1 for area 0x16: 54 global records, 0 area records, 36 stream rows, the global bank, no area bank | `em_message_live_install`, which loads it (finding 2) |
 | `sub0/world_models.emwm` + `.json` | the model bank `*D_0028A59C` (15 models) | `em_world_models_parse` |
 | `sub0/sfx/area22_banks.bin`, `banks.json` | the area SShd container | (the registry's source) |
 | `sub0/sfx/sfx_registry.emsr` + `.json` | EMSR v2 for scope (0x16, 0) | `em_sfx_registry_load` |
@@ -382,7 +382,7 @@ are bound in every capture.
 `tools/test_area22_assets_reference.py`:
 - **loaders:** every file goes through its port loader, compiled privately
   from `src/` by the AREA01 checker's `build_loaders`: 10 files load,
-  `sub0/area22_cells.bin` included. `em_message_live_install` refuses
+  `sub0/area22_cells.bin` included. `em_message_live_install` loads
   `sub0/message_data.emmd` (finding 2); a diagnostic copy with one all-zero
   area record and the global bank repeated as an area bank loads (built in
   the test build tree and removed). Both verdicts are asserted.
@@ -497,8 +497,10 @@ static bank's last 4 bytes are already zero).
    earlier areas' `build_load_map` refuses it; `build_load_map_flat` models
    001FFCD0 state 5.
 2. **No area message table.** D_00264DD0[0x17] = 0 and no id-0x41 file.
-   `em_message_live_install` requires at least one area record and a
-   non-empty area bank, so it refuses the AREA22 file. The in-area messages
+   `em_message_live_install` loads the AREA22 file without area records or
+   area bank (since lane C1, port 6c6d8323; an area message request then
+   faults in the service, where the original would read through the zero
+   word). The in-area messages
    seen on the route (the reader, door [10]) are then global or script
    messages; which table they index was not established here.
 3. **Two unrelocated pointers.** D_0028A594 and D_0028A5A4 keep AREA04's
@@ -550,8 +552,8 @@ boot functions) names none of the load-path functions these exports model
 
 ## Binding
 
-Nothing is wired. The files are exported, checked and loadable, except
-`sub0/message_data.emmd` (finding 2). When AREA22 is bound:
+Nothing is wired. The files are exported, checked and loadable (the
+message file without area records, finding 2). When AREA22 is bound:
 - The scene selects `sub0/` for the level, collision, cells, roster, world
   models, message file and sound files; the spawn table, doors and overlay
   data are shared.

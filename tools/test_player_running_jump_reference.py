@@ -1380,6 +1380,20 @@ class WorldJump:
         out[0] = e.load(e.load(e.load(0x275B40)) + 8)
         return 0
 
+    # 001741D0's workers (state 0x23, the Gatling seat): the original row
+    # request, the first node's word +0 and the pad test's two halfwords.
+    def w_row_request(self, a, blend):
+        self.around(0x174A50, (self.base(),), (F(blend),)); return 0
+
+    def w_root_word0(self, out):
+        e = self.ee
+        out[0] = e.load(e.load(e.load(0x275B40)))
+        return 0
+
+    def w_buttons(self, pressed, mask):
+        pressed[0], mask[0] = self.ee.load(0x810E74, 2), self.ee.load(0x70003B76, 2)
+        return 0
+
     # ---- the hooks at the original addresses --------------------------------
     def hook(self, kind):
         def run(ee):

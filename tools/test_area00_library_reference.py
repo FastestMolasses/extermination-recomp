@@ -28,15 +28,24 @@ def main():
     header, regions = X.parse(installed)
     base = X.B.u32(header, 32 + 4 * X.B.GLOBAL_TABLE_INDEX)
     import struct
-    before = bytearray(header)
+    before, pieces = bytearray(header), 0
     for address, writable, retained, data in regions:
-        for first, _ in X.SPANS:
-            start = X.B.u32(library, 4 + 4 * first) & ~3
-            # the region holding the span's first model (AREA02's export may
-            # have extended it downwards): keep up to that model's end
-            if address <= base + start < address + len(data):
-                data = data[:base + start - address + X.B.block_model_size(library, start)]
-        before += struct.pack('<4I', address, len(data), writable, retained) + data
+        starts = [base + (X.B.u32(library, 4 + 4 * first) & ~3) for first, _ in X.SPANS]
+        inside = [a for a in starts if address <= a < address + len(data)]
+        if not inside:
+            before += struct.pack('<4I', address, len(data), writable, retained) + data
+            pieces += 1
+            continue
+        # The region holding a span's first model (AREA02's export may have
+        # extended it downwards; a later library export may hold both spans
+        # in one region): keep up to the first span's first model and give
+        # each further span its first model as a region of its own.
+        for k, at in enumerate(inside):
+            lo = address if k == 0 else at
+            piece = data[lo - address:at - address + X.B.block_model_size(library, at - base)]
+            before += struct.pack('<4I', lo, len(piece), writable, retained) + piece
+            pieces += 1
+    struct.pack_into('<I', before, 16, pieces)          # the header's region count
     after = X.extend(bytes(before), library)
     assert X.extend(after, library) == after, 'export is not idempotent'
     for malformed in (before[:-1], before[:31], before + b'x'):
@@ -50,8 +59,8 @@ def main():
     cursor = len(header)
     target = base + (X.B.u32(library, 4 + 4 * X.SPANS[0][0]) & ~3)
     for address, _, _, raw in X.parse(before)[1]:
-        if address == target:
-            altered[cursor + 16] ^= 1
+        if address <= target < address + len(raw):      # the span's first model
+            altered[cursor + 16 + target - address] ^= 1
         cursor += 16 + len(raw)
     try:
         X.extend(bytes(altered), library)
@@ -70,7 +79,8 @@ def main():
                     '-Isrc', 'tests/area00_library_readview_test.c', '-o', str(binary)],
                    cwd=X.A.ROOT, check=True)
     for label, present in (('before', 0), ('after', 1)):
-        subprocess.run([str(binary), str(library_path), str(present)], cwd=OUT / label,
+        regions_in = len(X.parse(before if label == 'before' else after)[1])
+        subprocess.run([str(binary), str(library_path), str(present), str(regions_in)], cwd=OUT / label,
                        env=dict(os.environ, UBSAN_OPTIONS='halt_on_error=1'), check=True)
     M.OUT = OUT / 'model'
     lib = M.build()

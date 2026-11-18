@@ -648,6 +648,24 @@ def emot_entries(data):
 SHARED = {}          # the parent's FirstLevel / world / quick hub list (fork-inherited)
 
 
+# models.emsk's pinned digest covers its first seven records: the menu player
+# and the six captured glyphs (export_status_models.CAPTURED_GLYPHS). Later
+# glyphs and the menu-player variants follow them in the file.
+PINNED_EMSK_MODELS = 7
+
+
+def emsk_prefix_sha256(path, models):
+    """SHA-256 of the EMSK file cut to its first `models` records."""
+    data = path.read_bytes()
+    magic, version, count = struct.unpack_from('<4sII', data)
+    assert magic == b'EMSK' and version == 1 and count >= models, (path, count)
+    at = 12
+    for _ in range(models):
+        _token, nodes = struct.unpack_from('<II', data, at)
+        at += 8 + nodes * (4 + 64)
+    return hashlib.sha256(struct.pack('<4sII', magic, version, models) + data[12:at]).hexdigest()
+
+
 def export_part(part):
     """One exporter part into OUT/assets; returns (part, [(file, sha256)])."""
     import export_disc_textures as X
@@ -1117,8 +1135,15 @@ def main() -> int:
     files = 0
     for part, outputs, _states in exported:
         names = {name for name, _ in outputs}
-        assert names == set(ASSET_FILES[part]), (part, sorted(names))
+        # Every pinned file is exported; an exporter may add files this test
+        # does not pin (export_status_models.py's later glyphs and menu-player
+        # variants, checked by make test-status-models).
+        assert set(ASSET_FILES[part]) <= names, (part, sorted(set(ASSET_FILES[part]) - names))
         for name, digest in outputs:
+            if name not in ASSET_FILES[part]:
+                continue
+            if name == 'status_models/models.emsk':
+                digest = emsk_prefix_sha256(OUT / 'assets' / name, PINNED_EMSK_MODELS)
             assert CAPTURE_SHA256[name] == digest, ('differs from the capture-derived file', name)
             files += 1
     assert files == len(CAPTURE_SHA256)

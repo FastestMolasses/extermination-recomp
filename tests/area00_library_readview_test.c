@@ -4,7 +4,7 @@
 
 int main(int argc, char **argv)
 {
-    assert(argc == 3);
+    assert(argc == 4);
     FILE *file = fopen(argv[1], "rb");
     assert(file);
     assert(fseek(file, 0, SEEK_END) == 0);
@@ -15,7 +15,7 @@ int main(int argc, char **argv)
     fclose(file);
     const unsigned ids[] = {0x4D, 0x4F, 0x58, 0x59, 0x72};
     const uint32_t *bank = em_area11_roger_library_word();
-    assert(bank && R.regions == 16);
+    assert(bank && R.regions == (uint32_t)atoi(argv[3]));   /* the file's region count */
     unsigned added = (unsigned)atoi(argv[2]), checked = 0;
     for (unsigned i = 0; i < sizeof ids / sizeof ids[0]; ++i) {
         uint32_t offset = rd32(disc + 4 + 4 * ids[i]) & ~3u;

@@ -1586,9 +1586,12 @@ static void startup_task(void)
     }
     EmGfx *gfx = em_frame_gfx();
     const float black[4] = {0, 0, 0, 1};
-    /* The demo's world frame draws itself (001AE5E0 / 001AE6B0). */
+    /* The demo's world frame draws itself (001AE5E0 / 001AE6B0). The black
+     * frame is the overlay pass's bottom fill, under the backdrop quads:
+     * the load screen's and the OPTIONS' 0020A7A0 background draws there
+     * (an overlay rect would cover it; docs/OPTIONS.md section 4.5). */
     if (!f.attract_serial)
-        em_gfx_overlay_rect(gfx, 0, 0, EM_GFX_OVERLAY_W, EM_GFX_OVERLAY_H, black);
+        em_gfx_overlay_backdrop_fill(gfx, black);
     int screen = -1;
     if (view.screen >= EM_STARTUP_SCREEN_LOGO_A && view.screen <= EM_STARTUP_SCREEN_LOGO_C)
         screen = view.screen - EM_STARTUP_SCREEN_LOGO_A;

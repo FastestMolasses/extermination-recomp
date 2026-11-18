@@ -54,7 +54,8 @@ def main():
         assert lib.area00_receivers_select(0, sub) == 0
         selected = tuple(lib.area00_receivers_selected(i) for i in range(4))
         assert selected == (0, sub, shadow['objects'], shadow['blocks'])
-        for invalid in ((0, 2), (0, 255), (1, 1), (99, 0)):
+        # AREA00 sub 2 and AREA01 sub 1 have verified exports now (PORT-A01S1).
+        for invalid in ((0, 3), (0, 255), (1, 2), (99, 0)):
             assert lib.area00_receivers_select(*invalid) == -1
             assert tuple(lib.area00_receivers_selected(i) for i in range(4)) == selected
             assert lib.em_world_textures_live_bind(*invalid) == -1

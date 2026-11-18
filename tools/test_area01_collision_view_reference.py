@@ -54,7 +54,7 @@ def main():
     for capture in sorted(S.ROUTE.glob('a01_*/eeMemory.bin')):
         with capture.open('rb') as f:f.seek(0x810700);area=f.read(1)[0]
         (beats if area==1 else outside).append(capture.parent.name)
-    assert outside==['a01_07_level_exit'] and len(beats)==15
+    assert outside==['a01_07_level_exit'] and len(beats)==16   # a01_s8_fire_medicine joined the route
     for beat in beats:
         w=Q.World(beat,elf)
         b=Q.native_world(n,w,ROOT/'assets/area01/area01.emcl')

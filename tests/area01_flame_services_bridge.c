@@ -5,10 +5,10 @@ static FILE *manifest_open(const char *path,const char *mode)
 {
     if(!manifest_overflow)return fopen(path,mode);
     FILE *f=tmpfile();if(!f)return NULL;
-    /* One entry more than em_effects_live's window table holds (96). */
-    const uint32_t header[4]={0x54454D45u,1,97,0},entry[4]={0x100000,0,0,0};
+    /* One entry more than em_effects_live's window table holds (192). */
+    const uint32_t header[4]={0x54454D45u,1,193,0},entry[4]={0x100000,0,0,0};
     if(fwrite(header,sizeof header,1,f)!=1){fclose(f);return NULL;}
-    for(unsigned i=0;i<97;++i)if(fwrite(entry,sizeof entry,1,f)!=1){fclose(f);return NULL;}
+    for(unsigned i=0;i<193;++i)if(fwrite(entry,sizeof entry,1,f)!=1){fclose(f);return NULL;}
     rewind(f);return f;
 }
 #define fopen manifest_open
@@ -132,7 +132,11 @@ int fs_splash(uint8_t *ram,uint8_t *spr,uint32_t address,uint32_t handler,int32_
     S.window[6].address=0x257090;S.window[6].size=0x120;S.windows=7;
     memcpy(S.elf+ELF_AT(0x257090),ram+0x257090,0x120);
     memcpy(S.spad3400_lift,spr+0x3400,sizeof S.spad3400_lift);
-    if(splash_deny_descriptors)S.windows=2;
+    /* Denied: only the first two windows, and no boot-constants fallback
+     * (em_effects_live_window reads the descriptors there too). */
+    if(splash_deny_descriptors)(void)em_boot_constants_select(0); /* load it, then hide its runs */
+    const uint32_t boot_runs=BC.count;
+    if(splash_deny_descriptors){S.windows=2;BC.count=0;}
     memcpy(S.spad3600_sprite,spr+0x3600,sizeof S.spad3600_sprite);
     S.sworkers=(EmPlayerEquipmentSpriteWorkers){&pc,w_sprite_001CD370,w_sprite_001CB5F0,
         em_packet_chain_w_001CB6B0,em_packet_chain_w_001CB900};
@@ -157,6 +161,6 @@ int fs_splash(uint8_t *ram,uint8_t *spr,uint32_t address,uint32_t handler,int32_
     fs_publish(ram);
     memcpy(ram+0x257360,S.elf+ELF_AT(0x257360),0x1B0);
     memcpy(ram+0x257510,S.elf+ELF_AT(0x257510),0x1B0);
-    free(S.elf);S.elf=NULL;S.windows=0;
+    free(S.elf);S.elf=NULL;S.windows=0;BC.count=boot_runs;
     return rc<0 || S.fault || S.k.fault.code || S.hfault.code ? -1 : 0;
 }

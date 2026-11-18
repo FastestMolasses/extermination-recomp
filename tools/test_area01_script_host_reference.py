@@ -53,9 +53,10 @@ def main():
     ram[0x823500:0x82CD00]=A.read_overlay()
     for _name,lo,hi,_entry,_entries in B.WINDOWS:ram[lo:hi]=read(lo,hi-lo)
     S.CONTEXT.update(elf=elf,ram=bytes(ram),spad=cap.spad,lib=S.build(),synthetic=b'')
-    # 0x157F30 / 0x1575E0: the medical station scripts' op09 callbacks.
+    # 0x157F30 / 0x1575E0: the medical station scripts' op09 callbacks;
+    # 0x157360: the switch script D_00246A20's (port c3dc3a38).
     callbacks=(0x825130,0x825240,0x825910,0x826950,0x158130,0x158050,0x1580C0,0x157F60,0x1575B0,0x157F30,0x1575E0,
-               0x1BB400,0x1BB310,0x1BBAE0,0x1BBBF0,0x1B6EA0)
+               0x1BB400,0x1BB310,0x1BBAE0,0x1BBBF0,0x1B6EA0,0x157360)
     images=[('overlay',0x828A00,0x82CD00,T.SCRIPT_ENTRIES)]
     # (the lift's scripts need op handlers this harness's EE does not model:
     # their timing is compared on the a04b start-card runs, EIGHTH_LEVEL_ROUTE.md)

@@ -120,6 +120,14 @@ def check_sectors(path):
     return results
 
 
+# Pairs the pack serves (export_level_module_pack.AREAS) with no retained s87
+# route snapshot of R.GROUPS: later subs and the second half come from the
+# guided run's takes. Their spans are still compared with the disc
+# (check_sectors); only the whole-load replay below needs a snapshot.
+UNRECORDED = {(0, 2), (1, 1), (2, 2), (6, 1), (7, 0), (7, 2), (7, 3), (8, 0), (8, 2), (8, 3),
+              (14, 0), (16, 0), (16, 1), (17, 0), (18, 0), (20, 0), (21, 0)}
+
+
 def captures():
     """First complete retained original snapshot for each requested pair."""
     found = {(11, 0): T.ROUTE/'03_panel_power'}
@@ -134,7 +142,7 @@ def captures():
                 pair = tuple(stream.read(2))
             if pair in E.AREAS:
                 found.setdefault(pair, path)
-    assert set(found) == set(E.AREAS), 'missing retained area snapshot'
+    assert set(found) == set(E.AREAS) - UNRECORDED, 'missing retained area snapshot'
     return found
 
 

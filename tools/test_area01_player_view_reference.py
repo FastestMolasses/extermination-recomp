@@ -157,8 +157,15 @@ def main():
     C.c_uint8.from_address(lib.sv_bytes(0x810701,1)).value=5
     C.c_uint8.from_address(lib.sv_bytes(0x70003B8D,1)).value=3
     assert lib.sv_check()==1
-    for a,n in ((0x810700,4),(0x81072F,2),(0x81074F,2),(0x810750,5),(0x810E70,3),
-                (0x8101E4,1),(0x810811,1),(0x70003B84,4),(0xFFFFFFFF,2),(0x810700,0)):
+    # Since save2 round 2 the progress block D_00810700..D_00810D3F is one
+    # storage (the area bytes, D_00810730[], D_00810750 and D_00810811 are
+    # named members over it): a read inside it is canonical, one across its
+    # ends is refused.
+    for a,n in ((0x810700,4),(0x81072F,2),(0x810750,5),(0x810811,1)):
+        assert lib.sv_bytes(a,n),(hex(a),n)
+    assert lib.sv_bytes(0x810701,1)==lib.sv_bytes(0x810700,4)+1
+    for a,n in ((0x8106FF,2),(0x810D3F,2),(0x810E70,3),
+                (0x8101E4,1),(0x70003B84,4),(0xFFFFFFFF,2),(0x810700,0)):
         assert not lib.sv_bytes(a,n),(hex(a),n)
     p=lib.sv_bytes(0x8106B0,0x48);assert p and lib.sv_bytes(0x8106C8,4)==p+0x18
     print(f'area01 player/scene view: PASS ({RM.MODE}: {case_count} captured original contact + sound cases; {faults} refusal/lifetime cases; alias/owner restoration checks)')

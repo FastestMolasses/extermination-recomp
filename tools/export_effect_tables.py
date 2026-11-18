@@ -152,7 +152,11 @@ Output (disc-derived: git-ignored assets/ only):
 Runs natively on arm64 macOS (pure Python).
 
 Usage (port root):
-  python3 tools/export_effect_tables.py
+  python3 tools/export_effect_tables.py --out build/<task>/base.emet
+
+The installed assets/effect_tables.emet is written by
+tools/export_area00_runtime_tables.py, whose windows are these BLOCKS plus
+every later owner's; this tool refuses to write a subset over it.
 """
 from __future__ import annotations
 
@@ -282,6 +286,29 @@ def default_captures():
         p for p in route.glob('*/eeMemory.bin') if not p.parent.name.startswith('15'))
 
 
+OWNER = 'tools/export_area00_runtime_tables.py'
+
+
+def refuse_dropping(out: Path, blocks) -> None:
+    """assets/effect_tables.emet is OWNER's: its export is a superset of
+    BLOCKS (plus every later window). A subset written over it would drop
+    windows other owners read, so refuse when the existing file (read
+    through a worktree's link too) holds a window this export lacks."""
+    if not out.exists():
+        return
+    old = out.read_bytes()
+    if len(old) < 16 or old[:4] != b'EMET':
+        return
+    count = struct.unpack_from('<I', old, 8)[0]
+    have = {a for a, _d in blocks}
+    lost = [struct.unpack_from('<I', old, 16 + 16 * i)[0] for i in range(min(count, (len(old) - 16) // 16))]
+    lost = [a for a in lost if a not in have]
+    if lost:
+        raise SystemExit(f'{out}: holds {len(lost)} windows this export lacks (e.g. {lost[0]:#010x}); '
+                         f'the file is written by {OWNER} (a superset of these blocks): run that, '
+                         f'or pass --out to a private build/ path')
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--elf', type=Path, default=DECOMP / 'config/SCUS_971.12')
@@ -295,6 +322,7 @@ def main(argv=None) -> int:
     blocks = [(a, elf_block(elf, a, n)) for a, n in BLOCKS]
     captures = [] if args.no_verify else (args.verify_ram or default_captures())
     compared = sum(verify(blocks, p.read_bytes(), p) for p in captures)
+    refuse_dropping(args.out, blocks)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     if args.out.is_symlink():
         args.out.unlink()   # a worktree's link to a shared tree: write a file of its own
