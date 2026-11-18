@@ -544,11 +544,83 @@ em_equipment_live) faults at address 0x7A6DE4. g80 not reached.
 - Not done: g76's extra 0020A7A0 draw at row 6385 (The boss fight, last
   item).
 
+## Final phase (lane PORT-A21-FINAL, 2026-11-18, branch `a21final`)
+
+- **g79 row 418 and g76 row 6386 (one cause, a comparison aid):** a
+  hidden fork replay of g79 with a log probe on 00122BB8 (every rand()
+  call, its caller) and a per-tick table of the task slots 0x28A750 ..
+  0x28A7AF and D_00275BD8 showed the original's frames 12 .. 418 on the
+  status page with no draws, the screen loader (slot 2) stepping 1 .. 7
+  then 0x63 (row 415), D_00275BD8 clearing in frame 415, the page's exit
+  step seeing it in frame 416, the page closing in 417 (task +0xB 5 at row
+  418) and the music resume 001FAE70(0) drawing once in frame 418. The
+  port's frames do the same steps in the same order; the difference was
+  where EM_START_AT_FRAMES samples a page frame: its end-of-frame step ran
+  inside slot 0's render, before slot 2's loader cleared D_00275BD8 in
+  that frame, so EM_START_AT_PHASES saw the load one frame longer and
+  anchored its end (row 416) a frame late; every row after it was labelled
+  one less (the close and its draw at row 417). Fix: the end-of-frame step
+  waits for the frame's end (em_frontend_start_at_after_tasks through
+  em_frame_set_frame_tail, run after steps E .. W, before the counter
+  moves); comparison only, nothing the game computes changes. It also
+  removed g76's rand() difference at row 6386 (the 0020A7A0 draw was the
+  same one-frame label shift after the prep's page load).
+- **Chain g20** (card g73): g73 4191 / 4192, g74 3736 / 3736 (hits
+  equal), g75 3864 / 3864, **g76 6383 / 6383 with every rand() word
+  equal**, g77 12864 / 12864, g78 15530 / 15530, **g79 578 / 578 to row
+  667** (the original's first hit at row 519, 65.0, matched), g80 not
+  reached.
+- **g79 row 667, 001869A0** (not fixed): the sub-weapon fire (mode 1 / 2
+  one-shot of 00188630) spawns a class-1 record with behaviour 0018AF50;
+  its last store, the target link +0x24 (D_008106E0 when D_008104E0 is
+  0xC and D_00810CA4 is 1, else 0), has no field in the aim/fire
+  runtime's record view (em_aim_fire_runtime pool_field: EmActor names
+  +0x20, +0x2E, +0x30 .. but not +0x24), so the store faults (the address
+  is the new record + 0x24: 0x7A6DE4 / 0x7B6794 = records 8 / 93). Once
+  mapped, settle() refuses the record because only 0x0018ABA0 (the bullet
+  marker) and the muzzle node are bound: 0018AF50 (byte-identical C,
+  156 lines: states 0 .. 3, the homing turn, 0019A570 / 0019B6C0
+  collision, 001B41F0 damage, 001EFD20 / 001EFE00 effects, 001FBD50,
+  00183C40, 001AFC10) needs a translation, an oracle and a binding in
+  em_aim_fire_runtime beside 0018ABA0 (every callee already has a port
+  counterpart). Then the blast 001A91C0 (g79's src) follows.
+- **g80** (not reached): what the ending runs, from the take's rows
+  (task 0 +9 / +0xA / +0xB): rows 0 .. 8243 the ending script in AREA21,
+  row 8244 +9 = 3, **001AD740** (byte-identical C), which the port
+  dispatches to an unbound worker (em_scene_task.c case 3, w_001AD740:
+  fail-stop). Its states: 0 (001AEDB0, 001D2880, the credits' reset
+  0022D360, 001AEBA0(0xFF), 001D1EF0; 0x70003B93 1 -> state 1 with +0x1A
+  = 0x30), 1 (sub 0 the 0x30 wait then 001AEE10(6, 0), row 8293; sub 1
+  **the credits 0022D380** (byte-identical C: the table D_00268B40 of
+  rows drawn with 001CC1E0 / 001CC170 and 00207F80 underlines, 0.5 lines
+  per frame) until it returns 1 or Square, then 001B0C00(4), row 19907;
+  sub 2 until D_0028A9A0 is 2), 2 (row 19971: 001FABB0, the continue
+  state rebuilt: area 0x0B 0 0, 001AF2C0, the unlocks 001C40B0, the
+  quartet D_00810CA8..CB0, all 15 tags -> 001C40B0(3, 1)), 3 (row 19972:
+  **screen module 0x37** through 001FF080(0, 0x37), loaded by row 20000;
+  two pictures through 001ABF90 with TEX0 words 0x20064406_21322E00 ..
+  (TBP 0x6400 set) for 0x1C60 frames, then 0x20064006_21322A00 .. for
+  0x1AC; the same shape as game over's module 0x27, so
+  tools/export_game_over.py's composer serves both), 4 (row 27823:
+  00225A00), 5 (rows 27824 .. 28265: the card screen 00225AC0(1), its
+  module 0x2A load at rows 27826 .. 27843), 6 (row 28266: +9 = 4,
+  D_00810D38 = 0). The take's movie word 0x821058 stays 0 (no PSS).
+  To do, in order: translate 001AD740 into em_scene_task.c (the
+  001AD4E0 core's shape) and add it to tools/test_scene_task_reference.py
+  (its LAYOUT needs D_0081070A, D_00810C90, D_00810C91..9F, D_00810CA6 ..
+  CB0, D_00810D38, 0x70003B93); translate 0022D360 / 0022D380 over the
+  message glyph draw; export module 0x37's two screens and extend
+  em_render_001ABF90 to its two TEX0 sets; bind 00225A00 / 00225AC0(1)
+  as the in-game save does (docs/SAVE_GAME.md), then compare the port's
+  saved files with the take's card_end.ps2 (tools/ps2_card.py ls,
+  read only).
+
 ## Next
 
-0. Next: g79's first rand() difference at row 418 and the 001869A0
-   fault at row 667 (Phases), then g80 (the ending module 0x37, the
-   credits, the clear save); the rand() word at g76 row 6386.
+0. Next: g79 row 667's 001869A0 store to +0x24 and the 0018AF50
+   behaviour, then g80: 001AD740, the credits 0022D380, module 0x37's
+   pictures, the clear save (Final phase). (done: g79's rand() word at
+   row 418 and g76's at row 6386, Final phase.)
 1. (done) 0x825B00, the AREA21 op09 callbacks, D_00275C48 (Phases);
    001E76A0 (Haze ring); 0x823B40 and 001B7670's gate (lane
    PORT-A21-3B40); 001741D0 and the seated frame's workers (The Gatling

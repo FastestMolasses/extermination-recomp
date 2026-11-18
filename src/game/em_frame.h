@@ -102,6 +102,9 @@ EmGfx    *em_frame_gfx(void);
 
 /* Lifetime frame counter — the scratchpad 0x70003B64 main-loop counter. */
 uint32_t em_frame_counter(void);
+/* A hook run at the very end of a frame step, before the counter moves
+ * (EM_START_AT's deferred end-of-frame step; comparison only). */
+void em_frame_set_frame_tail(void (*fn)(void));
 /* Read-only byte views borrow the same word; only the frame loop writes it. */
 const uint32_t *em_frame_counter_storage(void);
 
