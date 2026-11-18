@@ -208,6 +208,18 @@ each take; `em_start_at.c`), beats g61 .. g67 in `mid_route_beats.py`.
   times out (900 s). Not investigated.
 - g65 and g67 were not run.
 
+### Lane PORT-CHAIN (2026-11-17, branch `chain`): the continuous chain
+
+`tools/guided_chain.py g16` plays g61 -> g62 -> ... -> g67 as one run from
+the card g61 (AREA17_PORT.md "Lane PORT-CHAIN" for the tool). It stops on
+its first frame at 001CAE30, [10]'s +0x4C draw method, as beat g61 does:
+not a card difference, so the curtains question (g62's card respawns
+them) waits behind it; in the chain g62 continues from g61's broken
+curtains with no load. A start before the area change (card g60: g59's
+end, AREA06 sub 1 in play; built and registered) does not load yet:
+AREA06 sub 1 is not exported (assets/area06 holds sub 0; the module pack
+has no room (0x06, 1), so em_module_loader fails at its first read).
+
 ## Water grid (lane PORT-WATER, 2026-11-17)
 
 Branch `water`. [10] 0x825800 (sub 0, the player's height mover) drives

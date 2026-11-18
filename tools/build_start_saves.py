@@ -301,11 +301,15 @@ START_POINTS = {
     'k01_05': {'route': 'levels-recordings-20261102-1/s87/route_k01', 'first': 'k01_05_', 'area': 14},
     # AREA17 (lane PORT-LIVE2): Claude's guided run as a route set (tools/capture_from_take.py: each
     # beat folder is a kept take's end.p2s entries); the source state of g46 (g45's end, AREA17
-    # entry 0 with the load still ahead), g47 (g46's end, the ramp) and g48 (g47's end, after Roger)
+    # entry 0 with the load still ahead), g47 (g46's end, the ramp) and g48 (g47's end, after Roger);
+    # g45 (g44's end, AREA14 entry 1 in play: lane PORT-CHAIN's chained start, tools/guided_chain.py)
+    'g45': {'route': 'guided-20261117/s87/route_g17', 'first': 'g45_', 'area': 0x0E},
     **{f'g4{k}': {'route': 'guided-20261117/s87/route_g17', 'first': f'g4{k}_', 'area': 0x11} for k in (6, 7, 8)},
     # AREA16 (lane PORT-LIVE-A16): the same for route_g16; the source state of g61 (g60's end: AREA16
     # sub 0 entry 0 at control after the load from AREA06 sub 1), g62 (g61's end, sub 0) and g63 ..
-    # g67 (sub 1: g62's .. g66's ends)
+    # g67 (sub 1: g62's .. g66's ends); g60 (g59's end, AREA06 sub 1 in play: lane PORT-CHAIN's
+    # chained start into AREA16)
+    'g60': {'route': 'guided-20261117/s87/route_g16', 'first': 'g60_', 'area': 0x06},
     **{f'g6{k}': {'route': 'guided-20261117/s87/route_g16', 'first': f'g6{k}_', 'area': 0x10} for k in range(1, 8)},
 }
 

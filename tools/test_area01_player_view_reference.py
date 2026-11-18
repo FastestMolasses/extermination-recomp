@@ -104,14 +104,18 @@ def main():
         reset();assert lib.pv_begin()==0;p=view(at,1,0);C.c_uint8.from_address(p).value^=1
         assert lib.pv_commit()==-1 and lib.pv_fault()==3;faults+=1
     # 00183010's quadword adds over +0xA0 / +0xB0 (an owner pushing the
-    # player): the homogeneous lanes +0xAC / +0xBC may be stored with their
-    # own value only (a change faults at the commit); the hip +0xB0..BB may
-    # move and is published (the pose host's hip, em_player.c).
+    # player; AREA14's ride 0x825C40 adds w 1.0): the homogeneous lanes
+    # +0xAC / +0xBC take any value and it is not carried (the original's
+    # frame top holds 1.0 again: g45's end state mid-ride; the next begin
+    # projects 1.0); the hip +0xB0..BB may move and is published (the pose
+    # host's hip, em_player.c).
     for at in (0xAC,0xBC):
         reset();assert lib.pv_begin()==0;p=view(at,4,1);assert p
         C.memmove(p,C.string_at(p,4),4);assert lib.pv_commit()==0
-        reset();assert lib.pv_begin()==0;p=view(at,1,1);C.c_uint8.from_address(p).value^=1
-        assert lib.pv_commit()==-1 and lib.pv_fault()==3;faults+=1
+        reset();assert lib.pv_begin()==0;p=view(at,4,1);assert p
+        struct.pack_into('<f',(C.c_uint8*4).from_address(p),0,2.0);assert lib.pv_commit()==0
+        assert lib.pv_begin()==0;p=view(at,4,0)
+        assert struct.unpack('<f',C.string_at(p,4))[0]==1.0;assert lib.pv_commit()==0
     reset();assert lib.pv_begin()==0;p=view(0xA0,0x20,1);assert p
     C.c_uint8.from_address(p+0x10).value^=1;assert lib.pv_commit()==0
     for kind in range(6):

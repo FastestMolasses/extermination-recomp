@@ -170,10 +170,10 @@ waits in its op0D, START reaches the script's skip (op0D -> op18 at
 0x826FA0, the op06 / op0D / op07 sub 4 end) and [30]'s 0x19 places the
 player at (156.5, 220, 300), 40 frames after the press in both (input
 f 60 -> pad frame 100 = recording row 412). The script's op07 sub 0xC
-waits about 17 frames longer in the original (its fade-out from the
-area change's fade-in; the card's fade is already full): a card
-difference, so its four [4]..[7] group nodes (one rand() draw each) start
-earlier in the port.
+waits about 17 frames longer in the original, so its four [4]..[7] group
+nodes (one rand() draw each) start earlier in the port. (This was called a
+card difference; lane PORT-CHAIN found it in continuous play too: it is
+the disc-drive timing, section "Lane PORT-CHAIN".)
 
 **Beat alignment** (`tools/mid_route_beats.py` REQUEST_CARDS): g46's card is
 the LOAD GAME of an area request (g45's end), so the recording's load rows
@@ -287,11 +287,10 @@ e.g. the skip's frame and the walk at frames 172..176); EM_START_AT_CLOCK
   never reached, so whether the item use replays is not shown by g46. The
   first difference is earlier: the per-frame rand() word (reseeded every
   frame from the rows) first differs at script frame 128 and on most
-  frames after it, which is the known card difference (PORT-LIVE-A17: the
-  arrival script's op07 sub 0xC waits ~17 frames less from a card, so the
-  [4]..[7] group nodes and their draws start earlier); the creature's
-  spit schedule moves with it. Not a translation fault found; aligning
-  that wait is the next step for g46.
+  frames after it, which is the arrival script's op07 sub 0xC waiting ~17 frames less
+  (the [4]..[7] group nodes and their draws start earlier); the creature's
+  spit schedule moves with it. Lane PORT-CHAIN: that wait is the drive
+  timing, and with it g46 is row-exact in the continuous chain.
 - **g47**: no fault through all 6619 pad frames. Its end state differs
   because its card (a LOAD GAME of g46's end) runs [30]'s arrival script
   again: the player stands at the load pose until a START reaches the
@@ -305,13 +304,74 @@ e.g. the skip's frame and the walk at frames 172..176); EM_START_AT_CLOCK
   39, which the port has freed (actor view code 2 at 0x7AC8D0). Not
   investigated.
 
+### Lane PORT-CHAIN (2026-11-17, branch `chain`): the continuous chain
+
+`tools/guided_chain.py g17` plays Claude's kept takes g45 -> g46 -> g47 ->
+g48 as one run from the card g45 (g44's end, AREA14 entry 1 in play; new in
+`build_start_saves.py` / `em_start_at.c`), so the area change into AREA17 is
+a real one (001B07C0 with D_00275BE0 == 0), as in the takes. Every frame is
+compared with the takes' rows (docs/STARTUP.md "Developer switches":
+EM_START_AT_PHASES, EM_START_AT_CLOCKS, the trace's heading and area
+bytes). With `--steer g45` (the path steering through g45 only, then the
+pad alone):
+
+- **g45** (AREA14): with the pad alone the positions are exact to row 248
+  (the walk out and the drop off the plateau), then the original's player
+  is pushed ~1.9 units over three frames (rows 248..250, the fall's height
+  unchanged) and the port's is not; the steered run leaves the rows at 167
+  (the steering's own turns). The rand() word differs from row 1: from a
+  card, AREA14's timer-driven effect draws (001E2BA0, 001E7050's slot roll,
+  001F4BF0, 001F1180: em_level9_port_001E7050, em_area00_hud_001E2BA0, ...)
+  start from the load's state, not the continuous play's, so the beasts
+  0x141D20 draw other values. Likely (not proven: no capture of the
+  original's beasts at row 248) the push is a beast's hull: the original's
+  beasts end g45 by the spot where the player fell (g45's end state: (713,
+  689, 851), (694, 690, 881)), the port's are ~95 units away at row 248. A
+  card difference (no earlier
+  AREA14 card exists: AREA18 has no live run); the steering carries the
+  route to [6].
+- **[6]'s ride** (0x825C40, AREA14): 00183010 adds (0, s, 0, 1) to the
+  player's +0xA0 and +0xB0 quadwords, so their w lanes become 2.0; the
+  player view refused any change there (fault code 3 at 0x81035C). The
+  original's frame top holds 1.0 there again: g45's end state, mid-ride with
+  0x825C40 at work, has +0xAC = +0xBC = 1.0 (and 0x70003B40's w 1.0). The
+  view now takes the w lanes and does not carry them (the next begin
+  projects 1.0); `make test-area01-player-view-reference`'s w-lane case says
+  so (that target fails before and after this change at its scene-view
+  check of 0x810700, a separate stale case).
+- **The arrival** (g46): **row-exact**: 1967 of 1967 compared frames on the
+  row (position and heading), the skip, the ring walk, the three missile
+  hits at the original's frames (rows 765, 1509, 1857), the heal through
+  the status page and its two page loads, to the take's end. The rand()
+  word differs only on single frames (rows 1897..1899 and 2278..2293, one
+  frame early for a ~28-draw owner after the page's close anchor).
+- **The 17 frames of op07 sub 0xC are disc timing, not a card difference**
+  (corrects PORT-LIVE-A17 above): in the chain the port's [4]..[7] draws
+  began 17 frames early too, with a real area change. Sub 0xC's state 1
+  waits for the veil full (D_0028A9A0 == 2) after its 001AEDE0(4, 0); with
+  the recorded drive timing (EM_PS2_DISC_DRIVE_TIMING=1, as watch_takes
+  plays the takes) the fade-out begins at the recording's row 333 and the
+  draw counts of rows 311..336 equal the original's. Host-speed loads
+  (the Original default) shorten that wait: a hardware-timing difference
+  by the user's rule, not a translation fault. guided_chain runs with the
+  drive timing on.
+- **g47**: the rand() word differs from row 0 (the one-frame offset above
+  carried over); Roger's heal at row 327 (65) is the original's, but the
+  original's hit at row 662 (55) does not come and the port takes others
+  (rows 788 .. 1617) and dies at row ~1617: the next stop. g47's
+  LOAD-GAME intro problem (its card reruns [30]'s intro) is gone in the
+  chain: the take continues from g46 with no load.
+- **g48**: not reached yet (its freed record 39 at pad ~19590 is still to
+  check in the chain).
+
 ## Not done
 
 - **The live area** (section "Live"; 001F1F60 and 001BAD40 done by
-  PORT-FX; 001D6B10 and 0x810835 by PORT-WORKERS): g46's card wait
-  (op07 sub 0xC) that moves the creature's spits, g47's card alignment
-  (its LOAD GAME runs [30]'s intro), g48's freed record 39 at pad ~19590,
-  drawing the haze list on the chain page.
+  PORT-FX; 001D6B10 and 0x810835 by PORT-WORKERS; the continuous chain by
+  PORT-CHAIN): g47 in the chain (the one-frame offset after the status
+  page's close at g46 row ~2278, the missing hit at row 662), g48's freed
+  record 39 at pad ~19590, drawing the haze list on the chain page. g46's
+  op07 sub 0xC wait is the drive timing (PORT-CHAIN), not a card fault.
 - The other live-only bindings AREA14 needed (AREA14_PORT.md "Pieces the
   live run needed") but the muzzle node 001F5040 are not checked for AREA17.
 - 0x8235E0 and 0x823860, and the group holding 0x823580 / 0x8236F0 /

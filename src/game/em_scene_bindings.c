@@ -1108,21 +1108,41 @@ static void log_area02(FILE *f)
  * where the load placed them. Their records (nodes running 0012A5D0, at the
  * same pool addresses in both) take the recording's bytes, but for the pool
  * links and the model and collision pointers a load owns. */
-/* EM_START_AT_TRACE (comparison only, tools/test_area03x_rows.py): one line
- * per script frame: the creatures' first bytes, positions and rand() word. */
-void em_scene_creature_trace(FILE *f, int t, const float pos[3])
+/* EM_START_AT_TRACE (comparison only, tools/test_area03x_rows.py,
+ * tools/guided_chain.py): one line per script frame: the player's position,
+ * heading (the record's +0xC4, when known), the area bytes D_00810700..02,
+ * the vitals, the rand() word, and the creatures' first bytes and positions. */
+void em_scene_creature_trace(FILE *f, int t, const float pos[3], const float *heading)
 {
     if (!s_area01_live.bound || !f || !pos) return;
     float vit[2];
     memcpy(&vit[0], &s_state.d810858, 4);
     memcpy(&vit[1], &s_state.d81085C, 4);
-    fprintf(f, "{\"t\": %d, \"pos\": [%.5f, %.5f, %.5f], \"hp\": %.2f, \"inf\": %.2f, \"a\": 0, \"rand\": %u, \"n\": [",
+    fprintf(f, "{\"t\": %d, \"pos\": [%.5f, %.5f, %.5f], \"hp\": %.2f, \"inf\": %.2f, \"a\": 0, \"rand\": %u, ",
             t, pos[0], pos[1], pos[2], vit[0], vit[1], em_random_peek());
+    if (heading) fprintf(f, "\"yaw\": %.6f, ", *heading);
+    fprintf(f, "\"area\": \"%02x%02x%02x\", \"n\": [", s_state.d810700, s_state.d810701, s_state.d810702);
+    /* EM_START_AT_TRACE_KINDS=<hex>,<hex>,...: the behaviours listed
+     * (default the bugs 0012A5D0 and the creatures 0013D2D0, 00147390). */
+    static uint32_t kinds[16] = {0x0013D2D0u, 0x00147390u, 0x0012A5D0u};
+    static unsigned nkinds = 3, kinds_read;
+    if (!kinds_read) {
+        kinds_read = 1;
+        const char *list = getenv("EM_START_AT_TRACE_KINDS");
+        if (list && list[0]) {
+            nkinds = 0;
+            for (char *e; *list && nkinds < 16; list = *e ? e + 1 : e) {
+                kinds[nkinds++] = (uint32_t)strtoul(list, &e, 16);
+                if (e == list) break;
+            }
+        }
+    }
     int n = 0;
     for (uint32_t i = 0; i < EM_ACTOR_POOL_CAPACITY; ++i) {
         const EmActor *a = &s_pool.records[i];
-        if (!a->allocated || (a->callback != 0x0013D2D0u && a->callback != 0x00147390u && a->callback != 0x0012A5D0u))
-            continue;
+        unsigned k = 0;
+        while (k < nkinds && a->callback != kinds[k]) ++k;
+        if (!a->allocated || k == nkinds) continue;
         const uint32_t at = EM_ACTOR_POOL_BASE + i * EM_ACTOR_RECORD_SIZE;
         uint8_t h[0x10] = {0};
         float p[3] = {0, 0, 0};

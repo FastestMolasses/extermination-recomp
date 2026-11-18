@@ -565,8 +565,22 @@ recording-derived and stay in the ignored `build/`.
   keeps the recording's rows. `EM_START_AT_LOADS=<file>` (lines `area sub room f`,
   hex, f decimal) sets the script's clock to the recording's row f when the fade-in
   after that room's load starts (a load the host drive ends sooner);
-  `EM_START_AT_TRACE=<file>` writes the player, vitals, rand() word and creature
-  states per script frame (both comparison only, docs/AREA03X_PORT.md).
+  `EM_START_AT_TRACE=<file>` writes the player (position, heading g.yaw), the
+  area bytes D_00810700..02, vitals, rand() word and creature states per script
+  frame, scripted frames included (both comparison only, docs/AREA03X_PORT.md);
+  `EM_START_AT_TRACE_KINDS=<hex>,...` names the behaviours whose records it
+  lists (default the bugs and the two creatures).
+  `EM_START_AT_PHASES=<file>` (one f per line): at the end of each of the
+  port's load segments (em_replay.c's phase L, or a gap of more than 8 engine
+  frames without a step: an area load) the script's clock becomes the
+  recording's next row f after its own load (within 400 frames; others are
+  reported and skipped). `EM_START_AT_CLOCKS=<file>` (lines `f hex`) puts the
+  recording's world clock 0x70003B68 (and D_00810750 by the same difference)
+  in place at those script frames. Both comparison only, for
+  `tools/guided_chain.py`: Claude's guided takes played as one continuous run
+  from one card (no reload between takes), every frame compared with the takes'
+  rows, with the recorded disc-drive timing (as tools/watch_takes.py); see
+  AREA17_PORT.md "Lane PORT-CHAIN".
   `EM_START_AT_RANDS=<file>` (lines `f state`) puts
   the rand() word in place at those script frames.
   `EM_START_AT_CLOCK=<f>:<hex>` (comparison only) sets 0x70003B68 to the
