@@ -15,7 +15,8 @@
 typedef uint32_t u32;
 
 /* The nodes' +0x110 words: the trail's three (001F18C0 state 0:
- * 001F1550(node, 3)); a debris node's one per piece (001F2E90: the row's
+ * 001F1550(node, 3)); the burst's six (001F1F60 state 0: 001F1550(node,
+ * 6)); a debris node's one per piece (001F2E90: the row's
  * +0x4C byte, D_0025A350), at most 56 here: more would reach +0x1F0, the
  * effect node's em_effects_live fields (no first-level break spawns more;
  * BRANCH br_04 / br_06). */
@@ -31,7 +32,10 @@ typedef struct {
 /* The callbacks this module keeps the slots of, and each one's most. */
 static unsigned slots_max(uint32_t callback)
 {
-    return callback == EM_AIM_FIRE_TRAIL_CALLBACK ? 3u : callback == EM_AIM_FIRE_DEBRIS_CALLBACK ? SLOTS_MAX : 0u;
+    return callback == EM_AIM_FIRE_TRAIL_CALLBACK    ? 3u
+           : callback == EM_AIM_FIRE_BURST6_CALLBACK ? 6u
+           : callback == EM_AIM_FIRE_DEBRIS_CALLBACK ? SLOTS_MAX
+                                                     : 0u;
 }
 
 static struct {

@@ -551,7 +551,17 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   music cue 0xB is exported, the muzzle node binds in AREA17. g46 and g47
   now stop at the untranslated particle burst 001F1F60 (effects
   0x80000037 / 0x80000038 of the creature's spit), g48 at 001BAD40 (from
-  0x8251B0) after ~12200 frames. No beat passes yet. AREA16's owners now bind in the live composition too (area 0x10:
+  0x8251B0) after ~12200 frames. Lane PORT-FX (branch fx): 001F1F60 and
+  001F1DD0 translated (em_area00_fx_burst.c, test_area00_fx_reference
+  burst / 001F1DD0 groups) and bound (six slots in em_aim_fire_trail);
+  001BAD40 runs for an overlay owner's direct call (em_area01_runtime's
+  rv_001BAD40, the workers 001BB0E0's 001BAD40 already uses). Now g46
+  runs to pad frame ~1180, where the player has taken four spit hits and
+  dies (the game returns to the title; the original's take ends at health
+  35 after one item 0x22, so the hit count is not confirmed); g47 runs to
+  pad frame ~2600 and stops at 001D6B10 (00133E30's haze texture, no live
+  worker); g48 runs to pad frame ~18800 and stops at the player closure
+  0016BC40 (code 5 at 0x810835). No beat passes yet. AREA16's owners now bind in the live composition too (area 0x10:
   dispatch_second_half, scene bindings, 001B6660's window, op09 callbacks).
 - AREA16 live (lane PORT-LIVE-A16, AREA16_PORT.md "Live"): SUBS rows for
   subs 0 and 1 from the guided run's g60 .. g66 (route_g16), CREATURES
@@ -559,8 +569,10 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   from 0x825800's C, two explicit models; all kinds, profile 16, sfx
   scopes (0x10, 0) / (0x10, 1) and its stream cues are exported; cards and
   beats g61 .. g67. g63 passes (end position and progress block); sub 0
-  fail-stops at 001DAFA0 (the untranslated water grid), g64 at 001BAD40
-  (no live worker for overlay owners), g66 returns to the title.
+  fail-stops at 001DAFA0 (the untranslated water grid), g66 returns to
+  the title. g64 passed 001BAD40 (lane PORT-FX) and now stops at pad
+  frame ~2900 at 001D8060 (0x824E10's render-slot lookup; em_frh_001D8060
+  exists but no live worker binds it).
 - Every boot behaviour of the six areas is now in a census ledger or
   defined (section 6 for the six BOOT2 added); those marked only "defined"
   by an earlier lane still need their oracle named before they count. The

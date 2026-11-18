@@ -2227,6 +2227,8 @@ static const Binding k_bindings[] = {
     {0x001F18C0u, "knife trail: em_area00_fx 001F18C0 (em_aim_fire_trail, em_effects_live)",
      tick_effect_node, NULL},
     {0x001F2BA0u, "box debris: em_area00_fx 001F2BA0 (em_aim_fire_trail, em_effects_live)", tick_effect_node, NULL},
+    {0x001F1F60u, "six-slot burst: em_area00_fx 001F1F60 (em_aim_fire_trail, em_effects_live)", tick_effect_node,
+     NULL},
     {0x001E4CE0u, "burst: em_area02_misc 001E4CE0 (em_aim_fire_burst, em_effects_live)", tick_effect_node, NULL},
     {0x001E4610u, "burst ring: em_level11_port 001E4610 (em_aim_fire_burst, em_effects_live)", tick_effect_node, NULL},
     {0x0022BBC0u, "bone burst: em_area01_ui 0022BBC0 (em_bone_burst, em_effects_live)", tick_effect_node, NULL},

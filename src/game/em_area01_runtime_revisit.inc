@@ -421,6 +421,34 @@ static int rv_slg_001BAD40(void *ctx, const EmSlgScriptActor *s, int32_t *ret)
     return 0;
 }
 
+/* 001BAD40(node, entry) called directly by an overlay owner (AREA17's
+ * 0x8251B0, group 0x827F40 [4]; AREA16's 0x824E10: their state 0, decomp
+ * func_overlay_AREA17_00825170 / func_overlay_AREA16_00824DD0, the node's
+ * +0x20 as the entry): the same translation and workers 001BB0E0's
+ * 001BAD40 uses above, with the node synced around every callee. Frame
+ * 0x60 below the caller's sp. Returns its result in v0. */
+static int rv_001BAD40(EmArea01Runtime *r, EmArea01Call *c)
+{
+    if (c->na < 2 || c->nf || c->sp < 0x60u) return fail(r, c->function);
+    static RvActor a;   /* one call at a time: 001BAD40 does not re-enter itself */
+    memset(&a, 0, sizeof a);
+    a.r = r;
+    a.node = (uint32_t)c->a[0];
+    a.sp = c->sp;
+    if (rv_actor_load(&a) < 0) return fail(r, a.node);
+    const uint32_t entry_address = (uint32_t)c->a[1];
+    const uint8_t *entry = bytes(r, entry_address, EM_SDF_ENTRY_SIZE, 0);
+    if (!entry) return fail(r, entry_address);
+    uint8_t entry_copy[EM_SDF_ENTRY_SIZE];
+    memcpy(entry_copy, entry, sizeof entry_copy);
+    const EmSlgScriptActor s = {a.image, entry_copy, NULL};
+    int32_t result = 0;
+    if (rv_slg_001BAD40(&a, &s, &result) < 0 || a.fault) return fail(r, a.fault ? a.fault : c->function);
+    if (rv_actor_flush(&a) < 0) return fail(r, a.fault);
+    c->v0 = (uint64_t)(int64_t)result;
+    return 0;
+}
+
 static int rv_slg_node(void *ctx, uint32_t fn)
 {
     RvActor *a = ctx;

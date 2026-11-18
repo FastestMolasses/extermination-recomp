@@ -157,9 +157,12 @@ each take; `em_start_at.c`), beats g61 .. g67 in `mid_route_beats.py`.
   0x825800's state 0 calls 001DAFA0, the water grid's init. The family
   001DAFA0, 001DB240, 001DB250, 001DB040 (NEARMISS), 001DB480 (the grid's
   GS display list, twin of 001DDE10) and 001DAE10 has no port translation.
-- g64 fail-stops at 001BAD40, called by 0x824E10 (the booth's group
-  owner): em_sdf_001BAD40 exists, but only AREA11's opening binds it (with
-  its own workers); there is no live worker for an overlay owner's node.
+- g64 passes 001BAD40 (lane PORT-FX: 0x824E10, decomp
+  func_overlay_AREA16_00824DD0, calls it directly with its +0x20 entry;
+  em_area01_runtime's rv_001BAD40 runs em_sdf_001BAD40 over the node with
+  the workers 001BB0E0's 001BAD40 uses) and now runs to pad frame ~2900,
+  then fail-stops at 001D8060 (0x824E10's render-slot lookup through
+  0x825740; em_frh_001D8060 exists, no live worker binds it).
 - g66 diverges: at pad frame 1000 the player has health 25, then the game
   returns to the title (001AC070 again, engine frame 3950) and the beat
   times out (900 s). Not investigated.

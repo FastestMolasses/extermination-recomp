@@ -738,6 +738,8 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
         return rv_001BAC00(r, c);          /* AREA04's arrival script op14 */
     if (creatures && c->function == 0x001BB0E0u)
         return rv_001BB0E0(r, c);          /* the script actors it places */
+    if (creatures && c->function == 0x001BAD40u)
+        return rv_001BAD40(r, c);          /* an overlay owner's own (AREA17 0x8251B0, AREA16 0x824E10) */
     if (creatures && c->function == 0x001F9660u)
         return rv_001F9660(r, c);          /* their command 6's sound copy (event [3]'s script, a04b_03) */
     /* AREA22's overlay holds no owner (its one function is the area init
