@@ -82,6 +82,16 @@ int em_owner_draw_live_001CAA00(const EmWorldModels *bank, EmOwnerServicesOwner 
  * it (em_owner_draw_live_page_unit). 0, or -1 (reported). */
 int em_owner_draw_live_001CABA0(const EmWorldModels *bank, EmOwnerServicesOwner *owner,
                                 const uint32_t rgb[4], uint32_t record);
+/* 001CAE30's 001CACC0(owner, model) (model kind 3's +0x4C: AREA16 sub 0's
+ * [10] 0x825800): em_owner_services_001CACC0 over the same views as
+ * 001CABA0, its passes 001D39A0 / 001D3DA0 (em_owner_draw_001D39A0 /
+ * _001D3DA0 with the veil module's 001D1F80(3, 2, 3)), then 001CAAC0's
+ * depth insertion, or (+0x02 bit 0x40) 001CB760 at slot 0 of the page
+ * D_007635C0 through the render context's packet chain. The unit is parsed
+ * at once as a class-3 object unit (set 2 class 3, ALPHA 0x8000000062) and
+ * kept for this frame by its address, as 001CABA0's. 0, or -1 (reported). */
+int em_owner_draw_live_001CACC0(const EmWorldModels *bank, EmOwnerServicesOwner *owner,
+                                const uint32_t rgb[4], uint32_t record);
 /* 001F3E30's mode-0 draw (the shell casing's, the barrel's particle sweep):
  * 001CA7B0(position, f12), then 001C7900(m, token, 0x3F5, 0) (the colour
  * and node CNTs on channel 0, its 001D88B0 lighting over the token's 16

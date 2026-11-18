@@ -115,7 +115,7 @@ def write_inputs(out, rows, inputs, starts):
             lines.append(f'{r["f"]} {value[0]:x} {value[1]} {value[2]}')
             sent = value
     last = len(rows) - 1
-    assert len(lines) <= 4096, 'more pad rows than EM_START_AT_PAD holds'
+    assert len(lines) <= 65536, 'more pad rows than EM_START_AT_PAD holds (PAD_MAX, em_start_at.c)'
     pad.write_text('\n'.join([f'EMA1 1 {last} 1'] + lines) + '\n')
     rands = out / 'chain.rands'
     rands.write_text(''.join(f'{r["f"]} {r["rand"]}\n' for r in rows))
