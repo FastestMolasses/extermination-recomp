@@ -8,9 +8,12 @@ here. Routines executed unmodified:
   0015EC50  the running-jump probe (Use chain)   0015FDF0  the aim solver
   001AA4E0  the nearest-target scan              001634A0  state 6 callback
   001747F0  state 0x24 callback                  00179880  drop accumulator
+  001741D0  state 0x23 callback (the Gatling seat with +1F0 0x38, else the
+            0x4A placement)
 
 Their pure SDK leaves (00102948, 001026A0, 001029C0, 001029E8, 00102BB0,
-00102918, 001B1470, 0011DF78) execute unhooked; every other callee is hooked,
+00102918, 001B1470, 0011DF78, and 001741D0's 001028D0, 00102760, 00103200,
+001B12B0) execute unhooked; every other callee is hooked,
 scripted per case and recorded (never simulated as a claim about the
 callee), and the native module gets the same script through its workers.
 Scripted callees may rewrite record bytes and scratch words, so every
@@ -90,9 +93,11 @@ class JumpEE(recovery.ModelEE):
 # ======================================================================
 
 PROBE, AIM, SCAN, JUMP, STATE24, DROP = 0x15EC50, 0x15FDF0, 0x1AA4E0, 0x1634A0, 0x1747F0, 0x179880
-SIZES = {PROBE: 0x11A0, AIM: 0x42C, SCAN: 0x158, JUMP: 0x53C, STATE24: 0x1A4, DROP: 0x50}
+STATE23 = 0x1741D0
+SIZES = {PROBE: 0x11A0, AIM: 0x42C, SCAN: 0x158, JUMP: 0x53C, STATE24: 0x1A4, DROP: 0x50, STATE23: 0x620}
 TRANSLATED = set(SIZES)
-LEAVES = {0x102948, 0x1026A0, 0x1029C0, 0x1029E8, 0x102BB0, 0x102918, 0x1B1470, 0x11DF78}
+LEAVES = {0x102948, 0x1026A0, 0x1029C0, 0x1029E8, 0x102BB0, 0x102918, 0x1B1470, 0x11DF78,
+          0x1028D0, 0x102760, 0x103200, 0x1B12B0}
 
 
 def in_translated(pc):
@@ -109,7 +114,7 @@ CALLEES = {
     0x178B90: 'translate', 0x178EC0: 'strafe', 0x1751A0: 'quadrant', 0x2243F0: 'react',
     0x17C860: 'grab', 0x17DEB0: 'dust', 0x17C580: 'land', 0x21D250: 'surface5d',
     0x21D2E0: 'teleport', 0x1764E0: 'probes', 0x175900: 'floor', 0x1796C0: 'fall_check',
-    0x1760C0: 'column',
+    0x1760C0: 'column', 0x174A50: 'row_request',
 }
 
 
@@ -229,6 +234,8 @@ FN = {
     'grab': C.CFUNCTYPE(I, VP, A, U32, IP),
     'actor_int2': C.CFUNCTYPE(I, VP, A, I, I),
     'root_clock': C.CFUNCTYPE(I, VP, P(U32)),
+    'row_request': C.CFUNCTYPE(I, VP, A, FLT),
+    'buttons': C.CFUNCTYPE(I, VP, P(C.c_uint16), P(C.c_uint16)),
 }
 # EmPlayerRunningJumpWorkers after context/scratch, in header order.
 WORKER_FIELDS = (
@@ -242,6 +249,7 @@ WORKER_FIELDS = (
     ('react', 'actor_result'), ('grab', 'grab'), ('dust', 'actor'), ('land', 'actor'),
     ('surface5d', 'actor_int'), ('teleport', 'actor_int2'), ('probes', 'actor_int'),
     ('floor', 'actor_int_result'), ('fall_check', 'actor'), ('root_clock', 'root_clock'),
+    ('row_request', 'row_request'), ('root_word0', 'root_clock'), ('buttons', 'buttons'),
 )
 
 
@@ -257,7 +265,7 @@ class Live(C.Structure):
                 ('shared3A20', P(C.c_uint32))]
 
 
-ENTRIES = ('probe', 'aim', 'scan', 'jump', 'state24')
+ENTRIES = ('probe', 'aim', 'scan', 'jump', 'state24', 'state23')
 
 
 def build_native(name='running_jump'):
@@ -280,8 +288,10 @@ def build_native(name='running_jump'):
     n.em_player_running_jump_target.argtypes = [A, S, W, P(VP)]
     n.em_player_running_jump_tick.argtypes = [A, W]
     n.em_player_running_jump_state24_tick.argtypes = [A, W]
+    n.em_player_running_jump_state23_tick.argtypes = [A, W]
     n.em_player_running_jump_workers_bound.argtypes = [W]
-    for name_ in ('em_player_running_jump_state6', 'em_player_running_jump_state24'):
+    for name_ in ('em_player_running_jump_state6', 'em_player_running_jump_state24',
+                  'em_player_running_jump_state23'):
         getattr(n, name_).argtypes = [VP, A]
     for name_ in ('em_player_running_jump_use_probe', 'em_player_running_jump_use_aim'):
         getattr(n, name_).argtypes = [VP, A, IP]
@@ -325,7 +335,7 @@ RECORD_WRITES = (
 )
 ACTOR_WORKERS = {'move', 'sweep', 'column', 'sight', 'heading', 'request', 'arbiter', 'sound',
                  'translate', 'strafe', 'quadrant', 'react', 'grab', 'dust', 'land', 'surface5d',
-                 'teleport', 'probes', 'floor', 'fall_check'}
+                 'teleport', 'probes', 'floor', 'fall_check', 'row_request'}
 
 
 def random_hit(rng):
@@ -386,6 +396,8 @@ def effect_for(rng, name, ctx):
         e['frame'] = random_frame(rng)
     elif name == 'sqrt':
         e['fret'] = rng.choice((host(math.sqrt, ctx['x']),) * 3 + (F(5.0), F(13.5), F(20.0), 0, F(27.0)))
+        if rng.random() < 0.1:          # 001741D0's 1.0 bound, on it and one ulp either side
+            e['fret'] = rng.choice((F(1.0), 0x3F800001, 0x3F7FFFFF))
     elif name in ('sin', 'cos'):
         e['fret'] = host(math.sin if name == 'sin' else math.cos, ctx['x'])
     elif name == 'atan2':
@@ -499,6 +511,33 @@ def bound_choice(interval, k):
     return (lo, hi, F((b2f(lo) + b2f(hi)) / 2), (lo - 1) & MASK, (hi + 1) & MASK)[k]
 
 
+def state23_fields(rng, actor, wild):
+    """001741D0's inputs: the mode +1F0, the step +6, the seat +290..+298 near
+    +B0, the headings +218 / +C4 within a turn step of each other, the
+    placement's +2E, +224 / +22C (zero, -0, or not), +F and +302."""
+    mount = rng.random() < 0.6
+    put(actor, 0x1F0, 1, 0x38 if mount else rng.choice((0x37, 0x39, 0, 0x4A, 0xB8)))
+    put(actor, 0x6, 1, rng.choice((0, 1, 1, 1, 2, 2, 2, 3, 4, 4, 5, 6, 0x13) if mount else
+                                  (0, 0, 1, 1, 2, 2, 2, 3, 3, 4, 0x80)))
+    if not wild:
+        for k, axis in enumerate((0xB0, 0xB4, 0xB8)):
+            base = b2f(int.from_bytes(actor[axis:axis + 4], 'little'))
+            offset = rng.choice((0.0, 0.5, -0.7, 0.71, 1.0, 3.0, -12.0, rng.uniform(-2, 2)))
+            put(actor, 0x290 + 4 * k, 4, F(base + offset))
+        put(actor, 0x29C, 4, F(rng.choice((1.0, 0.0))))
+    turn = 0.20943952
+    yaw = b2f(int.from_bytes(actor[0xC4:0xC8], 'little'))
+    goal = rng.choice((yaw, yaw + turn, yaw - turn, yaw + 0.1, yaw - 0.05, yaw + 2.0, yaw - 3.0,
+                       yaw + 6.0, rng.uniform(-3.14, 3.14)))
+    if rng.random() < 0.85:
+        put(actor, 0x218, 4, F(goal) if rng.random() < 0.8 else (F(goal) + rng.choice((-1, 1))) & MASK)
+    put(actor, 0x2E, 2, rng.choice((0, 0, 1, 0x100, 0xFFFF)))
+    for axis in (0x224, 0x22C):
+        put(actor, axis, 4, rng.choice((0, 0, 0, 0x80000000, F(0.5), F(-2.0), 1)))
+    put(actor, 0xF, 1, rng.choice((0, 2, 6, 1, 0xFD)))
+    put(actor, 0x302, 1, rng.choice((0, 0, 1, 0x80)))
+
+
 def make_case(seed):
     if seed >= BOX_BASE:
         area, (jy, jx, jz), (ky, kx, kz) = box_plan()[seed - BOX_BASE]
@@ -512,7 +551,8 @@ def make_case(seed):
         return dict(case, seed=seed, entry='probe', actor=bytes(actor), area=area,
                     subarea=BOX_SUBAREA[area], owner=None)
     rng = random.Random(seed)
-    entry = rng.choice(('probe',) * 7 + ('aim',) * 4 + ('scan',) * 2 + ('jump',) * 7 + ('state24',) * 3)
+    entry = rng.choice(('probe',) * 7 + ('aim',) * 4 + ('scan',) * 2 + ('jump',) * 7 + ('state24',) * 3 +
+                       ('state23',) * 5)
     actor = bytearray(rng.getrandbits(8) for _ in range(0x320))
     wild = rng.random() < 0.04
     area = rng.choice((4, 0xD, 0xF, 0x10, 0x13, 0x16, 0xB, 0xB, 0x15, 1))
@@ -555,6 +595,8 @@ def make_case(seed):
     put(actor, 0xA, 1, rng.choice((0, 1)))
     sub6 = {'jump': (0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 0x63, 4), 'state24': (0, 1, 1, 2, 2, 3)}.get(entry, (0,))
     put(actor, 0x6, 1, rng.choice(sub6))
+    if entry == 'state23':
+        state23_fields(rng, actor, wild)
     owner = rng.choice((None, None, 0x28, 2, 2, 5))
     put(actor, 0x308, 4, OWNER if owner is not None else 0)
     targets = []
@@ -565,7 +607,9 @@ def make_case(seed):
                         'x': F(rng.uniform(-500, 500)), 'z': F(rng.uniform(-500, 500))})
     return {'seed': seed, 'entry': entry, 'actor': bytes(actor), 'area': area, 'subarea': subarea,
             'spad3B8D': rng.choice((0, 0, 0, 1)), 'targets': targets, 'owner': owner,
-            'clock': F(rng.uniform(0, 100)),
+            'clock': F(rng.uniform(0, 100)), 'clock0': F(rng.uniform(0, 100)),
+            'pressed': rng.choice((0, 0x40, 0x4000, 0x8, 0xFFFF, rng.getrandbits(16))),
+            'mask': rng.choice((0x40, 0x4040, 0, rng.getrandbits(16))),
             'scratch': [rng.getrandbits(32) for _ in range(len(SCRATCH))]}
 
 
@@ -652,7 +696,7 @@ class UnitOracle:
             return (name, s32(a(1)))
         if name in ('heading', 'translate', 'surface5d', 'floor'): return (name, s32(a(1)))
         if name == 'teleport': return (name, s32(a(1)), s32(a(2)))
-        if name == 'grab': return (name, f12)
+        if name in ('grab', 'row_request'): return (name, f12)
         if name == 'probes':
             source = {0: 0, ACTOR: 1, CALLER_S1: 2}.get(ee.r[17] & MASK)
             assert source is not None, ('001764E0 $s1', hex(ee.r[17] & MASK))
@@ -684,9 +728,13 @@ class UnitOracle:
         ee.save(0x275B40, NODE_TABLE)
         ee.save(NODE_TABLE, NODE0)
         ee.save(NODE0 + 8, case['clock'])
+        ee.save(NODE0, case['clock0'])
+        ee.save(0x810E74, case['pressed'], 2)
+        ee.save(0x70003B76, case['mask'], 2)
         for address, word in zip(SCRATCH, case['scratch']):
             ee.save(address, word)
-        entry = {'probe': PROBE, 'aim': AIM, 'scan': SCAN, 'jump': JUMP, 'state24': STATE24}[case['entry']]
+        entry = {'probe': PROBE, 'aim': AIM, 'scan': SCAN, 'jump': JUMP, 'state24': STATE24,
+                 'state23': STATE23}[case['entry']]
         ee.call(entry, (ACTOR,))
         v0 = s32(ee.r[2]) if case['entry'] in ('probe', 'aim') else \
             (ee.r[2] & MASK if case['entry'] == 'scan' else None)
@@ -909,11 +957,19 @@ class NativeRun:
         if field == 'teleport':
             return lambda _, a, frames, hold: (
                 -1 if self.call('teleport', ('teleport', frames, hold), self.ctx()) is None else 0)
-        if field == 'root_clock':
+        if field in ('root_clock', 'root_word0'):
             def root_clock(_, out):
-                out[0] = c['clock']
+                out[0] = c['clock' if field == 'root_clock' else 'clock0']
                 return 0
             return root_clock
+        if field == 'row_request':
+            return lambda _, a, blend: (
+                -1 if self.call('row_request', ('row_request', fb(blend)), self.ctx()) is None else 0)
+        if field == 'buttons':
+            def buttons(_, pressed, mask):
+                pressed[0], mask[0] = c['pressed'], c['mask']
+                return 0
+            return buttons
         raise AssertionError(field)
 
     def run(self, adapter=False, shared3A20=None):
@@ -937,6 +993,7 @@ class NativeRun:
             elif entry == 'aim': result = n.em_player_running_jump_use_aim(X, L, C.byref(out)); v0 = out.value
             elif entry == 'jump': result = n.em_player_running_jump_state6(X, L)
             elif entry == 'state24': result = n.em_player_running_jump_state24(X, L)
+            elif entry == 'state23': result = n.em_player_running_jump_state23(X, L)
             else: raise AssertionError(entry)
         elif entry == 'probe':
             result = n.em_player_running_jump_probe(L, S, W, C.byref(out)); v0 = out.value
@@ -946,6 +1003,8 @@ class NativeRun:
             result = n.em_player_running_jump_target(L, S, W, C.byref(ptr)); v0 = ptr.value or 0
         elif entry == 'jump':
             result = n.em_player_running_jump_tick(L, W)
+        elif entry == 'state23':
+            result = n.em_player_running_jump_state23_tick(L, W)
         else:
             result = n.em_player_running_jump_state24_tick(L, W)
         return result, {'actor': bytes(self.live.bytes), 'scratch': self.scratch_words(),

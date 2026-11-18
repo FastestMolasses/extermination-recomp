@@ -938,6 +938,10 @@ test-player-ladder-climb-reference:
 test-player-running-jump-reference:
 	python3 tools/test_player_running_jump_reference.py
 
+.PHONY: test-stick-ring-reference
+test-stick-ring-reference:
+	python3 tools/test_stick_ring_reference.py
+
 .PHONY: test-pose-host-workers-reference
 test-pose-host-workers-reference:
 	python3 tools/test_pose_host_workers_reference.py

@@ -18,12 +18,14 @@ ROOT = Path(__file__).resolve().parents[1]
 HOOKS = {
     # the group 0x82B500 / 0x82BA70 members 0x823580, 0x8237B0, 0x823860, 0x8238E0
     0x00102948: ('uu', None), 0x0011DE90: ('f', 'f'), 0x00122BB8: ('', 'i'), 0x001C6190: ('u', 'i'),
-    0x001CD520: ('iiuqufff', None), 0x001EFD20: ('uu', None),
-    # 0x824CF0 (unreached)
+    0x001CD520: ('iiuqufff', None), 0x001EFD20: ('uu', 'u'),
+    # 0x824CF0 (a boss-fight effect node, g77)
     0x001029C0: ('u', None), 0x00102C58: ('uuu', None), 0x00102918: ('uuu', None), 0x001AFC10: ('u', None),
     0x001CCF70: ('u', 'i'), 0x001CFB50: ('uiufffff', None), 0x001CFBE0: ('iiuui', None),
     # 0x8243B0 (placement [52]; 001281C0 is the float -> unsigned helper)
     0x001281C0: ('f', 'i'), 0x0021B9A0: ('iff', None),
+    # 0x824FE0 (the node of [43] / [44]'s deferred spawn: 001EFD20's result is the effect node)
+    0x001026A0: ('uuu', None), 0x00102BB0: ('uuf', None),
 }
 TYPES = {'u': 'uint32_t', 'i': 'int32_t', 'f': 'float', 'q': 'uint64_t'}
 

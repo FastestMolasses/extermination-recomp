@@ -146,6 +146,10 @@ int em_area00_world_001B0CD0(EmArea00World *s, uint32_t a0, uint32_t a1);
 int em_area00_world_view_001B0CD0(EmArea00World *s, EmArea00WorldMemory view, void *ctx, uint32_t a0, uint32_t a1);
 int em_area00_world_001B41F0(EmArea00World *s, uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t t0,
                              uint32_t t1, int32_t *out);
+/* The same over canonical live spans (AREA21's rounds 0x825C70: the victim
+ * is any pool record). */
+int em_area00_world_view_001B41F0(EmArea00World *s, EmArea00WorldMemory view, void *ctx, uint32_t a0, uint32_t a1,
+                                  uint32_t a2, uint32_t a3, uint32_t t0, uint32_t t1, int32_t *out);
 int em_area00_world_001C24D0(EmArea00World *s, uint32_t a0, uint32_t a1, uint32_t a2, uint64_t *out);
 int em_area00_world_001C5050(EmArea00World *s, uint32_t a0, uint32_t f12, uint64_t *out);
 int em_area00_world_001C6200(EmArea00World *s, uint32_t a0);

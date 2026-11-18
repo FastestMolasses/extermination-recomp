@@ -1845,8 +1845,10 @@ static void bind_worlds(void)
      * duct's actions 9 and 11 (00198CE0 / 00198F10, recorded in AREA00
      * a00_07: 9 -> 10 -> 11 -> 0 over the player states 44 / 45 / 46) run
      * on the camera's own regions there too (low_run, as in AREA11; 10
-     * between them stays forwarded); action 14 remains unbound and fails
-     * if reached. */
+     * between them stays forwarded). Action 14 (00198AF0, the Gatling
+     * seat's camera while the player code +230 is 0x28) runs on the aim
+     * host in both: AREA21's g77 row 4354 reaches it under the canonical
+     * host (lane PORT-A21-GATLING). */
     C.lw.w_001963A0 = lw_001963A0;
     C.lw.w_00196CE0 = lw_00196CE0;
     C.lw.w_00197390 = lw_00197390;
@@ -1854,6 +1856,7 @@ static void bind_worlds(void)
     C.lw.w_00197D20 = lw_00197D20;
     C.lw.w_00198650 = lw_00198650;
     C.lw.w_0018CA90 = lw_0018CA90;
+    C.lw.w_00198AF0 = lw_00198AF0;
     if (C.host.area_worker) {
         C.lw.w_001B0300 = lw_001B0300;
         C.lw.w_00198D90 = area_00198D90;
@@ -1865,7 +1868,6 @@ static void bind_worlds(void)
         C.lw.w_00198D90 = lw_00198D90;
         C.lw.w_001D2830 = lw_001D2830;
         C.lw.w_00198F10 = lw_00198F10;
-        C.lw.w_00198AF0 = lw_00198AF0;
     }
     C.lworld = (EmCamLeftWorld){ &C.cam.rec, &C.player, &C.lg, &C.scratch, &C.hit, &C.lw, 0, scratch38_aliases() };
 

@@ -4124,7 +4124,8 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
      * translation runs through the runtime's dispatch_second_half
      * (em_area21_overlay / _owners / _doors / _groups; 0x823A10 / 0x823AB0
      * as em_level17_boot's twins; [52] 0x8243B0 in _groups, lane
-     * PORT-A21-52). Its boot owners bind as the later areas' do (lane
+     * PORT-A21-52; the effect nodes 0x824FE0 / 0x824CF0 in _groups, lane
+     * PORT-A21-BOSS). Its boot owners bind as the later areas' do (lane
      * PORT-LIVE-A2021: the area loads from the guided run's g75). */
     if (s_state.d810700 == 0x15 && fn >= 0x00823500u) {
         switch (fn) {
@@ -4133,7 +4134,7 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
         case 0x0082A1D0u: case 0x00825C70u: case 0x00825C60u: case 0x008272C0u: case 0x008273C0u:
         case 0x00827640u: case 0x00827880u: case 0x00827A30u: case 0x00827E70u: case 0x00828350u:
         case 0x00823580u: case 0x008237B0u: case 0x00823860u: case 0x008238E0u: case 0x00823A10u:
-        case 0x00823AA0u: case 0x00823AB0u: case 0x008243B0u:
+        case 0x00823AA0u: case 0x00823AB0u: case 0x008243B0u: case 0x00824FE0u: case 0x00824CF0u:
             goto bind;
         default:
             return -1;
@@ -4368,7 +4369,9 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
          (s_state.d810700 == 2 && s_state.d810701 == 2) ||
          /* AREA20: group 0x826100's 0x824440 (AREA14 0x823FC0's twin) through 0019B6C0, as
           * AREA14's (the guided g74, row 2047) */
-         s_state.d810700 == 0x14) &&
+         s_state.d810700 == 0x14 ||
+         /* AREA21: the Gatling [62] 0x8297C0's shots (the guided g77, row 4520) */
+         s_state.d810700 == 0x15) &&
         fn == 0x001F5040u) {
         if (!em_aim_fire_flash_owns(a) && em_area01_live_adopt_flash(&s_area01_live, a) < 0)
             return -1;

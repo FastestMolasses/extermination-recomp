@@ -236,6 +236,20 @@ static int s_rectangle(void *ctx, int32_t slot, int32_t x0, int32_t y0, int32_t 
     return done(&u, em_uip_00207F80(&u, slot, x0, y0, x1, y1, rgba), "00207F80");
 }
 
+/* 00207F80 called from gameplay code (AREA21's Gatling 0x8297C0 draws its
+ * two gauge bars with it every seated frame): the same slot-1 packet,
+ * counted as the frame's other packets (as the glyph runs), not as a
+ * status page's. 1, or 0 on a refusal. */
+int em_sgp_00207F80(int32_t slot, int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t rgba)
+{
+    if (G.fault) return 0;
+    if (!active()) return 1;
+    EmUip u;
+    if (!uip(&u)) return 0;
+    G.frame_any = 1;
+    return done(&u, em_uip_00207F80(&u, slot, x0, y0, x1, y1, rgba), "00207F80 (gameplay)");
+}
+
 /* 00207D90(slot, x0, y0, x1, y1): SCISSOR_1 (DATABASE's 00213CC0 scroll:
  * the list's window, then the whole field again; STATUS_FIELD.md 3g). */
 static int s_scissor(void *ctx, int32_t slot, int32_t x0, int32_t y0, int32_t x1, int32_t y1)

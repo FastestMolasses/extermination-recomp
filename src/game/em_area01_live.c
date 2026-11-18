@@ -1,4 +1,6 @@
 #include "game/em_area01_live.h"
+#include "game/em_effect_original.h"
+#include "game/em_status_gs_page.h"
 #include "game/em_render_verify_rest.h"
 #include "game/em_sdk_soft_float.h"
 #include "game/em_player_closure_live.h"
@@ -1757,6 +1759,19 @@ static int worker(void *ctx,EmArea01Call *c)
         c->v0=result;return rc<0 ? -1 : 0;
     }
     case 0x00122BB8u:c->v0=em_random_next();return 0;
+    case 0x00207F80u:
+        /* 00207F80(slot, x0, y0, x1, y1, rgba) (byte-matched C): the flat
+         * rectangle packet, em_ui_packet_original's translation over the one
+         * render context (em_status_gs_page). AREA21's Gatling 0x8297C0. */
+        if(c->na<6)return -1;
+        if(!em_sgp_00207F80((int32_t)c->a[0],(int32_t)c->a[1],(int32_t)c->a[2],(int32_t)c->a[3],
+                            (int32_t)c->a[4],(uint32_t)c->a[5]))return -1;
+        c->v0=0;return 0;
+    case 0x001B5DC0u:
+        /* 001B5DC0(axis byte): the stick ring 0..3 (AREA21's Gatling 0x829310
+         * steps its yaw / pitch by it; tools/test_stick_ring_reference.py). */
+        if(c->na<1)return -1;
+        c->v0=(uint64_t)(int64_t)em_effect_original_001B5DC0((int32_t)c->a[0]);return 0;
     case 0x001B12B0u: {
         /* The first level's approach step (em_script_host_workers). */
         uint32_t out=0;

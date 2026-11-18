@@ -10,8 +10,12 @@
  * 001EB250(a0, a1), its twin (first reached in g77 too): first, unless
  * w[+0x54] <= 0.8, the word a0 + 0x38 (the node matrix's translation z)
  * -= 2.0; then the same with the sources D_00255B30 / D_00255BC0.
+ * 001EB600(a0, a1) (first reached in g77 row 3622, lane PORT-A21-BOSS):
+ * unless w[+0x54] <= 0, a0 + 0x38 -= 3.0; the two fog calls; a0 + 0x34 (the
+ * matrix's translation y) = 20.0; the two passes with the sources
+ * D_00255D70 / D_00255E00.
  * Ground truth: the decomp's byte-identical C (src/func_001EB440.c,
- * func_001EB250.c);
+ * func_001EB250.c, func_001EB600.c);
  * evidence: tools/test_effect_001EB440_reference.py (the ORIGINAL
  * instructions). Float arithmetic is the EE's (em_ee_float.h).
  *
@@ -38,6 +42,16 @@ typedef struct {
 int em_effect_001EB440(const EmEffect001EB440Hooks *h, uint32_t a0, int32_t a1,
                        EmEffect001EB440Fault *fault);
 int em_effect_001EB250(const EmEffect001EB440Hooks *h, uint32_t a0, int32_t a1,
+                       EmEffect001EB440Fault *fault);
+int em_effect_001EB600(const EmEffect001EB440Hooks *h, uint32_t a0, int32_t a1,
+                       EmEffect001EB440Fault *fault);
+/* 001EE4E0(a0, a1) (the hit spray of the Gatling's rounds, g77 row 4534):
+ * no fog; rewrites the three records' parameter blocks D_002576E0 /
+ * D_00257770 / D_00257800 (12, 12, 16, 0 x5; twice 32, 32, 64, 96, 16, 16,
+ * 64, 0), runs the pass with the records D_002576C0 / D_00257750 /
+ * D_002577E0, kinds 1, 6, 1 and copy 1, then eases w[+8] toward 0.02 by a
+ * tenth of the gap, floored at 0.02. */
+int em_effect_001EE4E0(const EmEffect001EB440Hooks *h, uint32_t a0, int32_t a1,
                        EmEffect001EB440Fault *fault);
 #ifdef __cplusplus
 }

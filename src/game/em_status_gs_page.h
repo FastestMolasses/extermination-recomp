@@ -100,6 +100,10 @@ int em_sgp_field_frame(void);
  * claimed frame's list through the GS model. 0 (done, or not claimed), or
  * -1 (reported). */
 int em_sgp_kick(struct EmGfx *gfx);
+/* 00207F80(slot, x0, y0, x1, y1, rgba) from gameplay code (not a status
+ * page): the flat rectangle into the frame's slot-1 packets. 1, or 0 when
+ * the builder refused (reported once, latched). */
+int em_sgp_00207F80(int32_t slot, int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t rgba);
 /* The latched fault, or NULL. */
 const char *em_sgp_fault(void);
 /* Packets built so far (all builders), for the tests. */

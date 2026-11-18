@@ -21430,6 +21430,17 @@ static inline void b21d_hooks(EmArea01Runtime *r, EmArea21DoorsHooks *h)
     h->w_callback = b21d_w_callback;
 }
 
+static int b21p_w_001026A0(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001026A0u, .sp = r->sp, .na = 3, .nf = 0};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)(int32_t)a1;
+    c.a[2] = (uint64_t)(int64_t)(int32_t)a2;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
 static int b21p_w_00102918(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2)
 {
     EmArea01Runtime *r = ctx;
@@ -21456,6 +21467,17 @@ static int b21p_w_001029C0(void *ctx, uint32_t a0)
     EmArea01Runtime *r = ctx;
     EmArea01Call c = {.function = 0x001029C0u, .sp = r->sp, .na = 1, .nf = 0};
     c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
+static int b21p_w_00102BB0(void *ctx, uint32_t a0, uint32_t a1, float a2)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x00102BB0u, .sp = r->sp, .na = 2, .nf = 1};
+    c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
+    c.a[1] = (uint64_t)(int64_t)(int32_t)a1;
+    c.f[0] = em_ee_bits(a2);
     int rc = em_area01_runtime_call(r, &c);
     return rc;
 }
@@ -21574,13 +21596,14 @@ static int b21p_w_001CFBE0(void *ctx, int32_t a0, int32_t a1, uint32_t a2, uint3
     return rc;
 }
 
-static int b21p_w_001EFD20(void *ctx, uint32_t a0, uint32_t a1)
+static int b21p_w_001EFD20(void *ctx, uint32_t a0, uint32_t a1, uint32_t *result)
 {
     EmArea01Runtime *r = ctx;
     EmArea01Call c = {.function = 0x001EFD20u, .sp = r->sp, .na = 2, .nf = 0};
     c.a[0] = (uint64_t)(int64_t)(int32_t)a0;
     c.a[1] = (uint64_t)(int64_t)(int32_t)a1;
     int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = (uint32_t)c.v0;
     return rc;
 }
 
@@ -21614,9 +21637,11 @@ static inline void b21p_hooks(EmArea01Runtime *r, EmArea21GroupsHooks *h)
     memset(h, 0, sizeof *h);
     h->ctx = r;
     h->bytes = b21p_view;
+    h->w_001026A0 = b21p_w_001026A0;
     h->w_00102918 = b21p_w_00102918;
     h->w_00102948 = b21p_w_00102948;
     h->w_001029C0 = b21p_w_001029C0;
+    h->w_00102BB0 = b21p_w_00102BB0;
     h->w_00102C58 = b21p_w_00102C58;
     h->w_0011DE90 = b21p_w_0011DE90;
     h->w_00122BB8 = b21p_w_00122BB8;

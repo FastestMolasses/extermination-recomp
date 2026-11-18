@@ -3019,6 +3019,16 @@ static int rj_column(void *c, EmPlayerLiveActor *a, const float at[4], int arg, 
 static int rj_dust(void *c, EmPlayerLiveActor *a)
 { (void)c; return em_player_climb_live_0017DEB0(&L.climb, a); }
 static int rj_root_clock(void *c, uint32_t *value) { (void)c; return em_pose_view_root_clock(&L.view, value); }
+/* *(*D_00275B40 + 0) (001741D0's walk-off step). */
+static int rj_root_word0(void *c, uint32_t *value) { (void)c; return em_pose_view_node_bits(&L.view, 0, 0x0, value); }
+/* D_00810E74[0] and 0x70003B76 (PAD_CONFIG[1]): 001741D0's pad test. */
+static int rj_buttons(void *c, uint16_t *pressed, uint16_t *mask)
+{
+    (void)c;
+    *pressed = scene()->d810E74;
+    *mask = PAD_CONFIG[1];
+    return 0;
+}
 
 static void bind_running_jump(void)
 {
@@ -3037,6 +3047,7 @@ static void bind_running_jump(void)
     w->land = w_land; w->surface5d = w_surface5d; w->teleport = w_teleport;
     w->probes = w_probes_s1; w->floor = w_floor; w->fall_check = w_fall_check;
     w->root_clock = rj_root_clock;
+    w->row_request = w_row_request; w->root_word0 = rj_root_word0; w->buttons = rj_buttons;
     l->scene = running_jump_scene;
     l->shared3A20 = &L.land.s3A20;
 }
@@ -3590,6 +3601,7 @@ int em_player_closure_live_bind(EmPlayerStatesBinding *b, EmPlayerStageHost *sta
     set1(b, 0x03, em_player_climb_live_state, &L.climb, NULL, NULL, NULL, "00162190");
     set1(b, 0x06, em_player_running_jump_state6, &L.rj, NULL, NULL, NULL, "001634A0");
     set1(b, 0x0B, em_player_ladder_state_b, &L.le, &L.le_scratch.s3A20[0], NULL, NULL, "00165B60");
+    set1(b, 0x23, em_player_running_jump_state23, &L.rj, NULL, NULL, NULL, "001741D0");
     set1(b, 0x24, em_player_running_jump_state24, &L.rj, NULL, NULL, NULL, "001747F0");
 
     /* 0015B770's table. */
