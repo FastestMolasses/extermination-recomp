@@ -4085,8 +4085,9 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
         goto bind;
     /* AREA16's owners (lane PORT-A16, docs/AREA16_PORT.md): every
      * placement's and group's overlay behaviour (decomp
-     * tools/area_overview.py --area 16) and the two child behaviours
-     * 0x825260 / 0x828200 run through the runtime's dispatch_second_half
+     * tools/area_overview.py --area 16), the two child behaviours
+     * 0x825260 / 0x828200 and the five effect behaviours run through the
+     * runtime's dispatch_second_half
      * (em_area16_overlay). Its boot owners bind as the later areas' do. */
     if (s_state.d810700 == 0x10 && fn >= 0x00823500u) {
         switch (fn) {
@@ -4094,6 +4095,8 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
         case 0x00825310u: case 0x00825800u: case 0x008261A0u: case 0x008263D0u: case 0x00826C50u:
         case 0x00827030u: case 0x008273F0u: case 0x00827B70u: case 0x00827CE0u: case 0x00827FA0u:
         case 0x00828200u:
+        /* the effect behaviours of AREA16's effect ids 0..4 (001EF9D0) */
+        case 0x008237A0u: case 0x008239B0u: case 0x00823D20u: case 0x00823F70u: case 0x00824110u:
             goto bind;
         default:
             return -1;

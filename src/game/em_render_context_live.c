@@ -1868,6 +1868,17 @@ int em_rcl_001D6BA0(int32_t chan, int32_t a1, int32_t a2, int32_t a3, int32_t t0
     READY(1);
     return done(em_load_veil_particles_001D6BA0(&R.veil, chan, a1, a2, a3, t0, t1, NULL), 0x001D6BA0u);
 }
+int em_rcl_001D6B10(int32_t a0, int32_t a1, int32_t a2, int32_t a3)
+{
+    READY(1);
+    return done(em_render_context_001D6B10(&R.rc, a0, a1, a2, a3, NULL), 0x001D6B10u);
+}
+int em_rcl_001D6C90(const int32_t args[15])
+{
+    READY(1);
+    if (!args) return fail(0x001D6C90u, "no arguments");
+    return done(em_render_context_001D6C90(&R.rc, args, NULL), 0x001D6C90u);
+}
 int em_rcl_001D1FF0(int32_t chan, int32_t a1)
 {
     READY(1);

@@ -21,19 +21,13 @@ placements and groups of AREA16 name, from the decomp's C under
 | `em_area16_overlay_c.c` | 0x825800 (s0[10], the player's height mover; both 0019C6F0 calls: (0x28, 1) and (0x28, 0)) with 0x826A50 and scripts 0x82A1C0 / 0x82A3C0's op09 0x826C20 |
 | `em_area16_overlay_d.c` | 0x8273F0 (s0[9], s1[13..27]; both 001A2370 calls) with its child behaviour 0x828200, 0x827B70 (s1[41]), 0x827CE0 (s1[28], [29]), 0x827FA0 (s1[30..34]) |
 | `em_area16_overlay_e.c` | 0x8263D0 (s0[13]), 0x825310 (s1[10], NEARMISS) |
+| `em_area16_overlay_f.c` | the effect behaviours 0x8237A0 (NEARMISS), 0x8239B0, 0x823D20, 0x823F70, 0x824110 (lane PORT-A16FX, section "Effects") |
 
 Where the decomp C is NEARMISS (0x824690, 0x825310), the translation
 follows the original's access order and the oracle runs the original
 words, so it decides.
 
-**Not translated:** the five effect functions 0x8237A0, 0x8239B0,
-0x823D20, 0x823F70 and 0x824110 (decomp: no static reference). No word of
-AREA16's data holds their addresses and no AREA16 code forms them, but
-they are reached at run time through effect ids: 001EFD20 allocates the
-node through 001EF9D0 by id, and in the live run (g61, lane PORT-WATER)
-[13] 0x8263D0's 001EFD20(4, +0xB0) makes a node whose behaviour is
-0x824110, which faults (no binding). [10] 0x825800 also spawns effects
-1, 3 and 0x8000003F; which of the five they select is unchecked. The init 0x824420 is the
+**Effects:** see section "Effects" (lane PORT-A16FX). The init 0x824420 is the
 second-half state's (section 1 of SECOND_HALF_AREAS.md).
 
 **Two caller-register arms (fail-stop).** 0x823580 with +0x94 outside
@@ -66,8 +60,9 @@ after, a poisoned re-run, every reachable original word, the callee
 inventory and the fail-stop contract; plus the two caller-register
 fail-stops checked natively.
 
-- Quick run: 1688 cases, about 5 s; `EM_TEST_FULL=1`: 1822 cases. Both pass.
-- Every reachable word of the 25 entries runs, but two delay-slot words of
+- Quick run: 2018 cases, about 6 s; `EM_TEST_FULL=1`: 2193 cases. Both pass
+  (with the five effect behaviours of section "Effects").
+- Every reachable word of the 30 entries runs, but two delay-slot words of
   the caller-register arms (0x82361C, 0x8282F8), named DEAD in the cases.
 - A constant changed in a scratch copy (0x823580's count, 0x825800's
   script address) fails the run (19 failures).
@@ -85,16 +80,21 @@ section "Live".
 
 ## Open
 
-- The live run (section "Live"): the effect functions above (0x824110
-  first: g61's next fault), a live 001BAD40 worker for sub 1's booth,
-  g62's and g66's returns to the title; then the guided states' live nodes
-  as oracle cases.
-- The water grid's display list 001DB480 has not run live yet (g61 stops
-  at 0x824110 on its first frame, before [10]'s state 1): its hooks
-  (001D6B10, 001D6BA0, 001D1FF0, 001D6C90, 001CD370, 001D1F20, 001CAAC0)
-  in the live composition and the GS packets it builds are unchecked.
+- g62's card (section "Live"): it respawns the three curtains the guided
+  run broke in g61; choose between a card from a later state and a melee
+  prefix. g66's return to the title (health 25 at pad frame 1000) is not
+  investigated yet; check it the same way (per-frame progress past the
+  last good pad frame, the nodes near the player against the recording's
+  source state).
+- The live run (section "Live"): g61's next stop, [10]'s +0x4C draw
+  method 001CAE30 (model kind 3: 001CACC0 with 001CA7B0, 001C7420,
+  001D39A0 / 001D3DA0, all untranslated); a live 001BAD40 worker for sub
+  1's booth (lane PORT-FX's); g62's and g66's returns to the title; then
+  the guided states' live nodes as oracle cases.
+- 001DB480's packets now run live (section "Effects"), but no capture
+  compares them: the water oracle proves the function over g60's context,
+  not the live chain the page consumer walks.
 - 0x823580's group records: the +0x94 values they carry.
-- The five unreached effect functions (above).
 
 ## Live (lane PORT-LIVE-A16, 2026-11-17)
 
@@ -162,13 +162,29 @@ each take; `em_start_at.c`), beats g61 .. g67 in `mid_route_beats.py`.
   D_00810700 equal to the original's (the beat's end check; rows are not
   compared frame by frame).
 - g61 fail-stopped on its first frame at 001DAFA0 (the water grid); since
-  lane PORT-WATER (section "Water grid") it passes [10]'s state 0 and
-  fail-stops on the same frame at 0x824110, the behaviour of [13]
-  0x8263D0's effect 4 (untranslated, see "Not translated").
+  lane PORT-WATER (section "Water grid") it passes [10]'s state 0, and
+  since lane PORT-A16FX (section "Effects") [13]'s effect 4 and the grid's
+  display list 001DB480; it now fail-stops on its first frame at
+  001CAE30, [10]'s +0x4C draw method (model kind 3, untranslated).
 - g62 (sub 0 after the barrier: [10] in state 2, [13] makes no effect)
-  plays in sub 0 to pad frame 3000 with no fault, then returns to the title
-  (001AC070 again at engine frame 8105) without reaching sub 1; not
-  investigated (the run was stopped there).
+  plays in sub 0 to pad frame 3042 with no fault, then returns to the
+  title (001AC070 again at engine frame 8105) without reaching sub 1.
+  Cause (lane PORT-A16FX): a death, from the start card, not from a
+  translation. In g61 the guided player broke the three curtains
+  0x1C1030 at (350, 325), (390, 325) and (445, 290) with one light melee
+  each (decomp FULL_RUN_PLAN.md, `_g63_corridor`); g61's end state holds
+  them in state 2 sub 1 (+0x36 0x1003, +0x34 -2: 001C1030's destroyed
+  arm, waiting for its clip). 001C1030 records a kill only in state 3
+  (001B1190(+0x9A): ids 0x76 .. 0x78, D_00810860[0x10] word 3 bits 22 ..
+  24), and those bits are clear in g61's and g62's end blocks, so the
+  card's LOAD GAME spawns the curtains whole (state 1, as 001C1030's own
+  code does from that block). g62's recorded pad (no melee) then walks
+  into the curtain at (445, 290): the player stops at (445.0, 281.87),
+  the path steering holds the pad at frame 3042, the three bugs 0x12A5D0
+  nearby bite (infection 44 -> 100 in steps of 12, then health 55 -> 0)
+  and 001ADF00 returns to the title. No game-code fix applies; the beat
+  needs a card made after the curtains are gone, or the three melees
+  before its pad (a harness decision, section "Open").
 - g64 passes 001BAD40 (lane PORT-FX: 0x824E10, decomp
   func_overlay_AREA16_00824DD0, calls it directly with its +0x20 entry;
   em_area01_runtime's rv_001BAD40 runs em_sdf_001BAD40 over the node with
@@ -234,3 +250,47 @@ and of `tools/gen_mid_route_bridge.py` (its hooks re-enter the runtime).
 The grid block 0x818000 .. 0x81C03F is one process-lifetime boot-BSS block
 in `em_area01_live.c`'s memory map (no other decomp function names an
 address in it). Where g61 and g62 stand: section "Live".
+
+## Effects (lane PORT-A16FX, 2026-11-17)
+
+Branch `a16fx`. No AREA16 word names the five functions 0x8237A0 ..
+0x824110: an effect node gets its behaviour from its effect id. 001EF9D0
+reads the record's +0x0C word of AREA16's effect table (D_00259C74[0x10],
+0x30 bytes a record, read from the user's ELF): ids 0..4 are the five in
+address order. The spawners, from the decomp C:
+
+| Id | Behaviour | Spawned by |
+|---|---|---|
+| 0 | 0x8237A0 (decomp NEARMISS) | 0x823580, 001EFEB0(0, ..) twice |
+| 1 | 0x8239B0 | [10] 0x825800, 001EFD20(1, ..) |
+| 2 | 0x823D20 | [11] 0x8261A0, 001EFD20(2, +0xB0) |
+| 3 | 0x823F70 | [10] 0x825800, 001EFD20(3, ..) (beside 0x8000003F, a boot effect 001F4840) |
+| 4 | 0x824110 | [13] 0x8263D0, 001EFD20(4, +0xB0); [13] keeps the node at +0x2D0 and sets its +5 (1, 2, 3, 0x63) |
+
+They are translated in `src/game/em_area16_overlay_f.c` from the decomp C
+(the NEARMISS 0x8237A0 in the original's access order) and proven by
+`make test-area16-overlay-reference` (cases `tools/area16_overlay_cases_f.py`:
+every state and sub-state, the fades' and wraps' thresholds and their
+neighbouring floats, seeds, random draws; 330 cases quick, 371 full; every
+reachable word of the five runs). 00102918, 00102C58 and 001281C0 run as
+original code in the oracle (MATH). A scratch copy with three constants
+changed (a position, a step, a table address) fails 139 cases. They bind
+in `dispatch_second_half` (frames 0x50, 0xA0, 0x70, 0x40, 0xA0) and in
+`em_scene_bindings` for area 0x10.
+
+**001DB480 live.** With effect 4 bound, g61 reaches [10]'s display list
+call on its first frame. Its render callees now run in the live
+composition (`em_area01_live.c` `water_render`, area 0x10 only):
+001D6B10 and 001D6C90 through new `em_rcl_001D6B10` / `em_rcl_001D6C90`
+(em_render_context's translations over the one render context; the seven
+stack words of 001D6C90 read at the caller's frame,
+`EM_AREA01_RUNTIME_NEST` above the hook's sp), 001D6BA0, 001D1FF0 and
+001D1F20 through the existing `em_rcl_*`, 001CD370 as before, and
+001CAAC0(kick, head) through `em_owner_draw_live_001CAAC0_chain`: only the
+original's depth insertion (em_anim_rest_001CAAC0 into the page through
+001CB760), as the chain is CNT packets of VIF DIRECT strips, not an object
+unit; a head that is not a CNT tag with a DIRECT VIF word is refused. The
+page consumer (em_chain_page) walks CNT, DIRECT and the PACKED RGBAQ / ST /
+XYZ2 the strips use. `make test-norender-equal` passes, and g61 stops at
+the same place with and without drawing. The live packets are not yet
+compared with a capture (section "Open").

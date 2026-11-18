@@ -495,7 +495,7 @@ static int dispatch_overlay04(EmArea01Runtime *r, EmArea01Call *c)
  * frames these entries call each other through (the deepest, 001A7BA0's
  * 0x290 under 001A7B80), so no callee frame overlaps a local the module
  * writes. Returns 0 when the address is not one of them. */
-enum { EIGHTH_NEST = 0x400u };
+enum { EIGHTH_NEST = EM_AREA01_RUNTIME_NEST };
 static int dispatch_level8(EmArea01Runtime *r, EmArea01Call *c, int *out)
 {
     static const struct { uint32_t fn, frame; unsigned na, nf; } entries[] = {

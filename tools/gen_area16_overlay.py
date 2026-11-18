@@ -17,8 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 HOOKS = {
     # vector / matrix helpers (run as original code by the oracle)
     0x001026A0: ('uuu', None), 0x001026D0: ('uuu', None), 0x00102948: ('uu', None),
-    0x00102958: ('uu', None), 0x001029C0: ('u', None), 0x00102B08: ('uuf', None), 0x00102BB0: ('uuf', None),
-    0x00103230: ('uuf', None), 0x0011E2A8: ('f', 'f'), 0x00122BB8: ('', 'i'),
+    0x00102918: ('uuu', None), 0x00102958: ('uu', None), 0x001029C0: ('u', None), 0x00102C58: ('uuu', None), 0x00102B08: ('uuf', None), 0x00102BB0: ('uuf', None),
+    0x00103230: ('uuf', None), 0x0011E2A8: ('f', 'f'), 0x00122BB8: ('', 'i'), 0x001281C0: ('f', 'i'),
     # boot services
     0x0019C6F0: ('ii', None), 0x001A2370: ('uu', None), 0x001AF800: ('u', None), 0x001AFA90: ('i', 'u'),
     0x001AFC10: ('u', None), 0x001B0FD0: ('u', 'i'), 0x001B10B0: ('uii', 'i'), 0x001B11E0: ('i', 'i'),
@@ -28,8 +28,8 @@ HOOKS = {
     0x001C5570: ('uuii', 'u'), 0x001C5C90: ('u', None), 0x001C6120: ('ii', 'i'), 0x001C62C0: ('u', None),
     0x001C6380: ('u', None), 0x001C63E0: ('ui', None), 0x001C64F0: ('uf', None), 0x001C68C0: ('u', None),
     0x001CA5E0: ('uii', None), 0x001CA5F0: ('ui', None), 0x001CA6E0: ('ui', None), 0x001CB5B0: ('i', None),
-    0x001CCF70: ('u', 'i'), 0x001CFAE0: ('uiuffff', None), 0x001CFBE0: ('iiuui', None),
-    0x001D7FA0: ('uuiff', 'i'), 0x001D8060: ('i', 'u'), 0x001D80B0: ('i', None), 0x001D8BF0: ('ui', None),
+    0x001CCF70: ('u', 'i'), 0x001CD520: ('iiuqufff', None), 0x001CFAE0: ('uiuffff', None), 0x001CFBE0: ('iiuui', None),
+    0x001D04B0: ('uiuff', None), 0x001D7FA0: ('uuiff', 'i'), 0x001D8060: ('i', 'u'), 0x001D80B0: ('i', None), 0x001D8BF0: ('ui', None),
     0x001DAFA0: ('', None), 0x001DB240: ('i', None), 0x001DB250: ('', None), 0x001DB480: ('', None),
     0x001EFD20: ('iu', 'u'), 0x001EFD90: ('iuu', None), 0x001EFEB0: ('iu', 'u'), 0x001F4BF0: ('uu', None),
     0x001F4E20: ('uuf', None), 0x001F5940: ('iui', None), 0x001FAE70: ('i', None), 0x001FBD50: ('uiif', None),
