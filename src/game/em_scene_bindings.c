@@ -4534,9 +4534,65 @@ static int area_spawn_deferred(EmArea01Call *call, uint32_t want_id, uint32_t da
         call->v0 = result ? em_actor_pool_address(&s_pool, result) : 0;
     return rc;
 }
+/* The halfwords 0015C7C0 reads (D_00248A00..08 from the record pose's
+ * table region, D_002754C0..DA from the status pages' windows), as the
+ * player stage's own reader (em_player_stage_live r_table16). */
+static int area01_table16(void *c, uint32_t address, int16_t *value)
+{
+    (void)c;
+    const uint8_t *p = player_pose_record_bytes(address, 2);
+    if (p) {
+        *value = (int16_t)(uint16_t)(p[0] | p[1] << 8);
+        return 0;
+    }
+    return em_area11_interaction_host_data16(address, value);
+}
+
+/* 0015C700(D_008102B0) from an area script (AREA21's ending script 0x827040
+ * at 0x827250, after its store of the health D_00810858): the player record's
+ * +0x220 and low-health latch through the one translation (byte-matched C,
+ * player_pose_0015C700), with 001B0070()'s word D_008106C8, as the status
+ * page's caller (em_area11_interaction_host page_player_0015C700), on the
+ * record the composition's player view holds. */
+static int area01_player_0015C700(EmArea01Call *call)
+{
+    if (call->na < 1 || call->nf || (uint32_t)call->a[0] != 0x008102B0u)
+        return -1;
+    const uint8_t *c8 = em_scene_req_at(&s_state, 0x008106C8u);
+    const uint32_t word = (uint32_t)c8[0] | (uint32_t)c8[1] << 8 | (uint32_t)c8[2] << 16 |
+                          (uint32_t)c8[3] << 24;
+    /* Inside the composition's player view the record is the live one: the
+     * view's commit publishes +0x220 to the vitals' owners (no publish of
+     * the owners into the record here, which would stale the view). */
+    return player_pose_0015C700(s_state.d810858, word, area01_table16, NULL) ? 0 : -1;
+}
+
+/* 0015C750(D_008102B0) from an area script (the same ending script, next
+ * to 0015C700): the closure's em_area02_misc_0015C750 over the live record
+ * with the canonical D_00810707 (em_player_closure_live_0015C750), as the
+ * status page's caller. */
+static int area01_player_0015C750(EmArea01Call *call)
+{
+    if (call->na < 1 || call->nf || (uint32_t)call->a[0] != 0x008102B0u)
+        return -1;
+    const uint8_t *c8 = em_scene_req_at(&s_state, 0x008106C8u);
+    const uint32_t word = (uint32_t)c8[0] | (uint32_t)c8[1] << 8 | (uint32_t)c8[2] << 16 |
+                          (uint32_t)c8[3] << 24;
+    uint8_t *d810707 = em_scene_progress_at(&s_state, 0x00810707u, 1);
+    return em_player_closure_live_0015C750(word, area01_table16, NULL, d810707);
+}
+
 static int area01_missing_worker(void *ctx, EmArea01Call *call)
 {
     (void)ctx;
+    if (call->function == 0x0015C700u || call->function == 0x0015C750u || call->function == 0x001B81D0u) {
+        int rc = call->function == 0x0015C700u ? area01_player_0015C700(call) :
+                 call->function == 0x0015C750u ? area01_player_0015C750(call) :
+                 call->na >= 1 && !call->nf ? em_area11_script_host_001B81D0((uint32_t)call->a[0]) : -1;
+        if (rc < 0)
+            fprintf(stderr, "em_area01: %08X on the player record faulted\n", call->function);
+        return rc;
+    }
     if (s_state.d810700 == 0 && call->function == 0x001B6660u)
         return area_spawn_deferred(call, 1u, 0x00826F80u, 0x0082D480u);
     if (s_state.d810700 == 1 && call->function == 0x001B6660u)

@@ -680,6 +680,22 @@ static int background_gate(EmGfx *gfx)
     if (list <= 0)
         return list;
     static int reported;
+    /* A level with a second background (AREA21 from g79's end on: the list
+     * sends TBP 0x3740 instead of the play captures' 0x3700) keeps it beside
+     * the first as background_<TEX0>.embg (tools/export_area21_ending_
+     * background.py, the same export over that capture): loaded when the
+     * list asks for that TEX0, then checked as the first. */
+    if (em_gfx_background_state(gfx, &tex0, &rgbaq) && tex0 != want_tex0 && g.scene_dir[0]) {
+        char alt[600];
+        snprintf(alt, sizeof alt, "%s/background_%016llX.embg", g.scene_dir,
+                 (unsigned long long)want_tex0);
+        FILE *probe = fopen(alt, "rb");
+        if (probe) {
+            fclose(probe);
+            if (em_gfx_background_load(gfx, alt) != 0)
+                return -1;
+        }
+    }
     if (!em_gfx_background_state(gfx, &tex0, &rgbaq) || tex0 != want_tex0 || rgbaq != want_rgbaq) {
         if (!reported)
             fprintf(stderr, "background: the channel-3 list at ctx+0x1D8 is built (001E1E60) but the "

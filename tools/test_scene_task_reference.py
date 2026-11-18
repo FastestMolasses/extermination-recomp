@@ -3,7 +3,7 @@
 with the original ELF instructions.
 
 Executed originals (SCENE_COORDINATOR_DESIGN.md sections 2.2 and 2.6):
-  001ACEC0, 001AD250, 001AD360, 001ADF50, 001AD4E0, 001ADF00 (the task chain,
+  001ACEC0, 001AD250, 001AD360, 001ADF50, 001AD4E0, 001AD740, 001ADF00 (the task chain,
   entered at 001ACEC0 and at each sub-machine), 001AD010, 001AD140, 001AFCF0,
   and the memset 00121A28 that 001AFCF0 calls.
 Every other callee is a recorded stub: its a0..a3, the owned state at the jal
@@ -63,9 +63,9 @@ M64 = (1 << 64) - 1
 
 # Executed original functions: start -> size (splat .s headers).
 FUNCS = {0x1ACEC0: 0x148, 0x1AD010: 0x12C, 0x1AD140: 0x60, 0x1AD250: 0x108,
-         0x1AD360: 0x16C, 0x1AD4E0: 0x258, 0x1ADF00: 0x4C, 0x1ADF50: 0xEC,
+         0x1AD360: 0x16C, 0x1AD4E0: 0x258, 0x1AD740: 0x7C0, 0x1ADF00: 0x4C, 0x1ADF50: 0xEC,
          0x1AFCF0: 0x78, 0x121A28: 0xC0}
-ENTRIES = [0x1ACEC0, 0x1AD250, 0x1AD360, 0x1ADF50, 0x1AD4E0, 0x1ADF00, 0x1AD010,
+ENTRIES = [0x1ACEC0, 0x1AD250, 0x1AD360, 0x1ADF50, 0x1AD4E0, 0x1AD740, 0x1ADF00, 0x1AD010,
            0x1AD140, 0x1AFCF0]
 RETURNS_VALUE = {0x1AD360, 0x1ADF50}
 
@@ -74,7 +74,10 @@ LAYOUT = [(TASK+8, 24), (0x8106B0, 0x48), (0x810700, 3), (0x810730, 0x20),
           (0x810750, 4), (0x70003B68, 4), (0x70003B84, 2), (0x70003B8A, 2),
           (0x70003B8C, 8), (0x70003258, 4), (0x700031F4, 4), (0x275BD8, 1),
           (0x275BDC, 1), (0x275BE0, 1), (0x8101E4, 1), (0x810E74, 2),
-          (0x810E70, 2), (0x810E50, 1)]
+          (0x810E70, 2), (0x810E50, 1),
+          # 001AD740: the continue counter, the knife flag and the dog tags
+          # D_00810C90..9F, D_00810CA6..CB1 (CA8 / CAA / CAC / CB0 halfwords)
+          (0x81070A, 1), (0x810C90, 0x10), (0x810CA6, 12)]
 SNAP = sum(size for _, size in LAYOUT)
 OFFSET = {}
 _o = 0
@@ -87,10 +90,11 @@ OWNED = set(OFFSET)
 READERS = {0x28A9A0: 2, 0x282157: 1}
 STORES = {0x821058: 1, 0x275C78: 1, 0x810D38: 4}
 OOB = range(0x810750, 0x810830)   # D_00810730[0x20..0xFF]
-RESULT_CALLEES = (0x1AD1A0, 0x1AD230, 0x21B550)
+RESULT_CALLEES = (0x1AD1A0, 0x1AD230, 0x21B550, 0x22D380, 0x225AC0)
 # Argument registers each callee declares (decomp C); compared on events and trace.
 ARGS = {0x1D2830: 2, 0x1AEDB0: 1, 0x1AED80: 1, 0x1FF080: 2, 0x1AEE10: 2, 0x1FA790: 2,
-        0x1ABF90: 4, 0x1AEDE0: 2, 0x1AEBA0: 1, 0x1AB790: 1, 0x121A28: 3}
+        0x1ABF90: 4, 0x1AEDE0: 2, 0x1AEBA0: 1, 0x1AB790: 1, 0x121A28: 3,
+        0x1B0C00: 1, 0x1C40B0: 2, 0x1D1EA0: 1, 0x225AC0: 1}
 # Trace-only arguments: registers the call site sets up for a void callee.
 TRACE_ARGS = {(0x1AD010, 0x1FBC50): 2}
 KIND = {'call': 1, 'store': 2, 'read': 3}
@@ -299,7 +303,7 @@ typedef struct { uint32_t caller, callee, a[4]; } Tr;
 typedef struct {
     int32_t entry, fail_at, perturb, clear_bd8, r_1AD1A0, r_1AD230, r_21B550, fade, busy;
     uint32_t null_address;
-    int32_t prefault, null_user, no_table;
+    int32_t prefault, null_user, no_table, r_22D380, r_225AC0;
 } Cfg;
 typedef struct {
     int32_t ret, nev, ntr, fault_code, overflow;
@@ -330,6 +334,9 @@ static void io(EmSceneState *s, uint8_t *user, uint8_t *b, int write)
     LE(s->spad3258, 4); LE(s->spad31F4, 4);
     LE(s->d275BD8, 1); LE(s->d275BDC, 1); LE(s->d275BE0, 1); LE(s->d8101E4, 1);
     LE(s->d810E74, 2); LE(s->d810E70, 2); LE(s->d810E50, 1);
+    BYTES(em_scene_progress_at(s, 0x0081070Au, 1), 1);
+    BYTES(em_scene_progress_at(s, 0x00810C90u, 0x10), 0x10);
+    BYTES(em_scene_progress_at(s, 0x00810CA6u, 12), 12);
 #undef BYTES
 #undef LE
     (void)o;
@@ -364,6 +371,12 @@ static int hit(void *ctx, uint32_t kind, uint32_t address, uint64_t a0, uint64_t
 #define CALL0(addr) static int w_##addr(void *c) { return hit(c, 1, 0x##addr##u, 0, 0, 0, 0, 0); }
 CALL0(001AD4D0) CALL0(001AD740) CALL0(001D1EF0) CALL0(001FABB0) CALL0(001FBC50)
 CALL0(001FC9B0) CALL0(0021B180) CALL0(0021B840) CALL0(001D2880) CALL0(001FAB50)
+CALL0(0022D360) CALL0(001AF2C0) CALL0(00225A00) CALL0(001D1C50)
+static int w_0022D380(void *c) { return hit(c, 1, 0x22D380u, 0, 0, 0, 0, ((Ctx *)c)->cfg->r_22D380); }
+static int w_00225AC0(void *c, int a) { return hit(c, 1, 0x225AC0u, U(a), 0, 0, 0, ((Ctx *)c)->cfg->r_225AC0); }
+static int w_001B0C00(void *c, int a) { return hit(c, 1, 0x1B0C00u, U(a), 0, 0, 0, 0); }
+static int w_001C40B0(void *c, int a, int b) { return hit(c, 1, 0x1C40B0u, U(a), U(b), 0, 0, 0); }
+static int w_001D1EA0(void *c, int a) { return hit(c, 1, 0x1D1EA0u, U(a), 0, 0, 0, 0); }
 static int w_001AD1A0(void *c) { return hit(c, 1, 0x1AD1A0u, 0, 0, 0, 0, ((Ctx *)c)->cfg->r_1AD1A0); }
 static int w_001AD230(void *c) { return hit(c, 1, 0x1AD230u, 0, 0, 0, 0, ((Ctx *)c)->cfg->r_1AD230); }
 static int w_0021B550(void *c) { return hit(c, 1, 0x21B550u, 0, 0, 0, 0, ((Ctx *)c)->cfg->r_21B550); }
@@ -419,6 +432,9 @@ int scene_task_shim(const Cfg *cfg, const uint8_t *snap_in, Out *out)
     w.w_001FF080 = w_001FF080; w.w_001D2830 = w_001D2830; w.w_001FA790 = w_001FA790;
     w.w_001AEE10 = w_001AEE10; w.w_001AEDE0 = w_001AEDE0; w.w_001AEBA0 = w_001AEBA0;
     w.w_001AB790 = w_001AB790; w.w_001ABF90 = w_001ABF90;
+    w.w_0022D360 = w_0022D360; w.w_0022D380 = w_0022D380; w.w_001AF2C0 = w_001AF2C0;
+    w.w_00225A00 = w_00225A00; w.w_00225AC0 = w_00225AC0; w.w_001B0C00 = w_001B0C00;
+    w.w_001C40B0 = w_001C40B0; w.w_001D1C50 = w_001D1C50; w.w_001D1EA0 = w_001D1EA0;
     switch (cfg->null_address) {
 #define NUL(addr, field) case 0x##addr##u: w.field = NULL; break;
     NUL(28A9A0, r_0028A9A0) NUL(282157, r_00282157) NUL(821058, s_00821058)
@@ -430,7 +446,10 @@ int scene_task_shim(const Cfg *cfg, const uint8_t *snap_in, Out *out)
     NUL(1AEDB0, w_001AEDB0) NUL(1AED80, w_001AED80) NUL(1FF080, w_001FF080)
     NUL(1D2830, w_001D2830) NUL(1FA790, w_001FA790) NUL(1AEE10, w_001AEE10)
     NUL(1AEDE0, w_001AEDE0) NUL(1AEBA0, w_001AEBA0) NUL(1AB790, w_001AB790)
-    NUL(1ABF90, w_001ABF90)
+    NUL(1ABF90, w_001ABF90) NUL(22D360, w_0022D360) NUL(22D380, w_0022D380)
+    NUL(1AF2C0, w_001AF2C0) NUL(225A00, w_00225A00) NUL(225AC0, w_00225AC0)
+    NUL(1B0C00, w_001B0C00) NUL(1C40B0, w_001C40B0) NUL(1D1C50, w_001D1C50)
+    NUL(1D1EA0, w_001D1EA0)
 #undef NUL
     default: break;
     }
@@ -443,6 +462,7 @@ int scene_task_shim(const Cfg *cfg, const uint8_t *snap_in, Out *out)
     case 0x1AD360: r = em_sf_001AD360(&s, u, wp); break;
     case 0x1ADF50: r = em_sf_001ADF50(&s, u, wp); break;
     case 0x1AD4E0: r = em_sf_001AD4E0(&s, u, wp); break;
+    case 0x1AD740: r = em_sf_001AD740(&s, u, wp); break;
     case 0x1AD010: r = em_sf_001AD010(&s, u, wp); break;
     case 0x1AD140: r = em_sf_001AD140(&s, u, wp); break;
     case 0x1ADF00: r = em_sf_001ADF00(&s, wp); break;
@@ -471,7 +491,7 @@ class Cfg(C.Structure):
     _fields_ = [(n, C.c_int32) for n in ('entry', 'fail_at', 'perturb', 'clear_bd8', 'r_1AD1A0',
                                          'r_1AD230', 'r_21B550', 'fade', 'busy')] + \
                [('null_address', C.c_uint32)] + \
-               [(n, C.c_int32) for n in ('prefault', 'null_user', 'no_table')]
+               [(n, C.c_int32) for n in ('prefault', 'null_user', 'no_table', 'r_22D380', 'r_225AC0')]
 
 
 class Out(C.Structure):
@@ -503,7 +523,8 @@ class Native:
         cfg = Cfg(entry, fail_at, int(config.get('perturb', 0)), int(config.get('clear_bd8', 0)),
                   config['results'][0x1AD1A0], config['results'][0x1AD230],
                   config['results'][0x21B550], config['fade'], config['busy'], null_address,
-                  prefault, null_user, no_table)
+                  prefault, null_user, no_table, config['results'][0x22D380],
+                  config['results'][0x225AC0])
         out = self.out
         self.lib.scene_task_shim(C.byref(cfg), bytes(snap), C.byref(out))
         assert not out.overflow
@@ -644,7 +665,8 @@ def background(rng, noise):
 
 def random_config(rng):
     return {'results': {0x1AD1A0: rng.choice((0, 4, 1)), 0x1AD230: rng.choice((0, 4)),
-                        0x21B550: rng.choice((0, 1, 4))},
+                        0x21B550: rng.choice((0, 1, 4)), 0x22D380: rng.choice((0, 1)),
+                        0x225AC0: rng.choice((0, 1))},
             'fade': rng.choice((0, 1, 2, 3, -1, -32768, 0x7FFF)),
             'busy': rng.choice((0, 1, 0x80, 0xFF)),
             'clear_bd8': rng.randrange(2), 'perturb': 0}
@@ -699,6 +721,25 @@ def cases():
         config = random_config(rng)
         config['fade'] = fade
         yield 0x1AD4E0, snap, config, f'1AD4E0 +A={tA:X} BD8={bd8} fade={fade} n={count:X} e74={e74:X}'
+    # 001AD740: +A x +B x 3B93 x fade x the +0x1A timer x E74 x the knife / tags /
+    # continue counter, the credits' and the card screen's results (a sample).
+    for tA, tB in itertools.product((0, 1, 2, 3, 4, 5, 6, 7, 0xFF), (0, 1, 2, 3, 4, 5, 6, 7)):
+        for sample in range(10 if tA in (1, 3) else 4):
+            snap = background(rng, rng.randrange(2))
+            put(snap, TASK+0xA, tA); put(snap, TASK+0xB, tB)
+            put(snap, 0x70003B93, rng.choice((0, 1, 2)))
+            put(snap, TASK+0x1A, rng.choice((0, 1, 2, 0x30, 0x1C60, 0xFFFF)), 2)
+            put(snap, 0x810E74, rng.choice((0, 0x800, 0xF7FF, 0xFFFF)), 2)
+            put(snap, 0x275BD8, rng.choice((0, 1)))
+            put(snap, 0x81070A, rng.choice((0, 5, 0xFE, 0xFF)))
+            tags = rng.choice(('all', 'none', 'some'))
+            put(snap, 0x810C90, rng.choice((0, 1, 0x80)))
+            for i in range(1, 0x10):
+                put(snap, 0x810C90+i, (rng.choice((1, 0x80)) if tags == 'all' else
+                                       0 if tags == 'none' else rng.choice((0, 1))))
+            config = random_config(rng)
+            config['fade'] = rng.choice((0, 1, 2, 3))
+            yield 0x1AD740, snap, config, f'1AD740 +A={tA:X} +B={tB:X} {tags} s{sample}'
     # 001AD010: B8 x 3B93 x B6 x B5 x B7.
     for b8, st, b6, b5, b7 in itertools.product((0, 1, 2, 3, 0xFF), (0, 1, 2, 3, 0xFF),
                                                 (0, 3, 0x7F, 0x80, 0xFE, 0xFF),

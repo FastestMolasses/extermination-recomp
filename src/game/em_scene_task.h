@@ -51,6 +51,10 @@ int em_sf_001ACEC0(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w);
 int em_sf_001AD250(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w);
 int em_sf_001AD360(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w);
 int em_sf_001ADF50(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w);
+/* 001AD740 (byte-matched): the ending, steps on +A (7 states); the credits,
+ * the continue state rebuilt, screen module 0x37's two pictures, the clear
+ * save; other +A values do nothing. */
+int em_sf_001AD740(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w);
 int em_sf_001AD4E0(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w);
 int em_sf_001AD010(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w);
 int em_sf_001AD140(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w);

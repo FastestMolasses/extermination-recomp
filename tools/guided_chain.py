@@ -130,6 +130,10 @@ CHAINS = {
     'g20': ('g73', mrb.G20_ROUTE, ('g73_area04_area20', 'g74_area20_tag8', 'g75_area20_area21', 'g76_area21_prep',
                                    'g77_area21_phase1', 'g78_area21_phase2', 'g79_area21_phase3',
                                    'g80_area21_ending')),
+    # The ending alone (lane PORT-A21-ENDING), while g20 does not reach it: card g80 (g79's end,
+    # AREA21 after the Origin's phase 3) -> the ending script -> 001AD740: the credits 0022D380,
+    # screen module 0x37's two pictures, the clear save 00225A00 / 00225AC0(1) -> +9 = 4.
+    'g21': ('g80', mrb.G20_ROUTE, ('g80_area21_ending',)),
 }
 
 

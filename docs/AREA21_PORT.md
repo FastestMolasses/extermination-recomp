@@ -615,11 +615,59 @@ em_equipment_live) faults at address 0x7A6DE4. g80 not reached.
   saved files with the take's card_end.ps2 (tools/ps2_card.py ls,
   read only).
 
+## Ending (lane PORT-A21-ENDING, 2026-11-18, branch `a21ending`)
+
+- **001AD740** (byte-matched C) is translated: em_sf_001AD740 in
+  em_scene_task.c, run by 001AD250 at +9 = 3 as a core (no worker), all
+  seven states, the state-1 credits wait (+0x1A pre-decrement 0x30), the
+  state-2 rebuild (knife D_00810C90, tags D_00810C91..9F, the saturating
+  continue counter D_0081070A, D_00810750 kept across 001AF2C0, area 0x0B
+  0 0, the unlocks, the quartet CA8 / CAA / CAC / CB0, the all-tags 001C40B0(3,
+  1) / CAA 0x63 / CA6 3) and state 3's two 001ABF90 packets (+0x1A
+  post-decrement 0x1C60 / 0x1AC). Oracle: test_scene_task_reference runs the
+  original 001AD740 (0x7C0 bytes) as an entry and under 001AD250 / 001ACEC0:
+  768 compared runs (with the perturbing stub) plus fail-stop at every
+  event; LAYOUT adds D_0081070A, D_00810C90..9F and D_00810CA6..CB1. New
+  EmSceneWorkers hooks: w_0022D360, w_0022D380, w_001B0C00, w_001AF2C0,
+  w_001C40B0, w_00225A00, w_00225AC0 (not bound live yet: g80 would fault
+  there by name at row 8244).
+- **Chain g21** (tools/guided_chain.py): g80 alone from card g80. The card's
+  LOAD GAME is not the take's continuous play: rows differ from row 0 (the
+  load pose's y 36.694 settles to 36.454; rand() from row 1).
+- **Second background**: from g79's end the channel-3 list sends TEX0
+  0x20076C0121323740 (TBP 0x3740), not the play captures' 0x3700.
+  tools/export_area21_ending_background.py runs the same background export
+  over g79's end capture (texels equal its GS freeze) into
+  assets/area21/sub0/background_<TEX0>.embg; em_render_frame's gate loads
+  such a file when the list asks for that TEX0.
+- **Row 407 (not fixed)**: script 0x82CBD0's op09 callback 0x827250
+  (em_area21_owners) stores the vitals words D_00810858 / D_008104D0 /
+  D_0081085C / D_008104D8, then calls 0015C700 / 0015C750 / 001B81D0 on
+  D_008102B0. Those three are now bound for area overlays
+  (em_scene_bindings area01_missing_worker: player_pose_0015C700,
+  em_player_closure_live_0015C750, em_area11_script_host_001B81D0) and
+  return 0, but the composition's player view then refuses its commit
+  (em_area01_player_view_commit fault 2, stale owner): the overlay wrote
+  the vitals' canonical owners (external_snapshot reads d810858 /
+  pd_pend_hp / d81085C / pd_pend_inf) while the view was open. A rebase of
+  the view's vitals baseline after those stores was tried and did not clear
+  it (another owner value or link also moves: 0015C7C0's clip or the face
+  slot); the view needs a rule for owner stores the original makes inside
+  it. Next: tabulate which EmArea01PlayerValues field differs at that
+  commit.
+- Still open after row 407: the credits 0022D360 / 0022D380 (translation
+  over 001CC1E0 / 001CC170 / 00207F80 and the row table D_00268B40; the
+  colour structs' third byte is left unset by the original), module 0x37's
+  export and em_render_001ABF90's two packets, the save 00225A00 /
+  00225AC0(1) binding, the card comparison with
+  build/guided_play/g80_area21_ending/card_end.ps2, the credits' music cue.
+
 ## Next
 
 0. Next: g79 row 667's 001869A0 store to +0x24 and the 0018AF50
-   behaviour, then g80: 001AD740, the credits 0022D380, module 0x37's
-   pictures, the clear save (Final phase). (done: g79's rand() word at
+   behaviour, then g80: row 407's player-view commit after 0x827250
+   (Ending), the credits 0022D380, module 0x37's pictures, the clear save
+   (Final phase); 001AD740 is done (Ending). (done: g79's rand() word at
    row 418 and g76's at row 6386, Final phase.)
 1. (done) 0x825B00, the AREA21 op09 callbacks, D_00275C48 (Phases);
    001E76A0 (Haze ring); 0x823B40 and 001B7670's gate (lane

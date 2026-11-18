@@ -143,6 +143,14 @@ typedef struct EmSceneWorkers {
     int (*w_001AEDE0)(void *ctx, int16_t a0, uint8_t a1);
     int (*w_001FAB50)(void *ctx);
     int (*w_001AB790)(void *ctx, uint32_t fn); /* task replace; 001ADF00 passes 0x1AC070 */
+    /* 001AD740 (the ending, lane PORT-A21-ENDING). */
+    int (*w_0022D360)(void *ctx); /* the credits' reset (memset D_00822CD0, 0x20) */
+    int (*w_0022D380)(void *ctx); /* the credits; original result: 1 when over */
+    int (*w_001B0C00)(void *ctx, int a0);
+    int (*w_001AF2C0)(void *ctx); /* the progress reset */
+    int (*w_001C40B0)(void *ctx, int a0, int a1); /* item give */
+    int (*w_00225A00)(void *ctx);
+    int (*w_00225AC0)(void *ctx, int a0); /* the card screen; original result: != 0 when done */
 } EmSceneWorkers;
 
 /* Call protocol for the cores. Before calling worker `present` (non-zero
