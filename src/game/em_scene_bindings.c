@@ -2912,6 +2912,7 @@ static int arrival_scene(void)
            strcmp(g.scene_dir, AREA00_SCENE_DIR) == 0 ||
            strcmp(g.scene_dir, AREA02_SCENE_DIR "/sub0") == 0 ||
            strcmp(g.scene_dir, AREA02_SCENE_DIR "/sub1") == 0 ||
+           strcmp(g.scene_dir, AREA02_SCENE_DIR "/sub2") == 0 ||
            strcmp(g.scene_dir, AREA04_SCENE_DIR) == 0 ||
            strcmp(g.scene_dir, "assets/area22/sub0") == 0 ||
            strcmp(g.scene_dir, "assets/area06/sub0") == 0 ||
@@ -3724,7 +3725,10 @@ static int area_read(void)
         scene = AREA01_SCENE_DIR;
     if (s_state.d810700 == 0 && s_state.d810701 <= 1)
         scene = AREA00_SCENE_DIR;
-    if (s_state.d810700 == 2 && s_state.d810701 <= 1)
+    /* AREA02 sub 2 (chunk06.n2, the guided run's duct at g51; tools/
+     * export_area02s2_assets.py, docs/AREA02_ASSETS.md, its section on sub 2)
+     * in the same per-sub layout. */
+    if (s_state.d810700 == 2 && s_state.d810701 <= 2)
         scene = area02_file(s_state.d810701, "");
     if (s_state.d810700 == 4 && s_state.d810701 == 0)
         scene = AREA04_SCENE_DIR;
@@ -4149,6 +4153,11 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
      * when it runs. */
     if (s_state.d810700 == 0 && s_state.d810701 == 2 && fn < 0x00823500u && fn && fn != 0x001F5040u)
         goto bind;
+    /* AREA02 sub 2's boot owners (placements 0x8283D0, groups 0x826080 /
+     * 0x8263F0; decomp tools/area_overview.py --area 2), likewise; its one
+     * overlay owner, the turntable 0x825100, is sub 0's (below). */
+    if (s_state.d810700 == 2 && s_state.d810701 == 2 && fn < 0x00823500u && fn && fn != 0x001F5040u)
+        goto bind;
     /* AREA02's pool owners (the 0x823930 / 0x823D70 / 0x824FA0 / 0x825100
      * placements and 0x823580's spawned node; em_area01_runtime area 2). */
     if (s_state.d810700 == 2 && fn >= 0x00823500u) {
@@ -4319,7 +4328,9 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
          /* AREA17: the creature's beam 001B3C30 (00133E30's 001348E0) */
          s_state.d810700 == 0x11 ||
          /* AREA06 sub 1: the creature 00147390's beam 001B3C30 (group 0x8265E0) */
-         (s_state.d810700 == 6 && s_state.d810701 == 1)) &&
+         (s_state.d810700 == 6 && s_state.d810701 == 1) ||
+         /* AREA02 sub 2: the same creature's beam (group 0x826080 [7] .. [9]) */
+         (s_state.d810700 == 2 && s_state.d810701 == 2)) &&
         fn == 0x001F5040u) {
         if (!em_aim_fire_flash_owns(a) && em_area01_live_adopt_flash(&s_area01_live, a) < 0)
             return -1;
@@ -4691,7 +4702,8 @@ static int area01_bind_roster(void *ctx, EmActor *a, const EmActorRosterSpawned 
 static int spawn_area01(void)
 {
     const unsigned area = s_state.d810700, sub = s_state.d810701;
-    if (!((area == 1 && sub == 0) || ((area == 0 || area == 2) && sub <= 1) || (area == 4 && sub == 0) ||
+    if (!((area == 1 && sub == 0) || ((area == 0 || area == 2) && sub <= 1) || (area == 2 && sub == 2) ||
+          (area == 4 && sub == 0) ||
           mid_area(area, sub)))
         return em_scene_fault(&s_state, 0x001B6990u, EM_SCENE_FAULT_BAD_INDEX);
     const char *path = area == 1 && sub == 0 ? AREA01_ROSTER_PATH :

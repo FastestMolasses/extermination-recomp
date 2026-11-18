@@ -473,6 +473,64 @@ Nothing is wired. The files are exported, checked and loadable, except
 - The ctx +0xA0..+0xFF block is evaluated at run time from
   `assets/render_context.emrc` (room entries 5 / 6), as for AREA01 and AREA00.
 
+## Sub 2 (lane PORT-A02S2, 2026-11-17)
+
+`tools/export_area02s2_assets.py` exports AREA02 sub 2 (`chunk06.n2`:
+placements 0x8283D0, groups 0x826080 / 0x8263F0), the south tunnel and its
+rails room as AREA02 loads it once the car has stopped. The guided run
+reaches it by the duct from sub 1 (g51 row 3333, area bytes 02 02 05) and
+leaves by door [25] into AREA04 sub 1 entry 0 (g51 row 5546). It runs the
+AREA13 lane's per-(target, sub) exporters, as AREA01 sub 1 and AREA06 sub 1
+do: a Target for AREA02 (area 2, AREA02.BIN = MWo3 id 3, INDEX chunk06,
+nested) pointed at sub 2.
+
+- **Captures:** no take of the guided run ends in sub 2, so the export uses
+  the fork route sets `levels-recordings-20261102-1/s87/route_a04e/a04e_01_door41`
+  (AREA04 sub 1's slider [41] -> sub 2 entry 4, after the real load,
+  02 02 04 02) and `route_a02c/a02c_00_seal` (the same load later, the seal
+  [21] broken); one load map fits both (D_0028A740 0x13E38C0). Previous:
+  a04e_00_hall (AREA04 sub 1). The duct's own load sits elsewhere (g50's
+  end: D_0028A73C 0x1349D00 against 0x133C1C0 here); AREA01 sub 1's
+  cross-check showed the files the port reads do not depend on the load
+  base (only the raw banks and EMWM's header address do).
+- **No area message bank:** sub 2's nested list has no id 0x41, so
+  *D_0028A594 keeps the previous load's word (0x15349C0 from AREA04 in both
+  captures), as sub 1 (finding 2). The level exporter accepts the word only
+  when it equals the previous capture's; the tables exporter writes no
+  message file (`export_area13_tables.NO_AREA_BANK`). The runtime keeps
+  sub 0's tables, as for sub 1.
+- **Rules** (from AREA02's byte-identical overlay C): sub 2's one overlay
+  owner is the turntable 0x825100 ([27], [28]), which passes self + 0xD0 to
+  001A2370; the pickup 0x219550 (group [0]) is the exporter's own rule. The
+  0019C6F0 callers (0x823D70, 0x823930's kinds, 0x823980) are sub 0's only
+  (decomp `tools/area_overview.py --area 2`, owner_subs): no flag call.
+  Cells: 51 uids, the hull of uid 45 re-derived.
+- **Level:** static bank 799 objects -> one zone EMDL (798 objects, 14,397
+  vertices, 95 textures, every decode equal to the GS freeze); collision
+  from `chunk06.n2` id 0x42 (2,377 vertices, 1,800 polygons); background
+  not armed.
+- **Tables:** roster 53 placements + groups 0x826080 (19) and 0x8263F0
+  (18); door row 0x24DFC0 ([22] -> AREA01 entry 3, [25] -> AREA04 entry
+  0); the spawn table, door rows, the 12 script chains and the overlay data
+  are byte-identical to `assets/area02/`'s, which serve every sub. The
+  AREA02 C casts the chain argument; the exporter's pattern takes the cast.
+- **Sound:** container `chunk06.n2` +0 (743,392 bytes, 4 banks); group 3
+  bank 0 is refused in both captures (no SShd: no attachment worn on that
+  route; the attachment scope holds it in the guided run). Scope (2, 2) is
+  the registry's last mid scope (78 samples).
+- **Profile 02s2** (`tools/level_asset_profiles.py`): world textures (462
+  fixed, 1 unresolved key; func_001D5370 has no case 0x0202, so no dynamic
+  list), shadow receivers (798), player texture variants (the a04e / a02c /
+  k00 captures); output `assets/levels/02/sub2/`. Module packs: (0x02, 2) in
+  `export_module_loader.DEFAULT_AREAS` and `export_level_module_pack.AREAS`.
+
+Output (ignored, never committed): `assets/area02/sub2/`,
+`assets/levels/02/sub2/`. Live wiring: AREA02's per-sub layout takes sub 2
+(em_scene_bindings area_read, the roster, arrival_scene), its boot owners
+bind and take the later dispatch (em_area01_runtime), the creature
+00147390's beam node 001F5040 binds as in AREA06 sub 1, and the world
+textures and shadow receivers select profile 02s2.
+
 ## Known gaps
 
 1. **Script run-time words** are located (each in a reached record, each
@@ -486,9 +544,9 @@ Nothing is wired. The files are exported, checked and loadable, except
    x stands for the largest x it reached.
 4. **The grid pointer** D_0028A598 is pinned by measurement; the code that
    fills it is not identified.
-5. **Not exported:** sub 2 (`chunk06.n2`, placement table 0x8283D0): no
-   capture loads it; shadow receivers, owner object textures and door, prop
-   and pickup models (as for AREA01 and AREA00).
+5. **Not exported:** owner object textures and door, prop and pickup
+   models (as for AREA01 and AREA00). Sub 2 is exported (the section on
+   sub 2 below); its duct load (from sub 1) has no capture.
 6. **SPU residency** of the samples: there is no AREA02 SPU capture.
 7. **The 46 UNSUPPORTED sub-1 sound ids** (finding 8) and the one sub-0
    script-op id are not resolved.

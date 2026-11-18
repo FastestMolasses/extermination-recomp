@@ -701,6 +701,14 @@ stick: capture_from_take keeps both with their row 'k') are placed at f =
 k - 2, the first take's too: EM_START_AT_PAD accepts f = -2 and -1, rows
 set before the script's first frame (the card's rows 0 and 1 read them;
 lane PORT-A01S1: g59's first stick was read one frame late before).
+Since lane PORT-A02S2 (AREA02 sub 2 exported and live, AREA15's 0x824B40 /
+0x824C90 translated) g11 plays from card g49 to the end of g58 with every
+real load: g49 4778 / 4841 compared rows on the row, g50 1037 / 1037, g51
+5344 / 5346, g52 2602 / 2602, g53 5070 / 5071, g54 2745 / 2745, g55 2300 /
+2300, g56 7662 / 7665, g57 5286 / 5286, g58 5624 / 5625, with the
+original's hits. Assets it needs: AREA01 sub 1's and AREA02 sub 2's exports
+(docs/AREA01_ASSETS.md, docs/AREA02_ASSETS.md, their sub sections), the
+module packs and the sfx registry re-run after them.
 
 ### EM_SKIP_STARTUP=1: the older debug fixture
 

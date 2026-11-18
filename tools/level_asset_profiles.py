@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SUBS = {'00': (0, 1), '01': (0,), '02': (0, 1), '03': (0,), '07': (0, 2, 3), '08': (0, 2, 3),
         '04': (0,), '06': (0,), '13': (0,), '13x': (0,),
         '15': (0, 1), '19': (0,), '19x': (0,), '19s1': (1,), '22': (0,),
-        '03x': (1, 2), '04x': (1,), '00s2': (2,), '06s1': (1,), '01s1': (1,), '14': (0,), '17': (0,), '16': (0, 1)}
+        '03x': (1, 2), '04x': (1,), '00s2': (2,), '06s1': (1,), '01s1': (1,), '02s2': (2,), '14': (0,), '17': (0,), '16': (0, 1)}
 _active = None
 
 
@@ -36,6 +36,9 @@ def configure(profile, sub):
         return A.install()
     if profile == '01s1':                 # AREA01 sub 1 (chunk05.n1)
         import export_area01s1_assets as A
+        return A.install()
+    if profile == '02s2':                 # AREA02 sub 2 (chunk06.n2)
+        import export_area02s2_assets as A
         return A.install()
     if profile in ('07', '08'):
         import export_area08_common as A
@@ -85,6 +88,6 @@ def area03(sub):
 def output(profile, sub):
     if profile in ('03x', '04x'):         # export_area03x_split.py places them
         return ROOT/f'build/area03x/assets/tree/{profile[:2]}_{sub}/sub{sub}'
-    if profile in ('00s2', '06s1', '01s1'):
+    if profile in ('00s2', '06s1', '01s1', '02s2'):
         return ROOT/'assets/levels'/profile[:2]/f'sub{sub}'
     return ROOT/'assets/levels'/profile/f'sub{sub}'

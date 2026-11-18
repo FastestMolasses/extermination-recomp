@@ -208,6 +208,12 @@ def run_time_words(disc, base, ram, records, writers=None):
 # explicit_model_problems instead of the generic rule (a callable model id
 # takes (ram, node)).
 EXPLICIT_MODELS = {0x826850: (2, 0xD)}
+# Targets whose nested list holds no area message bank (no id 0x41): the
+# export writes no message file, as AREA02 sub 1 (AREA02_ASSETS.md finding
+# 2); *D_0028A594 must then be the same word in every capture and outside
+# this load's id list (name -> the previous capture's word, the value the
+# load left in place)
+NO_AREA_BANK = {}
 
 
 def explicit_model_nodes(ram):
@@ -430,22 +436,32 @@ def export_target(name, out_root):
     (out / 'roster.emro').write_bytes(blob)
     lmap, _info = C.build_load_map(caps[0])
     image = C.LoadedImage(lmap)
-    bank, _label = E02.area_bank(image, caps[0])
-    for cap in caps[1:]:
-        if E02.area_bank(image, cap)[0] != bank:
-            raise SystemExit(f'{cap.name}: a different area message bank')
     rel = A13.relocation_problems(caps[0])[1]
-    if rel.get(0x41) != bank:
-        raise SystemExit(f'*D_0028A594 = {bank:#x} is not the relocated id 0x41')
-    source, labels = E02.bank_source(image, bank, C.SCRATCH)
-    saved = T.AREA_BANK
-    T.AREA_BANK = (str(source), 0)
-    try:
-        report['messages'] = T.export_messages(caps, out / 'message_data.emmd')
-    finally:
-        T.AREA_BANK = saved
-    report['messages']['area_bank'].update(source='the resident image from the bank address', address=hex(bank),
-                                           resident_files=labels)
+    if name in NO_AREA_BANK:
+        words = {C.u32(cap.ram, T.D_0028A594) for cap in caps}
+        if 0x41 in rel or words != {NO_AREA_BANK[name]}:
+            raise SystemExit(f'*D_0028A594 {sorted(hex(w) for w in words)}: not the previous load\'s '
+                             f'{NO_AREA_BANK[name]:#x} with no id 0x41 in the list')
+        if (out / 'message_data.emmd').exists():
+            (out / 'message_data.emmd').unlink()
+        report['messages'] = dict(area_bank=None, stale_word=hex(NO_AREA_BANK[name]),
+                                  file=None, reason='no id 0x41 in the nested list: no area message bank')
+    else:
+        bank, _label = E02.area_bank(image, caps[0])
+        for cap in caps[1:]:
+            if E02.area_bank(image, cap)[0] != bank:
+                raise SystemExit(f'{cap.name}: a different area message bank')
+        if rel.get(0x41) != bank:
+            raise SystemExit(f'*D_0028A594 = {bank:#x} is not the relocated id 0x41')
+        source, labels = E02.bank_source(image, bank, C.SCRATCH)
+        saved = T.AREA_BANK
+        T.AREA_BANK = (str(source), 0)
+        try:
+            report['messages'] = T.export_messages(caps, out / 'message_data.emmd')
+        finally:
+            T.AREA_BANK = saved
+        report['messages']['area_bank'].update(source='the resident image from the bank address',
+                                               address=hex(bank), resident_files=labels)
     wm, index = export_world_models(image, caps, placements, groups)
     if rel.get(0x43) != int(index['table_address'], 16):
         raise SystemExit(f'*D_0028A59C = {index["table_address"]} is not the relocated id 0x43')

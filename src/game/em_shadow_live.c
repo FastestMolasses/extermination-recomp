@@ -206,6 +206,8 @@ int em_shadow_live_select_area(unsigned area, unsigned subarea)
     if (area == 0 && subarea == 1) path = EM_SHADOW_LIVE_AREA00_SUB1_RECEIVERS_PATH;
     if (area == 2 && subarea == 0) path = EM_SHADOW_LIVE_AREA02_SUB0_RECEIVERS_PATH;
     if (area == 2 && subarea == 1) path = EM_SHADOW_LIVE_AREA02_SUB1_RECEIVERS_PATH;
+    /* --profile 02s2 (AREA02 sub 2, tools/export_area02s2_assets.py) */
+    if (area == 2 && subarea == 2) path = "assets/levels/02/sub2/shadow_receivers.emsr";
     if (area == 4 && subarea == 0) path = EM_SHADOW_LIVE_AREA04_SUB0_RECEIVERS_PATH;
     /* tools/export_level_shadow_receivers.py --profile 22 / 06 */
     if (area == 0x16 && subarea == 0) path = EM_SHADOW_LIVE_AREA22_SUB0_RECEIVERS_PATH;
