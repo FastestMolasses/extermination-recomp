@@ -27,12 +27,18 @@ Usage (native arm64 macOS; build/extermination first, native):
                                                # --render draws the picture as well)
   python3 tools/watch_takes.py --root ../Extermination/build/guided_play g01_title_newgame
                                                # Claude's guided chain (docs FULL_RUN_PLAN 8.3)
+  python3 tools/watch_takes.py --check --ticks 64000 --root ../Extermination/build/guided_play g01_title_newgame
+                                               # a stop point: the chain's first 64000 game ticks
 
 --root DIR plays the chains of another take folder; the default is the user's
 own takes. A chain never mixes the two: under --root, a take whose start state or
 card lies outside DIR is refused, and the output goes to build/guided_takes/.
 --port DIR runs another checkout's built binary (its build/extermination and
 assets), e.g. a worktree that has no build of its own.
+
+A guided take's pad columns are re-read from its input.log at the vsync the
+original read them (read_pads: the guided recorder's timeline rule is one vsync
+off the user's); the user's takes play their take.rec as written.
 
 rand()'s state follows the recording tick by tick (em_replay.c says why), and the
 world clock too (take.rec's column, or tools/take_clock.py for an older take), so a
@@ -41,10 +47,12 @@ difference comes from the logic and not from a load's length.
 Output: build/takes/<first take>/ (derived from the disc: never committed).
 """
 import argparse
+import bisect
 import json
 import math
 import os
 import shutil
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -99,18 +107,75 @@ def clocks(names):
     return out
 
 
-def stitch(names, path):
+def input_log(folder):
+    """The take's input.log as {vsync: (buttons, lx, ly, rx, ry)} (the decomp's
+    record_original_play.records: 32-byte records, a later record of a vsync wins)."""
+    data = (folder / 'input.log').read_bytes()
+    return {v: pad for v, _tick, *pad in
+            (struct.unpack_from('<IIH4B', data, i) for i in range(0, len(data) - 31, 32))}
+
+
+def read_pads(name, carried):
+    """The pad each played tick of a guided take read, or None for a take whose
+    take.rec pad columns already are (the user's takes).
+
+    take.rec lists at row k the input.log record of row k's vsync. Both kinds of
+    take replay exactly on the original, but with different timeline rules: a
+    user's take puts record v at offset v - (first record) - 1 = v - start - 2
+    (the decomp's record_original_play.timeline), a guided take at offset
+    v - start + shift with shift -1 (record_guided_run.replay; verify.json
+    'shift'). EM_INPUT_PLAY plays the user's rule (row k's pad is tick k's read:
+    test1 and run1 play exact), so a guided take's tick k read the record of
+    vsync(k) - 2 - shift, one vsync earlier than its take.rec row says: played
+    as listed, every guided stick reached the port a tick early (the heading
+    one pi/8 turn step ahead, lane PORT-WATCH-DRIFT). Before a take's first
+    record the pad in effect is the one the previous take left ('carried').
+    Returns (pads per game row, the take's last pad)."""
+    folder = TAKES / name
+    verify = folder / 'verify.json'
+    shift = json.loads(verify.read_text()).get('shift') if verify.exists() else None
+    if shift is None:
+        return None, carried
+    meta = json.loads((folder / 'rows.tbl.json').read_text())
+    at = next(h['offset'] for h in meta['row_header'] if h['name'] == 'vsync')
+    table = (folder / 'rows.tbl').read_bytes()[meta['header_size']:]
+    size = meta['row_size']
+    log = input_log(folder)
+    keys = sorted(log)
+    pads = []
+    for i in range(len(table) // size):
+        v = struct.unpack_from('<I', table, i * size + at)[0] - 2 - shift
+        if v in log:
+            pads.append(log[v])
+        else:
+            j = bisect.bisect_right(keys, v)
+            pads.append(log[keys[j - 1]] if j else carried)
+    return pads, log[keys[-1]] if keys else carried
+
+
+def stitch(names, path, ticks=None):
     rows, last = [], -1
     clock = clocks(names)
+    carried = (0, 128, 128, 128, 128)
     for name in names:
         take = TAKES / name / 'take.rec'
         if not take.exists():
             sys.exit(f'{take} is missing: run tools/record_original_play.py trace {name} in the decomp')
+        pads, carried = read_pads(name, carried)
+        played = -1
         for line in take.read_text().splitlines():
             if line.startswith('#'):
                 continue
             parts = line.split()
             movie = parts[2] == '1'
+            if not movie:
+                played += 1
+                if pads is not None:
+                    if played >= len(pads):
+                        sys.exit(f'{name}: take.rec has more game rows than rows.tbl')
+                    btn, *axes = pads[played]
+                    parts[4:9] = [f'0x{btn:04x}', *map(str, axes)]
+                    line = ' '.join(parts)
             if not movie and int(parts[1]) <= last:
                 continue            # the tick a take ended inside: the earlier take has it
             if not rows and not movie:
@@ -118,6 +183,9 @@ def stitch(names, path):
             if not movie:
                 last = int(parts[1])
             rows.append(line)
+    if ticks is not None:
+        played = [i for i, line in enumerate(rows) if line.split()[2] == '0']
+        rows = rows[:played[ticks - 1] + 1] if ticks < len(played) else rows
     rows = [' '.join([str(i), *line.split()[1:]]) for i, line in enumerate(rows)]
     header = HEADER
     if clock:
@@ -228,6 +296,8 @@ def main():
     parser.add_argument('--render', action='store_true', help='with --check: draw the picture too (default: EM_NO_RENDER=1, state only)')
     parser.add_argument('--root', help='the take folder (default: the user\'s own takes)')
     parser.add_argument('--port', help='run this port checkout\'s build (default: this one)')
+    parser.add_argument('--ticks', type=int, help='play only the chain\'s first N game ticks (the lead-in\'s '
+                        'included): a stop point inside a long chain')
     args = parser.parse_args()
     if args.root:
         use_root(args.root)
@@ -245,7 +315,7 @@ def main():
         shutil.rmtree(out / 'card')     # every run starts from an empty card, as the take did
     (out / 'card').mkdir(parents=True)
     rec, log = out / 'stitched.rec', out / 'played.rec'
-    ticks = stitch(names, rec)
+    ticks = stitch(names, rec, args.ticks)
     print(f'{" + ".join(names)}: {ticks} ticks, {ticks / 59.94 / 60:.1f} minutes', flush=True)
     env = {k: v for k, v in os.environ.items() if not k.startswith('EM_')}
     env.update(EM_INPUT_PLAY=str(rec), EM_INPUT_RECORD=str(log), EM_PS2_DISC_DRIVE_TIMING='1',
