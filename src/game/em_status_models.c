@@ -864,8 +864,11 @@ static int load_skeletons(EmStatusModels *m, const char *path)
 
 EmStatusModels *em_status_models_load(const char *directory)
 {
-    static const uint8_t glyphs[] = {0x2F, 0x40, 0x30, 0x31, 0x32, 0x38, 0x33, 0x34, 0x36, 0x37, 0x39, 0x3A,
-                                     0x3B, 0x3C, 0x3D, 0x6D};
+    /* Every glyph 0020E3A0 can name (tools/export_status_models.py GLYPHS);
+     * each keeps its own nodes (0x33 / 0x34 / 0x3D two, 0x35 three), posed
+     * by 001C62C0 / 001C6380 over its skeleton records (models.emsk). */
+    static const uint8_t glyphs[] = {0x2F, 0x40, 0x30, 0x31, 0x32, 0x38, 0x33, 0x34, 0x35, 0x36, 0x37, 0x39,
+                                     0x3A, 0x3B, 0x3C, 0x3D, 0x6D};
     char path[1024];
     EmStatusModels *m = calloc(1, sizeof *m);
     if (!m || !directory)

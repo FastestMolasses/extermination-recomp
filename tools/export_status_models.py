@@ -25,6 +25,15 @@ Exported: the menu player of variant 0 / costume 0 and the equipment parts
 0020E3A0 can name (the capture showed '/', '@', '0', '1', '2', '8'). Any other
 selection is a missing asset the port faults on (em_status_models.c).
 
+A glyph model of several nodes keeps them all: 001C6150 returns the byte at
+model + 8, 0020E460 takes that many bone slots, 001C62C0 copies each node's
+parent and bind from the skeleton records and 001C6380 composes the node
+matrices +0x90 (bind x parent's +0x90, em_owner_services_001C9610). Its mesh
+stays node-local, each vertex on the node its position-W slot names (the
+VU1 palette index), so the port's palette (the +0x90 matrices) places it.
+Model 0x35 (code 3) is such a model: node 1's bind moves its part by
+(5.52, 0.31, 0) from node 0, node 2's bind moves it back.
+
 Writes (ignored, disc-derived):
   assets/status_models/menu_player.emdl   mesh + texels, 21 nodes
   assets/status_models/menu_player.empc   clips 0x1C2 and 0x0A (keys)
@@ -62,8 +71,8 @@ CLIPS = (0x1C2, 0x0A)                          # 0020E6F0's two clips
 CAPTURED_GLYPHS = (0x2F, 0x40, 0x30, 0x31, 0x32, 0x38)
 # Every part 0020E3A0 can name, as 0020E250 spawns them for D_00810CA4..A7: the
 # fitted attachment is CA6 (the SHOTGUN UNIT's model 0x33); em_status_models.c
-# lists the same. Models of two nodes whose second node's bind is the unit
-# matrix are one rigid piece here.
+# lists the same. Every model keeps its own node count (0x33, 0x34, 0x3D: 2;
+# 0x35: 3).
 GLYPHS = CAPTURED_GLYPHS + (0x33, 0x34, 0x35, 0x36, 0x37, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x6D)
 POOL, STRIDE = 0x28B020, 0x2F0
 
@@ -85,6 +94,19 @@ def skeleton(model: bytes):
         assert len(bind) == 64
         nodes.append((parent, bind))
     return count, nodes
+
+
+def node_local_mesh(library: bytes, offset: int, count: int):
+    """A glyph model of `count` nodes as one node-local section, each vertex
+    on the node its position-W slot names (export_props.model_tris_slots;
+    the same welding and authored normals as build_placed_mesh). Refuses a
+    slot outside the model's nodes."""
+    import export_props as ep
+    sections, tex_table = ep.build_office0_door_mesh(library, offset)  # the generic node-local builder
+    slots = set(sections[0][3])
+    if not slots or max(slots) >= count:
+        raise SystemExit(f'model at {offset:#x}: vertex slots {sorted(slots)} outside its {count} nodes')
+    return sections, tex_table
 
 
 def variant_freezes(loader, extract: Path, scratch: Path) -> dict:
@@ -120,6 +142,10 @@ def write(output: Path, extract: Path, texels: Path, variant_texels: dict | None
     bank = rel(BANK_FILE).read_bytes()
     library = rel(LIBRARY_FILE).read_bytes()
     output.mkdir(parents=True, exist_ok=True)
+    links = [p.name for p in output.iterdir() if p.is_symlink()]
+    if links:
+        raise SystemExit(f'{output}: {len(links)} symlinks ({links[0]} ...): a worktree writes its own files, '
+                         'never through to another checkout (remove the links first)')
     emsk, emsk_count, written = bytearray(), 0, []
     report = {'models': []}
     # ---- the menu player (pool record 0)
@@ -167,16 +193,14 @@ def write(output: Path, extract: Path, texels: Path, variant_texels: dict | None
     for glyph in GLYPHS:
         offset = directory[glyph]
         count, nodes = skeleton(library[offset:])
-        unit = struct.pack('<16f', 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
-        if count > 1 and any(bind[48:60] != unit[48:60] for _, bind in nodes):
-            print(f'  model {glyph:#x}: {count} nodes with binds of their own: not exported')
-            continue
-        count, nodes = 1, nodes[:1]
-        sections, tex_table, _n = ep.build_placed_mesh(library, {glyph: [ep.lvl.IDENT34]})
+        if count == 1:
+            sections, tex_table, _n = ep.build_placed_mesh(library, {glyph: [ep.lvl.IDENT34]})
+        else:
+            sections, tex_table = node_local_mesh(library, offset, count)
         tex_entries, tex_blob = en.build_texture_blob(None, tex_table, texels)
         out = output / f'letter_{glyph:02x}.emdl'
-        en.write_emdl(out, sections, [], [-1], [[en.mat_identity()]], 30.0, tex_entries, tex_blob,
-                      flags=ep.NORMAL_FLAGS)
+        en.write_emdl(out, sections, [], [parent for parent, _ in nodes], [[en.mat_identity()] * count], 30.0,
+                      tex_entries, tex_blob, flags=ep.NORMAL_FLAGS)
         written.append(out)
         emsk += struct.pack('<II', glyph, count)
         for parent, bind in nodes:
