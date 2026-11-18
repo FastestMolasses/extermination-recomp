@@ -4,7 +4,8 @@
  * 0x823860, 0x8238E0 and the empty 0x823AA0 (their 0x823A10 / 0x823AB0 are
  * in em_level17_boot.c), the sub 0 placement [52] 0x8243B0 (decomp
  * func_overlay_AREA21_00824370, NEARMISS C), and the effect nodes 0x824CF0
- * and 0x824FE0: no table names them statically, but the boss fight's
+ * and 0x824FE0 (and 0x825B00, 0014EC00's 001EFD90 node, g77 row 5893):
+ * no table names them statically, but the boss fight's
  * 001EFD20 effect nodes run them (the guided run's g77, lane
  * PORT-A21-BOSS: 0x824FE0 from row 2858, 0x824CF0 from row 3024; 001EFD20's
  * result is the effect node 0x824FE0's mode 10 clears +0x38 of). Overlay addresses are runtime
@@ -46,6 +47,7 @@ typedef struct {
     int (*w_001C6190)(void *ctx, uint32_t a0, int32_t *result);
     int (*w_001CCF70)(void *ctx, uint32_t a0, int32_t *result);
     int (*w_001CD520)(void *ctx, int32_t a0, int32_t a1, uint32_t a2, uint64_t a3, uint32_t a4, float a5, float a6, float a7);
+    int (*w_001CFAE0)(void *ctx, uint32_t a0, int32_t a1, uint32_t a2, float a3, float a4, float a5, float a6);
     int (*w_001CFB50)(void *ctx, uint32_t a0, int32_t a1, uint32_t a2, float a3, float a4, float a5, float a6, float a7);
     int (*w_001CFBE0)(void *ctx, int32_t a0, int32_t a1, uint32_t a2, uint32_t a3, int32_t a4);
     int (*w_001EFD20)(void *ctx, uint32_t a0, uint32_t a1, uint32_t *result);
@@ -68,6 +70,9 @@ int em_area21_groups_008243B0(const EmArea21GroupsHooks *h, uint32_t a0, uint32_
 int em_area21_groups_00824CF0(const EmArea21GroupsHooks *h, uint32_t a0, uint32_t sp, EmArea21GroupsFault *fault);
 /* 0x824FE0, the node of [43] / [44]'s deferred spawn (001EFD20's effect
  * node): keeps a packet (0x60 bytes) in its 0xF0 frame below sp. */
+/* 0x825B00, the effect node 0014EC00's 001EFD90 starts (g77 row 5893):
+ * keeps a packet (0x60 bytes) in its 0xA0 frame below sp. */
+int em_area21_groups_00825B00(const EmArea21GroupsHooks *h, uint32_t a0, uint32_t sp, EmArea21GroupsFault *fault);
 int em_area21_groups_00824FE0(const EmArea21GroupsHooks *h, uint32_t a0, uint32_t sp, EmArea21GroupsFault *fault);
 #ifdef __cplusplus
 }

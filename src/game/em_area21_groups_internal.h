@@ -215,6 +215,14 @@ static inline int a21p_c_001CD520(A21P *o, int32_t a0, int32_t a1, uint32_t a2, 
     return 0;
 }
 
+static inline int a21p_c_001CFAE0(A21P *o, uint32_t a0, int32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5, uint32_t a6)
+{
+    if (a21p_failed(o)) return -1;
+    if (!o->h->w_001CFAE0) return a21p_latch(o, 0x001CFAE0u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
+    if (o->h->w_001CFAE0(o->h->ctx, a0, a1, a2, a21p_float(a3), a21p_float(a4), a21p_float(a5), a21p_float(a6)) < 0) return a21p_latch(o, 0x001CFAE0u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
+    return 0;
+}
+
 static inline int a21p_c_001CFB50(A21P *o, uint32_t a0, int32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5, uint32_t a6, uint32_t a7)
 {
     if (a21p_failed(o)) return -1;

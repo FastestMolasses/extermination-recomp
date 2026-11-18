@@ -8,6 +8,7 @@
 #define A21P_GROUP_82AE50 0x0082AE50u   /* 0x824CF0's packet groups (+0xD 3 / 5) */
 #define A21P_GROUP_82AEE0 0x0082AEE0u
 #define A21P_GROUP_82AF70 0x0082AF70u   /* 0x824CF0's packet group (+0xD 4) */
+#define A21P_GROUP_82B0E0 0x0082B0E0u   /* 0x825B00's packet group */
 
 /* globals */
 #define D_700038A0 0x700038A0u   /* a scratchpad vector (0x8238E0's quad position) */
@@ -56,6 +57,8 @@
 #define F_0_03 0x3CF5C28Fu
 #define F_1_2 0x3F99999Au
 #define F_1_60 0x3C888889u        /* 0.016666668 */
+#define F_1_120 0x3C088889u       /* 0.008333334 */
+#define F_1_5 0x3FC00000u
 
 /* ----------------------------------------------------------------------
  * 0x823580 (decomp overlay_AREA21_func_00823540) — group 0x82B500 (x2).
@@ -462,6 +465,59 @@ int em_area21_groups_00824CF0(const EmArea21GroupsHooks *h, uint32_t a0, uint32_
     A21P o;
     if (a21p_begin(&o, h, fault)) return -1;
     a21p_824CF0(&o, a0, sp);
+    return a21p_end(&o);
+}
+
+/* ----------------------------------------------------------------------
+ * 0x825B00 (decomp func_overlay_AREA21_00825AC0, byte-identical C) — no
+ * static reference; the behaviour of an effect node 0014EC00's 001EFD90
+ * starts (g77 row 5893). The AREA19 0x824A90's shape with another packet
+ * builder. Work block +0x1F0: [0] a phase, [1] a seed fraction. State 0:
+ * the +0xD0 matrix from 001029C0 / 00102C58 (+0xC0) / 00102918 (+0xB0),
+ * phase 0, [1] = 00122BB8() / 2^31, state 1, and on into state 1: h =
+ * 001CCF70(+0x100); the packet in the frame (sp - 0x60) from
+ * 001CFAE0(packet, 0, +0xD0, phase, [1], 1.0, 0.1), queued by
+ * 001CFBE0(h, 0, group 0x82B0E0, packet, 0); phase += 1/120 and state 3
+ * unless it is at most 1.5. States 2 / 3: 001AFC10. Others: nothing.
+ * ---------------------------------------------------------------------- */
+static void a21p_825B00(A21P *o, uint32_t self, uint32_t sp)
+{
+    const uint32_t packet = sp - 0x60u;
+    const uint32_t w = self + 0x1F0;
+    const uint32_t state = a21p_u8(o, self + 4);
+
+    if (state == 3 || state == 2) {
+        (void)a21p_c_001AFC10(o, self);
+        return;
+    }
+    if (state == 0) {
+        (void)a21p_c_001029C0(o, self + 0xD0);
+        (void)a21p_c_00102C58(o, self + 0xD0, self + 0xD0, self + 0xC0);
+        (void)a21p_c_00102918(o, self + 0xD0, self + 0xD0, self + 0xB0);
+        a21p_w32(o, w, F_ZERO);
+        int32_t r = 0;
+        (void)a21p_c_00122BB8(o, &r);
+        a21p_w32(o, w + 4, A21P_DIV(A21P_CVT_S_W((uint32_t)r), F_2_31));
+        a21p_w8(o, self + 4, 1);
+    } else if (state != 1) {
+        return;
+    }
+    int32_t handle = 0;
+    (void)a21p_c_001CCF70(o, self + 0x100, &handle);
+    const uint32_t phase = a21p_u32(o, w);
+    const uint32_t seed = a21p_u32(o, w + 4);
+    (void)a21p_c_001CFAE0(o, packet, 0, self + 0xD0, phase, seed, F_ONE, F_0_1);
+    (void)a21p_c_001CFBE0(o, handle, 0, A21P_GROUP_82B0E0, packet, 0);
+    const uint32_t next = A21P_ADD(a21p_u32(o, w), F_1_120);
+    a21p_w32(o, w, next);
+    if (!A21P_LE(next, F_1_5)) a21p_w8(o, self + 4, 3);
+}
+
+int em_area21_groups_00825B00(const EmArea21GroupsHooks *h, uint32_t a0, uint32_t sp, EmArea21GroupsFault *fault)
+{
+    A21P o;
+    if (a21p_begin(&o, h, fault)) return -1;
+    a21p_825B00(&o, a0, sp);
     return a21p_end(&o);
 }
 

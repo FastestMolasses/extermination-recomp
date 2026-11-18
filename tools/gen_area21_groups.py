@@ -26,6 +26,8 @@ HOOKS = {
     0x001281C0: ('f', 'i'), 0x0021B9A0: ('iff', None),
     # 0x824FE0 (the node of [43] / [44]'s deferred spawn: 001EFD20's result is the effect node)
     0x001026A0: ('uuu', None), 0x00102BB0: ('uuf', None),
+    # 0x825B00 (the effect node 0014EC00's 001EFD90 starts, g77 row 5893)
+    0x001CFAE0: ('uiuffff', None),
 }
 TYPES = {'u': 'uint32_t', 'i': 'int32_t', 'f': 'float', 'q': 'uint64_t'}
 

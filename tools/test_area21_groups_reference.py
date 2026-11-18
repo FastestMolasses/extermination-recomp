@@ -5,7 +5,8 @@ the scripts 0x82B5E0 / 0x82C5C0 place, 0x823580 (its effect position a
 frame local, compared at its original stack address), 0x8237B0, 0x823860,
 0x8238E0 and the empty 0x823AA0, the effect nodes 0x824CF0 and 0x824FE0
 (no static reference, but reached in the boss fight: lane PORT-A21-BOSS;
-their packets frame locals; 0x824FE0's parent node and its 32 child
+their packets frame locals; 0x825B00, 0014EC00's 001EFD90 node, g77
+row 5893, the same; 0x824FE0's parent node and its 32 child
 objects are designed at PAR), and the sub 0 placement [52] 0x8243B0 (its
 packet a frame local). Decomp docs/AREA21_OVERLAY.md.
 
@@ -53,6 +54,7 @@ FUNCS = {
     0x824CF0: ('em_area21_groups_00824CF0', 0x2F0, [U, S], None),
     0x8243B0: ('em_area21_groups_008243B0', 0x93C, [U, S], None),
     0x824FE0: ('em_area21_groups_00824FE0', 0xB18, [U, S], None),
+    0x825B00: ('em_area21_groups_00825B00', 0x160, [U, S], None),
 }
 OVERLAY_ID = 0x12
 AREA21 = ROOT.parent / 'Extermination/extract/OVERLAY/AREA21.BIN'
@@ -420,6 +422,23 @@ def cases():
         {0x1CFBE0: [O.Scribble(None, [(A + 0x1F0, f(1.995)), (A + 0x1FC, s32(500)), (A + 0x1F4, f(.001))])]})
     add('4cf0/1/3/scribble', 0x824CF0, st(1) + [(A + 0xD, b(3))],
         {0x1CFBE0: [0, O.Scribble(None, [(A + 0x1F0, f(1.19))])]})
+    # ---- 0x825B00 (no static reference; 0014EC00's 001EFD90 node, g77 row 5893)
+    for state in (2, 3, 4, 0x80, 0x81, 0x82, 0x83, 0xFF):
+        add(f'5b00/{state:x}', 0x825B00, st(state))
+    for r in RANDS:
+        add(f'5b00/0/{r & 0xFFFFFFFF:x}', 0x825B00, st(0), {0x122BB8: [r], 0x1CCF70: [5]})
+    for name, phase in (('0', f(0.)), ('1.49', f(1.49)), ('1.5-', ulp(1.5 - 1. / 120, 1)),
+                        ('1.5-1', ulp(1.5 - 1. / 120, -1)), ('1.5-0', f(1.5 - 1. / 120)), ('1.5', f(1.5)),
+                        ('-1', f(-1.)), ('inf', w(0x7F800000)), ('-0', w(0x80000000))):
+        for h_ in (0, 3, -1):
+            add(f'5b00/1/{name}/{h_}', 0x825B00, st(1) + [(A + 0x1F0, phase), (A + 0x1F4, f(.375))], {0x1CCF70: [h_]})
+    add('5b00/1/scribble', 0x825B00, st(1) + [(A + 0x1F0, f(.5))],
+        {0x1CCF70: [O.Scribble(4, [(A + 0x1F0, f(1.)), (A + 0x1F4, f(-.25))])],
+         0x1CFBE0: [O.Scribble(None, [(A + 0x1F0, f(1.495)), (A + 4, b(7))])]})
+    add('5b00/1/scribble2', 0x825B00, st(1) + [(A + 0x1F0, f(1.49))],
+        {0x1CFAE0: [O.Scribble(None, [(A + 0x1F0, f(0.)), (A + 4, b(2))])]})
+    add('5b00/0/scribble', 0x825B00, st(0),
+        {0x122BB8: [O.Scribble(-7, [(A + 0x1F0, f(2.)), (A + 4, b(3))])], 0x1CCF70: [1]})
     # ---- 0x8243B0, placement [52]
     W = A + 0x1F0
     D_8101E4, D_81024E, D_3A20, D_3A24 = 0x8101E4, 0x81024E, 0x70003A20, 0x70003A24
