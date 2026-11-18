@@ -585,7 +585,11 @@ recording-derived and stay in the ignored `build/`.
   `tools/guided_chain.py`: Claude's guided takes played as one continuous run
   from one card (no reload between takes), every frame compared with the takes'
   rows, with the recorded disc-drive timing (as tools/watch_takes.py); see
-  AREA17_PORT.md "Lane PORT-CHAIN".
+  AREA17_PORT.md "Lane PORT-CHAIN". The pad rule differs between the two
+  tools: guided_chain places take.rec row k's pad at f = k - 2 under the
+  script's clock, while watch_takes' EM_INPUT_PLAY plays tick k's read, which
+  for a guided take is input.log's record of vsync(k) - 1, not take.rec row k
+  (watch_takes.read_pads; lane PORT-WATCH-DRIFT, FIDELITY_FEATURES.md).
   `EM_START_AT_FRAMES=1` (comparison only, tools/guided_chain.py) keeps the
   script's clock on the engine's frames: the frontend steps the script at a
   world frame's head in play but at the frame's end on a status page (states
