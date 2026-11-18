@@ -653,6 +653,7 @@ enum {
     EM_SCENE_TASK_10 = 0x10, /* cleared by 001AD360 step 3 */
     EM_SCENE_TASK_11 = 0x11, /* cleared on status/pause entry */
     EM_SCENE_TASK_18 = 0x18, /* u16: 001AD4E0 countdown, cleared by 001AD360 */
+    EM_SCENE_TASK_1A = 0x1A, /* u16: 001AD740 timer */
     EM_SCENE_TASK_FIRST = 0x08,
     EM_SCENE_TASK_END = 0x20 /* EM_TASK_USER_BYTES == 24 */
 };

@@ -154,6 +154,8 @@ uint8_t *em_area11_script_host_timeline_bytes(uint32_t address, uint32_t size);
 
 /* 001B0460(a0) from an op09 callback. */
 int em_area11_script_host_001B0460(int a0);
+/* 001B81D0(actor) from an area overlay's own code (the player record only). */
+int em_area11_script_host_001B81D0(uint32_t actor);
 
 #ifdef __cplusplus
 }

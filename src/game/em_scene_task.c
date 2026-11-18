@@ -308,6 +308,252 @@ int em_sf_001AD4E0(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w)
     }
 }
 
+/* ------------------------------------------------------------ 001AD740 */
+
+/* The two 001ABF90 packets of 001AD740 state 3 (screen module 0x37's two
+ * pictures: TBP 0x6400.. for subs 2..4, 0x6400 - 0x400 .. for subs 5, 6). */
+static int push_ending_001ABF90(EmSceneState *s, const EmSceneWorkers *w, int second)
+{
+    enum { F = 0x001AD740u };
+    static const uint64_t packets[2][4] = {
+        {0x2006440621322E00ull, 0x2006448621322E40ull, 0x2006460621323000ull, 0x2006468621323040ull},
+        {0x2006400621322A00ull, 0x2006408621322A40ull, 0x2006420621322C00ull, 0x2006428621322C40ull},
+    };
+    const uint64_t *k = packets[second];
+    return ST_CALL(s, w, F, 0x001ABF90u, w_001ABF90, k[0], k[1], k[2], k[3],
+                   ((w)->ctx, k[0], k[1], k[2], k[3]));
+}
+
+static void set_u16_le(uint8_t *at, uint16_t v)
+{
+    at[0] = (uint8_t)v;
+    at[1] = (uint8_t)(v >> 8);
+}
+
+/* 001AD740 state 2: the continue state rebuilt (src/func_001AD740.c). */
+static int ending_rebuild_001AD740(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w)
+{
+    enum { F = 0x001AD740u };
+    if (ST_CALL0(s, w, F, 0x001FABB0u, w_001FABB0) < 0)
+        return -1;
+    TB(user, 0x0A) = (uint8_t)(TB(user, 0x0A) + 1);
+    TB(user, 0x0B) = 0;
+    if (ST_CALL(s, w, F, 0x001AEDB0u, w_001AEDB0, 0, 0, 0, 0, ((w)->ctx, 0)) < 0)
+        return -1;
+    uint8_t *c90 = em_scene_progress_at(s, 0x00810C90u, 0x10);
+    uint8_t *d70A = em_scene_progress_at(s, 0x0081070Au, 1);
+    uint8_t *ca6 = em_scene_progress_at(s, 0x00810CA6u, 12);
+    if (!c90 || !d70A || !ca6)
+        return em_scene_fault(s, F, EM_SCENE_FAULT_BAD_INDEX);
+    /* The knife flag D_00810C90 and the dog tags D_00810C91..9F
+     * (D_0081072D[0x564 + k], k = 0x2D..0x3B). */
+    const int flag = c90[0] != 0;
+    int n = 0;
+    for (int i = 1; i < 0x10; ++i)
+        n += c90[i] != 0;
+    /* The continue counter, saturating at 0xFF. */
+    const uint8_t next = *d70A != 0xFF ? (uint8_t)(*d70A + 1) : 0xFF;
+    const int32_t saved = s->d810750;
+    if (ST_CALL0(s, w, F, 0x001AF2C0u, w_001AF2C0) < 0)
+        return -1;
+    s->d810750 = saved;
+    s->d810700 = 0x0B;
+    s->d810701 = 0;
+    s->d810702 = 0;
+    uint8_t *entry = em_scene_d810730_at(s, s->d810700);
+    if (!entry)
+        return em_scene_fault(s, F, EM_SCENE_FAULT_BAD_INDEX);
+    *entry = s->d810701;
+    if (ST_CALL(s, w, F, 0x001C40B0u, w_001C40B0, 0x10, 8, 0, 0, ((w)->ctx, 0x10, 8)) < 0)
+        return -1;
+    *d70A = next;
+    if (flag) {
+        static const int give[5][2] = {{0x1E, 0x14}, {0x1F, 5}, {0x20, 5}, {0x21, 5}, {0x22, 3}};
+        for (int i = 0; i < 5; ++i)
+            if (ST_CALL(s, w, F, 0x001C40B0u, w_001C40B0, give[i][0], give[i][1], 0, 0,
+                        ((w)->ctx, give[i][0], give[i][1])) < 0)
+                return -1;
+    }
+    /* D_00810CA8 / CAA / CAC / CB0 (halfwords; ca6 points at D_00810CA6). */
+    set_u16_le(ca6 + 2, 0x32);
+    set_u16_le(ca6 + 4, 0x1E);
+    set_u16_le(ca6 + 6, 0x0A);
+    set_u16_le(ca6 + 10, 0x19);
+    if (n == 0xF) {
+        if (ST_CALL(s, w, F, 0x001C40B0u, w_001C40B0, 3, 1, 0, 0, ((w)->ctx, 3, 1)) < 0)
+            return -1;
+        set_u16_le(ca6 + 4, 0x63);
+        ca6[0] = 3;
+    }
+    return 0;
+}
+
+/* 001AD740 state 3: screen module 0x37's two pictures on +B. */
+static int ending_pictures_001AD740(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w)
+{
+    enum { F = 0x001AD740u };
+    int16_t fade;
+    uint16_t v;
+    switch (TB(user, 0x0B)) {
+    case 0:
+        if (ST_CALL0(s, w, F, 0x001D1EF0u, w_001D1EF0) < 0)
+            return -1;
+        s->d275BD8 = 1;
+        if (ST_CALL(s, w, F, 0x001FF080u, w_001FF080, 0, 0x37, 0, 0, ((w)->ctx, 0, 0x37)) < 0)
+            return -1;
+        TB(user, 0x0B) = (uint8_t)(TB(user, 0x0B) + 1);
+        return 0;
+    case 1:
+        if (s->d275BD8 != 0)
+            return 0;
+        if (ST_CALL(s, w, F, 0x001AEE10u, w_001AEE10, 4, 0, 0, 0, ((w)->ctx, 4, 0)) < 0)
+            return -1;
+        TB(user, 0x0B) = (uint8_t)(TB(user, 0x0B) + 1);
+        em_scene_task_set_u16(user, EM_SCENE_TASK_1A, 0x1C60);
+        return ST_CALL(s, w, F, 0x001D2830u, w_001D2830, 3, 1, 0, 0, ((w)->ctx, 3, 1)) < 0 ? -1 : 0;
+    case 2:
+    case 5: {
+        const int second = TB(user, 0x0B) == 5;
+        if (push_ending_001ABF90(s, w, second) < 0)
+            return -1;
+        if (s->d810E74 & 0x800) { /* START */
+            if (ST_CALL(s, w, F, 0x001AEDE0u, w_001AEDE0, 4, 0, 0, 0, ((w)->ctx, 4, 0)) < 0)
+                return -1;
+            TB(user, 0x0B) = (uint8_t)(TB(user, 0x0B) + 1);
+            return 0;
+        }
+        /* Post-decrement: the timer is stored one less (wrapping) and the
+         * expiry is its old value 0. */
+        v = task_u16(user, EM_SCENE_TASK_1A);
+        em_scene_task_set_u16(user, EM_SCENE_TASK_1A, (uint16_t)(v - 1));
+        if (v != 0)
+            return 0;
+        if (ST_CALL(s, w, F, 0x001AEDE0u, w_001AEDE0, 4, 0, 0, 0, ((w)->ctx, 4, 0)) < 0)
+            return -1;
+        TB(user, 0x0B) = second ? (uint8_t)(TB(user, 0x0B) + 1) : 4;
+        return 0;
+    }
+    case 3:
+    case 4:
+    case 6: {
+        const int second = TB(user, 0x0B) == 6;
+        if (push_ending_001ABF90(s, w, second) < 0)
+            return -1;
+        if (read_0028A9A0(s, w, &fade) < 0)
+            return -1;
+        if (fade != 2)
+            return 0;
+        if (!second && TB(user, 0x0B) == 4) {
+            TB(user, 0x0B) = (uint8_t)(TB(user, 0x0B) + 1);
+            em_scene_task_set_u16(user, EM_SCENE_TASK_1A, 0x1AC);
+            return ST_CALL(s, w, F, 0x001AEE10u, w_001AEE10, 4, 0, 0, 0, ((w)->ctx, 4, 0)) < 0 ? -1 : 0;
+        }
+        TB(user, 0x0A) = (uint8_t)(TB(user, 0x0A) + 1);
+        TB(user, 0x0B) = 0;
+        return 0;
+    }
+    default:
+        return 0;
+    }
+}
+
+/* 001AD740 (byte-matched C, src/func_001AD740.c): the ending, +9 = 3. */
+int em_sf_001AD740(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w)
+{
+    enum { F = 0x001AD740u };
+    int16_t fade;
+    int r;
+    if (core_begin(s, user, F) < 0)
+        return -1;
+    switch (TB(user, 0x0A)) {
+    case 0:
+        if (ST_CALL(s, w, F, 0x001AEDB0u, w_001AEDB0, 0, 0, 0, 0, ((w)->ctx, 0)) < 0 ||
+            ST_CALL0(s, w, F, 0x001D2880u, w_001D2880) < 0 ||
+            ST_CALL0(s, w, F, 0x0022D360u, w_0022D360) < 0 ||
+            ST_CALL(s, w, F, 0x001AEBA0u, w_001AEBA0, 0xFF, 0, 0, 0, ((w)->ctx, 0xFF)) < 0 ||
+            ST_CALL0(s, w, F, 0x001D1EF0u, w_001D1EF0) < 0)
+            return -1;
+        if (s->spad3B93 == 1) {
+            TB(user, 0x0A) = (uint8_t)(TB(user, 0x0A) + 1);
+            em_scene_task_set_u16(user, EM_SCENE_TASK_1A, 0x30);
+        } else {
+            TB(user, 0x0A) = 2;
+        }
+        return 0;
+    case 1:
+        switch (TB(user, 0x0B)) {
+        case 0: {
+            /* Pre-decrement: the credits start when the 0x30 wait reaches 0. */
+            const uint16_t v = (uint16_t)(task_u16(user, EM_SCENE_TASK_1A) - 1);
+            em_scene_task_set_u16(user, EM_SCENE_TASK_1A, v);
+            if (v == 0) {
+                if (ST_CALL(s, w, F, 0x001AEE10u, w_001AEE10, 6, 0, 0, 0, ((w)->ctx, 6, 0)) < 0)
+                    return -1;
+                TB(user, 0x0B) = (uint8_t)(TB(user, 0x0B) + 1);
+            }
+            return ST_CALL0(s, w, F, 0x001D1EF0u, w_001D1EF0) < 0 ? -1 : 0;
+        }
+        case 1:
+            if (ST_CALL0(s, w, F, 0x001D1C50u, w_001D1C50) < 0 ||
+                ST_CALL(s, w, F, 0x001D2830u, w_001D2830, 3, 1, 0, 0, ((w)->ctx, 3, 1)) < 0)
+                return -1;
+            r = ST_CALL0(s, w, F, 0x0022D380u, w_0022D380);
+            if (r < 0)
+                return -1;
+            if (r != 0 || (s->d810E74 & 0x800)) {
+                if (ST_CALL(s, w, F, 0x001B0C00u, w_001B0C00, 4, 0, 0, 0, ((w)->ctx, 4)) < 0)
+                    return -1;
+                TB(user, 0x0B) = (uint8_t)(TB(user, 0x0B) + 1);
+            }
+            return ST_CALL(s, w, F, 0x001D1EA0u, w_001D1EA0, 0, 0, 0, 0, ((w)->ctx, 0)) < 0 ? -1 : 0;
+        case 2:
+            if (ST_CALL0(s, w, F, 0x001D1C50u, w_001D1C50) < 0 ||
+                ST_CALL(s, w, F, 0x001D2830u, w_001D2830, 3, 1, 0, 0, ((w)->ctx, 3, 1)) < 0 ||
+                ST_CALL0(s, w, F, 0x0022D380u, w_0022D380) < 0 ||
+                ST_CALL(s, w, F, 0x001D1EA0u, w_001D1EA0, 0, 0, 0, 0, ((w)->ctx, 0)) < 0)
+                return -1;
+            if (read_0028A9A0(s, w, &fade) < 0)
+                return -1;
+            if (fade == 2) {
+                TB(user, 0x0A) = (uint8_t)(TB(user, 0x0A) + 1);
+                TB(user, 0x0B) = 0;
+            }
+            return 0;
+        default:
+            return 0;
+        }
+    case 2:
+        return ending_rebuild_001AD740(s, user, w);
+    case 3:
+        return ending_pictures_001AD740(s, user, w);
+    case 4:
+        if (ST_CALL0(s, w, F, 0x001D1EF0u, w_001D1EF0) < 0 ||
+            ST_CALL0(s, w, F, 0x00225A00u, w_00225A00) < 0)
+            return -1;
+        TB(user, 0x0A) = (uint8_t)(TB(user, 0x0A) + 1);
+        return 0;
+    case 5:
+        if (ST_CALL0(s, w, F, 0x001D1C50u, w_001D1C50) < 0 ||
+            ST_CALL(s, w, F, 0x001D2830u, w_001D2830, 3, 1, 0, 0, ((w)->ctx, 3, 1)) < 0)
+            return -1;
+        r = ST_CALL(s, w, F, 0x00225AC0u, w_00225AC0, 1, 0, 0, 0, ((w)->ctx, 1));
+        if (r < 0)
+            return -1;
+        if (r != 0)
+            TB(user, 0x0A) = (uint8_t)(TB(user, 0x0A) + 1);
+        return ST_CALL(s, w, F, 0x001D1EA0u, w_001D1EA0, 0, 0, 0, 0, ((w)->ctx, 0)) < 0 ? -1 : 0;
+    case 6:
+        TB(user, 0x09) = 4;
+        TB(user, 0x0A) = 0;
+        if (em_scene_reader_ready(s, w, 0x00810D38u, w != NULL && w->s_00810D38 != NULL) < 0 ||
+            store_result(s, 0x00810D38u, w->s_00810D38(w->ctx, 0)) < 0)
+            return -1;
+        return 0;
+    default:
+        return 0;
+    }
+}
+
 /* ------------------------------------------------------------ 001ADF50 */
 
 /* 001ADF50 (byte-matched): area load, at least 3 ticks. Returns 4 when done,
@@ -455,7 +701,9 @@ int em_sf_001AD250(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w)
             return -1;
         return em_sf_001AD4E0(s, user, w) < 0 ? -1 : 0;
     case 3:
-        return ST_CALL0(s, w, F, 0x001AD740u, w_001AD740) < 0 ? -1 : 0;
+        if (core_call(s, w, F, 0x001AD740u, 0, 0, 0) < 0)
+            return -1;
+        return em_sf_001AD740(s, user, w) < 0 ? -1 : 0;
     case 4:
         if (core_call(s, w, F, 0x001ADF00u, 0, 0, 0) < 0)
             return -1;

@@ -677,6 +677,47 @@ int em_area11_script_host_001B0460(int a0)
     return w_001B0460(NULL, a0);
 }
 
+/* 001B81D0(actor) called from an area overlay's own code (AREA21's ending
+ * script 0x827040 at 0x827250, on D_008102B0): the same steps as the script
+ * ops' face-attach (em_area_script.c, byte-matched src/func_001B81D0.c):
+ * row 0x18 when D_0081078F is 1, else the record's +0x2FF (0x3B 0x18, 0x3E
+ * 0x19, 0x3F 0x1A, 0x40 0x1B, other none); with a row, 001CA700(actor,
+ * D_0028A490[row], 7) and, when it attached, 001D06D0(actor, 1) and
+ * 0x70003B8F = 2. Only the player record has a view here. 0, or -1. */
+int em_area11_script_host_001B81D0(uint32_t actor)
+{
+    EmSceneState *s = H.scene ? H.scene : em_scene_state();
+    const uint8_t *f = em_scene_progress_at(s, 0x0081078Fu, 1);
+    EmPlayerLiveActor *p = player_states_actor_mut();
+    if (!f || !p || actor != EM_AREA_SCRIPT_D_008102B0)
+        return report("001B81D0: no view of D_0081078F or the player record");
+    int idx;
+    if (*f == 1)
+        idx = 0x18;
+    else {
+        switch (p->bytes[0x2FF]) {
+        case 0x3B: idx = 0x18; break;
+        case 0x3E: idx = 0x19; break;
+        case 0x3F: idx = 0x1A; break;
+        case 0x40: idx = 0x1B; break;
+        default: idx = -1; break;
+        }
+    }
+    if (idx == -1)
+        return 0;
+    uint32_t bank;
+    int32_t result = 0;
+    if (r_0028A490(NULL, EM_AREA_SCRIPT_D_0028A490 + 4u * (uint32_t)idx, &bank) < 0 ||
+        w_001CA700(NULL, actor, bank, 7, &result) < 0)
+        return -1;
+    if (result != 0) {
+        if (w_001D06D0(NULL, actor, 1) < 0)
+            return -1;
+        s->spad3B8F = 2;
+    }
+    return 0;
+}
+
 /* 0021B9A0(mode, scale, bias): the fog / depth-range programmer on the
  * render context (em_packet_chain_0021B9A0 through em_render_context_live;
  * the floats are passed as their bits). */
