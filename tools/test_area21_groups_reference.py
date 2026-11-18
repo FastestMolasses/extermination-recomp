@@ -1,0 +1,378 @@
+#!/usr/bin/env python3
+"""AREA21's group members (src/game/em_area21_groups.c) against the
+ORIGINAL instructions: the members of the groups 0x82B500 / 0x82BA70 that
+the scripts 0x82B5E0 / 0x82C5C0 place, 0x823580 (its effect position a
+frame local, compared at its original stack address), 0x8237B0, 0x823860,
+0x8238E0 and the empty 0x823AA0, and the unreached 0x824CF0 (no static
+reference; its packet a frame local). Decomp docs/AREA21_OVERLAY.md.
+
+The harness is tools/test_level14_port_reference.py (`O`), configured as
+tools/test_area21_doors_reference.py configures it. No AREA21 recording
+exists: every entry runs as original code from the user's
+extract/OVERLAY/AREA21.BIN, the WHOLE file loaded over the arena of the
+fork recording a03b_03_item2a. Every callee is a hook with a scripted
+result, except the pure helpers in MATH, which run as original code nested
+in the oracle (their writes replayed to the native side). The entries
+with a frame local take the stack pointer (kind S): the oracle runs with
+sp = STACK_TOP and the frame locals live in the compared stack window. The
+designed node lives in zero RAM at FREE. Compared per case: every call and
+its arguments, memory at every call entry, the memory accesses between
+calls one for one in order, memory after the last store, a poisoned
+re-run, coverage of every reachable original word (DEAD excepted, each
+with its reason), the callee inventory and the fail-stop contract.
+
+EM_TEST_FULL=1 widens the random sample. EM_AREA21_GROUPS_ONLY=<label
+prefix> runs a subset (no coverage or contract); EM_AREA21_GROUPS_SOURCE=
+<dir> tests another copy of the module source; EM_AREA21_GROUPS_SHOW=<n>
+prints n failures; EM_AREA21_GROUPS_MISSING=1 lists unexecuted words;
+EM_AREA21_GROUPS_TRACE=<label> prints the original's calls and accesses of
+matching cases (no instruction text). Reports hold addresses and counts
+only.
+"""
+import ctypes as C
+import os
+import random
+import re
+import struct
+from pathlib import Path
+import gen_area21_groups as G
+import test_level14_port_reference as O
+import reference_root as refs
+ROOT = Path(__file__).resolve().parents[1]
+U, I, F, Q, S = O.U, O.I, O.F, O.Q, O.S
+# entry: (native symbol, byte length, argument kinds, result kind)
+FUNCS = {
+    0x823580: ('em_area21_groups_00823580', 0x224, [U, S], None),
+    0x8237B0: ('em_area21_groups_008237B0', 0xA4, [U], None),
+    0x823860: ('em_area21_groups_00823860', 0x78, [U], None),
+    0x8238E0: ('em_area21_groups_008238E0', 0x12C, [U], None),
+    0x823AA0: ('em_area21_groups_00823AA0', 0x8, [U], None),
+    0x824CF0: ('em_area21_groups_00824CF0', 0x2F0, [U, S], None),
+}
+OVERLAY_ID = 0x12
+AREA21 = ROOT.parent / 'Extermination/extract/OVERLAY/AREA21.BIN'
+AREA03 = ROOT.parent / 'Extermination/extract/OVERLAY/AREA03.BIN'
+BEAT = 'a03b_03_item2a'
+DESIGNED = 'designed-a21-groups/' + BEAT   # the capture with AREA21.BIN loaded over the arena
+FREE = 0x1E61000             # zero in the capture
+A = FREE + 0x1000            # the designed node (0x2F0 bytes)
+# the pure helpers run as original code (their writes replayed): the
+# vector copy, the sine, the matrix identity, rotation and translation
+MATH = frozenset((0x102948, 0x11DE90, 0x1029C0, 0x102C58, 0x102918))
+# Words the static walk reaches that no input can reach, and why.
+DEAD = {}
+D_70003B68 = 0x70003B68     # the frame counter
+D_700038A0 = 0x700038A0     # 0x8238E0's scratchpad vector
+
+
+def spec(args):
+    words, floats, out = 4, 12, []
+    for kind in args:
+        if kind == F:
+            out.append((F, floats))
+            floats += 1
+        else:
+            out.append((kind, words))
+            words += 1
+    return out
+
+
+HOOKS = [(f'w_{a:08X}', a, spec(args), result) for a, (args, result) in sorted(G.HOOKS.items())]
+
+
+def default_args(entry):
+    return [A, O.STACK_TOP] if S in FUNCS[entry][2] else [A]
+
+
+def configure():
+    O.FREE = FREE
+    O.FUNCS, O.HOOKS = FUNCS, HOOKS
+    O.OVERLAY_OF = {e: OVERLAY_ID for e in FUNCS if e >= O.ARENA}
+    O.OVERLAY_FILES = {4: AREA03, OVERLAY_ID: AREA21}
+    O.OUT = ROOT / 'build/area21_groups'
+    O.SOURCES = ('em_area21_groups.c',)
+    O.BEATS = [BEAT]
+    O.BEAT_DIRS = {BEAT: refs.capture('levels-recordings-20261030-1/s87/route_a03b/' + BEAT)}
+    O.RESIDENT = {BEAT: 4}
+    O.BY_ADDRESS = {a: (n, args, res) for n, a, args, res in HOOKS}
+    O.BY_NAME = {n: a for n, a, _, _ in HOOKS}
+    O.HOOK_NAMES = [h[0] for h in HOOKS] + ['w_callback']
+    O.Hooks = type('Hooks', (C.Structure,), {'_fields_':
+        [('ctx', C.c_void_p), ('bytes', O.BYTES_FN)] +
+        [(name, O.hook_proto(args, res)) for name, _, args, res in HOOKS] + [('w_callback', O.CALLBACK_FN)]})
+    O.SELF_ENTRIES = set()
+    O.SCRIBBLED_CALLBACKS = set()
+    O.HEAVY = set()
+    O.RETURN_SITES = O.RETURN_SITES_FULL = ()
+    # no entry calls a node's +0x4C method (the field is the shared table shape)
+    O.CONTRACT_UNREACHABLE = {'w_callback': 'no entry here calls a node method'}
+    O.LOCAL_STORES = set()
+    O.JUMP_TABLES = {}
+    O.TABLE_BYTES = frozenset()
+    O.DEFAULT_ARGS = {e: default_args(e) for e in FUNCS}
+    O.image_for = lambda entry: O.CAPTURES[DESIGNED][0]
+    O.CAPTURES.clear()
+    O.CAPTURES.update(O.load_captures(O.read_elf()))
+    # the whole overlay file (header, text and data) over the arena
+    data = AREA21.read_bytes()
+    assert data[4] == OVERLAY_ID
+    ram, spad = O.CAPTURES[BEAT]
+    designed = bytearray(ram)
+    designed[O.ARENA:O.ARENA + len(data)] = data
+    assert not any(designed[FREE:FREE + 0x10000]), 'the designed-record area is not zero'
+    O.CAPTURES[DESIGNED] = (bytes(designed), spad)
+
+
+fw, b, h, w, f = O.fw, O.b8, O.h16, O.w32, O.f32b
+RANDS = (0, 1, 0x7FFFFFFF, -1, -2, 3, 0x12345678, 0x40000000, -0x80000000, 0x00012000, 0x5A5A5A5A, -0x3FFFFFFF)
+# 001C6190's results around every bound 0x823580 / 0x8237B0 test
+DISTANCES = (-1, 0, 500, 501, 599, 600, 601, 949, 950, 1000, 1001, 1039, 1040, 1041, 1079, 1080, 0x7FFFFFFF)
+
+
+def fbits(x):
+    return struct.unpack('<I', struct.pack('<f', x))[0]
+
+
+def ulp(x, d):
+    """The float d units in the last place from x, as bytes."""
+    return w(fbits(x) + d)
+
+
+def s32(v):
+    return w(v & 0xFFFFFFFF)
+
+
+def s16(v):
+    return h(v & 0xFFFF)
+
+
+def node():
+    """The node's position and vector the members read."""
+    return [(A + 0xB0, fw(10., 20., 30., 1.)), (A + 0xC0, fw(0., .5, 0., 0.)), (A + 0x100, fw(-40., 5., 72.5, 1.)),
+            (A + 0xD, b(3))]
+
+
+def fields(rng):
+    """The fields the entries branch on, each a random interesting value."""
+    c = rng.choice
+    return node() + [
+        (A + 4, b(c((0, 1, 1, 1, 2, 3, 4)))), (A + 0xD, b(c((0, 3, 4, 5, 6)))),
+        (A + 0x94, s16(c((3, 5, 0, 4, 0x103)))), (A + 0x1F0, s32(c((0, 11, 19, 34, 14, -1, 0x7FFFFFFF)))),
+        (A + 0x1F4, s32(c((0, 59, 60)))), (D_70003B68, s32(c((60, 0, 25, 30, 65, 325, -30, 61)))),
+        (A + 0x28, s16(c((0, 1, -1, 0x7FFF, -0x8000)))), (A + 0x2A, s16(c((1, -1, 0x7FFF)))),
+    ]
+
+
+def hook_values(rng):
+    def ints(*values, n=4): return [rng.choice(values) for _ in range(n)]
+    return {0x122BB8: ints(*RANDS), 0x1C6190: ints(*DISTANCES), 0x1CCF70: ints(0, 7, -1)}
+
+
+def cases():
+    out, labels = [], set()
+
+    def add(label, e, patches=(), queues=None, run=MATH, args=None):
+        assert label not in labels, label
+        labels.add(label)
+        all_patches = node() + list(patches)
+        out.append((label, DESIGNED, e, tuple(args if args is not None else O.DEFAULT_ARGS[e]),
+                    [(a, v) for a, v in all_patches if a < 0x70000000],
+                    [(a, v) for a, v in all_patches if a >= 0x70000000], O.Script(queues), set(run)))
+
+    def st(state):
+        return [(A + 4, b(state))]
+
+    # ---- 0x823580: the frame count and the effects
+    frame = 1000
+
+    def counted(count, kind, link=True):
+        """State 1 with the count reaching `count` (consecutive frames when
+        `link`, else a reset to 0)."""
+        return st(1) + [(D_70003B68, s32(frame)), (A + 0x1F4, s32(frame - 1 if link else frame - 5)),
+                        (A + 0x1F0, s32(count - 1)), (A + 0x94, s16(kind))]
+    for state in (0, 2, 3, 4, 0x80, 0x81, 0xFF):
+        add(f'3580/{state:x}', 0x823580, st(state) + [(D_70003B68, s32(frame)), (A + 0x1F0, s32(9))])
+    for kind in (0, 4, 0x103, 0x305, -3):
+        add(f'3580/1/kind/{kind}', 0x823580, counted(12, kind))
+    for count in (12, 13, 24, -12, -13, 0, -0x7FFFFFFF):
+        add(f'3580/1/5/{count}', 0x823580, counted(count, 5))
+    add('3580/1/5/reset', 0x823580, counted(7, 5, link=False))
+    add('3580/1/5/wrap', 0x823580, st(1) + [(D_70003B68, s32(-0x80000000)), (A + 0x1F4, s32(0x7FFFFFFF)),
+                                            (A + 0x1F0, s32(0x7FFFFFFF)), (A + 0x94, s16(5))])
+    for v in DISTANCES:
+        for count in (20, 35, 15, 105, 140, 1, 0):
+            add(f'3580/1/3/{v}/{count}', 0x823580, counted(count, 3), {0x1C6190: [v], 0x122BB8: [0x40000000]})
+    for r in RANDS:
+        add(f'3580/1/3/rand/{r & 0xFFFFFFFF:x}', 0x823580, counted(20, 3), {0x1C6190: [0], 0x122BB8: [r]})
+    add('3580/1/3/reset', 0x823580, counted(7, 3, link=False), {0x1C6190: [0]})
+    add('3580/1/3/neg', 0x823580, counted(-20, 3), {0x1C6190: [0], 0x122BB8: [-5]})
+    # callees that rewrite fields the original reads after them
+    add('3580/1/3/scribble', 0x823580, counted(20, 3),
+        {0x1C6190: [O.Scribble(0, [(A + 0x1F0, s32(21))])], 0x122BB8: [O.Scribble(0, [])]})
+    add('3580/1/3/scribble/fire', 0x823580, counted(21, 3),
+        {0x1C6190: [O.Scribble(0, [(A + 0x1F0, s32(40))])],
+         0x122BB8: [O.Scribble(7, [(A + 0x100, f(3.)), (A + 0x108, f(-9.))])]})
+    add('3580/1/5/scribble', 0x823580, counted(12, 5),
+        {0x122BB8: [O.Scribble(7, [(A + 0x100, f(8.)), (A + 0x108, f(.5))])]})
+    # ---- 0x8237B0 / 0x823860: the frame-counter effects
+    for state in (0, 2, 3, 4, 0x80, 0x81, 0xFF):
+        add(f'37b0/{state:x}', 0x8237B0, st(state))
+        add(f'3860/{state:x}', 0x823860, st(state))
+    for v in DISTANCES:
+        for fr in (0, 25, 65, 325, 26, -25, -65, -0x80000000, 0x7FFFFFFF):
+            add(f'37b0/1/{v}/{fr}', 0x8237B0, st(1) + [(D_70003B68, s32(fr))], {0x1C6190: [v]})
+    add('37b0/1/scribble', 0x8237B0, st(1) + [(D_70003B68, s32(26))],
+        {0x1C6190: [O.Scribble(0, [(D_70003B68, s32(50))])]})
+    for fr in (0, 30, 31, 60, -30, -31, -0x80000000, 0x7FFFFFFF, 0x7FFFFFE2 - 0x7FFFFFE2 % 30):
+        add(f'3860/1/{fr}', 0x823860, st(1) + [(D_70003B68, s32(fr))])
+    # ---- 0x8238E0: the quad
+    for state in (2, 3, 4, 0x80, 0x81, 0x82, 0x83, 0xFF):
+        add(f'38e0/{state:x}', 0x8238E0, st(state) + [(A + 0x28, s16(5))])
+    for r in RANDS:
+        add(f'38e0/0/{r & 0xFFFFFFFF:x}', 0x8238E0, st(0) + [(A + 0x28, s16(77)), (A + 0x2A, s16(9))],
+            {0x122BB8: [r]})
+    for n in (0, 1, -1, 100, 0x7FFF, -0x8000):
+        for d in (1, -1, 0x7FFF):
+            add(f'38e0/1/{n}/{d}', 0x8238E0, st(1) + [(A + 0x28, s16(n)), (A + 0x2A, s16(d))])
+    add('38e0/1/x', 0x8238E0, st(1) + [(A + 0x28, s16(3)), (A + 0xB0, ulp(-0.09, 1))])
+    add('38e0/0/scribble', 0x8238E0, st(0), {0x122BB8: [O.Scribble(-3, [(A + 0x28, s16(4))])]})
+    add('38e0/1/scribble', 0x8238E0, st(1) + [(A + 0x28, s16(3)), (A + 0x2A, s16(1))],
+        {0x1CD520: [O.Scribble(None, [(A + 0x28, s16(-9)), (A + 0x2A, s16(4)), (D_700038A0, f(2.))])]})
+    # ---- 0x823AA0
+    add('3aa0', 0x823AA0)
+    # ---- 0x824CF0 (unreached in the original)
+    for state in (2, 3, 4, 0x80, 0x81, 0x82, 0x83, 0xFF):
+        add(f'4cf0/{state:x}', 0x824CF0, st(state))
+    for kind in (0, 3, 4, 5, 6, 0x83, 0x84, 0x85, 0xFF):
+        for r in (0x12345678, -1, 0, 0x7FFF0000):
+            add(f'4cf0/0/{kind}/{r & 0xFFFFFFFF:x}', 0x824CF0, st(0) + [(A + 0xD, b(kind))],
+                {0x122BB8: [r], 0x1CCF70: [5]})
+    for kind in (3, 5):
+        for name, phase in (('0', f(0.)), ('1.17', f(1.17)), ('1.2-', ulp(1.17, 1)), ('1.2', f(1.2)), ('-1', f(-1.))):
+            for seed in (0, 0xFFFF0000, 0x80001234):
+                add(f'4cf0/1/{kind}/{name}/{seed:x}', 0x824CF0,
+                    st(1) + [(A + 0xD, b(kind)), (A + 0x1F0, phase), (A + 0x1F8, w(seed))], {0x1CCF70: [3]})
+    for name, phase in (('0', f(0.)), ('1.99', f(1.99)), ('1.99+', ulp(1.99, 1)), ('2', f(2.)), ('3', f(3.))):
+        for count in (0, 239, 240, 241, -1, 0x7FFFFFFF):
+            for scale in (1., 1. / 60, .01, 0., -.5):
+                add(f'4cf0/1/4/{name}/{count}/{scale}', 0x824CF0,
+                    st(1) + [(A + 0xD, b(4)), (A + 0x1F0, phase), (A + 0x1F4, f(scale)), (A + 0x1FC, s32(count)),
+                             (A + 0x1F8, w(0xBEEF0000))], {0x1CCF70: [-1]})
+    add('4cf0/1/scribble', 0x824CF0, st(1) + [(A + 0xD, b(6))],
+        {0x1CCF70: [O.Scribble(4, [(A + 0xD, b(4)), (A + 0x1F8, w(0x7777AAAA))])]})
+    add('4cf0/1/4/scribble', 0x824CF0, st(1) + [(A + 0xD, b(4)), (A + 0x1FC, s32(240))],
+        {0x1CFBE0: [O.Scribble(None, [(A + 0x1F0, f(5.)), (A + 0x1FC, s32(5)), (A + 0x1F4, f(.001))])],
+         0x1CFB50: [O.Scribble(None, [(A + 0x1F0, f(1.995))])]})
+    add('4cf0/1/4/scribble2', 0x824CF0, st(1) + [(A + 0xD, b(4)), (A + 0x1FC, s32(9))],
+        {0x1CFBE0: [O.Scribble(None, [(A + 0x1F0, f(1.995)), (A + 0x1FC, s32(500)), (A + 0x1F4, f(.001))])]})
+    add('4cf0/1/3/scribble', 0x824CF0, st(1) + [(A + 0xD, b(3))],
+        {0x1CFBE0: [0, O.Scribble(None, [(A + 0x1F0, f(1.19))])]})
+    # ---- a seeded random sample over every entry
+    rng = random.Random(0xA21B)
+    for entry in FUNCS:
+        for n in range(O.reference_mode.pick(24, 3)):
+            add(f'random/{entry:06X}/{n}', entry, fields(rng), hook_values(rng))
+    return out
+
+
+def header_checks():
+    header = (ROOT / 'src/game/em_area21_groups.h').read_text()
+    block = header.split('/* BEGIN GENERATED HOOKS */')[1].split('/* END GENERATED HOOKS */')[0]
+    found = re.findall(r'int \(\*(w_[0-9A-F]{8})\)\(void \*ctx((?:, [^,)]+)*)\);', block)
+    assert [n for n, _ in found] == [h_[0] for h_ in HOOKS]
+    types = {U: 'uint32_t', I: 'int32_t', F: 'float', Q: 'uint64_t'}
+    for (name, params), (expected, address, args, result) in zip(found, HOOKS):
+        actual = [re.sub(r'\s*\b\w+$', '', p.strip()).replace(' ', '') for p in params.split(',')[1:]]
+        assert actual == [types[k] for k, _ in args] + ([types[result] + '*'] if result else []), name
+    internal = (ROOT / 'src/game/em_area21_groups_internal.h').read_text()
+    for name, address, _, _ in HOOKS:
+        bodies = re.findall(r'static inline int a21p_c_%s\(.*?\n}\n' % name[2:], internal, re.S)
+        assert len(bodies) == 1 and f'o->h->{name}(' in bodies[0] and f'0x{address:08X}u' in bodies[0]
+    for entry, (symbol, _, kinds, result) in FUNCS.items():
+        assert re.search(r'^int %s\(' % symbol, header, re.M), symbol
+
+
+def entry_guards():
+    """A latched fault, a NULL hook table and a NULL fault pointer: every
+    entry refuses with no hook or memory call."""
+    touched = []
+
+    def refuse(*_):
+        touched.append(1)
+        return -1
+    keep = [O.BYTES_FN(refuse), O.CALLBACK_FN(refuse)]
+    fields_ = {'ctx': None, 'bytes': keep[0], 'w_callback': keep[1]}
+    for name, _, args, result in HOOKS:
+        fields_[name] = O.hook_proto(args, result)(refuse)
+        keep.append(fields_[name])
+    hooks = O.Hooks(**fields_)
+    for entry, (symbol, _, _, kind) in FUNCS.items():
+        for table, fault in ((C.byref(hooks), O.Fault(0x1234, 7)), (None, O.Fault()), (C.byref(hooks), None)):
+            touched.clear()
+            args = [table] + O.native_args(entry, O.DEFAULT_ARGS[entry])
+            rc = getattr(O.NATIVE, symbol)(*args, C.byref(fault) if fault is not None else None)
+            assert rc == -1 and not touched, symbol
+            if fault is not None:
+                assert (fault.address, fault.code) == ((0x1234, 7) if table is not None else (0, 0))
+
+
+def trace(prefix, selected):
+    for case in selected:
+        if not case[0].startswith(prefix):
+            continue
+        label, beat, entry, args, patches, spad, script, run = case
+        ram0, spad0 = O.CAPTURES[beat]
+        ram, sp = O.patched(ram0, patches), O.patched(spad0, spad)
+        oracle = O.Oracle(ram, sp, entry, (args, O.callbacks_of(entry, args, ram)), O.copy_script(script), run, set())
+        print('==', label)
+        for t in oracle.trace:
+            print(' ', t[0], *(hex(x) if isinstance(x, int) else x for x in t[1:]))
+
+
+def judge(results):
+    only = os.environ.get('EM_AREA21_GROUPS_ONLY')
+    failures = [(name, errors) for name, _, errors, _, _, _ in results if errors]
+    seen = set().union(*(r[3] for r in results)) if results else set()
+    for entry, (_, size, _, _) in FUNCS.items():
+        words = O.reachable_words(O.image_for(entry), entry, size)
+        missing = words - seen - set(DEAD)
+        print(f'{entry:08X}: {len(words & seen)}/{len(words - set(DEAD))} reachable words')
+        if missing and (not only or os.environ.get('EM_AREA21_GROUPS_MISSING')):
+            failures.append(('coverage', [hex(entry), [hex(m) for m in sorted(missing)]]))
+    if not only:
+        assert not set(DEAD) & seen, 'a word called dead ran'
+        failures += [('callee inventory', p) for p in O.callee_checks()]
+        if not failures:
+            sites, missing = O.hook_sites(results)
+            if missing:
+                failures.append(('unreached hooks', missing))
+            for problems, runs in O.reference_mode.parallel_map(O.hook_contract_site, sites):
+                if problems:
+                    failures.append(('fail-stop contract', problems))
+    return failures
+
+
+def main():
+    configure()
+    O.NATIVE = O.build(os.environ.get('EM_AREA21_GROUPS_SOURCE'))
+    header_checks()
+    entry_guards()
+    selected = cases()
+    only = os.environ.get('EM_AREA21_GROUPS_ONLY')
+    if only:
+        selected = [c for c in selected if c[0].startswith(only)]
+    O.CASES[:] = selected
+    if os.environ.get('EM_AREA21_GROUPS_TRACE'):
+        trace(os.environ['EM_AREA21_GROUPS_TRACE'], selected)
+        return
+    results = O.run_cases(selected)
+    failures = judge(results)
+    for label, errors in failures[:int(os.environ.get('EM_AREA21_GROUPS_SHOW', '8'))]:
+        print('FAIL', label, errors)
+    assert not failures, f'{len(failures)} failures'
+    O.reference_mode.banner(f'{len(selected)} cases')
+    print(f'PASS {len(selected)} cases: calls, ordered accesses, whole memory, poisoned starts and fail-stop')
+
+
+if __name__ == '__main__':
+    main()
