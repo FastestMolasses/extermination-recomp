@@ -137,7 +137,9 @@ its statuses are the ones that count.
     Original profile always shows the frontend.
   - `EM_SLOT1_FIELD=0` (2026-11-18, port lane PORT-SLOT1-2D): the Original
     profile's world frames leave the kicked list's slot-1 segment undrawn
-    (the field as before that step: no sight, no Gatling gauge bars).
+    (the field as before that step: no sight, no Gatling gauge bars; since
+    PORT-SLOT1-B the letterbox bars, message text and fade then go to the
+    GPU overlay pass as before).
     An A/B switch for `make test-slot1-field` and for tracing; the original
     always draws slot 1 (GS_EXACT.md section 9 "Slot 1").
   - `EM_START_AT=<name>` (2026-10-21, side lane save2; the user's decision of

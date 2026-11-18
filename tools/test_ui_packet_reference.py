@@ -672,6 +672,12 @@ def decode(ram: bytes, start: int, end: int, blocks: int, font_tall: bytes, font
                 raise RuntimeError(f'upload at {at:#x}: its texels are no glyph of the font')
             out.append((at, B_CC8A0, (1 if tall else 0, x, y, hits[0])))
             at += 0x280 if tall else 0x100
+        elif tid == 3 and ((qwc == 9 and addr in (0x28A7B0, 0x28A840)) or
+                           (qwc == 6 and addr in (0x28A8E0, 0x28A940))):
+            # the screen effects' REFs, the letterbox 001AEBE0 and the fade
+            # 001AEE70 (test_fade_packets_reference proves them)
+            out.append((at, 'effect', (qwc, addr)))
+            at += 0x10
         else:
             raise RuntimeError(f'packet not decoded at {at:#x}: tag {tid} qwc {qwc} addr {addr:#x} {nxt.hex()}')
     return out

@@ -1013,7 +1013,9 @@ the rules of 3.1-3.4, 4.2-4.8 and 5.1-5.3 as `plot_dst`, `plot_src` and
 
 `EmGs.strict = 1` refuses every primitive that needs a feature no capture
 has settled:
-- AA1, PRIM FIX, context 2, PRMODECONT.AC 0 (attributes from PRMODE);
+- AA1, PRIM FIX, PRMODECONT.AC 0 (attributes from PRMODE) (context 2 is
+  allowed since 2026-11-18: the letterbox and fade sprites draw through
+  it, section 9 "Slot 1");
 - MXL > 0, MMAG ≠ MMIN, mipmap MMIN;
 - T8H / T4HL / T4HH;
 - CT24 / CT16 textures, CT16 CLUTs;
@@ -1702,16 +1704,37 @@ does, `gif_direct`, with the same checks: textured kicks reading resident
 or drawn memory, a transfer's blocks resident from the transfer on) and the
 field is read again; such a frame is not pipelined. Left out, on purpose:
 the message service's glyph runs (em_message_live's glyph sink records the
-cursor range of each run, and the walk skips those tags), because the GPU
-overlay pass still draws the glyph strips, the letterbox bars and the fade
-over the presented field (the port's letterbox and fade are not slot-1
-REFs: em_frame.c frame_screen_fade_draw), and the bars must stay under the
-text, as in the original's slot-1 order. Moving the three into the field is
-the next step (the original's order: bars, the frame's other 2D content in
-call order, glyphs, fade). A world frame with D_008106C4 set whose slot 1
+cursor range of each run, and the walk skipped those tags), because the GPU
+overlay pass still drew the glyph strips, the letterbox bars and the fade.
+**Since lane PORT-SLOT1-B (2026-11-18) the three are in the field**: the
+letterbox and the fade append their REFs as the originals do
+(em_fade_packets.c: 001AEA50 / 001AE900's blocks D_0028A7B0 and
+D_0028A8E0, the packet halves of 001AEBE0 at step D and 001AEE70 at steps
+G and O, after em_fade.c's state steps; `make test-fade-packets-reference`
+runs the original instructions, 1,501 quick / 36,793 full comparisons),
+the glyph runs (prompts, radio, examine text and the area-title card
+001C5930, which writes through 001CC1E0) are walked like any slot-1
+packet, so slot 1 draws in the original's order (bars, the tasks' 2D,
+glyphs, fade). The REFs' blocks are read from em_status_gs_page's copy
+(the bars' corners D_0024A8C0 from `assets/render_context_fade.emrc`,
+tools/export_render_context.py). The sprites use context 2 (PRIM CTXT),
+now allowed in strict mode (section 6). A frame whose 2D layer went into
+the field (a walked world frame, or a status page's GIF frame, whose list
+holds the same REFs) skips the GPU overlay pass for them
+(em_sgp_2d_in_field; em_frame.c frame_2d_overlays now queues the bars,
+strips and fade at the frame's end, after step V decided). The overlay
+pass still draws them where slot 1 is not drawn into a field: the GPU
+renderer (the Enhanced path), GPU-drawn frames (frontend, status hub,
+movies) and a world frame with D_008106C4 set (its 2D ranges are skipped
+by the walk, as before). The fade's REF is appended whenever 001AEE70's
+mode byte is non-zero, also at level 0 (a sprite that subtracts 0: the
+RGB stays, the field's alpha becomes 0x80), so most gameplay frames carry
+it; it is register data (PACKED vertex kicks), recorded into the body, so
+the frame stays pipelined. A world frame with D_008106C4 set whose slot 1
 draws is refused (fail-stop); its open and close blocks alone are not sent.
 `EM_SLOT1_FIELD=0` (developer A/B switch, LAUNCHER_OPTIONS.md) leaves slot
-1 undrawn.
+1 undrawn and its 2D layer to the overlay pass. `EM_SLOT1_LOG=<file>` (a
+diagnostic) lists the frames whose field took a 2D layer.
 
 Evidence, the zoom scope (`make test-slot1-field`, tools/test_slot1_field.py;
 the decomp's fork capture build/sights_ref/zoom, renderer 13): the port's
@@ -1750,6 +1773,28 @@ the port's world in the fight differs there (the whole field: 7,306 to
 13,808 exact; the haze ring, the creature, the snow). The bars' own
 packets drawn the original's way are what the step proves.
 
+Evidence, PORT-SLOT1-B (2026-11-18): the packets are the originals' (the
+oracle above; `make test-status-gs-page` decodes the live REFs in 1,122
+dumped frames); `make test-slot1-field` still passes, the zoom scope's
+pixels as before (1 / 2 / 152 off), and at ticks 279 / 401 the LOAD GAME
+start point's area-title card (AREA16, 2,057 pixels; the g66-end capture
+has none) is now in the field and reported apart; `make
+test-message-capture` (the elevator refusal's text lines, read from the
+presented frame) passes with the text in the field. Frames without a 2D
+layer are unchanged (EM_PRESENT_LOG against port main 949d58f3): New Game
+to first control, 2,999 frames, the 1,367 that differ are exactly the
+frames with a 2D layer in the field (most only the level-0 fade); take
+test1 rendered, 18,875 frames, 4,182 of the 4,229 that differ have a 2D
+layer, 8 are frames shown again from such a buffer, and 39 field frames
+differ without one (counter 16574, 17577 and every other counter
+18553..18625): not traced (a candidate: the fade's alpha 0x80 left in a
+buffer the next world frame does not fully redraw). Not done: the
+letterbox / fade / area-title pixels against the fb2 references 14 and
+15, because `EM_TEST_FULL=1 make test-fb2-pixels` stops in the level
+smoke's AREA11-exit check on main (test_area_load_reference replay_chain:
+tick log 168 bytes against the oracle's 208 since the attract-demo
+commit), before any point is compared.
+
 The producers of a world frame's slot-1 packets (a census of the boot ELF
 and the 19 overlays: every call of a slot-argument builder with slot 1 and
 every direct writer of the +0x14 cursor), and what the port does with them:
@@ -1761,12 +1806,10 @@ every direct writer of the +0x14 cursor), and what the port does with them:
   the render-context colour fade 001DFE70 (render flag 7, from 001DFF70,
   em_render_context_live rcl_001DFE70: its packets would be drawn from
   slot 1 too; no recorded route was seen to reach it, not verified);
-- built into slot 1 but drawn by the GPU overlay instead (left out of the
-  walk): the message glyph runs 001FC7B0 (001CC1E0 -> 001CC8A0 /
-  001CC3B0: prompts, radio, examine text) and the area-title card 001C5930,
-  which use them;
-- drawn by the GPU overlay, no slot-1 packet in the port: the letterbox
-  001AEBE0 and the fade 001AEE70 (em_frame.c);
+- drawn from slot 1 since PORT-SLOT1-B: the message glyph runs 001FC7B0
+  (001CC1E0 -> 001CC8A0 / 001CC3B0: prompts, radio, examine text), the
+  area-title card 001C5930, which uses them, the letterbox 001AEBE0 and
+  the fade 001AEE70 (em_fade_packets.c);
 - fail-stops before any packet: the lock reticle 001DD170 (00199770 /
   00199220; vf23 not certified) and the CA5 == 6 marker 0022E7F0 /
   0022E630;

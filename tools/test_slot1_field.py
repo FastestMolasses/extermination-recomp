@@ -50,6 +50,13 @@ POINTS = {279: 'frame_aim040', 401: 'frame_aim160', 541: 'frame_aim300'}
 # GS_EXACT.md section 9 "Slot 1"), and the whole field's exact floor
 SIGHT_OFF = {279: 4, 401: 8, 541: 400}
 FLOOR = {279: 114000, 401: 109000, 541: 112800}
+# The start point arrives in AREA16 by LOAD GAME, so the area-title card
+# 001C5930 (its glyph runs, in slot 1 since GS_EXACT.md 9 "Slot 1") is still
+# up at ticks 279 and 401; the capture was taken from g66's end state, long
+# after the arrival, and shows none. The card's box (field columns 102..369,
+# rows 18..26) is reported apart: the sight's pixels are judged outside it,
+# the whole field's floor over the rest.
+TITLE = {279: (18, 27, 102, 370), 401: (18, 27, 102, 370)}
 
 
 def pad_script():
@@ -120,17 +127,27 @@ def main():
         new, old, orig = field(a), field(b), original(name)
         drawn = (new != old).any(axis=2)
         exact = (new == orig).all(axis=2)
+        box = np.zeros(drawn.shape, bool)
+        title = ''
+        if t in TITLE:
+            y0, y1, x0, x1 = TITLE[t]
+            box[y0:y1, x0:x1] = True
+            card = int((drawn & box).sum())
+            title = f'; the area-title card drew {card} pixels in its box (not in the capture)'
+            if card < 300:
+                bad.append(f'tick {t}: the area-title card is not on the field ({card} pixels)')
+        drawn &= ~box
         n, off_px = int(drawn.sum()), int((drawn & ~exact).sum())
         worst = int(np.abs(new - orig).max(axis=2)[drawn].max()) if n else 0
-        whole = int(exact.sum())
+        whole = int((exact & ~box).sum())
         print(f'  tick {t} ({name}): slot 1 drew {n} pixels, {n - off_px} equal to the original '
-              f'({off_px} off, worst {worst}); whole field {whole} of {exact.size} exact '
-              f'(before {int((old == orig).all(axis=2).sum())})')
+              f'({off_px} off, worst {worst}); whole field {whole} of {exact.size - int(box.sum())} exact '
+              f'(before {int(((old == orig).all(axis=2) & ~box).sum())}){title}')
         if n < 60000:
             bad.append(f'tick {t}: slot 1 drew only {n} pixels (the sight is not on the field)')
         if off_px > SIGHT_OFF[t]:
             bad.append(f'tick {t}: {off_px} slot-1 pixels off the original (at most {SIGHT_OFF[t]})')
-        if whole < FLOOR[t]:
+        if whole < FLOOR[t] - int(box.sum()):
             bad.append(f'tick {t}: {whole} exact pixels, under the floor {FLOOR[t]}')
     for x in bad:
         print('  FAIL ' + x)

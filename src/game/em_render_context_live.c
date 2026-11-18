@@ -5,6 +5,7 @@
  * routines address and wires each lane translation's workers to the other
  * translations over that one storage. Every worker below names the original
  * callee it stands for. */
+#include "game/em_fade_packets.h"
 #include "game/em_render_context_live.h"
 #include "game/em_diag.h"
 #include "game/em_gs_blocks_original.h"
@@ -249,6 +250,9 @@ static float f32(u32 bits) { float f; memcpy(&f, &bits, 4); return f; }
 
 /* ---- views --------------------------------------------------------------- */
 
+static EmFadePackets s_fpk;   /* 001AEA50's blocks (em_status_gs_page fills them) */
+EmFadePackets *em_rcl_fade_packets(void) { return &s_fpk; }
+
 static void add_view(u32 address, u32 size, uint8_t *bytes, int writable)
 {
     if (R.view_count >= VIEWS_MAX) {
@@ -294,6 +298,8 @@ static void build_views(void)
     add_view(SPAD_3A20, 0x20, (uint8_t *)s_spad3A20_words, 1);
     add_view(D_253490, D_253490_SIZE, s_d253490, 0);
     add_view(D_26E810, D_26E810_SIZE, s_d26E810, 0);
+    add_view(EM_FPK_D_0028A7B0, EM_FPK_LETTERBOX_BYTES, s_fpk.letterbox, 0);
+    add_view(EM_FPK_D_0028A8E0, EM_FPK_FADE_BYTES, s_fpk.fade, 0);
     if (s_dynamic_word) {
         add_view(EM_A01R_D_0028A5A4, 4, (uint8_t *)(uintptr_t)s_dynamic_word, 0);
         add_view(s_dynamic_address, s_dynamic_size, (uint8_t *)(uintptr_t)s_dynamic_bytes, 0);
