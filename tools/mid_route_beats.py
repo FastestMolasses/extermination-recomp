@@ -98,6 +98,8 @@ K01_ROUTE = 'levels-recordings-20261102-1/s87/route_k01'
 # AREA17 from Claude's guided run (lane PORT-LIVE2): the kept takes g45 .. g48 as a route set
 # (tools/capture_from_take.py; each beat's end is its take's end.p2s, its rows and pad the take's).
 G17_ROUTE = 'guided-20261117/s87/route_g17'
+# AREA16 from the same run (lane PORT-LIVE-A16): the kept takes g59 .. g67 as a route set
+G16_ROUTE = 'guided-20261117/s87/route_g16'
 # beat: (start card, route recording, beat folder). A group's first beat
 # starts from the group's arrival card; a01u_s1 starts where a01u_00 does.
 BEATS = {
@@ -271,6 +273,13 @@ BEATS = {
     'g46': ('g46', G17_ROUTE, 'g46_area17_ramp'),
     'g47': ('g47', G17_ROUTE, 'g47_area17_roger'),
     'g48': ('g48', G17_ROUTE, 'g48_area17_cable'),
+    'g61': ('g61', G16_ROUTE, 'g61_area16_water'),
+    'g62': ('g62', G16_ROUTE, 'g62_area16_sub1'),
+    'g63': ('g63', G16_ROUTE, 'g63_area16_recharge'),
+    'g64': ('g64', G16_ROUTE, 'g64_area16_booth'),
+    'g65': ('g65', G16_ROUTE, 'g65_area16_vaccine'),
+    'g66': ('g66', G16_ROUTE, 'g66_area16_bed'),
+    'g67': ('g67', G16_ROUTE, 'g67_area16_out'),
 }
 GROUPS = {'a22': ('a22_',), 'a01u': ('a01u_',), 'a06': ('a06_',), 'a06b': ('a06b_',), 'a01v': ('a01v_',),
           'a22b': ('a22b_',), 'a04b': ('a04b_0',), 'boss': ('a04b_s',), 'bossg': ('a04b_g',),

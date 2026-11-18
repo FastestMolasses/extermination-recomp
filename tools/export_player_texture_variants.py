@@ -62,11 +62,12 @@ FORK_ROUTES = {'06': ('s87/route_a06', 's87/route_a06b'), '22': ('s87/route_a22'
                '19s1': ('levels-recordings-20261018-17/s87/route_a19c', 'levels-recordings-20261018-19/s87/route_a19d'),
                '00s2': ('levels-recordings-20261102-1/s87/route_k01',),
                '14': ('levels-recordings-20261102-1/s87/route_k01',),
-               '17': ('guided-20261117/s87/route_g17',)}     # tools/capture_from_take.py
+               '17': ('guided-20261117/s87/route_g17',),     # tools/capture_from_take.py
+               '16': ('guided-20261117/s87/route_g16',)}
 # Sets that hold a capture taken before the area's load with its area bytes already set (the
 # guided g45 end: AREA14's overlay and textures still resident): only a capture with the area's
 # own overlay resident (MWo3 id at 0x823504) is a recording of the area.
-RESIDENT_OVERLAY = {'17': 0x0E}
+RESIDENT_OVERLAY = {'17': 0x0E, '16': 0x0D}
 MODEL_FILES = {0x3D: 'chunk28/f02_id3d.bin', 0x3E: 'chunk28/f03_id3e.bin', 0x3F: 'chunk28/f04_id3f.bin', 0x40: 'chunk28/f05_id40.bin'}
 
 

@@ -547,6 +547,14 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   (row 311), and 00133E30's shadow (44 bones, kind 0) fail-stops after ~400
   frames. AREA16's owners now bind in the live composition too (area 0x10:
   dispatch_second_half, scene bindings, 001B6660's window, op09 callbacks).
+- AREA16 live (lane PORT-LIVE-A16, AREA16_PORT.md "Live"): SUBS rows for
+  subs 0 and 1 from the guided run's g60 .. g66 (route_g16), CREATURES
+  0x8273F0 with its node + 0x118 matrix rule (MATRIX_RULES), FLAG_RULES
+  from 0x825800's C, two explicit models; all kinds, profile 16, sfx
+  scopes (0x10, 0) / (0x10, 1) and its stream cues are exported; cards and
+  beats g61 .. g67. g63 passes (end position and progress block); sub 0
+  fail-stops at 001DAFA0 (the untranslated water grid), g64 at 001BAD40
+  (no live worker for overlay owners), g66 returns to the title.
 - Every boot behaviour of the six areas is now in a census ledger or
   defined (section 6 for the six BOOT2 added); those marked only "defined"
   by an earlier lane still need their oracle named before they count. The
@@ -565,8 +573,8 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   camera arm 00230230 (em_area14_overlay, test_area14_overlay_reference) and
   the beats k01_02 .. k01_05 pass from their cards (AREA14_PORT.md). The capture
   kinds of AREA18 and AREA17 wait for their SUBS rows: the guided run
-  recorded both (g41 .. g48); AREA16 and AREA21 have no recording planned
-  yet. AREA20's owners (lane PORT-A20) are proven by their oracles only:
+  recorded both (g41 .. g48); AREA16's takes g59 .. g67 are its recording
+  (its bullet above); AREA21 has none yet. AREA20's owners (lane PORT-A20) are proven by their oracles only:
   the guided run's g73 .. g75 AREA20 tries are not kept recordings (the
   chain was forked at g69), so its SUBS row still waits.
 - AREA21 (lane PORT-A21, docs/AREA21_PORT.md): every overlay owner the

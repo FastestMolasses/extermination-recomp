@@ -195,6 +195,15 @@ static const struct {
     {"g46", 0x11},
     {"g47", 0x11},
     {"g48", 0x11},
+    /* AREA16 from the guided run's takes (lane PORT-LIVE-A16): the source state of g61 (g60's end:
+     * sub 0 entry 0), g62 (sub 0) and g63 .. g67 (sub 1) */
+    {"g61", 0x10},
+    {"g62", 0x10},
+    {"g63", 0x10},
+    {"g64", 0x10},
+    {"g65", 0x10},
+    {"g66", 0x10},
+    {"g67", 0x10},
 };
 
 static struct {
@@ -600,7 +609,7 @@ int em_start_at_check(void)
                              "a22_02, a01u, a01u_01, a01u_02, a01u_s0, area06, a06_01 .. a06_05, a06b, "
                              "a06b_01, a01v, a01v_01, a01v_02, a22b, a22b_01, a04_00 .. a04_05, a04b_00 .. "
                              "a04b_04, boss, area13, a13_01 .. a13_05, a13b_01 .. a13b_05, "
-                             "a13c_00 .. a13c_06, a13d_00 .. a13d_07, k01_01 .. k01_05, area14k, g46 .. g48)", NULL);
+                             "a13c_00 .. a13c_06, a13d_00 .. a13d_07, k01_01 .. k01_05, area14k, g46 .. g48, g61 .. g67)", NULL);
     }
     const char *ng = getenv("EM_NEW_GAME");
     if (ng && ng[0] && strcmp(ng, "0") != 0)

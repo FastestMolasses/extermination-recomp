@@ -125,7 +125,7 @@ and g47 (after Roger) in AREA17, g48 (ends in AREA11 entry 3).
 
 **Exports** (`export_second_half_common`): SUBS[('area17', 0)] = g46, g47,
 previous g45. CREATURES 0x825560 with its own matrix rule (node + 0xD0,
-MATRIX_AT_NODE); FLAG_RULES `area17_flag_calls` ((0xE, 1), (0xF, 1) from
+MATRIX_RULES since PORT-LIVE-A16); FLAG_RULES `area17_flag_calls` ((0xE, 1), (0xF, 1) from
 [30] once D_00810805 >= 3 after a load that began at 0; (0xF, 0) from [34]
 at D_00810806 = 0xFF; anything else not modelled); EXPLICIT_MODELS [31]
 0x8243E0 state 2 = model 0xD. Two relaxations, both named: the drums [20],

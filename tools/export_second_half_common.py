@@ -70,6 +70,7 @@ K01 = DECOMP / 'build/fork_refs/levels-recordings-20261102-1/s87/route_k01'
 # Claude's guided run as capture folders (tools/capture_from_take.py: each folder is a kept
 # take's end.p2s entries; the take's end is the next take's start)
 G17 = DECOMP / 'build/fork_refs/guided-20261117/s87/route_g17'
+G16 = DECOMP / 'build/fork_refs/guided-20261117/s87/route_g16'
 
 # SHA-256 of the user's extract/OVERLAY files (hashes, not disc data)
 AREA14_SHA256 = '43f7e9bbb9fb18bf398f197689231ec1b91ff5ece7e6eb05abbbba98d86690f7'
@@ -103,8 +104,15 @@ SUBS = {
     ('area14', 0): dict(paths=tuple(K01 / b for b in ('k01_02_item26', 'k01_03_item19', 'k01_04_face',
                                                      'k01_05_plateau')),
                         previous=K01 / 'k01_01_slab', dynamic=False),
-    ('area16', 0): dict(paths=None, previous=None, dynamic=True),
-    ('area16', 1): dict(paths=None, previous=None, dynamic=True),
+    # AREA16 (lane PORT-LIVE-A16): the guided takes' end states. Sub 0: g60 (the arrival from
+    # AREA06 sub 1's slider [1], at control) and g61 (the water barrier passed), one load; the
+    # capture before it is g59's end (AREA06 sub 1). Sub 1: g62 (the arrival by sub 0's slider [1])
+    # .. g66 (the bed room), one load (the room moves between them keep it); before it, g61's end.
+    ('area16', 0): dict(paths=tuple(G16 / b for b in ('g60_area06_area16', 'g61_area16_water')),
+                        previous=G16 / 'g59_area01_area06', dynamic=True),
+    ('area16', 1): dict(paths=tuple(G16 / b for b in ('g62_area16_sub1', 'g63_area16_recharge', 'g64_area16_booth',
+                                                     'g65_area16_vaccine', 'g66_area16_bed')),
+                        previous=G16 / 'g61_area16_water', dynamic=True),
     # AREA17 sub 0 (lane PORT-LIVE2): the guided takes' end states in AREA17 after its load, in
     # route order (g46: the ramp after the skipped intro; g47: after Roger); the capture before
     # the load is g45's end (the area bytes already 0x11 entry 0, AREA14's overlay still resident)
@@ -156,9 +164,16 @@ CREATURES['area14'] = 0x823FC0
 # AREA17's 0x825560 (func_overlay_AREA17_00825520.c, NEARMISS: the call is the C's
 # func_001A2370(self, self + 0xD0) in its state-1 arm, which the original's words make too
 # (test_area17_overlay_reference runs them)) passes the node's own +0xD0 matrix, the pickup's
-# and the drum's rule (MATRIX_AT_NODE), not export_area13_level's *(node + 0x11C) + 0x90.
+# and the drum's rule (MATRIX_RULES), not export_area13_level's *(node + 0x11C) + 0x90.
 CREATURES['area17'] = 0x825560
-MATRIX_AT_NODE = {'area17': 0xD0}
+# AREA16's 0x8273F0 (func_overlay_AREA16_008273B0.c, byte-identical) passes D_00275B40[2] + 0x90 in
+# both its state-0 calls, with D_00275B40 a char ** = node + 0x110 while its behaviour runs: the
+# word at node + 0x118 (AREA14's REC_A, not export_area13_level's *(node + 0x11C)) plus 0x90.
+CREATURES['area16'] = 0x8273F0
+# the creature's matrix where it is not export_area13_level's rule: (ram, node) -> address
+MATRIX_RULES = {'area17': lambda ram, node: node + 0xD0,
+                'area16': lambda ram, node: C.u32(ram, node + 0x118) + 0x90}
+_LV_OWNER_MATRIX = {}
 FLAG_RULES = {}           # target -> flag_calls(ram) for its 0019C6F0 callers, filled by an area lane
 
 
@@ -195,6 +210,38 @@ def area17_flag_calls(ram):
 
 FLAG_RULES['area17'] = area17_flag_calls
 
+
+def area16_flag_calls(ram):
+    """AREA16's 0019C6F0 calls in this load, from the byte-identical C of sub 0's [10] 0x825800
+    (func_overlay_AREA16_008257C0.c), the only caller:
+      * state 0 (the node's first frame) calls (0x28, 1) and goes to state 1 when D_0081078B is not
+        0xFF; with 0xFF it goes to state 2 with no call;
+      * state 1 calls (0x28, 0) on its way to state 0xC8 (when D_0081080B & 7 >= 3);
+      * 0xC8 ends in state 2, storing D_0081078B = 0xFF (its only writer in the code).
+    So with D_0081078B not 0xFF in the capture before the load: a live node in state 1 made
+    (0x28, 1); one in state 0xC8 or 2 made (0x28, 1) then (0x28, 0). With 0xFF before the load:
+    state 2, no call. Any other state, node count or byte: ValueError (not modelled)."""
+    t = A13.current()
+    if ram[0x810700] != t.area or ram[0x810701] != t.sub or t.sub != 0:
+        return ()
+    before = LV.previous_word(t.name, 0x810788)
+    if before is None:
+        raise ValueError('area16: the capture before the load is missing (D_0081078B there)')
+    b78b = (before >> 24) & 0xFF
+    nodes = [a for _s, a in LV.E02.pool(ram) if C.u32(ram, a + 0x10) == 0x825800]
+    state = ram[nodes[0] + 4] if len(nodes) == 1 else None
+    if b78b == 0xFF and state == 2:
+        return ()
+    if b78b != 0xFF and state == 1:
+        return ((0x28, 1),)
+    if b78b != 0xFF and state in (0xC8, 2):
+        return ((0x28, 1), (0x28, 0))
+    raise ValueError(f'area16: [10] 0x825800 nodes {[(hex(a), ram[a + 4]) for a in nodes]} with D_0081078B '
+                     f'{b78b:#x} before the load: not modelled')
+
+
+FLAG_RULES['area16'] = area16_flag_calls
+
 # Orphaned hulls no capture can prove (a known gap, recorded in level.json's cells report as
 # 'orphan-unproven'): AREA17's drums [20], [21] and [23] (placements of 0x156620 with uids 19,
 # 20, 22) are freed before the first capture after the load (g46: no shot was fired, so the
@@ -208,7 +255,26 @@ FLAG_RULES['area17'] = area17_flag_calls
 # {behaviour: (state, model id)}): AREA17's [31] 0x8243E0 (func_overlay_AREA17_008243A0.c,
 # byte-identical) sets func_001CA6E0(self, func_001C6120(D_0028A59C, 0xD)) on its way to state
 # 2 and leaves +0x0D as it was.
-EXPLICIT_MODELS = {'area17': {0x8243E0: (2, 0xD)}}
+# AREA16's [11] 0x8261A0 (func_overlay_AREA16_00826160.c, byte-identical) in state 2: from state 1 it
+# sets func_001CA6E0(self, func_001C6120(D_0028A59C, 0x10)) and leaves +0x0D (0xF) as it was; from
+# state 0 (D_0081080B bit 1 already set) it stores +0x0D = 0x10 before its model loads, so model
+# 0x10 either way.
+# AREA16's 0x828200 (func_overlay_AREA16_008281C0.c, byte-identical; 0x8273F0's and 0x827B70's
+# child) in state 1 draws its parts with func_001CA5E0(self, func_001C6120(D_0028A59C, id), 1) for
+# each id of the table its +0x0D selects (6: 4 ids at 0x82C2A0; 0x25: 4 at 0x82C2F0; 0x14: 16 at
+# 0x82C340), so +0x44 is the last id's model at the end of every frame.
+A16_PART_IDS = {6: (0x82C2A0, 4), 0x25: (0x82C2F0, 4), 0x14: (0x82C340, 16)}
+
+
+def area16_part_model(ram, node):
+    if ram[node + 0x0D] not in A16_PART_IDS:
+        raise ValueError(f'area16: 0x828200 node {node:#x} with +0x0D {ram[node + 0x0D]:#x} (the C has no table)')
+    table, count = A16_PART_IDS[ram[node + 0x0D]]
+    return C.u32(ram, table + 4 * (count - 1))
+
+
+EXPLICIT_MODELS = {'area17': {0x8243E0: (2, 0xD)},
+                   'area16': {0x8261A0: (2, 0x10), 0x828200: (1, area16_part_model)}}
 ORPHANS_UNPROVEN = {('area17', 0): {19: 0x156620, 20: 0x156620, 22: 0x156620}}
 UNPROVEN_REPORT = {}
 
@@ -350,7 +416,7 @@ def install(target, sub, tree=None, need_captures=True):
     A13.capture_paths = lambda: list(v['paths'] or ())
     A13.configure(t)
     LV.PREVIOUS[target] = v['previous']
-    LV.CREATURES[target] = None if target in MATRIX_AT_NODE else CREATURES.get(target)
+    LV.CREATURES[target] = None if target in MATRIX_RULES else CREATURES.get(target)
     LV.FLAG_OWNERS[target] = None
     LV.flag_calls = FLAG_RULES.get(target, no_flag_calls)
     # the colour windows D_00251BE0 / D_00251C20 hold the last class-6 draw's
@@ -372,8 +438,14 @@ def install(target, sub, tree=None, need_captures=True):
     if (target, sub) in ORPHANS_UNPROVEN and not getattr(LV.verify_directory, 'gap', None):
         LV.verify_directory = _verify_directory_with_gap(LV.verify_directory, (target, sub))
         LV.verify_directory.gap = (target, sub)
-    if target in MATRIX_AT_NODE:
-        # the creature's matrix at the node itself (MATRIX_AT_NODE), around LV's owner_matrix
-        rule, owner, at = LV.L.owner_matrix, CREATURES[target], MATRIX_AT_NODE[target]
-        LV.L.owner_matrix = lambda ram, node: node + at if C.u32(ram, node + 0x10) == owner else rule(ram, node)
+    # the creature's matrix by its own rule (MATRIX_RULES), around export_area13_level's
+    # owner_matrix: wrapped in LV itself, since LV.install (which the level kind calls again)
+    # points export_area01_level at LV's owner_matrix by name
+    rule = _LV_OWNER_MATRIX.setdefault('rule', LV.owner_matrix)
+    if target in MATRIX_RULES:
+        owner, at = CREATURES[target], MATRIX_RULES[target]
+        LV.owner_matrix = lambda ram, node: at(ram, node) if C.u32(ram, node + 0x10) == owner else rule(ram, node)
+    else:
+        LV.owner_matrix = rule
+    LV.L.owner_matrix = LV.owner_matrix
     return C
