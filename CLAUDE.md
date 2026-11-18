@@ -116,6 +116,12 @@ built from one codebase (full rules: `docs/PORT_PROFILES.md`).
   `tools/mid_route_beats.py` (beats from start cards), `tools/watch_takes.py`
   (the user's takes; `--root` for Claude's guided chain), `tools/guided_chain.py`
   (guided takes as one continuous run from one card, compared every frame).
+- `docs/WHOLE_GAME_CENSUS.md` — every original function the game can reach
+  (boot + 19 overlays), whether a kept recording ran it, and whether the port
+  translates or binds it; its list (B) is the hidden-gap list (reachable, never
+  recorded, unported). Regenerate with the decomp's `tools/game_census.py`.
+  The per-level censuses (FIRST/SECOND/THIRD_LEVEL_CENSUS, CENSUS_STANDINS,
+  CENSUS_UNVERIFIED) are its reviewed ledgers.
 - The decomp's `docs/HANDOFF.md` is the cross-repo entry point; its `docs/INDEX.md`
   says which doc answers what. Coordination: the decomp's project skill
   `orchestrator` (`../Extermination/.claude/skills/orchestrator/SKILL.md`).
