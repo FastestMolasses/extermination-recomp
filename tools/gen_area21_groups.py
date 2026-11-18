@@ -22,6 +22,8 @@ HOOKS = {
     # 0x824CF0 (unreached)
     0x001029C0: ('u', None), 0x00102C58: ('uuu', None), 0x00102918: ('uuu', None), 0x001AFC10: ('u', None),
     0x001CCF70: ('u', 'i'), 0x001CFB50: ('uiufffff', None), 0x001CFBE0: ('iiuui', None),
+    # 0x8243B0 (placement [52]; 001281C0 is the float -> unsigned helper)
+    0x001281C0: ('f', 'i'), 0x0021B9A0: ('iff', None),
 }
 TYPES = {'u': 'uint32_t', 'i': 'int32_t', 'f': 'float', 'q': 'uint64_t'}
 

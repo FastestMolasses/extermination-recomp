@@ -117,7 +117,8 @@ static int a16_owner(uint32_t fn)
  * callbacks, each translated from the decomp C and checked against the
  * original instructions (make test-area21-overlay-reference). Frames from
  * each function's first instruction; `sp` the entry stack pointer for the
- * two that keep frame locals their callees read (0x8297C0, 0x823580).
+ * three that keep frame locals their callees read (0x8297C0, 0x823580,
+ * 0x8243B0).
  * 0x824CF0 (translated, unreached in the original) is not bound. */
 static int dispatch_area21(EmArea01Runtime *r, EmArea01Call *c, int *out, int *x, uint32_t *where, int32_t *code)
 {
@@ -135,7 +136,9 @@ static int dispatch_area21(EmArea01Runtime *r, EmArea01Call *c, int *out, int *x
         {0x00827A30u, 0x30u, 1, 'd'}, {0x00827E70u, 0x30u, 1, 'd'}, {0x00828350u, 0x20u, 1, 'd'},
         /* em_area21_groups: the members of groups 0x82B500 / 0x82BA70 */
         {0x00823580u, 0x40u, 1, 'p'}, {0x008237B0u, 0x20u, 1, 'p'}, {0x00823860u, 0x10u, 1, 'p'},
-        {0x008238E0u, 0x20u, 1, 'p'}, {0x00823AA0u, 0x00u, 1, 'p'}};
+        {0x008238E0u, 0x20u, 1, 'p'}, {0x00823AA0u, 0x00u, 1, 'p'},
+        /* placement [52] (frame 0x120; `sp` for its packet at sp - 0x60) */
+        {0x008243B0u, 0x120u, 1, 'p'}};
     const uint32_t fn = c->function;
     const unsigned n = sizeof owners / sizeof owners[0];
     unsigned k = 0;
@@ -202,6 +205,7 @@ static int dispatch_area21(EmArea01Runtime *r, EmArea01Call *c, int *out, int *x
         case 0x008237B0u: *x = em_area21_groups_008237B0(&h, a0, &f); break;
         case 0x00823860u: *x = em_area21_groups_00823860(&h, a0, &f); break;
         case 0x008238E0u: *x = em_area21_groups_008238E0(&h, a0, &f); break;
+        case 0x008243B0u: *x = em_area21_groups_008243B0(&h, a0, sp, &f); break;
         default: *x = em_area21_groups_00823AA0(&h, a0, &f); break;
         }
         *where = f.address;

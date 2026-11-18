@@ -4,7 +4,8 @@ ORIGINAL instructions: the members of the groups 0x82B500 / 0x82BA70 that
 the scripts 0x82B5E0 / 0x82C5C0 place, 0x823580 (its effect position a
 frame local, compared at its original stack address), 0x8237B0, 0x823860,
 0x8238E0 and the empty 0x823AA0, and the unreached 0x824CF0 (no static
-reference; its packet a frame local). Decomp docs/AREA21_OVERLAY.md.
+reference; its packet a frame local), and the sub 0 placement [52]
+0x8243B0 (its packet a frame local). Decomp docs/AREA21_OVERLAY.md.
 
 The harness is tools/test_level14_port_reference.py (`O`), configured as
 tools/test_area21_doors_reference.py configures it. No AREA21 recording
@@ -48,6 +49,7 @@ FUNCS = {
     0x8238E0: ('em_area21_groups_008238E0', 0x12C, [U], None),
     0x823AA0: ('em_area21_groups_00823AA0', 0x8, [U], None),
     0x824CF0: ('em_area21_groups_00824CF0', 0x2F0, [U, S], None),
+    0x8243B0: ('em_area21_groups_008243B0', 0x93C, [U, S], None),
 }
 OVERLAY_ID = 0x12
 AREA21 = ROOT.parent / 'Extermination/extract/OVERLAY/AREA21.BIN'
@@ -57,8 +59,9 @@ DESIGNED = 'designed-a21-groups/' + BEAT   # the capture with AREA21.BIN loaded 
 FREE = 0x1E61000             # zero in the capture
 A = FREE + 0x1000            # the designed node (0x2F0 bytes)
 # the pure helpers run as original code (their writes replayed): the
-# vector copy, the sine, the matrix identity, rotation and translation
-MATH = frozenset((0x102948, 0x11DE90, 0x1029C0, 0x102C58, 0x102918))
+# vector copy, the sine, the matrix identity, rotation and translation and
+# the float -> unsigned helper 001281C0 (0x8243B0's casts)
+MATH = frozenset((0x102948, 0x11DE90, 0x1029C0, 0x102C58, 0x102918, 0x1281C0))
 # Words the static walk reaches that no input can reach, and why.
 DEAD = {}
 D_70003B68 = 0x70003B68     # the frame counter
@@ -160,12 +163,14 @@ def fields(rng):
         (A + 0x94, s16(c((3, 5, 0, 4, 0x103)))), (A + 0x1F0, s32(c((0, 11, 19, 34, 14, -1, 0x7FFFFFFF)))),
         (A + 0x1F4, s32(c((0, 59, 60)))), (D_70003B68, s32(c((60, 0, 25, 30, 65, 325, -30, 61)))),
         (A + 0x28, s16(c((0, 1, -1, 0x7FFF, -0x8000)))), (A + 0x2A, s16(c((1, -1, 0x7FFF)))),
+        (0x8101E4, b(c((0, 3, 4, 3)))), (0x81024E, s16(c((29, 30, 31, 32, 33, 0)))),
+        (A + 0x1F8, w(c((0x3FC00000, 0x40000000, 0x3F000000, 0x40100000)))),
     ]
 
 
 def hook_values(rng):
     def ints(*values, n=4): return [rng.choice(values) for _ in range(n)]
-    return {0x122BB8: ints(*RANDS), 0x1C6190: ints(*DISTANCES), 0x1CCF70: ints(0, 7, -1)}
+    return {0x122BB8: ints(*RANDS), 0x1C6190: ints(*DISTANCES), 0x1CCF70: ints(0, 7, -1, 0xFFFFFF, n=14)}
 
 
 def cases():
@@ -267,6 +272,63 @@ def cases():
         {0x1CFBE0: [O.Scribble(None, [(A + 0x1F0, f(1.995)), (A + 0x1FC, s32(500)), (A + 0x1F4, f(.001))])]})
     add('4cf0/1/3/scribble', 0x824CF0, st(1) + [(A + 0xD, b(3))],
         {0x1CFBE0: [0, O.Scribble(None, [(A + 0x1F0, f(1.19))])]})
+    # ---- 0x8243B0, placement [52]
+    W = A + 0x1F0
+    D_8101E4, D_81024E, D_3A20, D_3A24 = 0x8101E4, 0x81024E, 0x70003A20, 0x70003A24
+
+    def detail(kind, stage):
+        return [(D_8101E4, b(kind)), (D_81024E, s16(stage))]
+
+    def work(phases=(0.25, 0.5, 0.75, 1.0), seed=0x12345678):
+        return [(W + 4 * k, f(v) if isinstance(v, float) else v) for k, v in enumerate(phases)] + [(W + 0x10, w(seed))]
+
+    def handles(*values):
+        return {0x1CCF70: list(values)}
+
+    for state in (2, 3, 4, 0x80, 0x81, 0xFF):
+        add(f'43b0/{state:x}', 0x8243B0, st(state) + detail(3, 29) + work())
+    for r in RANDS:
+        add(f'43b0/0/{r & 0xFFFFFFFF:x}', 0x8243B0, st(0) + detail(0, 0), {0x122BB8: [r, 0x7FFF0000, 5, r, -r]})
+    add('43b0/0/scribble', 0x8243B0, st(0) + detail(3, 30),
+        {0x122BB8: [1, 2, 3, 4, O.Scribble(0x2468ACE0, [(D_8101E4, b(7))])]})
+    for kind in (0, 1, 2, 3, 4, 0x83, 0xFF):
+        stages = (28, 29, 30, 31, 32, 33, 0, -1, 0x7FFF, -0x8000, 0x101D, 0x11D) if kind == 3 else (30, 32, 29)
+        for stage in stages:
+            for hs in ((5,) * 14, (0xFFFFFF,) * 14, (7, 0xFFFFFF, -1, 0, 0x1000000) * 3):
+                add(f'43b0/1/{kind}/{stage}/{hs[0]:x}/{len(set(hs))}', 0x8243B0,
+                    st(1) + detail(kind, stage) + work(), handles(*hs))
+    for seed in (0, 1, -1, 0x7FFFFFFF, -0x80000000, 0x12345678, 0xFFFF0000 - 0x100000000, 0x0000FFFF, 0x7FFF8000):
+        add(f'43b0/1/seed/{seed & 0xFFFFFFFF:x}', 0x8243B0, st(1) + detail(0, 0) + work(seed=seed), handles(*[3] * 14))
+    # the phase advances and the wraps: x + step is at most 2.0, exactly 2.0 and just above
+    import numpy as np
+    def f32(x):
+        return float(np.float32(x))
+    for k, step in enumerate((0.01, 0.005, 0.02, 0.01)):
+        base = f32(2.0 - f32(step))
+        for d in (-2, -1, 0, 1, 2):
+            phases = [0.1, 0.2, 0.3, 0.4]
+            phases[k] = w(fbits(base) + d)
+            add(f'43b0/1/adv{k}/{d}', 0x8243B0, st(1) + detail(3, 29) + work(phases), handles(*[5] * 14))
+    for p in (0., 1.5, 1.99, 2., 3., -1., 100.):
+        add(f'43b0/1/adv/{p}', 0x8243B0, st(1) + detail(3, 29) + work((p, p, p, p)), handles(*[5] * 14))
+    # the default step's wraps: D_70003A20 / 24 = phase + random, at most 2.0 or above
+    for p2 in (0., 1., 1.5, 1.9, 1.9999, 2., 2.5, 3.):
+        for p3 in (0., 1.2, 1.9999, 2., 5.):
+            for seed in (0x00010000, 0x7FFF0000, 0xFFFF0000 - 0x100000000):
+                add(f'43b0/1/wrap/{p2}/{p3}/{seed & 0xFFFFFFFF:x}', 0x8243B0,
+                    st(1) + detail(1, 0) + work((0.1, 0.2, p2, p3), seed), handles(*[5] * 14))
+    # callees that rewrite what the original reads after them
+    add('43b0/1/scribble/flags', 0x8243B0, st(1) + detail(0, 0) + work(),
+        {0x1CCF70: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+         0x1CFBE0: [O.Scribble(None, [(D_8101E4, b(3)), (D_81024E, s16(29)), (W, f(1.99)), (W + 4, f(3.)),
+                                      (W + 8, f(1.)), (W + 12, f(1.))])]})
+    add('43b0/1/scribble/random', 0x8243B0, st(1) + detail(0, 0) + work(), handles(*[5] * 14) | {
+        0x1CFB50: [O.Scribble(None, [(0x70003A34, f(9.)), (0x70003A38, f(8.)), (0x70003A3C, f(7.)),
+                                     (D_3A24, f(1.5)), (D_3A20, f(6.))])] * 28})
+    add('43b0/1/scribble/fog', 0x8243B0, st(1) + detail(0, 0) + work(), handles(*[5] * 14) | {
+        0x21B9A0: [O.Scribble(None, [(W + 0x10, w(0x5A5A5A5A))])]})
+    add('43b0/1/scribble/matrix', 0x8243B0, st(1) + detail(0, 0) + work(), handles(*[5] * 14) | {
+        0x1CCF70: [O.Scribble(5, [(W + 8, f(1.995)), (W + 12, f(1.995))])]})
     # ---- a seeded random sample over every entry
     rng = random.Random(0xA21B)
     for entry in FUNCS:

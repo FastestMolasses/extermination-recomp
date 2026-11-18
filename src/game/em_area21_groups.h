@@ -2,8 +2,9 @@
  * decomp: docs/AREA21_OVERLAY.md): the members of the groups 0x82B500 /
  * 0x82BA70 that the scripts 0x82B5E0 / 0x82C5C0 place, 0x823580, 0x8237B0,
  * 0x823860, 0x8238E0 and the empty 0x823AA0 (their 0x823A10 / 0x823AB0 are
- * in em_level17_boot.c), and 0x824CF0, which no table reaches (unreached
- * in the original: no static reference). Overlay addresses are runtime
+ * in em_level17_boot.c), the sub 0 placement [52] 0x8243B0 (decomp
+ * func_overlay_AREA21_00824370, NEARMISS C), and 0x824CF0, which no table
+ * reaches (unreached in the original: no static reference). Overlay addresses are runtime
  * addresses (the decomp's link names are 0x40 lower). Ground truth: the
  * decomp's byte-identical C under src/overlays/AREA21/; evidence:
  * tools/test_area21_groups_reference.py, which runs the ORIGINAL overlay
@@ -35,6 +36,7 @@ typedef struct {
     int (*w_00102C58)(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2);
     int (*w_0011DE90)(void *ctx, float a0, float *result);
     int (*w_00122BB8)(void *ctx, int32_t *result);
+    int (*w_001281C0)(void *ctx, float a0, int32_t *result);
     int (*w_001AFC10)(void *ctx, uint32_t a0);
     int (*w_001C6190)(void *ctx, uint32_t a0, int32_t *result);
     int (*w_001CCF70)(void *ctx, uint32_t a0, int32_t *result);
@@ -42,6 +44,7 @@ typedef struct {
     int (*w_001CFB50)(void *ctx, uint32_t a0, int32_t a1, uint32_t a2, float a3, float a4, float a5, float a6, float a7);
     int (*w_001CFBE0)(void *ctx, int32_t a0, int32_t a1, uint32_t a2, uint32_t a3, int32_t a4);
     int (*w_001EFD20)(void *ctx, uint32_t a0, uint32_t a1);
+    int (*w_0021B9A0)(void *ctx, int32_t a0, float a1, float a2);
 /* END GENERATED HOOKS */
     int (*w_callback)(void *ctx, uint32_t function, uint32_t self);
 } EmArea21GroupsHooks;
@@ -55,6 +58,8 @@ int em_area21_groups_008238E0(const EmArea21GroupsHooks *h, uint32_t a0, EmArea2
 /* 0x823AA0: an empty function (it reads and writes nothing; a0 is
  * ignored). */
 int em_area21_groups_00823AA0(const EmArea21GroupsHooks *h, uint32_t a0, EmArea21GroupsFault *fault);
+/* 0x8243B0, placement [52]: keeps a packet (0x60 bytes) at sp - 0x60. */
+int em_area21_groups_008243B0(const EmArea21GroupsHooks *h, uint32_t a0, uint32_t sp, EmArea21GroupsFault *fault);
 int em_area21_groups_00824CF0(const EmArea21GroupsHooks *h, uint32_t a0, uint32_t sp, EmArea21GroupsFault *fault);
 #ifdef __cplusplus
 }
