@@ -735,6 +735,19 @@ int em_shadow_live_actor_001DA6A0(uint32_t record, const uint8_t *bytes, uint32_
     if (!S.bound) return fail(0x001DA6A0u, "the shadow is not bound");
     /* 21 nodes (the player, Roger), or the 19 / 20 of an NPC or script actor. */
     const uint32_t kind = bytes && size >= 0x100u ? rd32(bytes + 0x94) >> 16 : 0;
+    if (bytes && size >= 0x100u && kind == 0) {
+        /* 001DA6A0's first test: a record whose halfword +0x96 is 0 returns
+         * before any read of its nodes or the scene and draws nothing
+         * (AREA17's 00133E30 record: 44 nodes, kind 0 in the guided run's
+         * g46 end state). */
+        const EmShadowLiveActorLog keep = S.alog;
+        memset(&S.alog, 0, sizeof S.alog);
+        S.alog.frame = em_frame_counter();
+        S.alog.record = record;
+        S.alog.calls = keep.calls + 1;
+        S.alog.drawn_total = keep.drawn_total;
+        return 0;
+    }
     if (!bytes || size < 0x100u || !nodes || !node_count || node_count > NODES ||
         (node_count != NODES && !(node_count >= 19u && kind >= EM_SHADOW_LIVE_KIND_NPC_FIRST &&
                                   kind <= EM_SHADOW_LIVE_KIND_NPC_LAST)))

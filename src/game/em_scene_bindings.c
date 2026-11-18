@@ -4252,7 +4252,9 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
      * AREA01 spawner pointed at 001F5040 (adopted here): its behaviour
      * 001F5040 is bound by em_aim_fire_runtime (em_aim_fire_flash). */
     if ((s_state.d810700 == 1 || s_state.d810700 == 4 || s_state.d810700 == 0x0F || s_state.d810700 == 3 || s_state.d810700 == 0x13 ||
-         s_state.d810700 == 8 || s_state.d810700 == 7 || s_state.d810700 == 0x0D || s_state.d810700 == 0x0E) &&
+         s_state.d810700 == 8 || s_state.d810700 == 7 || s_state.d810700 == 0x0D || s_state.d810700 == 0x0E ||
+         /* AREA17: the creature's beam 001B3C30 (00133E30's 001348E0) */
+         s_state.d810700 == 0x11) &&
         fn == 0x001F5040u) {
         if (!em_aim_fire_flash_owns(a) && em_area01_live_adopt_flash(&s_area01_live, a) < 0)
             return -1;

@@ -296,11 +296,36 @@ def beat_dir(beat):
     return refs.capture(route) / folder
 
 
+# Beats whose card is the LOAD GAME of an area request (lane PORT-LIVE-A17): the source state
+# holds the next area's bytes with its load still ahead (g46: g45's end, AREA17 entry 0), so the
+# card's own load has run before control. The recording's rows up to the original's placement
+# (001B07C0: the first row whose position leaves row 0's) and the two frames after it are dropped:
+# the port places the player at the frame before control and starts the script two frames after
+# its placement. Row k of the trimmed beat is the recording's row k + skip.
+REQUEST_CARDS = {'g46'}
+
+
+def request_skip(rows):
+    """The rows a request card's load and placement take: the placement row + 2."""
+    placed = next(i for i in range(1, len(rows)) if rows[i]['pos'] != rows[0]['pos'])
+    assert all(r['ph'] in ('L', 'P') for r in rows[:placed + 1]), 'a request card\'s load holds play'
+    return placed + 2
+
+
 def trace(beat):
     t = json.loads((beat_dir(beat) / 'trace.json').read_text())
     assert not t.get('teleports'), (beat, 'reference contains teleports')
     assert not t.get('v263_pad_corrections'), (beat, 'a recorded pad correction: not modelled here')
     assert len(t['rows']) == t['frames'] + 1, (beat, 'truncated reference')
+    if beat in REQUEST_CARDS:
+        skip = request_skip(t['rows'])
+        held = [r for r in t['inputs'] if r['f'] <= skip]
+        assert all(r['buttons'] == 0 and (r['lx'], r['ly']) == (127, 127) for r in held), (beat, 'input in the load')
+        rows = [dict(r, f=r['f'] - skip) for r in t['rows'][skip:]]
+        inputs = [dict(held[-1], f=0)] + [dict(r, f=r['f'] - skip) for r in t['inputs'] if r['f'] > skip]
+        # the rand() word of the first kept row (TRACE_RANDS' convention: script frame 0 takes it)
+        t = dict(t, rows=rows, inputs=inputs, frames=t['frames'] - skip, first_counter=t['first_counter'] + skip,
+                 skip=skip, skip_rand=t['rows'][skip]['rand'])
     return t
 
 
@@ -367,6 +392,8 @@ def source_rand(beat):
     source state: the creatures draw the recording's stream from control
     (EM_START_AT_RAND, comparison only)."""
     t = json.loads((beat_dir(beat) / 'trace.json').read_text())
+    if beat in REQUEST_CARDS:
+        return int(trace(beat)['skip_rand'], 16)
     ram = (Path(t['source_state']).resolve().parent / 'eeMemory.bin').read_bytes()
     block = int.from_bytes(ram[0x24295C:0x242960], 'little')
     return int.from_bytes(ram[block + 0x58:block + 0x5C], 'little')
@@ -449,6 +476,25 @@ def rand_anchors(name, beats, traces):
             rows[int(f) + off] = word
     out = OUT / 'pads' / f'{name}.rands'
     out.write_text(''.join(f'{f} {w}\n' for f, w in sorted(rows.items())))
+    return out
+
+
+# The guided run's takes record the rand() state word every row (take.rec's 'rand', the
+# word *(D_0024295C) + 0x58 that record_beat_rands.py reads on the fork): their per-frame table
+# comes from the trace itself: script frame r takes row r's word (rows.tbl samples it at the main
+# loop's 001AAF28, before the frame's owners; with this the port's draws and positions line up with
+# the rows: g46's skip frame, its walk), comparison only.
+TRACE_RANDS = ('g4',)
+
+
+def trace_rands(name, beats, traces):
+    base = traces[0]['first_counter'] - LEAD.get(beats[0], 0)
+    out = OUT / 'pads' / f'{name}.rands'
+    lines = []
+    for t in traces:
+        off = t['first_counter'] - base
+        lines += [f'{off + r} {row["rand"]}\n' for r, row in enumerate(t['rows'])]
+    out.write_text(''.join(lines))
     return out
 
 
@@ -554,6 +600,10 @@ def run(name, card, beats, timeout):
             env['EM_START_AT_LOADS'] = str(loads)
         if beats[0] in RESTORE_STEERED:
             env['EM_START_AT_RESTORE'] = restore_anchor(beats[0])
+    elif beats[0].startswith(TRACE_RANDS):
+        env['EM_START_AT_RANDS'] = str(trace_rands(name, beats, traces))
+        if 'clock' in traces[0]['rows'][0]:
+            env['EM_START_AT_CLOCK'] = f"0:{traces[0]['rows'][0]['clock']:x}"
     elif beats[0].startswith(LOAD_BEATS):
         loads = load_anchors(name, beats, traces)
         if loads:

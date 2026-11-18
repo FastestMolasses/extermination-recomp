@@ -26,10 +26,11 @@ them unchanged:
         where the bytes come from (the take, end.p2s's SHA-256, end.json's
         vsync / tick / pc) and ee_sha256 (build_start_saves checks it);
   <set>/<take>/trace.json
-        the take as a beat: rows (f, counter, pos, yaw, area4 from take.rec
-        and rows.tbl; row 0 also carries fade (D_0028A9A0, 16 bytes) and
-        m1F0 (the player record's +0x1F0) read from the source state's RAM,
-        the state row 0's tick starts from), inputs (each change of the pad
+        the take as a beat: rows (f, counter, pos, yaw, rand, the world
+        clock 0x70003B68 from take.rec and area4 from rows.tbl; row 0 also
+        carries fade (D_0028A9A0, 16 bytes) and m1F0 (the player record's
+        +0x1F0) read from the source state's RAM, the state row 0's tick
+        starts from), inputs (each change of the pad
         take.rec says a tick read, at f = tick - 2: route_capture's rule, a
         command set at row f reaches the game's pad block two frames later,
         which EM_START_AT_PAD reproduces), first_counter, frames,
@@ -161,7 +162,8 @@ def beat(take: str, folder: Path, source_state: str, source_ram: bytes) -> dict:
     rows, inputs, sent = [], [], None
     for k, (r, t) in enumerate(zip(rec, tbl)):
         rows.append({'f': k, 'counter': int(r['counter']), 'pos': [float(r['x']), float(r['y']), float(r['z'])],
-                     'yaw': float(r['yaw']), 'area4': t['area'].hex(), 'ph': r['ph'], 'rand': r['rand']})
+                     'yaw': float(r['yaw']), 'area4': t['area'].hex(), 'ph': r['ph'], 'rand': r['rand'],
+                     'clock': int(r['clock'])})
         pad = (int(r['btn'], 16), int(r['lx']), int(r['ly']))
         if pad != sent:
             f = max(k - PAD_LAG, 0)

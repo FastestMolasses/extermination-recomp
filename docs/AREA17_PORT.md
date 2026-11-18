@@ -152,25 +152,83 @@ for every key it does not list, AREA17's 0x1100 included; 0xF01 0xA;
 **Start cards** g46, g47, g48 (`build_start_saves.py`, the source state of
 each take; `em_start_at.c`), beats g46 .. g48 in `mid_route_beats.py`.
 
-**Where it stands** (`python3 tools/mid_route_beats.py --single g46`):
-LOAD GAME of card g46 loads AREA17 (level, collision, cells, textures,
-streams), places the player at the load pose (223.9, 888.85, 1185.5) and
-runs about 400 frames with no fault, then stops at the fail-stop of
-00133E30's 001DA6A0 (the creature's record has 44 bones and kind 0; the
-shadow gate takes 21 bones or the NPC kinds, and no proxy is exported for
-that kind). Before that the run already differs from the recording: the
-original moves the player to (320, 220, 270) two frames after control
-(row 311, the arrival's script) and the skip to (156.5, 220, 300); the port
-leaves the player at the load pose. So the beat fails; no AREA17 frame is
-row-checked yet.
+**Where it stood** (lane PORT-LIVE2): LOAD GAME of card g46 loaded AREA17 and
+ran about 400 frames, then the fail-stop of 00133E30's 001DA6A0; the player
+stayed at the load pose where the original's rows place it.
+
+### Lane PORT-LIVE-A17 (2026-11-17, branch `live-a17`)
+
+**The arrival pose.** (320, 220, 270) heading 0 at row 310 is not a script
+op: it is 001B07C0's spawn record D_0024D650[0x11][0] entry 0, which the
+original's area change (D_00275BE0 == 0) places from. A card is a LOAD
+GAME (D_00275BE0 == 1), whose 001B07C0 places from the block's load pose
+(build_start_saves copies the source state's player position, AREA14's
+(223.9, 888.85, 1185.5)). So before the skip the port's player stands at
+the load pose; nothing is missing in the area binding. [30] 0x823BA0 does
+run: state 0 starts script 0x826A20 at the placement frame, the script
+waits in its op0D, START reaches the script's skip (op0D -> op18 at
+0x826FA0, the op06 / op0D / op07 sub 4 end) and [30]'s 0x19 places the
+player at (156.5, 220, 300), 40 frames after the press in both (input
+f 60 -> pad frame 100 = recording row 412). The script's op07 sub 0xC
+waits about 17 frames longer in the original (its fade-out from the
+area change's fade-in; the card's fade is already full): a card
+difference, so its four [4]..[7] group nodes (one rand() draw each) start
+earlier in the port.
+
+**Beat alignment** (`tools/mid_route_beats.py` REQUEST_CARDS): g46's card is
+the LOAD GAME of an area request (g45's end), so the recording's load rows
+are dropped: the first row whose position leaves row 0's (the placement,
+row 310) + 2 = 312 rows; the pad, path, rand() table and end check use the
+rest (2001 frames).
+
+**Comparison aids** (comparison only, as the N1 beats'): the guided takes
+record the rand() state word every row (take.rec's `rand`), so g4x beats get
+EM_START_AT_RANDS from their own trace (script frame r takes row r's word;
+with that convention the port's draws and positions line up with the rows,
+e.g. the skip's frame and the walk at frames 172..176); EM_START_AT_CLOCK
+(new, docs/STARTUP.md) puts the row-0 world clock 0x70003B68 in place
+(capture_from_take now writes each row's `clock`).
+
+**Fixes**:
+- 001DA6A0 for an actor of kind 0 (halfword +0x96): the original returns at
+  its first test, before any node or scene read (decomp
+  src/func_001DA6A0.c; em_shadow_original_001DA6A0 already returns there).
+  em_shadow_live_actor_001DA6A0 now returns before its 21-node gate for
+  kind 0. The guided run's g46 end state holds 00133E30's record at
+  0x7B1B10 with 44 nodes and kind 0, so no capacity or proxy is needed for
+  it; a nonzero kind with more than 21 nodes still fails-stop (none seen).
+- Music cue 0xB (export_streams MUSIC_EXTRA): [30]'s 001FB0B0(0xB) at its
+  script's end or skip; its absence was the stream-lanes fault 001FB100
+  (00112610 code 8) in g46 .. g48.
+- The muzzle node 001F5040 binds in AREA17 (em_scene_bindings): the
+  creature's beam 001B3C30 (00133E30's 001348E0) allocates it through
+  001F4F40.
+
+**Where it stands now**:
+- g46: past the skip and the walk (the steered positions follow the rows to
+  pad frame ~330), then the fail-stop at 001F1F60: effects 0x80000037 /
+  0x80000038 (templates D_00257C90 + 0x37 / 0x38 * 0x30) run it, spawned
+  by the creature's spit (001373B0, 00153540, 0018AF50, 0018B3E0). It is
+  the 6-slot particle burst (decomp src/func_001F1F60.c, byte-matched; its
+  callee 001F1DD0 is untranslated, 001F1550 is em_area00_fx's); it draws
+  rand() (state 0 and mode 1), so it must run for the rand() stream too.
+  With it stubbed (local diagnosis only, never committed) the run went on
+  to frame ~1090, where the player had taken three hits of 10 the original
+  rows cannot confirm or deny (the original used item 0x22 in this take:
+  D_00810C82 2 -> 1, health 35 at both ends).
+- g47: the same 001F1F60 fault (frame ~250).
+- g48: runs to pad frame ~12200 of 26829, then 001BAD40 (unbound),
+  called by 0x8251B0 (group 0x827F40 [4]).
 
 ## Not done
 
-- **The live area** (section "Live"): why [30]'s arrival does not place
-  the player in the port (row 311); the 44-bone creature's shadow
-  (001DA6A0: its proxy, the node capacity); then the beats g46 .. g48.
-- The muzzle node 001F5040 and the other live-only bindings AREA14 needed
-  (AREA14_PORT.md "Pieces the live run needed") are not added for AREA17.
+- **The live area** (section "Live"): translate 001F1F60 and 001F1DD0
+  into em_area00_fx (the knife trail's slot framework: 001F1550 holds 6
+  slots here, em_aim_fire_trail's slots_max) with oracle cases, bind the
+  callback in the composition (em_aim_fire_runtime other_tick,
+  em_aim_fire_world_live); then 001BAD40 for g48; then the beats g46 .. g48.
+- The other live-only bindings AREA14 needed (AREA14_PORT.md "Pieces the
+  live run needed") but the muzzle node 001F5040 are not checked for AREA17.
 - 0x8235E0 and 0x823860, and the group holding 0x823580 / 0x8236F0 /
   0x823800, have no static reference in the overlay or its code; whether any
   path reaches them is open.
