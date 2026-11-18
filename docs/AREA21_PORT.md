@@ -401,6 +401,60 @@ point), then from about row 1450 y rises (35.01 to 39.80): a climb.
   func_overlay_AREA21_00825AC0; listed above as "not translated, no static
   reference"): untranslated, fail-stop. g78 .. g80 not reached.
 
+## Haze ring (lane PORT-A21-RING, 2026-11-18, branch `a21ring`)
+
+The effect node behaviour **001E76A0** (a word of 001EF9D0's kind table;
+the boss fight starts one at g77 row 5922, node 0x7BCB50) is translated in
+`em_haze_ring` (header: every function's behaviour) from the decomp C:
+001E76A0 and its ring **001E0AC0** (byte-identical C) and the sprite
+**001E0750** (NEARMISS 99.75%, VU0; register choices only, the original
+instructions were followed: x and y are scaled by Q, then w loses vf3.x
+(the GPR the zero float went into), Q is taken again and only then z is
+scaled). The node runs 300 frames (+0x20 from 300, state 3 at <= 0, then
+001AFC10); each frame 001028B8 moves its point by +0xC0 and 001E0AC0 draws
+64 screen-sampling sprites on an ellipse (75 by 30) around it on channel 3
+(001D1F80 / 001D7510 / 001D1FF0 first, a closing tag, then 001CAAC0). Each
+drawn sprite takes two rand() words (00122BB8) per vertex, 12 in all.
+
+- **Binding**: `em_haze_ring_live` over the area runtime, from
+  dispatch_area21 (em_area01_runtime_second_half.inc). Every hook re-enters
+  em_area01_runtime_call by address; 001D7510 is newly exported
+  (em_rcl_001D7510) and routed with 001D1F80 / 001D1FF0 in
+  em_area01_rcl_workers; D_0026E9A0 and D_00253530 come from the boot
+  constants; rand is the shared em_random.
+- **Evidence**: `make test-haze-ring-reference`
+  (tools/test_haze_ring_reference.py): the original instructions of the
+  three functions (001E0AC0 running 001E0750, 001E76A0 running both;
+  001CD370 and float_to_int as original code) over designed states (node
+  states 0..3 and others, the timer at 1.0, one ulp either side, 0, -0;
+  points inside, across and outside the clip volume and behind the camera;
+  the ELF's corner pairs or designed ones; fog ramps over both bounds; rand
+  words and sin / cos results true or extreme). Hooks scripted on both
+  sides with arguments and stack pointers compared. Compared: every byte of
+  the windows (no original store outside them), the calls, vf1, vf2,
+  vf3.x / .y, vf23..vf31, ACC, Q, CLIP. Quick 154 cases (~4 s),
+  EM_TEST_FULL=1 744; 363 of 363 words executed. EM_HAZE_RING_MUTANTS=1:
+  12 of 12 caught (300 one ulp, the s jitter span one ulp, the t jitter
+  base one ulp, the jitter scale, a corner offset index, the closing tag
+  0x60, the ring's fy, the step count 64, the w reduction's lane, the timer
+  compare < for <=, the fog max bound, the scale factor 8 one ulp).
+- **vf23 (open item)**: 001E0750 reads it as the logic walk left it.
+  Measured in the original (fork, hidden replay of g77's pad log from its
+  start state, a watch table at every 001E0750 entry over rows
+  5922..6281: 57600 calls, all from 001E0AC0, 900 rings, up to three rings
+  a frame): constant within a ring; equal to the fog quadword ctx +0xA0 in
+  676 rings, another owner's leftover (it looks like a matrix row, 184
+  distinct values) in 224, in no fixed position within the frame. The port
+  starts every ring from ctx +0xA0. vf23 shapes only the fog lane: ACC.w,
+  vf2.w and the scratch word 0x7000360C (the packets take x, y, z only).
+  Exact values need the last vf23 writer of the logic walk modelled.
+- vf3.z / .w (the upper half of that GPR, never set by 001E0750) are left
+  as they were.
+
+Chain g20 (card g73): g77 now 12090 / 12090 compared rows on the row
+(rand() word included) to row 12089, where 0x8266F0's 001BA1F0 faults at
+0x8269F0 (record 0x82C340; em_area11 script host). g73..g76 as before.
+
 ## Next
 
 0. Next: **0x825B00** (g77 row 5893, the effect node 0014EC00 starts),
@@ -420,6 +474,8 @@ point), then from about row 1450 y rises (35.01 to 39.80): a climb.
    0020A7A0 draw at g76 row 6385 (The boss fight, last item), then chain
    g20 on through g78 .. g80.
 1b. 001D7410's Z read-back (Far light, "Not modelled").
+1c. The haze ring's vf23 (Haze ring, open item): the logic walk's last
+    vf23 writer before each ring.
 2. Run the live owners of that recording through these oracles (as
    test_area14_overlay_reference's `live/` cases).
 3. (done) 0x8243B0, [52], lane PORT-A21-52.

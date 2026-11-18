@@ -126,6 +126,7 @@ static int a16_owner(uint32_t fn)
  * have no static reference but are reached: the boss fight's 001EFD20 /
  * 001EFD90 effect nodes (g77, lanes PORT-A21-BOSS and PORT-A21-PHASES). */
 #include "game/em_area21_use.h"
+#include "game/em_haze_ring_live.h"
 
 /* AREA21's Use classifier 001AAC00 (boot code, reached only in area
  * 0x15, from the Use dispatcher 00160220: em_area01_live_classify) with
@@ -167,6 +168,13 @@ static int dispatch_area21(EmArea01Runtime *r, EmArea01Call *c, int *out, int *x
         *where = f.address;
         *code = f.code;
         if (*x >= 0) c->v0 = (uint64_t)(int64_t)result;
+        return 1;
+    }
+    if (c->function == 0x001E76A0u) {
+        /* the effect node 001E76A0 (001EF9D0's kind table; g77 row 5922):
+         * em_haze_ring over this runtime (frame 0x20; sp passed as it is) */
+        if (c->na < 1 || c->nf) { *out = fail(r, c->function); return -1; }
+        *x = em_haze_ring_live_001E76A0(r, c->sp, (uint32_t)c->a[0], where, code);
         return 1;
     }
     static const struct { uint32_t fn, frame; unsigned na; char module; } owners[] = {
