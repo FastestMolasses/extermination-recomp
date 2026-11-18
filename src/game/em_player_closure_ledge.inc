@@ -50,6 +50,9 @@ static uint8_t *ledge_bytes(void *ctx, uint32_t a, uint32_t n)
     /* the area bytes and D_008106F2, the world's (00169250 / 00194240) */
     if (a == 0x00810700u && n == 1) return &scene()->d810700;
     if (a == 0x00810701u && n == 1) return &scene()->d810701;
+    /* D_00810835, the progress byte 0016BC40's state 0 sets in area 0x11
+     * (decomp func_0016BC40; AREA17's 0x8284F0 waits for it). */
+    if (a == 0x00810835u && n == 1) return em_scene_progress_at(scene(), a, 1);
     if ((a == 0x008106F2u || a == 0x008106F1u || a == 0x008106BDu) && n == 1) return em_scene_req_at(scene(), a);
     /* 0x700031FC / 0x70003204: the collision file's vertex and index pools
      * (00199C50's staging of the D_0028A598 header), for 0019F680. */

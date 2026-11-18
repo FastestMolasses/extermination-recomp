@@ -319,6 +319,12 @@ EmPointLightPool *em_rcl_point_lights(void);
 /* 001D80B0(id) over the context's point-light slots (em_frh_001D80B0). 0,
  * or -1 (reported). */
 int em_rcl_001D80B0(int32_t id);
+/* 001D8060(id) over the same slots (em_frh_001D8060): *slot = the matching
+ * slot's address, or 0. 0, or -1 (reported). */
+int em_rcl_001D8060(int32_t id, uint32_t *slot);
+/* 001D6B10(chan, a1, a2, a3) over this context (em_render_context_001D6B10):
+ * *result (may be NULL) = 001D6930's result. 0, or -1 (reported). */
+int em_rcl_001D6B10(int32_t chan, int32_t a1, int32_t a2, int32_t a3, uint32_t *result);
 
 /* The chain page 001CB800 spliced at the last frame close (001D1EA0's
  * kick): its start tag, and the CALL targets appended to slot 0xFFF in that

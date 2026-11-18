@@ -131,7 +131,11 @@ int em_area01_light_service_prepare(const EmArea01RuntimeHost *h, const EmArea01
             return -1;
         s->argument=(uint32_t)c->a[2]; s->multiplier=c->f[0]; s->adder=c->f[1];
     } else if (c->function==0x001CAAC0u) {
-        if (c->na!=3 || c->nf || (c->a[0]&15u) || (uint32_t)c->a[2]!=EM_RCL_CONTEXT ||
+        /* 001CAAC0(pos, payload) reads two arguments; a three-argument
+         * caller's third must name this context, a two-argument one
+         * (AREA17's creature haze 001E04E0) has none. */
+        if ((c->na!=3 && c->na!=2) || c->nf || (c->a[0]&15u) ||
+            (c->na==3 && (uint32_t)c->a[2]!=EM_RCL_CONTEXT) ||
             copy(h,(uint32_t)c->a[0],s->position,16)<0) return -1;
         s->argument=(uint32_t)c->a[1];
     } else if (c->na!=1 || c->nf) return -1;

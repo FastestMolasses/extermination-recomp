@@ -7,10 +7,43 @@
 static int fail(uint32_t *fault, uint32_t address)
 { if (fault && !*fault) *fault=address; return -1; }
 
+/* The render context's own entries an overlay or creature owner calls
+ * directly, each over its one live translation (em_render_context_live):
+ * 001D8060 (AREA16's 0x825780 light lookup) and the channel-3 set-up of
+ * AREA17's creature haze 001E04E0 (00133E30): 001D6B10, 001D1F80,
+ * 001D6BA0, 001D1FF0, 001D1F20. */
+static int context_entry(uint32_t fn)
+{
+    return fn==0x001D8060u || fn==0x001D6B10u || fn==0x001D1F80u || fn==0x001D6BA0u ||
+           fn==0x001D1FF0u || fn==0x001D1F20u;
+}
+
 int em_area01_rcl_workers_handles(uint32_t fn)
 {
     return fn==0x001CB5F0u || fn==0x001CB950u || fn==0x001CB6B0u || fn==0x001CB900u ||
-           fn==0x001CB760u || fn==0x001D2E00u || fn==0x001D2DE0u;
+           fn==0x001CB760u || fn==0x001D2E00u || fn==0x001D2DE0u || context_entry(fn);
+}
+
+static int context_call(EmArea01Call *c, uint32_t *fault)
+{
+    const uint32_t fn=c->function;
+    const unsigned na=fn==0x001D6BA0u ? 6u : fn==0x001D6B10u ? 4u : fn==0x001D1F80u ? 3u
+                     : fn==0x001D1FF0u ? 2u : 1u;
+    if (c->na!=na || c->nf) return fail(fault,fn);
+    const int32_t a0=(int32_t)c->a[0], a1=(int32_t)c->a[1], a2=(int32_t)c->a[2];
+    uint32_t result=0;
+    int rc;
+    switch (fn) {
+    case 0x001D8060u: rc=em_rcl_001D8060(a0,&result); break;
+    case 0x001D6B10u: rc=em_rcl_001D6B10(a0,a1,a2,(int32_t)c->a[3],&result); break;
+    case 0x001D1F80u: rc=em_rcl_001D1F80(a0,a1,a2); break;
+    case 0x001D6BA0u: rc=em_rcl_001D6BA0(a0,a1,a2,(int32_t)c->a[3],(int32_t)c->a[4],(int32_t)c->a[5]); break;
+    case 0x001D1FF0u: rc=em_rcl_001D1FF0(a0,a1); break;
+    default: rc=em_rcl_001D1F20(a0); break;
+    }
+    if (rc<0) return fail(fault,em_rcl_fault() ? em_rcl_fault() : fn);
+    if (fn==0x001D8060u || fn==0x001D6B10u) c->v0=(uint64_t)(int64_t)(int32_t)result;
+    return 0;
 }
 
 typedef struct { EmPacketChain *chain; uint32_t packet; } Tex0;
@@ -25,6 +58,7 @@ int em_area01_rcl_workers_call(EmArea01Call *c, uint32_t *fault)
     if (!c || !fault) return -1;
     if (*fault) return -1;
     if (!em_area01_rcl_workers_handles(c->function)) return 1;
+    if (context_entry(c->function)) return context_call(c,fault);
     const uint32_t fn=c->function;
     unsigned na=fn==0x001D2E00u ? 1u : fn==0x001D2DE0u ? 2u : fn==0x001CB6B0u ? 4u : 3u;
     if (c->na!=na || c->nf) return fail(fault,fn);
