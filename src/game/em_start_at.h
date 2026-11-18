@@ -58,7 +58,10 @@ int em_start_at_report(void);
 void em_start_at_pad_control(unsigned counter);
 /* pos / fwd: the player's position and the camera's forward (with
  * EM_START_AT_PATH the stick steers toward the recorded path). */
-int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[3], const float *heading);
+/* at_frame_end: the frontend's hook at the end of a frame with no world
+ * frame (a status page), not at a world frame's head. */
+int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[3], const float *heading,
+                          int at_frame_end);
 /* The player's position for EM_START_AT_TRACE on a frame whose
  * em_start_at_pad_frame gets no pos (a scripted stretch, where the path does
  * not steer): the trace still has a line for it; heading: the player's

@@ -581,6 +581,25 @@ recording-derived and stay in the ignored `build/`.
   from one card (no reload between takes), every frame compared with the takes'
   rows, with the recorded disc-drive timing (as tools/watch_takes.py); see
   AREA17_PORT.md "Lane PORT-CHAIN".
+  `EM_START_AT_FRAMES=1` (comparison only, tools/guided_chain.py) keeps the
+  script's clock on the engine's frames: the frontend steps the script at a
+  world frame's head in play but at the frame's end on a status page (states
+  3 and 5 run no world frame), and a page's open (the r == 2 frame, state 3's
+  step 0) and close (state 5) step neither. With it a gap of 2..8 engine
+  frames between steps advances the clock by the frames missed (an end-of-frame
+  step counts for the next frame), and an end-of-frame step sets the pad of
+  rows f <= t - 3 instead of t - 2 (the next frame reads it, as a head step's
+  pad is read in the frame after it). Without it the clock fell two frames
+  behind at a page's open and its pad reached the page a frame early, so g46's
+  page closed a frame before the original's (AREA17_PORT.md "Lane PORT-A17-NEXT").
+  The trace then also holds the engine counter `c`, the frame machine's state
+  `tb` (task 0's +0xB) and D_00275BD8 `bd8`, take.rec's tb / bd8 columns.
+  `EM_START_AT_STATUS_BG=<ram image>` (comparison only) puts the image's
+  D_002655A0 (the status pages' background, 0020A7A0) in place at control: its
+  pulse timers draw rand() on page frames and the original initialises it
+  once from the ELF's .data and never resets it, so a card from boot holds
+  the .data image where the recording holds what its earlier pages left
+  (guided_chain passes the card's source state).
   `EM_START_AT_RANDS=<file>` (lines `f state`) puts
   the rand() word in place at those script frames.
   `EM_START_AT_CLOCK=<f>:<hex>` (comparison only) sets 0x70003B68 to the

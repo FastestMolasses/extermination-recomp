@@ -57,6 +57,11 @@ typedef struct {
  * then zeros. */
 void em_status_background_init(EmStatusBackground *state);
 
+/* D_002655A0's 96 bytes in the original's layout (a RAM image's
+ * 0x2655A0..0x2655FF) become the shared live state: comparison only
+ * (EM_START_AT_STATUS_BG, docs/STARTUP.md). 1, or 0 for no bytes. */
+int em_status_background_live_restore(const unsigned char bytes[96]);
+
 /* One 0020A7A0 call. Every worker must return 1 (sine and random are
  * values); 1 on success, -1 on a worker failure or a value outside the
  * translated domain (the state is then partially updated, as the

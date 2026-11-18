@@ -23,8 +23,13 @@ What runs (EM_START_AT, docs/STARTUP.md; comparison aids as the g4x beats'):
   - EM_START_AT_PHASES: when a load segment ends (phase L: em_replay.c's and
     take.rec's rule) the script's frame becomes the recording's first row after
     its load (the port's disc answers at host speed, so its load is shorter);
-  - EM_START_AT_TRACE: the port's position, heading, area bytes, vitals and
-    rand() word per script frame.
+  - EM_START_AT_FRAMES: the script's clock follows the engine's frames across a
+    status page's open and close (frames no hook steps), and a step at a frame's
+    end sets the pad the next frame reads (docs/STARTUP.md);
+  - EM_START_AT_STATUS_BG: the pages' background D_002655A0 from the card's
+    source state (never reset by the original, so a card from boot differs);
+  - EM_START_AT_TRACE: the port's position, heading, area bytes, vitals,
+    rand() word, frame-machine state and D_00275BD8 per script frame.
 
 Every frame is then compared with the takes' rows (route set trace.json, read
 only): position (within 0.01), heading, the area bytes, the rand() word (the
@@ -62,6 +67,7 @@ import mid_route_beats as mrb  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'build/guided_chain'
 SAME = 0.01
+PAD_LAG = 2     # capture_from_take / route_capture: a pad read at row k is an input at f = k - 2
 TURNED = 0.001
 
 # chain: (start card, route set, takes in order). The card is the first take's source state.
@@ -99,7 +105,12 @@ def load(route, takes):
         for r in t['rows']:
             rows.append(dict(r, take=k, local=r['f'], f=r['f'] + off))
         for i in t['inputs']:
-            inputs.append(dict(i, f=i['f'] + off))
+            # A take's first pad changes are read at its rows 0 and 1, so their inputs lie in the
+            # previous take's last rows (f = k - 2: capture_from_take clamps them to 0 for a lone
+            # beat; 'k' keeps the row): g48's first stick at row 1 is the chain's frame before g48.
+            f = i['k'] - PAD_LAG if 'k' in i and k > 0 else i['f']     # (k: the take's index)
+            inputs.append(dict(i, f=f + off))
+        inputs.sort(key=lambda i: i['f'])
         hits = (t.get('vitals') or {}).get('hits', [])
         for h in hits:
             rows[off + h['f']]['hit'] = h['hp']
@@ -146,7 +157,7 @@ def row0_fade(row):
     return fade[4] if fade[0] else 0
 
 
-def run(name, card, rows, files, timeout, kinds, extra=(), steer=False):
+def run(name, card, rows, files, timeout, kinds, extra=(), steer=False, source_ram=None):
     pad, rands, clocks, loads, marks, _ = files
     out = OUT / name
     trace = out / 'trace.jsonl'
@@ -158,9 +169,13 @@ def run(name, card, rows, files, timeout, kinds, extra=(), steer=False):
     env['EM_PS2_DISC_DRIVE_TIMING'] = '1'
     env.update(EM_START_AT=card, EM_START_AT_PAD=str(pad), EM_START_AT_RAND=rows[0]['rand'],
                EM_START_AT_RANDS=str(rands), EM_START_AT_FADE=str(row0_fade(rows[0])),
-               EM_START_AT_TRACE=str(trace))
+               EM_START_AT_TRACE=str(trace), EM_START_AT_FRAMES='1')
     if kinds:
         env['EM_START_AT_TRACE_KINDS'] = kinds
+    if source_ram and source_ram.exists():
+        # The status pages' background D_002655A0 as the card's source state holds it (its pulse
+        # timers draw rand(); a card started from boot holds the ELF's .data image instead).
+        env['EM_START_AT_STATUS_BG'] = str(source_ram)
     env.update(v.split('=', 1) for v in extra)
     if steer:
         path = out / 'chain.path'
@@ -202,8 +217,10 @@ def run(name, card, rows, files, timeout, kinds, extra=(), steer=False):
     return time.time() - start, faults, trace, log_path
 
 
-def compare(rows, takes, trace):
-    """Per take: frames compared, the first frame of each kind of difference."""
+def compare(rows, takes, trace, anchors=()):
+    """Per take: frames compared, the first frame of each kind of difference.
+    The rand() word of a load anchor's row is not compared: the port's word
+    there follows its own (shorter) load, not the recording's last load row."""
     port = {}
     if trace.exists():
         for line in trace.read_text(errors='replace').splitlines():
@@ -242,7 +259,7 @@ def compare(rows, takes, trace):
                 same = same and turned <= TURNED
             if p.get('area') and p['area'] != r['area4'][:6] and first['area'] is None:
                 first['area'] = (r['local'], p['area'], r['area4'][:6])
-            if p['rand'] != int(r['rand'], 16) and first['rand'] is None:
+            if r['f'] not in anchors and p['rand'] != int(r['rand'], 16) and first['rand'] is None:
                 first['rand'] = (r['local'], f'{p["rand"]:08x}', r['rand'])
             exact += same
         last = max((r['local'] for r in mine if r['f'] in port), default=None)
@@ -309,12 +326,15 @@ def main(argv):
           f'{files[5]}', flush=True)
     if not args.compare_only:
         timeout = float(os.environ.get('EM_GUIDED_CHAIN_TIMEOUT', '1800'))
-        seconds, faults, trace, log_path = run(args.chain, card, rows, files, timeout, args.kinds or KINDS.get(args.chain), args.set, steer)
+        source = json.loads((refs.capture(route) / takes[0] / 'trace.json').read_text()).get('source_state')
+        source_ram = Path(source).parent / 'eeMemory.bin' if source else None
+        seconds, faults, trace, log_path = run(args.chain, card, rows, files, timeout,
+                                               args.kinds or KINDS.get(args.chain), args.set, steer, source_ram)
         print(f'run: {seconds:.0f} s, {log_path.relative_to(ROOT)}')
         for f in faults[:3]:
             print(f'  stopped: {f[:240]}')
     trace = out / 'trace.jsonl'
-    report, reached = compare(rows, takes, trace)
+    report, reached = compare(rows, takes, trace, set(files[5]))
     if reached >= 0:
         r = rows[min(reached, len(rows) - 1)]
         report.insert(0, f'the port\'s script reached chain frame {reached} of {len(rows) - 1} '

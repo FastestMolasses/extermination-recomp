@@ -131,6 +131,17 @@ uint8_t *em_area01_actor_view_bytes(EmArea01ActorView *v, uint32_t address, uint
      * +0x204 died: its +0xB0, before the tracker drops the pointer). */
     if (!write && (!a->allocated || a->self != a) && offset >= 0xA0u && offset + size <= 0x1F0u)
         return r->image + offset;
+    /* The same for +0x20..+0x9F of a record freed before this window: the
+     * pool keeps what 001AFC10 left there (its +0x36, +0x90 and +0x98
+     * cleared, the rest the last values; em_actor_pool_free_001AFC10). A
+     * script actor's owner read: 001BB0E0 state 1 tests its owner's +0x2E
+     * bits on the frame after AREA17's [38] 0x825470 freed itself at the
+     * end of its script (g48 row 19587, the area change to AREA11). */
+    if (!write && !a->allocated && offset >= 0x20u && offset + size <= 0xA0u) {
+        static uint8_t freed[EM_ACTOR_RECORD_SIZE];
+        em_actor_pool_record_image(v->pool, a, freed);
+        return freed + offset;
+    }
     if (em_area01_actor_view_touch(v, address - offset) < 0) return NULL;
     if (!a->allocated || a->self != a || a->generation != r->generation) {
         fail(v, address, 2); return NULL;

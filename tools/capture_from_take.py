@@ -144,8 +144,8 @@ def write(path: Path, data: bytes) -> None:
 def take_vitals(src: Path, rows: list, end: dict) -> dict | None:
     """The player's health and infection as the take records them: take.rec
     and rows.tbl have no health column, so these are threats.json's hit
-    events (each at the row whose counter is the event's `c`: health after
-    the hit, the loss, infection, the position) and end.json's checkpoint
+    events (health after the hit, the loss, infection, the position) and
+    end.json's checkpoint
     (health and infection at the take's end). None when the take has
     neither."""
     at = {r['counter']: r['f'] for r in rows}
@@ -153,13 +153,19 @@ def take_vitals(src: Path, rows: list, end: dict) -> dict | None:
     threats = src / 'threats.json'
     if threats.exists():
         for e in json.loads(threats.read_text()).get('events', []):
-            if e.get('kind') == 'hit' and e.get('c') in at:
-                hits.append({'f': at[e['c']], 'hp': e.get('hp'), 'lost': e.get('lost'), 'inf': e.get('inf'),
+            # The monitor (decomp tools/guided_run/threats.py) observes once per tick and logs
+            # an event with the counter of its PREVIOUS snapshot (`self.last.counter`): the
+            # snapshot that shows the loss is the next tick's, counter c + 1 (events' `t` and
+            # `c` advance together). The hit's row is that one: the first row whose state
+            # holds the lower health, as the port's per-frame trace reports it.
+            if e.get('kind') == 'hit' and e.get('c') is not None and e['c'] + 1 in at:
+                hits.append({'f': at[e['c'] + 1], 'hp': e.get('hp'), 'lost': e.get('lost'), 'inf': e.get('inf'),
                              'at': e.get('at')})
     check = end.get('checkpoint') or {}
     if not hits and 'hp' not in check:
         return None
-    return {'from': 'threats.json hit events (row by counter), end.json checkpoint', 'hits': hits,
+    return {'from': 'threats.json hit events (row by counter c + 1: the snapshot after the event\'s), '
+                    'end.json checkpoint', 'hits': hits,
             'end': {'hp': check.get('hp'), 'inf': check.get('inf')}}
 
 
@@ -193,7 +199,9 @@ def beat(take: str, folder: Path, source_state: str, source_ram: bytes) -> dict:
             f = max(k - PAD_LAG, 0)
             if inputs and inputs[-1]['f'] == f:
                 inputs.pop()
-            inputs.append({'f': f, 'buttons': pad[0], 'lx': pad[1], 'ly': pad[2]})
+            # 'k': the row whose tick read it; f clamps at 0 for a single beat, but a chain of
+            # takes (tools/guided_chain.py) places it at k - 2 of the previous take's rows.
+            inputs.append({'f': f, 'k': k, 'buttons': pad[0], 'lx': pad[1], 'ly': pad[2]})
             sent = pad
     rows[0]['fade'] = source_ram[FADE:FADE + FADE_SIZE].hex()
     rows[0]['m1F0'] = source_ram[PLAYER + 0x1F0]

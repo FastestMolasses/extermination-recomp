@@ -990,7 +990,7 @@ void em_frontend_start_at_after_frame(void)
 {
     if (f.start_at && lt.phase == 6 && !start_at_pad_stepped) {
         em_start_at_trace_position(g.pos, g.yaw);
-        if (em_start_at_pad_frame(em_frame_counter(), NULL, g.cam.fwd, NULL) == 1)
+        if (em_start_at_pad_frame(em_frame_counter(), NULL, g.cam.fwd, NULL, 1) == 1)
             start_at_pad_end();
         else
             start_at_pad_mark();
@@ -1011,7 +1011,7 @@ void em_frontend_load_test_before_frame(void)
     if (start_at_actor) memcpy(&start_at_heading, start_at_actor->bytes + 0xC4, 4);
     const int pad_step = f.start_at && lt.phase == 6 ?
                          em_start_at_pad_frame(em_frame_counter(), path_control ? g.pos : NULL, g.cam.fwd,
-                                               start_at_actor ? &start_at_heading : NULL) : 0;
+                                               start_at_actor ? &start_at_heading : NULL, 0) : 0;
     if (pad_step == 1)
         start_at_pad_end();
     else if (pad_step == 0 && f.start_at && lt.phase == 6)
