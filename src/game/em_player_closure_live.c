@@ -2674,10 +2674,25 @@ static int c10_segment(void *c, const uint32_t from[4], const uint32_t to[4], un
     float f[4], t[4];
     bits4(from, f); bits4(to, t);
     FAULT(w_segment_r(f, t, mask, id, result));
-    if (hit) {
-        if (*result) FAULT(segment_hit(hit));
-        else memset(hit, 0, sizeof *hit);
+    if (!hit) return 0;
+    if (!*result) {
+        memset(hit, 0, sizeof *hit);
+        return 0;
     }
+    FAULT(segment_hit(hit));
+    /* hit->axis is the record's +0x34..+0x3F (the header's contract), which
+     * 00181F60 reads for +218 (atan2(-axis.z, axis.x) + pi/2). segment_hit
+     * carries no axis, so the ladder scratch is filled from this query and
+     * its copy of the record gives it (a grid node's axis from the EMCL axis
+     * section). Without it 00181F60 turned the AREA08 ceiling hang toward
+     * pi/2 instead of pi (guided chain g16, counter 246,510). A cell record's
+     * +0x34 is scratch no walker writes: the one reader faults on it. */
+    FAULT(le_fill_last());
+    if (L.le_scratch.record == EM_PLAYER_LADDER_RECORD_OTHER && !L.le_scratch.axis_missing)
+        memcpy(hit->axis, L.le_scratch.record_bytes + 0x34, sizeof hit->axis);
+    else if ((hit->node & 0xFF) == 0x36)
+        return unbound("00181F60's record axis +0x34 on a hit without an axis (a cell record or an EMCL "
+                       "without the axis section)");
     return 0;
 }
 static int c10_move(void *c, EmPlayerLiveActor *a, const uint32_t target[4], unsigned mask, int *result,

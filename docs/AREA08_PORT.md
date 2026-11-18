@@ -90,7 +90,14 @@ row-exact from New Game.
   run's heading leaves the recording from row 24 (the walk's first clip change)
   with the camera equal, cause not found. a08_05, a07b_04 and a07b_05 leave by a
   small heading step at rows 19..25 the same way; a card's pose may be why (the
-  idle clip's phase is not the recording's), which is not proven.
+  idle clip's phase is not the recording's), which is not proven. The ceiling
+  hang's edge-turn fix (c10_segment's record axis, 2026-11-18, docs/AREA19_PORT.md)
+  did not move it: a08_04 in anchor mode still leaves at row 24.
+- **0011A070 for the overlay owners** (2026-11-18): em_area01_audio_services binds
+  it (em_sfx_stop_track; an index of 0x30 or more returns). Sub 3's flames
+  (0x824BC0) stop a refused voice with it; before, the live composition faulted
+  there (guided chain g16, the AREA08 sub 3 cutscene of the recharger beat, original
+  counter 250,537..251,030).
 - **Bug spawn timing**: in a08_01 the bug 0x7B0C60 appears at row 415, the
   recording's at 417: a spawner's timer is not on the card, and the bug restore
   does not carry it.
