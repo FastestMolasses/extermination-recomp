@@ -38,6 +38,7 @@
 #include "game/em_owner_draw_live.h"
 #include "game/em_scene_workers.h"
 #include "game/em_sdk_math_original.h"
+#include "game/em_sdk_vu0.h"
 #include "game/em_sfx.h"
 #include "game/em_sfx_bank.h"
 #include "game/em_stream_lanes_original.h"
@@ -1533,6 +1534,104 @@ static int handler_area06(u32 handler, EmEffectOriginalNode *node, int32_t depth
     return rc<0 ? fail(f.address?f.address:handler,"AREA06 effect fault (em_area06_port)") : 0;
 }
 
+/* AREA16's effect handler 001EF780 (g65; em_area06_port's translation,
+ * test_area06_port_reference): eight particles, each from the scratch
+ * matrix 0x700036A0 built by the VU0 routines 001029C0 / 00102C58 /
+ * 00102918 / 001026D0 (em_owner_services' and em_sdk_vu0's translations)
+ * over the angle rows D_00257C50, the offset rows D_00257BD0 and the node's
+ * matrix (+0xD0), submitted by 001CFB50 from that matrix and 001CFBE0 with
+ * the source D_00257B40 (export_area00_runtime_tables.py's window
+ * D_00257B40 .. D_00257C8F); the work block's +4 seed and +8 step. */
+typedef struct { A06Handler base; float spad36A0[16]; } EF780;
+static uint8_t *ef780_view(void *ctx, uint32_t address, uint32_t size)
+{
+    EF780 *v = ctx;
+    if (address >= 0x700036A0u && size <= 0x40u && address - 0x700036A0u <= 0x40u - size)
+        return (uint8_t *)v->spad36A0 + (address - 0x700036A0u);
+    if (address >= 0x00257BD0u && size <= 0xC0u && address - 0x00257BD0u <= 0xC0u - size)
+        return (uint8_t *)(uintptr_t)em_effects_live_window(address, size);
+    return a06_handler_view(&v->base, address, size);
+}
+static float *ef780_matrix(EF780 *v, uint32_t address)
+{
+    return (float *)(void *)ef780_view(v, address, 0x40u);
+}
+static int ef780_001029C0(void *ctx, uint32_t a0)
+{
+    float *m = ef780_matrix(ctx, a0);
+    return m && em_owner_services_identity_001029C0(m) == 0 ? 0 : -1;
+}
+static int ef780_00102C58(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    float *d = ef780_matrix(ctx, a0), *s = ef780_matrix(ctx, a1);
+    const uint8_t *r = ef780_view(ctx, a2, 12);
+    float angles[3];
+    if (!d || !s || !r) return -1;
+    memcpy(angles, r, sizeof angles);
+    return em_owner_services_euler_00102C58(d, s, angles) == 0 ? 0 : -1;
+}
+static int ef780_00102918(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    float *d = ef780_matrix(ctx, a0), *s = ef780_matrix(ctx, a1);
+    const uint8_t *r = ef780_view(ctx, a2, 12);
+    float offset[3];
+    if (!d || !s || !r) return -1;
+    memcpy(offset, r, sizeof offset);
+    return em_owner_services_translate_00102918(d, s, offset) == 0 ? 0 : -1;
+}
+static int ef780_001026D0(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    uint8_t *d = ef780_view(ctx, a0, 0x40u), *a = ef780_view(ctx, a1, 0x40u), *b = ef780_view(ctx, a2, 0x40u);
+    uint32_t dm[16], am[16], bm[16];
+    if (!d || !a || !b) return -1;
+    memcpy(am, a, sizeof am);
+    memcpy(bm, b, sizeof bm);
+    memcpy(dm, d, sizeof dm);
+    if (em_sdk_vu0_001026D0(dm, am, bm) != EM_EE_FLOAT_OK) return -1;
+    memcpy(d, dm, sizeof dm);
+    return 0;
+}
+static int ef780_001CFB50(void *ctx, uint32_t a0, int32_t n1, int32_t n2, float f3, float f4, float f5, float f6,
+                          float f7)
+{
+    EF780 *v = ctx;
+    if ((u32)n2 != 0x700036A0u) return -1;
+    return w_001CFB50(NULL, a0, (u32)n1, v->spad36A0, em_ee_bits(f3), em_ee_bits(f4), em_ee_bits(f5),
+                      em_ee_bits(f6), em_ee_bits(f7));
+}
+static int ef780_001CFBE0(void *ctx, int32_t n0, int32_t n1, uint32_t a2, uint32_t a3, int32_t n4)
+{
+    (void)ctx;
+    return w_001CFBE0(NULL, n0, n1, a2, a3, n4);
+}
+static int handler_001EF780(EmEffectOriginalNode *node, int32_t depth, EmEffectOriginalWork *work)
+{
+    Slot *slot = slot_of_node(node);
+    if (!slot || !work || work != &node->work) return fail(0x001EF780u, "AREA16 effect without its node");
+    if (!em_effects_live_window(0x00257B40u, 0x150u)) return fail(0x00257B40u, "001EF780's tables not exported");
+    u32 at = em_actor_pool_address(S.pool, actor_of(slot)), pointer = at + 0x1F0u;
+    EmArea02MiscRegion regions[] = {
+        {0x00275C34u, 4, (uint8_t *)&pointer},
+        {at + 0x1F4u, 4, (uint8_t *)&work->seed_copy},
+        {at + 0x1F8u, 4, (uint8_t *)&work->step},
+        {at + 0x244u, 4, (uint8_t *)&work->accumulator},
+        {at + 0xD0u, 0x40, (uint8_t *)node->matrix},
+    };
+    EF780 v;
+    memset(&v, 0, sizeof v);
+    v.base.call.node = node; v.base.call.address = at;
+    v.base.regions = regions; v.base.count = sizeof regions / sizeof *regions;
+    EmArea06PortHooks h;
+    memset(&h, 0, sizeof h);
+    h.ctx = &v; h.bytes = ef780_view;
+    h.w_001029C0 = ef780_001029C0; h.w_00102C58 = ef780_00102C58;
+    h.w_00102918 = ef780_00102918; h.w_001026D0 = ef780_001026D0;
+    h.w_001CFB50 = ef780_001CFB50; h.w_001CFBE0 = ef780_001CFBE0;
+    EmArea06PortFault f = {0, 0};
+    const int rc = em_area06_port_001EF780(&h, at + 0xD0u, (u32)depth, &f);
+    return rc < 0 ? fail(f.address ? f.address : 0x001EF780u, "AREA16 effect fault (em_area06_port)") : 0;
+}
+
 static int w_handler(void *ctx, u32 handler, EmEffectOriginalNode *node, int32_t depth,
                      EmEffectOriginalWork *work)
 {
@@ -1559,6 +1658,7 @@ static int w_handler(void *ctx, u32 handler, EmEffectOriginalNode *node, int32_t
     if (handler == 0x001EC820u) return handler_001EC820(node, depth, work);
     if (handler == 0x001ECA20u || handler == 0x001EBE10u || handler == 0x001EBE90u)
         return handler_area06(handler, node, depth, work);
+    if (handler == 0x001EF780u) return handler_001EF780(node, depth, work);
     if (splash_handler(handler)) return handler_splash(handler, node, depth, work);
     return fail(handler, "untranslated effect handler");
 }
@@ -1639,6 +1739,7 @@ static int w_001CFBE0(void *ctx, int32_t id, int32_t kind, u32 source, u32 xf, i
                               source == 0x00256DC0u || source == 0x00256E50u || /* 001ECA20's */
                               source == 0x002564C0u ||                          /* 001EBE10's */
                               source == 0x00256550u ||                          /* 001EBE90's */
+                              source == 0x00257B40u ||                          /* 001EF780's */
                               source == 0x00257510u || source == 0x002575A0u || /* 001EDAF0's middle row */
                               source == 0x00257630u || source == 0x00257870u ||
                               source == 0x00257900u || source == 0x002571B0u || source == 0x00257240u ||

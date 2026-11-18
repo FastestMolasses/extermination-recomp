@@ -9,7 +9,7 @@
  *   boot     00123020 (the EE string compare), 00169250 (player +5 state:
  *            the overhead bar's approach), 00176180, 001885B0, 001944B0
  *            (camera states 29..37), 0019F680, 001A8F40, 001EA210,
- *            001EBE10, 001EBE90, 001ECA20, 002072A0, 002072C0, 00207350 (the keypad
+ *            001EBE10, 001EBE90, 001ECA20, 001EF780, 002072A0, 002072C0, 00207350 (the keypad
  *            page) with 002079F0 / 00207BB0 / 00207CA0 / 00207CD0,
  *            00219870 (the node behaviour of AREA06's deferred g[11]) with
  *            00219F50 / 0021A180 / 0021A440, 0021AE90, 001CE860 (the
@@ -178,6 +178,11 @@ typedef struct {
     /* 0x823B10's. */
     int (*w_001EFE00)(void *ctx, int32_t n0, uint32_t a1);
 
+    /* 001EF780's (AREA16's effect, g65): 00102C58(dst, src, angles) and
+     * 001026D0(dst, a, b), the VU0 matrix routines. */
+    int (*w_00102C58)(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2);
+    int (*w_001026D0)(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2);
+
     /* The actor's +0x4C method, called by 00219870, 0x824340 and 0x824560
      * with the function read from +0x4C and the actor. */
     int (*w_callback)(void *ctx, uint32_t function, uint32_t actor);
@@ -200,6 +205,10 @@ int em_area06_port_001EA210(const EmArea06PortHooks *h, float value, EmArea06Por
 int em_area06_port_001EBE10(const EmArea06PortHooks *h, uint32_t a0, uint32_t a1, EmArea06PortFault *fault);
 int em_area06_port_001EBE90(const EmArea06PortHooks *h, uint32_t a0, uint32_t a1, EmArea06PortFault *fault);
 int em_area06_port_001ECA20(const EmArea06PortHooks *h, uint32_t a0, uint32_t a1, EmArea06PortFault *fault);
+/* 001EF780 (AREA16's effect handler, g65): a0 the node's matrix, a1 the
+ * depth; eight particles from the scratch matrix 0x700036A0, then the work
+ * block's +8 eased toward 0.02. */
+int em_area06_port_001EF780(const EmArea06PortHooks *h, uint32_t a0, uint32_t a1, EmArea06PortFault *fault);
 int em_area06_port_002072A0(const EmArea06PortHooks *h, EmArea06PortFault *fault);
 int em_area06_port_002072C0(const EmArea06PortHooks *h, uint32_t self, EmArea06PortFault *fault);
 int em_area06_port_00207350(const EmArea06PortHooks *h, uint32_t page, uint32_t sp, EmArea06PortFault *fault);

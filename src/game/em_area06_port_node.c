@@ -588,8 +588,6 @@ int em_area06_port_0021AE90(const EmArea06PortHooks *h, uint32_t self, EmArea06P
 #define F_M1_5  0xBFC00000u
 #define F_M0_6  0xBF19999Au
 #define F_M1    0xBF800000u
-#define F_65535 0x477FFF00u
-#define F_1EM4  0x38D1B717u
 #define F_96    0x42C00000u
 #define F_0_015 0x3C75C28Fu
 #define F_1_2   0x3F99999Au

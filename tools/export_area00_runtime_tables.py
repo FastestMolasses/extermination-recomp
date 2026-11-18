@@ -156,6 +156,10 @@ MID_WINDOWS = ((0x0024A85C, 2), (0x0024A87C, 2), (0x0024D838, 4), (0x0024D878, 4
                # D_00256DC0 / D_00256E50, 001EBE10's D_002564C0 and the next,
                # 001EBE90's D_00256550 (AREA16, g64)
                (0x00256DC0, 0x120), (0x002564C0, 0x90), (0x00256550, 0x90),
+               # AREA16's effect handler 001EF780 (g65): its 001CFBE0 source
+               # D_00257B40, the offset rows D_00257BD0 (eight quadwords) and
+               # the angle rows D_00257C50 (four), adjacent: one window
+               (0x00257B40, 0x150),
                # 0019C6F0's per-area room-list words D_0024D7C0[6] / [0x16]
                # and AREA06's per-sub list pointers D_00275948 (sub 0, 1: the
                # lists lie in the overlay's data); AREA22's D_00275A88 is in

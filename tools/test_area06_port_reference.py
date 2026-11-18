@@ -148,6 +148,7 @@ FUNCS = {
     0x1EBE10: ('em_area06_port_001EBE10', 0x7C, [U, U], None),
     0x1EBE90: ('em_area06_port_001EBE90', 0x78, [U, U], None),
     0x1ECA20: ('em_area06_port_001ECA20', 0xDC, [U, U], None),
+    0x1EF780: ('em_area06_port_001EF780', 0x1B4, [U, U], None),
     0x2072A0: ('em_area06_port_002072A0', 0x14, [], None),
     0x2072C0: ('em_area06_port_002072C0', 0x88, [U], None),
     0x207350: ('em_area06_port_00207350', 0x69C, [U, S], None),
@@ -267,6 +268,8 @@ HOOKS = [
     ('w_001CFAE0', 0x1CFAE0, [(U, 4), (I, 5), (U, 6), (F, 12), (F, 13), (F, 14), (F, 15)], None),
     ('w_001F4A00', 0x1F4A00, [(U, 4), (U, 5)], None),
     ('w_001EFE00', 0x1EFE00, [(I, 4), (U, 5)], None),
+    ('w_00102C58', 0x102C58, [(U, 4), (U, 5), (U, 6)], None),
+    ('w_001026D0', 0x1026D0, [(U, 4), (U, 5), (U, 6)], None),
 ]
 BY_ADDRESS = {address: (name, args, result) for name, address, args, result in HOOKS}
 
@@ -274,7 +277,8 @@ BY_ADDRESS = {address: (name, args, result) for name, address, args, result in H
 # the native side). Pure helpers only: none of them reaches hardware.
 RUN = {0x11DE90, 0x11DF78, 0x11E2A8, 0x11E748, 0x1026A0, 0x102738, 0x102760, 0x1028B8, 0x1028D0, 0x102900,
        0x102918, 0x102948, 0x102958, 0x1029C0, 0x102BB0, 0x122BB8, 0x1281C0, 0x18C4B0, 0x18C6A0, 0x191120,
-       0x1B1240, 0x1B12B0, 0x1B1470, 0x1B1EA0, 0x1BA1A0, 0x1CD370, 0x1CD390, 0x1CFA60}
+       0x1B1240, 0x1B12B0, 0x1B1470, 0x1B1EA0, 0x1BA1A0, 0x1CD370, 0x1CD390, 0x1CFA60,
+       0x102C58, 0x1026D0}
 
 # The two boot jump tables (runtime address of the jump -> (table, words)):
 # 001944B0's camera states 29..37 and 00207350's +5 = 0..8.
@@ -1588,6 +1592,7 @@ def case_list(elf):
         add('capture %s 1EBE10' % beat, beat, 0x1EBE10, [3, 7])
         add('capture %s 1EBE90' % beat, beat, 0x1EBE90, [3, 7])
         add('capture %s 1ECA20' % beat, beat, 0x1ECA20, [3, 7])
+        add('capture %s 1EF780' % beat, beat, 0x1EF780, [PLAYER + 0xD0, 7])
         add('capture %s 2072A0' % beat, beat, 0x2072A0, [])
         add('capture %s 1EA210' % beat, beat, 0x1EA210, [fb(2.0)])
     captured = len(cases)
@@ -1696,6 +1701,20 @@ def targeted_cases(add):
     b6 = 'a06_02_keypad'
     b1 = 'a01u_01_catwalk_event'
     ram6, spad6 = CAPTURES[b6]
+    # ---- 001EF780 (AREA16's effect handler): a designed work block (the
+    # seed's sign and high half, +8 below / at / above the 0.02 floor and
+    # its neighbours) and node matrices (identity, rotated and moved)
+    work, node = FREE + 0x2000, FREE + 0x2100
+    ident = fw(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+    turned = fw(0.0, 0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 413.4, 100.0, 254.3, 1.0)
+    for n, (seed, step, acc, matrix) in enumerate((
+            (0, 0.0, 0.0, ident), (0x7FFFFFFF, 0.02, 0.5, turned), (0x80000000, 0.019999999, 1.0, turned),
+            (0xFFFF0000, 0.020000001, 3.25, ident), (0x0000FFFF, 1.0, 0.0, turned),
+            (0x12345678, -1.0, 7.5, turned), (0xFFFFFFFF, 100.0, 0.25, ident),
+            (0x40000000, struct.unpack('<f', struct.pack('<I', 0x3CA3D709))[0], 2.0, turned),
+            (0x9E3779B9, struct.unpack('<f', struct.pack('<I', 0x3CA3D70B))[0], 9.0, turned))):
+        add('1EF780 designed %d' % n, b6, 0x1EF780, [node, 5 + n],
+            [(0x275C34, w32(work)), (work, fw(0, seed, step, 0.0)), (work + 0x54, fw(acc)), (node, matrix)])
     # ---- 00123020 the string compare (designed strings, no game text)
     a, b = FREE + 0x1000, FREE + 0x1100
 

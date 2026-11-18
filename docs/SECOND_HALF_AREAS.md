@@ -743,6 +743,17 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   are kept at f = k - 2 for every take, the first included
   (EM_START_AT_PAD takes f >= -2); route_g16's traces were rebuilt with the
   rows ('k'), snapshots and manifest unchanged.
+  Since lane PORT-A16-END (AREA16_PORT.md "Lane PORT-A16-END") the chain
+  plays g59 .. g67 to its last row: g65 (3000 / 3000, the leaper's hit at
+  2043), g66 (3232 / 3232, the bed) and g67 (6352 / 6355: launcher C, the
+  load back to sub 0, the corridor's three hits, the area change into
+  AREA06 sub 1 entry 3 and its arrival scene) are on the row, and the run
+  ends at the original's end position. New: 001EF780 (em_area06_port,
+  bound in em_effects_live), the module loader keeps a split read's
+  untouched suffix in place (the player's script bank under launcher C's
+  read), MUSIC.DAT cue 0x15 exported (0x825E20's 001FB0B0). Open: g67's
+  arrival scene ends one frame early (3B8D 2 -> 0 at row 6865, the
+  original's 6866; the same with EM_PS2_DISC_DRIVE_TIMING=1).
 
 ## 6. Boot translations (lane BOOT2)
 

@@ -87,9 +87,10 @@ section "Live".
   investigated yet; check it the same way (per-frame progress past the
   last good pad frame, the nodes near the player against the recording's
   source state).
-- The live run (section "Lane PORT-A16-G62"): g59 .. g64 are on the row;
-  the chain stops at g65 row 96 on the effect handler 001EF780. Then g65
-  .. g67, and the guided states' live nodes as oracle cases.
+- The live run (section "Lane PORT-A16-END"): g59 .. g67 play to the
+  chain's end; g67's arrival scene in AREA06 ends one frame early (rows
+  6866 .. 6868). Then g68 (AREA06 -> AREA01), and the guided states' live
+  nodes as oracle cases.
 - A start before the area change (card g60) needs AREA06 sub 1 exported
   (AREA06_ASSETS.md "Known gaps" 1).
 - 001DB480's packets now run live (section "Effects"), but no capture
@@ -361,6 +362,63 @@ g65's hit at 2043, g66 (the bed) and g67 (out to AREA06).
 **The rand() notes.** g59 row 1 (the card's frame 0) and g60 row 488 still
 differ with no position change; g60's is a single frame inside AREA06 sub
 1 and bears on nothing above. g62 row 428 and g63 row 2355 likewise.
+
+### Lane PORT-A16-END (2026-11-17, branch `a16end`): g65 .. g67 on the row
+
+`guided_chain.py g16` (card g59) now plays the whole chain, g59 .. g67, to
+its last row (chain frame 40739 of 40736) and ends at the original's end
+position, AREA06 sub 1 entry 3 (-240, 19.092, -788.5):
+
+| Take | Compared rows on the row | Hits (both) |
+|---|---|---|
+| g59 .. g64 | as before (section "Lane PORT-A16-G62") | |
+| g65 | 3000 / 3000 (the vaccine; the column leaper's fight) | 2043 |
+| g66 | 3232 / 3232 (the bed: 25 / 64 -> 100 / 0) | |
+| g67 | 6352 / 6355 (the corridor, launcher C, the load back to sub 0, the area change into AREA06) | 2618, 2730, 4346 |
+
+**1. 001EF780 (g65 row 96).** AREA16's effect handler: eight particles,
+each from the scratch matrix 0x700036A0 (001029C0, then 00102C58 with the
+angle row D_00257C50[i >> 1], 00102918 with the offset row D_00257BD0[i],
+001026D0 times the node's matrix), the work block's +4 seed giving the
+fraction and stepped by x * 0x25 + 0xB, 001CFB50 from that matrix and
+001CFBE0 with D_00257B40; then +8 eased toward 0.02 by a tenth and raised
+to 0.02 when below. Translated from the byte-matched decomp C (load and
+store order from the original instructions) as em_area06_port_001EF780
+(two new hooks, 00102C58 and 001026D0); bound in em_effects_live
+(handler_001EF780: the VU0 routines through em_owner_services' and
+em_sdk_vu0's translations over the scratch matrix, the tables and the
+node's matrix). `tools/test_area06_port_reference.py` runs the original:
+23 cases (14 captures, 9 designed work blocks: the seed's sign and high
+half, +8 below / at / above 0.02 and its neighbours, two node matrices),
+100 of 100 words; three constant mutations fail (5, 9 and 2 of 9 designed
+cases; a one-ulp change of the 10.0 divisor is not observable through the
+stored step for these values). The window D_00257B40 .. D_00257C8F is new
+in tools/export_area00_runtime_tables.py (assets/effect_tables.emet must
+be re-exported).
+
+**2. The player's script bank under launcher C's read (g67 row 3770).**
+Launcher C's Use faulted ("the canonical player script banks"): the item's
+read (145 sectors at 0x1609580) split the loader region that holds the
+player's script bank row D_0028A490[0x96] (0x16C5180 .. 0x1978980), and
+em_module_loader copied the untouched suffix to new storage, so the pose
+host's mapped region kept the freed bytes and the next map was refused.
+The original's memory outside a read stays where it is: region_for now
+keeps a split region's prefix and suffix in their allocation (Region.base
+names it; an allocation is freed when no region uses it any more).
+
+**3. MUSIC.DAT cue 0x15 (AREA06's arrival).** 0x825E20 (byte-identical
+decomp C) calls 001FB0B0(0x15) after its script 0x8276C0; the stream
+backend fail-stopped on the cue's first sector (00112610, code 8).
+tools/export_streams.py exports it (MUSIC_EXTRA); assets/streams must be
+re-exported.
+
+**Open: g67 rows 6866 .. 6868.** The arrival scene (script 0x8276C0, 3B8D
+= 2 from row 5314 in both) ends at row 6865 in the port and 6866 in the
+original (the take's rows.tbl, 0x70003B8C..8F), so the player's drop to the
+floor starts one frame early; the end position is the original's. The
+same with EM_PS2_DISC_DRIVE_TIMING=1, so not the stream's host speed.
+rand() also differs from g67 row 5645 (inside the scene) with no position
+change. Not yet traced to an op.
 
 ### Lane PORT-A16-DRAW (2026-11-17, branch `a16draw`): model kind 3's draw
 
