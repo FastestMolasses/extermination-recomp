@@ -63,14 +63,15 @@ HARNESS = r'''
 volatile unsigned char D_70003B8D;
 unsigned char D_00810700, D_00810701, D_008106B8;
 short D_00289B40[1][2];
-int *D_002671C0[1], *D_0026726C[6];
+unsigned char *D_002671C0[1], *D_0026726C[6];
+char D_00265520[1];
 static int draws;
 void func_001AFC10(unsigned char *p) {(void)p;}
 int func_001C5860(void) {return 0;}
-int func_001CC170(int p) {(void)p; return 100;}
-int func_001CC1E0(int a,int b,int c,int d,int e,int f,int *g) {
+int func_001CC170(unsigned char *p) {(void)p; return 100;}
+void func_001CC1E0(int a, int b, int c, int d, int e, void *f, void *g) {
     (void)a;(void)b;(void)c;(void)d;(void)e;(void)f;(void)g;
-    ++draws; return 0;
+    ++draws;
 }
 '''
 DRIVER = r'''
@@ -106,10 +107,13 @@ def main() -> None:
     source=(args.decomp/"src/func_001C5930.c").read_text()
     start=re.search(r"^void func_001C5930\(",source,re.MULTILINE)
     if start is None: raise ValueError("Readable title function missing")
+    # The function's own record type (a typedef above it in the decomp source).
+    sub_type=re.search(r"^typedef struct \{[^}]*\} Sub;\n",source,re.MULTILINE)
+    if sub_type is None: raise ValueError("Title record type missing")
     output=ROOT/"build/area11_original"
     output.mkdir(parents=True,exist_ok=True)
     generated=output/"title_oracle.c"
-    generated.write_text(HARNESS+source[start.start():]+"\nstatic const int original_suppressed[]={"+
+    generated.write_text(HARNESS+sub_type.group(0)+source[start.start():]+"\nstatic const int original_suppressed[]={"+
                          ",".join(map(str,expected))+"};\n"+DRIVER)
     binary=output/"title_oracle"
     subprocess.run(["clang","-std=c11","-Wall","-Wextra","-Werror",

@@ -89,7 +89,7 @@ def main():
     H.SOURCES += [f'src/game/em_{name}.c' for name in
                   ('area01_hull_live', 'collision_world', 'coll_list_passes_walkers',
                    'coll_list_passes', 'coll_segment_walkers', 'coll_move_original',
-                   'sdk_math_original', 'sdk_soft_float', 'interaction_scan')]
+                   'sdk_math_original', 'sdk_soft_float', 'interaction_scan', 'player_hull_shove')]
     H.ELF = read_elf()
     H.MV.ELF = H.ELF
     H.MV.CODE_GRAPH = H.MV.call_graph(H.ELF, (H.GRID, H.LOCK6440, H.LOCK6AD0,

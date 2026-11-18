@@ -29,6 +29,10 @@ uint8_t *em_module_loader_memory_mutable(EmModuleLoader *l,uint32_t a,uint32_t n
 { return (uint8_t *)(void *)em_module_loader_memory(l,a,n); }
 const uint8_t *em_module_loader_memory_rest(const EmModuleLoader *l,uint32_t a,uint32_t *n)
 { (void)l;(void)a;(void)n;return NULL; }
+/* The player's D_0028A580 bank word is the Roger export's; this fixture serves
+ * only the overlay's own resources, so reaching it is a fixture error. */
+int em_area11_roger_table_word(uint32_t a,uint32_t *v)
+{ (void)v;fprintf(stderr,"unexpected Roger table read %08x\n",(unsigned)a);abort(); }
 EmOwnerServicesOwner *em_area11_boxes_owner_view(EmActor *a) { (void)a;return NULL; }
 static int worker(void *ctx,EmArea01Call *c)
 { assert(ctx==&last);last=*c;++calls;c->v0=7;return reject ? -1 : 0; }
@@ -46,7 +50,8 @@ int main(int argc,char **argv)
     memcpy(replacement,module,module_size);delivered=module;
     EmArea01Script s={0};EmArea01RuntimeHost host={.ctx=&last,.worker=worker};
     EmModuleLoader *ld=(EmModuleLoader *)(void *)&loader;
-    assert(em_area01_script_bind_area(&s,&host,ld,NULL,NULL,2)<0 && !s.bound);
+    /* an area with no script set (AREA02 has one now) */
+    assert(em_area01_script_bind_area(&s,&host,ld,NULL,NULL,99)<0 && !s.bound);
     assert(em_area01_script_bind_area(&s,&host,ld,NULL,NULL,0)==0);
     assert(area.overlay_id==1 && s.area==0);
     assert(em_area01_script_bind_area(&s,&host,ld,NULL,NULL,1)<0);

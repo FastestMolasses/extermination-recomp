@@ -1,0 +1,82 @@
+{
+ "area00_box_lift": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "fs_splash assertion (line 85): the splash worker no longer refuses; flame-services bridge links, behavior drifted",
+  "status": "FAIL"
+ },
+ "area00_delivery": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "sound registry compare (line 59): exported sfx registry entries differ from the oracle's old entries (asset/registry drift); 38 s",
+  "status": "FAIL"
+ },
+ "area00_footstep": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "fs_splash assertion (line 80), same cause as area00_box_lift",
+  "status": "FAIL"
+ },
+ "area00_resources": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "area00_receivers_select(invalid) != -1 (line 58): the selector accepts a case the oracle expects refused",
+  "status": "FAIL"
+ },
+ "area00_runtime": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "a01rt_bind_area(host, 2) == -1 assertion (line 177): AREA02 now binds in the runtime",
+  "status": "FAIL"
+ },
+ "area00_script_binding": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "bridge links since TEST-HEALTH-1; main() asserts area.image(0x82BB11) is null (line 66) but an image now exists (script image lookup changed)",
+  "status": "FAIL"
+ },
+ "area00_surface": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "readview aborts (SIGABRT) on the surface provider case",
+  "status": "FAIL"
+ },
+ "area01_collision_view": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "assert outside==['a01_07_level_exit'] and len(beats)==15 (line 57): route beat list changed",
+  "status": "FAIL"
+ },
+ "area01_crawl_clip": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "assert call.v0 == original.r[2] (line 64): crawl-clip result differs from the original",
+  "status": "FAIL"
+ },
+ "area01_effect_ecef0": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "fs_splash assertion (line 82), same cause as area00_box_lift",
+  "status": "FAIL"
+ },
+ "area01_flame_services": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "bridge links; assert n.fs_overflow()==0 (line 91): the effect-slot overflow case now trips",
+  "status": "FAIL"
+ },
+ "area01_matrix_service": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "assertion at line 154 of the oracle (matrix service result differs)",
+  "status": "FAIL"
+ },
+ "area11_sfx": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "AssertionError in the registry oracle (parallel worker); also slow: ~500 s even in quick mode under load (CPU-heavy, needs a lighter quick sample)",
+  "status": "FAIL"
+ },
+ "area13x_assets": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "asset hash: lane sub0/scene.txt identical-file hash differs (stale/changed export)",
+  "status": "FAIL"
+ },
+ "level14_player_frame": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "bridge links since TEST-HEALTH-1 (loud abort stubs for the unreached pose-host/worker boundaries); every case mismatches (1384 of 1384 fail), no abort: the frame composition changed",
+  "status": "FAIL"
+ },
+ "player_pose_live": {
+  "owner": "TEST-HEALTH-2",
+  "reason": "hip bytes (+0xB0) differ from the original actor (line 99): hip/feet publication changed",
+  "status": "FAIL"
+ }
+}

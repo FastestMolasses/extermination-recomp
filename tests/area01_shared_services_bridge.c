@@ -40,6 +40,8 @@ int em_collision_world_publish_001B1B70(const EmActor *a)
 {return em_actor_class_publish_001B1B70(&lists,a);}
 int em_collision_world_push80_001B1DE0(const EmActor *a)
 {return em_actor_class_push80_001B1DE0(&lists,a);}
+int em_collision_world_push4_001B1D20(const EmActor *a)
+{return em_actor_class_push4_001B1D20(&lists,a);}
 int ss_init(const uint8_t *elf,uint32_t n)
 {
     memset(&scene,0,sizeof scene);memset(&player,0,sizeof player);memset(&sdk,0,sizeof sdk);

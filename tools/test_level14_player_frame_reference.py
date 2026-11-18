@@ -116,6 +116,7 @@ def compile_bridge(include_root, label, mutant):
                 "tests/level14_player_frame_bridge.c",
                 "tests/level14_player_frame_unreachable.c",
                 "src/game/em_player_floor.c", "src/game/em_player_record_pose.c",
+                "src/game/em_actor_pool.c",
                 "-o", str(dylib)]
     subprocess.run(command, cwd=ROOT, check=True, capture_output=True)
     native = C.CDLL(str(dylib))

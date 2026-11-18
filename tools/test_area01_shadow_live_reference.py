@@ -75,7 +75,7 @@ def main():
     start=time.time();data,export=E.build()
     asset=D.ROOT/'assets/area01_shadow_receivers.emsr'
     assert asset.read_bytes()==data,'regenerate AREA01 shadow receivers'
-    lib=D.build('tests/area01_shadow_bridge.c','as',('src/game/em_shadow_original.c',))
+    lib=D.build('tests/area01_shadow_bridge.c','as',('src/game/em_shadow_original.c','src/em_model.c'))
     lib.as_seed.argtypes=[C.c_void_p,C.c_void_p,C.c_uint32]
     lib.as_call.argtypes=[C.c_uint32];lib.as_face.argtypes=[C.c_uint32]
     lib.as_plan.restype=C.POINTER(S.Plan);lib.as_state.restype=C.POINTER(S.State)

@@ -199,6 +199,12 @@ sample per run is enough. Python reference tests use `tools/reference_mode.py`
 line, `parallel_map` to spread independent oracle cases over forked workers;
 `EM_TEST_JOBS=1` forces serial).
 
+**Sweep.** `python3 tools/test_sweep.py` runs every `tools/test_*_reference.py` in quick
+mode (4 jobs, 120 s cap each, a few heavier tests with their own cap; `-k name`, `-j N`, `--make` adds the `make test-*` targets), writes
+`build/test_sweep/<stamp>/results.json` and a PASS/FAIL/TIMEOUT/BUILD table, and exits 1 only for
+failures not listed in `tests/sweep_baseline.json` (each known failure carries a reason and an
+owner). Run it at merges; fix or re-baseline with `--update-baseline` (and edit the reasons).
+
 **Quiet output.** Every `make test-*` target prints a compact summary
 (tools/quiet.py through tools/quiet_shell): one PASS/FAIL line per check cut to
 130 characters, compiler warnings, a `[quiet]` footer with the log path

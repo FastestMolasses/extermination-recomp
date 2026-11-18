@@ -38,7 +38,7 @@ def build():
         'area00_fx_spawn','area00_fx_gs','area00_fx_debris','area00_fx_trail',
         'area01_ui_effect','area01_render_gs','coll_probe_original',
         'effect_original','owner_services_original','camera_commit_original',
-        'area00_low','sfx_bank','sfx')]
+        'area00_low','sfx_bank','sfx','area00_fx_burst','area00_fx_glow','area00_hud')]
     library=OUT/'live.dylib'
     # Rebuild only when a source, any src header or this script is newer.
     deps=[F.ROOT/x for x in sources]+list((F.ROOT/'src').rglob('*.h'))+[Path(__file__)]

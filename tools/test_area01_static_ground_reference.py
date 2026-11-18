@@ -28,7 +28,7 @@ CRATE = 0x7AAB70
 
 def build():
     OUT.mkdir(parents=True, exist_ok=True)
-    sources = ['collision_world', 'actor_collision', 'collision', 'actor_pool',
+    sources = ['player_hull_shove', 'collision_world', 'actor_collision', 'collision', 'actor_pool',
                'coll_probe_original', 'effect_original', 'coll_list_passes_walkers',
                'coll_list_passes', 'coll_segment_walkers', 'coll_move_original',
                'coll_grid_hull', 'sdk_math_original', 'sdk_soft_float', 'interaction_scan']

@@ -19,6 +19,10 @@ SIZE = 0x320
 BRIDGE = r'''
 #include "game/em_player.c"
 EmGameState g;
+/* No record pose (a scene with no original world): stage_position_publish
+ * keeps +B0 as the feet, the case this oracle compares. */
+const uint8_t *player_pose_record_bytes(uint32_t address,uint32_t size)
+{ (void)address;(void)size;return NULL; }
 void psp_begin(const uint8_t *raw,const float *feet,uint8_t *out) {
     memcpy(live.a.bytes,raw,EM_PLAYER_ACTOR_SIZE);
     memcpy(g.pos,feet,12);

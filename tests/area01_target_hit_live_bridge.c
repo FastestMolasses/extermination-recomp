@@ -23,6 +23,22 @@ int ah_gain_boundary(const float p[3],float radius,float *left,float *right)
     if(gain_result==2)return em_sfx_compute_gains(p,radius,left,right);
     *left=gain_left;*right=gain_right;return gain_result;
 }
+/* Owners outside this composition: reaching one is a refusal, as in
+ * aim_fire_world_live_test.c (the hull lock and sight rays are compared by
+ * test_area01_collision_view_reference.py; the spat hazard's draw by the
+ * effects oracles; the module loader is absent). */
+int em_effects_live_001D04B0_elf(const float m[16],int32_t kind,uint32_t source,uint32_t f12,uint32_t f13)
+{ (void)m;(void)kind;(void)source;(void)f12;(void)f13;return -1; }
+uint32_t em_effects_live_fault(void) { return 0x001D04B0u; }
+int em_coll_segment_0019AA80(EmCollProbeState *state,EmCollSegmentFaceScratch *face,
+                             const EmCollHullWorld *player,const float from[3],const float to[3],
+                             uint32_t mask,const void *hit_entity)
+{ (void)state;(void)face;(void)player;(void)from;(void)to;(void)mask;(void)hit_entity;return -1; }
+int em_coll_segment_0019A440(const EmCollSegment *seg,const float from[3],const float to[3],unsigned mask)
+{ (void)seg;(void)from;(void)to;(void)mask;return -1; }
+EmModuleLoader *em_module_loader_live(void) { return NULL; }
+EmStatusSceneLoader *em_module_loader_state(EmModuleLoader *ml) { (void)ml;return NULL; }
+EmSceneState *em_scene_state(void) { static EmSceneState state; return &state; }
 const unsigned char em_coll_move_cell_record_tag;
 const EmCollisionWorldOwners *em_collision_world_owners(void) { return NULL; }
 const EmCollSegment *em_collision_world_segment(void) { return &hit_segment; }

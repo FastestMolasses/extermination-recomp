@@ -6,6 +6,7 @@ animation, script-pump, collision publication, draw and fade are explicit
 worker boundaries. No original bytes are distributed. Full mode covers all
 recorded AREA01 frames and a larger phase/side/lock sweep.
 """
+import os
 import ctypes as C
 import itertools
 import struct
@@ -41,8 +42,14 @@ def build():
                 'src/game/em_area04_port.c',
                 'src/game/em_area22_port.c', 'src/game/em_area06_port.c', 'src/game/em_area06_port_node.c', 'src/game/em_area06_port_overlay.c', 'src/game/em_area06_port_strip.c', 'src/game/em_level8_port_gap.c', 'src/game/em_level8_port_creature.c', 'src/game/em_level8_port_lift.c', 'src/game/em_level8_port_overlay.c', 'src/game/em_level8_port_probe.c', 'src/game/em_level8_port_fx.c']
     subprocess.run(['cc','-std=c11','-O2','-Wall','-Wextra','-Werror','-ffp-contract=off',
-                    '-shared','-fPIC','-Isrc',*sources,'-lm','-o',str(lib)],cwd=A.ROOT,check=True)
-    native=C.CDLL(str(lib))
+                    '-shared','-fPIC','-Isrc',
+                    # The shared runtime re-enters every later level's port by address; this
+                    # door oracle never reaches them. Their symbols bind lazily, so reaching
+                    # one aborts in dyld ("symbol not found") instead of running a stand-in.
+                    '-Wl,-undefined,dynamic_lookup',*sources,'-lm','-o',str(lib)],cwd=A.ROOT,check=True)
+    libc=C.CDLL(None);libc.dlopen.restype=C.c_void_p;libc.dlopen.argtypes=[C.c_char_p,C.c_int]
+    handle=libc.dlopen(str(lib).encode(),os.RTLD_LAZY);assert handle,'dlopen failed'
+    native=C.CDLL(str(lib),handle=handle)
     native.a01door_bind.argtypes=[C.POINTER(Host)]
     native.a01door_call.argtypes=[C.POINTER(Call)]
     native.a01door_direct.argtypes=[C.POINTER(Call)]

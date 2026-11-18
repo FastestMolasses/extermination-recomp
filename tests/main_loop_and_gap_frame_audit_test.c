@@ -52,6 +52,13 @@ void em_gamepad_poll(void) { rec("gamepad"); }
 void em_gfx_begin_frame(EmGfx *gfx, float r, float g, float b, float a)
 { (void)gfx; (void)r; (void)g; (void)b; (void)a; rec("begin"); }
 void em_gfx_gs_world_drop(EmGfx *gfx) { (void)gfx; }
+/* Not part of the audited order (like em_gfx_gs_world_drop): the present tag
+ * only labels the frame in the presentation log, the display release hands the
+ * picture back after a movie, and the pad record is the input unpack. */
+void em_gfx_present_tag(EmGfx *gfx, uint64_t tag) { (void)gfx; (void)tag; }
+void em_gfx_gs_display_release(EmGfx *gfx) { (void)gfx; }
+void em_pad_record_001B5BC0(EmPadUnpack *u, const uint8_t rec[5], const uint8_t *prev)
+{ (void)rec; (void)prev; memset(u, 0, sizeof *u); }
 void em_gfx_end_frame(EmGfx *gfx) { (void)gfx; rec("end"); }
 void em_gfx_overlay_canvas(EmGfx *gfx, float w, float h) { (void)gfx; (void)w; (void)h; rec("overlay"); }
 void em_gfx_overlay_rect_add(EmGfx *gfx, float x, float y, float w, float h, const float rgb[3])
