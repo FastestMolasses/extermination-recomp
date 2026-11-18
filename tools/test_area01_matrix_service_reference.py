@@ -17,6 +17,8 @@ from test_area01_runtime_reference import Call
 from test_face_attach_reference import SOURCES
 from test_player_slide_reference import read_elf
 ROOT=Path(__file__).resolve().parents[1]
+PAGE_UNITS=int(next(l.split()[2].rstrip('u') for l in (ROOT/'src/game/em_owner_draw_live.c').read_text().splitlines()
+                    if l.startswith('#define EM_OWNER_DRAW_LIVE_PAGE_UNITS ')))
 OUT=ROOT/'build/level2/matrix-service'
 def u32(b,a):return struct.unpack_from('<I',b,a)[0]
 def put(b,a,v):struct.pack_into('<I',b,a,v&0xFFFFFFFF)
@@ -149,9 +151,14 @@ def main():
         assert n.mx_finish(0x320000,C.byref(fault))<0 and fault.value==0x320000
         assert n.mx_page(0x320000)==0;native.compare(e,('bad packet',offset));page_contracts+=1
     native=Native(n,page_image)
-    for i in range(16):
-        fault=C.c_uint32();assert n.mx_finish(0x320000,C.byref(fault))==0
-    fault=C.c_uint32();assert n.mx_finish(0x320000,C.byref(fault))<0 and fault.value==0x320000
+    # The host's page-unit cache (EM_OWNER_DRAW_LIVE_PAGE_UNITS, 512 since
+    # PORT-A16-DRAW: the chain page's own capacity) refuses the unit after it.
+    finished=0
+    while finished<4096:
+        fault=C.c_uint32()
+        if n.mx_finish(0x320000,C.byref(fault))<0:break
+        finished+=1
+    assert finished==PAGE_UNITS and fault.value==0x320000,(finished,hex(fault.value))
     native.compare(page_image,'cache capacity');page_contracts+=1
     result=dict(status='PASS',mode=mode.MODE,captures=len(beats),direct_calls=direct,
                 actual_caller_cases=callers,original_boundaries=boundaries,contract_checks=contracts,

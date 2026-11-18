@@ -32,14 +32,10 @@ void test_input(float magnitude, float angle) {
 }
 unsigned test_sounds(void) { return sounds; }
 void func_001B62C0(float *out) { (void)out; }
-uint64_t func_00128350(float value) {
-    double promoted = value; uint64_t encoded;
-    memcpy(&encoded, &promoted, 8); return encoded;
-}
-int func_00100130(uint64_t left, uint64_t right) {
-    double a, b; memcpy(&a, &left, 8); memcpy(&b, &right, 8);
-    return a >= b;
-}
+/* The decomp C declares the soft-float pair with doubles (since its byte
+ * match, decomp 34ac7a5b): 00128350 extends binary32, 00100130 is a >= b. */
+double func_00128350(float value) { return (double)value; }
+int func_00100130(double left, double right) { return left >= right; }
 void func_001FB9F0(int cue, int a, int b, int c) {
     if (cue == 5 && a == 4096 && b == 4096 && c == 4096) ++sounds;
     else sounds = 100;
