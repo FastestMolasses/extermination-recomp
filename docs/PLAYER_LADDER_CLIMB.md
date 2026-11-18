@@ -298,7 +298,7 @@ instruction it translates.
   | hit_point | 00199DB0(A0) | `em_player_ladder_00199DB0` (em_player_ladder_entry.h, *lane*; adapter) |
   | transform | 001026A0 | `em_player_sdk_apply`, with an adapter |
   | ledge_ahead | 0017E250(p, v) | `em_player_misc_w_ledge_ahead` (em_player_misc_workers.h, *lane*; direct) over `em_player_misc_0017E250` |
-  | dash | 00177030(p, arg) | `em_player_ladder_00177030` (em_player_ladder_entry.h, *lane*; adapter that drops its result, which 001662D0 does not read) |
+  | dash | 00177030(p, arg) | `em_player_ladder_00177030` (em_player_ladder_entry.h, *lane*; adapter that drops its result, which 001662D0 does not read) over the last sweep's probe state: 00177030 reads *(0x700031D0), the record 001809B0's 0019A570 just left, so the live adapter (`lc_dash`) refills the ladder scratch from that sweep first (2026-11-18; before, it read whichever record an earlier fill left) |
   | grab_check | 00178390 | `em_player_ladder_00178390` (em_player_ladder_entry.h) over the last sweep's probe state |
   | grab / hit_react | 001782A0 / 00178080 | `em_player_ladder_001782A0` / `em_player_ladder_00178080` (em_player_ladder_entry.h, from the byte-matched C, 2026-10-28) over the last sweep's probe state; 00178080 is the column lock-on scan (the old label "hit reaction" was wrong) |
   | sqrt / sine / cosine | 0011E748 / 0011E2A8 / 0011DE90 | `em_sdk_math_original_float_*` |

@@ -55,7 +55,7 @@ def build():
                     'em_area13_route*', 'em_area15_route*', 'em_area19_route*',
                     'em_area00s2_creature*', 'em_area07_probe*', 'em_area07_route*', 'em_area08_route*',
                     'em_area14_overlay*', 'em_area16_*', 'em_area17_*', 'em_area20_overlay*',
-                    'em_area21_*', 'em_owner_services_original'):
+                    'em_area21_*', 'em_haze_ring*', 'em_far_light', 'em_player_stage_workers', 'em_effect_original', 'em_owner_services_original'):
         sources += sorted(p for p in glob.glob('src/game/%s.c' % pattern, root_dir=ROOT) if p not in sources)
     subprocess.run(['cc', '-std=c11', '-O2', '-Wall', '-Wextra', '-Werror', '-ffp-contract=off',
                     '-shared', '-fPIC', '-Isrc', *sources, '-lm', '-o', str(lib)], cwd=ROOT, check=True)

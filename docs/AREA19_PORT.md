@@ -198,10 +198,32 @@ Chain now: segments 0 .. 360 exact (171,489 ticks, through AREA19 sub 1, the han
 sub 0), then 1,122 ticks of segment 361 (g12, AREA19 sub 0) on the recording; 172,611 of
 174,453 compared ticks; the playback overruns at counter 179,634.
 
-**Next divergence** (segment 361, g12, AREA19 sub 0, original counter 177,811). After
-Cross, 001662D0 (+5 0xC) goes +6 0x50 -> 0x51: clip 0xBA at blend 12 and a 12-tick move
-toward +290 (the original's +290 = (804.2250, 240.9756, 921.9996)). The compared position
-(0x810350) steps (-0.4397, -0.0855, 1.6218) a tick on the original. The port steps the
-same y and z, but its x step is -0.8147. Not established: is it the +290 target's x, or
-how the compared position follows the record during the clip-0xBA transition? The next
-lane reads 001662D0 0x50 / 0x51 and what writes +290 before them.
+**The 0xBA move's +290, closed (lane PORT-A19-MOVE, 2026-11-18).** In segment 361 (g12, AREA19
+sub 0, original counter 177,811) the Cross in 001662D0 +6 0x34 sends 001809B0 down its kind-0x34
+branch: 00177030(p, 2) projects +B0 / +B8 onto the record 0019A570 just hit (its axis +0x34 / +0x3C
+and its centre, 00199DB0), and the distance from there to the centre, in 4.5 steps, gives +290. The
+translations were right; the live adapter was not. `lc_dash` ran 00177030 over the ladder scratch
+as the last `le_fill_last` had left it, which was an earlier record (node 0x35B, axis (0, 0)). So
++B8 stayed at 902.538 instead of moving to 921.9998, the distance was 38.29 instead of 32.97, the
+step count was 9 instead of 8, and +290 x came out 799.7250 instead of 804.2250: 4.5 too far, or
+-0.375 a tick over the 12-tick move. `lc_dash` now refills the scratch from that sweep first
+(node 0x4AB, axis (1, 0)), as `lc_hit_point` already did. The port's +290 is now (804.2250,
+240.9756, 921.9996), the original's to the fourth decimal.
+
+Evidence:
+- The original capture: g12's recording, and the chain below.
+- The translations it composes keep their oracles: test_player_ladder_climb_reference
+  (001809B0) and test_player_ladder_entry_reference (00177030, 00199DB0).
+- No original-instruction oracle reaches the closure's live adapters (see "What is bound").
+  This one was found by tabulating the record that 00177030 reads.
+
+Chain now: segments 0 .. 453 exact (225,637 ticks). Segment 454 (g15, AREA03 sub 1, a cutscene)
+leaves only on its last tick, 0.09 away (original counter 235,955). Segments 455 .. 488 are exact,
+then 860 ticks of segment 489 (g16, AREA08 sub 2) are on the recording. In all, 238,784 of 240,324
+compared ticks are on the recording, and the playback overruns at counter 245,515.
+
+**Next divergence** (segment 489, g16 `_a08_ceiling`, AREA08 sub 2, original counter 246,510).
+The position is equal, but the heading is 0.140 off. The beat is the lab's "along the ceiling" stretch.
+Which player state runs at that tick has not been checked, and the divergence is not
+diagnosed. Following the AREA19 lessons, the next lane should tabulate every word that state's
+heading code reads at that tick: scratchpad, record and probe state.
