@@ -1032,6 +1032,18 @@ int em_area00_world_001B41F0(EmArea00World *s, uint32_t a0, uint32_t a1, uint32_
     return 0;
 }
 
+int em_area00_world_view_001B41F0(EmArea00World *s, EmArea00WorldMemory view, void *ctx, uint32_t a0, uint32_t a1,
+                                  uint32_t a2, uint32_t a3, uint32_t t0, uint32_t t1, int32_t *out)
+{
+    int32_t v;
+    if (!view) return -1;
+    ENTER_VIEW(s, 0x001B41F0u, view, ctx);
+    v = f_1B41F0(&run, s->sp, a0, a1, a2, a3, t0, t1);
+    if (out)
+        *out = v;
+    return 0;
+}
+
 int em_area00_world_001C24D0(EmArea00World *s, uint32_t a0, uint32_t a1, uint32_t a2, uint64_t *out)
 {
     uint64_t v;

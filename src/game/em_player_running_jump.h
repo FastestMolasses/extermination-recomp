@@ -12,6 +12,14 @@
  *   001634A0  the +5 = 6 state callback (0015B130's state[6]). NEARMISS.
  *   001747F0  the +5 = 0x24 state callback (0015B130's state[0x24]),
  *             entered by 00160220 when 0015FDF0 returns 1 (byte-matched C).
+ *   001741D0  the +5 = 0x23 state callback (0015B130's state[0x23]): with
+ *             +1F0 = 0x38 the Gatling mount (walk to the seat +290, turn
+ *             to +218, sit, wait for the dismount press or +302, stand
+ *             up); otherwise the 0x4A placement's step-on / step-off
+ *             (byte-matched C). Its SDK leaves 001028D0 (VSUB), 00102760
+ *             (normalise: em_effect_original_00102760), 00103200 (the
+ *             blend v0 * t + v1 * (1 - t), w from v0) and 001B12B0
+ *             (em_script_host_001B12B0) run here.
  *   00179880  the drop accumulator, here on +2E4 (001634A0 case 3 passes
  *             p + 0x2E4): not translated here; it runs from its one
  *             translation, em_player_fall_00179880 (em_player_fall.h).
@@ -148,6 +156,14 @@ typedef struct EmPlayerRunningJumpWorkers {
     /* *(*D_00275B40 + 8): the word 001747F0 reads (twice) from the first
      * skeleton node (raw bits). */
     int (*root_clock)(void *context, uint32_t *value);
+    /* 00174A50(p, blend $f12): the row request (001741D0 cases 5 / 3). */
+    int (*row_request)(void *context, EmPlayerLiveActor *actor, float blend);
+    /* *(*D_00275B40 + 0): the first skeleton node's word +0 (raw bits),
+     * read twice by 001741D0's walk-off step. */
+    int (*root_word0)(void *context, uint32_t *value);
+    /* D_00810E74[0] (the buttons pressed this frame) and the halfword at
+     * 0x70003B76 (a button mask): 001741D0's pad test is their AND. */
+    int (*buttons)(void *context, uint16_t *pressed, uint16_t *mask);
 } EmPlayerRunningJumpWorkers;
 
 /* 1 when every worker and the scratch are bound. */
@@ -168,6 +184,10 @@ int em_player_running_jump_target(EmPlayerLiveActor *actor, const EmPlayerRunnin
 int em_player_running_jump_tick(EmPlayerLiveActor *actor, const EmPlayerRunningJumpWorkers *workers);
 int em_player_running_jump_state24_tick(EmPlayerLiveActor *actor,
                                         const EmPlayerRunningJumpWorkers *workers);
+/* 001741D0(p). 0, or -1 on a fault (a worker's, or 001B1470 where the
+ * original's wrap loop never ends). */
+int em_player_running_jump_state23_tick(EmPlayerLiveActor *actor,
+                                        const EmPlayerRunningJumpWorkers *workers);
 
 /* ---- Binding (docs/PLAYER_RUNNING_JUMP.md "Binding") --------------------
  * One context for the adapters: the workers, the scene provider (called
@@ -182,11 +202,13 @@ typedef struct EmPlayerRunningJumpLive {
     uint32_t *shared3A20;
 } EmPlayerRunningJumpLive;
 
-/* EmPlayerStageWorkers.state[6] = em_player_running_jump_state6 and
- * .state[0x24] = em_player_running_jump_state24, each with an
- * EmPlayerRunningJumpLive context. */
+/* EmPlayerStageWorkers.state[6] = em_player_running_jump_state6,
+ * .state[0x23] = em_player_running_jump_state23 and .state[0x24] =
+ * em_player_running_jump_state24, each with an EmPlayerRunningJumpLive
+ * context. */
 int em_player_running_jump_state6(void *context, EmPlayerLiveActor *actor);   /* 001634A0 */
 int em_player_running_jump_state24(void *context, EmPlayerLiveActor *actor);  /* 001747F0 */
+int em_player_running_jump_state23(void *context, EmPlayerLiveActor *actor);  /* 001741D0 */
 /* The Use chain 00160220's calls of 0015EC50 (at 0016075C) and 0015FDF0 (at
  * 00160778), over an EmPlayerRunningJumpLive context: *result is the routine's return.
  * When use_aim returns 1, 00160220 itself writes +5 = 0x24, +6 = 0,

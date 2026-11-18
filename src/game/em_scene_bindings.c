@@ -4369,7 +4369,9 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
          (s_state.d810700 == 2 && s_state.d810701 == 2) ||
          /* AREA20: group 0x826100's 0x824440 (AREA14 0x823FC0's twin) through 0019B6C0, as
           * AREA14's (the guided g74, row 2047) */
-         s_state.d810700 == 0x14) &&
+         s_state.d810700 == 0x14 ||
+         /* AREA21: the Gatling [62] 0x8297C0's shots (the guided g77, row 4520) */
+         s_state.d810700 == 0x15) &&
         fn == 0x001F5040u) {
         if (!em_aim_fire_flash_owns(a) && em_area01_live_adopt_flash(&s_area01_live, a) < 0)
             return -1;
