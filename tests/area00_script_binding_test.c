@@ -63,9 +63,12 @@ int main(int argc,char **argv)
     w32(p+0x10,0x12345678u);
     assert(em_script_u32(area.resource(area.ctx,0x828FB0u,4),0)==0x12345678u);
     assert(area.image(area.ctx,0x24DE40u)==&s.boot[1]);
-    assert(!area.image(area.ctx,0x8284DFu) && !area.image(area.ctx,0x82BB11u));
-    assert(area.image(area.ctx,0x82BB10u));
-    assert(!area.image(area.ctx,0xFFFFFFFFu) && !area.image(area.ctx,0x82D070u));
+    /* The window is 0x8284E0..0x82D370 since sub 2's chain 0x82D070 joined
+     * it (export_area00s2_assets.py --kind tables): a 64-byte record must
+     * end inside it. */
+    assert(!area.image(area.ctx,0x8284DFu) && !area.image(area.ctx,0x82D331u));
+    assert(area.image(area.ctx,0x82BB10u) && area.image(area.ctx,0x82D070u) && area.image(area.ctx,0x82D330u));
+    assert(!area.image(area.ctx,0xFFFFFFFFu) && !area.image(area.ctx,0x82D370u));
     delivered=replacement;
     assert(area.image(area.ctx,0x828D60u)->bytes==replacement+0x3A80u);
     assert(em_script_u32(area.resource(area.ctx,0x828FB0u,4),0)!=0x12345678u);
@@ -84,7 +87,7 @@ int main(int argc,char **argv)
     const uint32_t denied[]={0x825130u,0x825240u,0x825910u,0x826950u,0x8260B0u,0xFFFFFFFFu};
     for(unsigned i=0;i<sizeof denied/sizeof denied[0];++i)
         assert(area.record(area.ctx,denied[i],0,0,0x828FA0u,&result)<0 && calls==before);
-    assert(area.record(area.ctx,0x824E40u,0,0,0x82BB50u,&result)<0 && calls==before);
+    assert(area.record(area.ctx,0x824E40u,0,0,0x82D370u,&result)<0 && calls==before);
     assert(area.record(area.ctx,0x824E40u,0,0,0x828FA0u,NULL)<0 && calls==before);
     reject=1;result=123;
     assert(area.record(area.ctx,0x824E40u,0,0,0x828FA0u,&result)<0 && result==123);

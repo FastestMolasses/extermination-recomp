@@ -636,7 +636,8 @@ def _sfx_cost(tagged):
 # arm; 00116598's step through 00119080), in lockstep with the original over
 # a capture of its own scope (the bank headers and handles as loaded there):
 # the car's 0x8B4 in AREA02 sub 0, 0x89E / 0x8A0 in AREA00 subs 0 and 1.
-SLIDE_CAPTURES={(2,0):'s87/route_a02/a02_01_switch',(0,0):'s87/route_a00/a00_05_ferry_deck',
+SLIDE_CAPTURES={(11,0):'s87/route/00_panel_no_battery',     # AREA11's 0x44E (passes A/B/C/M leave it here)
+                (2,0):'s87/route_a02/a02_01_switch',(0,0):'s87/route_a00/a00_05_ferry_deck',
                 (0,1):'s87/route_a00/a00_08_switch',
                 # AREA13's outdoor loop 0x44E, the same script over AREA13's banks
                 (13,0):'levels-recordings-20261018-10/s87/route_a13/a13_01_door14',
@@ -647,8 +648,8 @@ SLIDE_CAPTURES={(2,0):'s87/route_a02/a02_01_switch',(0,0):'s87/route_a00/a00_05_
 
 
 def _slide_case(job):
-    """One pass-V lockstep: (entry id, scope, request pair)."""
-    sid,scope,(left,right)=job
+    """One pass-V lockstep: (entry id, scope, request pair[, stop tick])."""
+    sid,scope,(left,right)=job[:3]
     report,path=_SFX['report'],_SFX['path']
     entry=[e for e in report['entries'] if e['id']==sid and tuple(e['scope'])==scope][0]
     ram=(refs.capture(SLIDE_CAPTURES[scope])/'eeMemory.bin').read_bytes()
@@ -658,7 +659,11 @@ def _slide_case(job):
     scenario={0:[('start',sid,left,right)]}
     last=max(e['tick'] for e in entry['events'] if 'op' in e)
     # a looping script: through its first turn and on past the jump
-    if any(e.get('op')==_SFX['X'].OP_JUMP for e in entry['events']):scenario[last+1500]=[('stop',('start',0),0)]
+    # a short run: the requester's soft stop at the given tick
+    if len(job)>3:scenario[job[3]]=[('stop',('start',0),0)]
+    # (quick: 120 ticks past the jump, its restart and the short first wait)
+    elif any(e.get('op')==_SFX['X'].OP_JUMP for e in entry['events']):
+        scenario[last+(1500 if FULL else 120)]=[('stop',('start',0),0)]
     elif endless(entry):scenario[last+60]=[('stop',('start',0),0)]
     pans=any(e.get('op')==_SFX['X'].OP_PAN for e in entry['events'])
     slides=2 if pans else 1 if any(e.get('op')==_SFX['X'].OP_VOLUME for e in entry['events']) else 0
@@ -673,17 +678,25 @@ def slide_oracle(elf,lib,report,path):
     entries=[(e['id'],tuple(e['scope'])) for e in report['entries'] if e['state']==X.STATE_AUDIBLE and
              any(ev.get('op')==X.OP_VOLUME for ev in e['events'])]
     ids=(0x44E,0x4E3,0x58A,0x58E,0x592,0x596,0x59A)
-    pinned=[(0x89E,(0,0)),(0x8A0,(0,0)),(0x89E,(0,1)),(0x8A0,(0,1)),(0x8B4,(2,0))]+[(i,(15,1)) for i in ids]+[(0x44E,(13,0))]
+    pinned=[(0x89E,(0,0)),(0x8A0,(0,0)),(0x89E,(0,1)),(0x8A0,(0,1)),(0x8B4,(2,0))]+[(i,(15,1)) for i in ids]+\
+        [(0x44E,(13,0)),(0x44E,(11,0))]
     assert set(pinned)<=set(entries),entries
     entries=pinned   # the scopes with a capture here (SLIDE_CAPTURES)
     pairs=((0x1000,0x1000),(0x800,-0x400))
     # Quick: each script once (0x89E / 0x8A0 in one sub each), the request
     # pairs alternating; full: every entry with both pairs.
     jobs=[(sid,scope,pair) for sid,scope in entries for pair in pairs] if FULL else \
-        [(0x89E,(0,0),pairs[0]),(0x8A0,(0,1),pairs[1]),(0x8B4,(2,0),pairs[0]),(0x44E,(15,1),pairs[0])]
+        [(0x89E,(0,0),pairs[0]),(0x8A0,(0,1),pairs[1]),(0x8B4,(2,0),pairs[0]),
+         # AREA15's 0x44E through its first pan slide (ticks 1200..1260); its
+         # 7152-tick loop runs in the full sweep, 0x44F's B0 60 loop here
+         (0x44E,(15,1),pairs[0],1300),
+         # AREA11's 0x44E through its key-ons, the first volume slides
+         # (ticks 240..300) and the soft stop
+         (0x44E,(11,0),pairs[1],320)]
     jobs+=[(0x44F,(0x13,0),pairs[0])]
     _SFX.update(elf=elf,lib=lib,report=report,path=path)
-    return parallel_map(_slide_case,jobs,cost=lambda job:9000 if job[1] in ((15,1),(0x13,0)) else 1200 if job[0]==0x8B4 else 400)
+    return parallel_map(_slide_case,jobs,cost=lambda job:job[3] if len(job)>3 else
+                        9000 if job[1] in ((15,1),(0x13,0)) else 1200 if job[0]==0x8B4 else 400)
 
 
 def registry_oracle(elf,ram):
@@ -834,6 +847,15 @@ def registry_oracle(elf,ram):
             assert lib.shim_start(shim,entry['id'],11,0,0x1000,0x1000)==-1,hex(entry['id'])
             lib.shim_free(shim)
     area11=[e for e in area11 if e['state']!=X.STATE_UNSUPPORTED]
+    # A script with a volume / pan slide or a B0 60 loop runs in pass V (the
+    # slide fields compared too; AREA11's is the forced outdoor ambient 0x44E,
+    # unreached without event flag 0x30 == 0xFF, above). Passes A/B/C/M assume
+    # a voice keeps its start volume and the script ends by itself, and a
+    # 7000-tick loop in each of them cost most of this test's time.
+    def sliding(e):
+        return any(ev.get('op') in (X.OP_VOLUME,X.OP_PAN,X.OP_JUMP) for ev in e.get('events',()))
+    assert [(e['id'],tuple(e['scope'])) for e in area11 if sliding(e)]==[(0x44E,(11,0))]
+    area11=[e for e in area11 if not sliding(e)]
     # Quick: every preset entry (the pre-census registry) and a covering
     # sample of 12 census additions (every bank, looping and key-off and
     # portamento form); full: every entry.
@@ -898,7 +920,10 @@ def registry_oracle(elf,ram):
     # quick run spreads the independent lockstep runs over forked workers,
     # longest first, and receives the results in the same order.
     mono_entries=audible_entries if FULL else audible_entries[:4]
-    tagged=[('A',job) for job in jobs]+[('B',e) for e in audible_entries]+[('C',x) for x in scenarios.values()]+\
+    # Quick: pass B over a covering sample (every bank, loop, key-off and
+    # portamento form, every endless loop) of 24; pass A ran every entry.
+    model_entries=select(audible_entries,24,0x5FD1,axes=(form,),keep=lambda _i,e:endless(e))
+    tagged=[('A',job) for job in jobs]+[('B',e) for e in model_entries]+[('C',x) for x in scenarios.values()]+\
         [('M',e) for e in mono_entries]
     if FULL:
         results=[_sfx_job(job) for job in tagged]
@@ -907,11 +932,11 @@ def registry_oracle(elf,ram):
     voices=results[:len(jobs)]
     cases,voices_checked=len(voices),sum(voices)
     model=dict(entries=0,ticks=0,commands=0,key_on=0,key_off=0,pitch=0,volume=0)
-    for stats in results[len(jobs):len(jobs)+len(audible_entries)]:
+    for stats in results[len(jobs):len(jobs)+len(model_entries)]:
         model['entries']+=1
         for key in ('ticks','commands','key_on','key_off','pitch','volume'):model[key]+=stats[key]
-    concurrent=dict(zip(scenarios,results[len(jobs)+len(audible_entries):len(jobs)+len(audible_entries)+len(scenarios)]))
-    mono=results[len(jobs)+len(audible_entries)+len(scenarios):]
+    concurrent=dict(zip(scenarios,results[len(jobs)+len(model_entries):len(jobs)+len(model_entries)+len(scenarios)]))
+    mono=results[len(jobs)+len(model_entries)+len(scenarios):]
     assert len(mono)==len(mono_entries) and sum(m['volume'] for m in mono)>0,'mono pass ran no volume command'
     # 48 tracks start (the 49th 0x14D and the 0x413 are refused -1), all 44
     # non-stream voices key on and the remaining key-ons find no voice.

@@ -37,6 +37,9 @@ int em_coll_segment_0019AA80(EmCollProbeState *state,EmCollSegmentFaceScratch *f
 int em_coll_segment_0019A440(const EmCollSegment *seg,const float from[3],const float to[3],unsigned mask)
 { (void)seg;(void)from;(void)to;(void)mask;return -1; }
 EmModuleLoader *em_module_loader_live(void) { return NULL; }
+/* The live area's original-layout records (em_scene_bindings) are absent:
+ * a +9F read of a class-2 model 6 is refused. */
+int em_scene_bindings_actor_snapshot(uint32_t a,uint32_t n,void *o) { (void)a;(void)n;(void)o;return -1; }
 EmStatusSceneLoader *em_module_loader_state(EmModuleLoader *ml) { (void)ml;return NULL; }
 EmSceneState *em_scene_state(void) { static EmSceneState state; return &state; }
 const unsigned char em_coll_move_cell_record_tag;
