@@ -494,24 +494,67 @@ rand() word differs at row 418, the position leaves at row 519 (0.8 away)
 and the port stops at row 667, where 001869A0 (player equipment,
 em_equipment_live) faults at address 0x7A6DE4. g80 not reached.
 
+## Phases (lane PORT-A21-PHASES, 2026-11-18, branch `a21phases`)
+
+- **0x825B00** (decomp func_overlay_AREA21_00825AC0, byte-identical C) in
+  `em_area21_groups`: the effect node 0014EC00's 001EFD90 starts (g77 row
+  5893). The AREA19 0x824A90's shape: state 0 builds the +0xD0 matrix
+  (001029C0 / 00102C58 +0xC0 / 00102918 +0xB0), phase 0, +0x1F4 = rand /
+  2^31; state 1 queues 001CFAE0(packet at sp - 0x60, 0, +0xD0, phase,
+  +0x1F4, 1.0, 0.1) through 001CFBE0(001CCF70(+0x100), 0, group 0x82B0E0,
+  packet, 0), phase += 1/120, state 3 above 1.5; states 2 / 3 001AFC10. New
+  hook 001CFAE0. Bound in dispatch_area21 (frame 0xA0) and
+  em_scene_bindings. Oracle (test_area21_groups_reference): 71 of 71 words;
+  mutants caught: the 1/120 step (one ulp), 001CFBE0's mode 0, the 1.0 /
+  0.1 order, the seed store; equivalent: `!(x <= 1.5)` as `1.5 < x` (no
+  NaN on the EE).
+- **AREA21's op09 callbacks** 0x8269A0 / 0x8269F0 (script 0x82BEC0) and
+  0x827250 (script 0x82CBD0) were translated and bound in dispatch_area21
+  but em_area01_script_live's record allow list refused them (g77 row
+  12089); area 0x15 now passes them.
+- **D_00275C48** (001F3620's splash count, .bss; a shell casing landing in
+  water bumps it and spawns 0xDB on odd counts; g77 row 12323): a view in
+  em_aim_fire_runtime, zero at boot. It is never reset; the card sources
+  g72 end and g76 end hold 0 (g77 end 24), so chain g20 starts it exactly.
+- Sub-lanes: Haze ring (above) and 0x823B40 (PORT-A21-3B40, in this
+  doc's Modules / Evidence), which also opened the boot script workers to
+  AREA21 (001B7670, g78 row 12749).
+- **Chain g20** (card g73): g73 4191 / 4192, g74 3736 / 3736 (hits equal),
+  g75 3864 / 3864, g76 6383 / 6383 (rand() word at row 6386 as before),
+  **g77 12864 / 12864 to its end** (hit at row 3533, 95.0, equal), **g78
+  15530 / 15530 to its end** (the original's hit at row 1875, 80.0, is
+  matched), g79 578 compared, 429 on the row, stop at row 667, g80 not
+  reached.
+- **g79 divergence** (not diagnosed): the rand() word differs first at
+  row 418 (the frame before drew a different number of times; positions
+  still on the row), the position leaves at row 519 (0.801 away), the
+  heading at row 603; the port's first hit lands at row 520 (65.0) against
+  the original's 519 (65.0), one frame late. At row 667 001869A0 (player
+  equipment, em_equipment_live) faults at 0x7A6DE4. g79 is not in SUBS
+  (its background asset differs, Live above); whether that or another
+  drawer explains the extra or missing draw at row 417 needs an
+  EM_RAND_TRACE run against the take's rows (tools/rand_order.py).
+- **g80** (the ending, the credits and the clear save): not reached. The
+  take's movie table (the word 0x821058) stays 0 for all 28268 rows: the
+  ending plays no PSS movie, so no movie export is needed. The ending
+  pictures are a screen module (001AD740 state 3 calls 001FF080(0, 0x37):
+  a DATA.DAT module / chunk 0x37 through frame-task slot 2); the credits'
+  music and the card write (00225A00 / 00225AC0) are to be checked when
+  the chain gets there.
+- Not done: g76's extra 0020A7A0 draw at row 6385 (The boss fight, last
+  item).
+
 ## Next
 
-0. Next: **0x825B00** (g77 row 5893, the effect node 0014EC00 starts),
-   then chain g20 on through g78 .. g80; the rand() word at g76 row 6386.
-1. (done) 001741D0 and the seated frame's workers (The Gatling seat).
-   (done) 001E1E60's flag-0x23 workers (Far light); (done) 001E1AD0's
-   flag-0x22 path (Grid); (done) 001AAC00 with its tests, 001EB440 /
-   001EB250 (Use and the boss effects); (done) 0x824FE0, 0x824CF0,
-   001EB600 and cue 0xC (The boss fight). Next: **001741D0** (+5 0x23,
-   byte-identical C; g77 row 4354 takes its +1F0 0x38 Gatling branch, a
-   six-step table switch; the other branch is the 0x4A placement), most
-   naturally in em_player_running_jump beside 001747F0 (its workers
-   already cover 001749A0, 00178B90, 00175900, sin / cos / atan2 / sqrt
-   and *(*D_00275B40 + 8)); new: 00174A50, *(*D_00275B40 + 0), the pad
-   test D_00810E74 & 0x70003B76, 001028D0 / 00102760 / 001026A0 /
-   00103200 into 0x700038A0..DC, 001B12B0, 001B1470. Then the extra
-   0020A7A0 draw at g76 row 6385 (The boss fight, last item), then chain
-   g20 on through g78 .. g80.
+0. Next: g79's first rand() difference at row 418 and the 001869A0
+   fault at row 667 (Phases), then g80 (the ending module 0x37, the
+   credits, the clear save); the rand() word at g76 row 6386.
+1. (done) 0x825B00, the AREA21 op09 callbacks, D_00275C48 (Phases);
+   001E76A0 (Haze ring); 0x823B40 and 001B7670's gate (lane
+   PORT-A21-3B40); 001741D0 and the seated frame's workers (The Gatling
+   seat); 001E1E60's flag-0x23 workers (Far light); 001E1AD0's flag-0x22
+   path (Grid); 001AAC00, 001EB440 / 001EB250 (Use and the boss effects);
+   0x824FE0, 0x824CF0, 001EB600 and cue 0xC (The boss fight).
 1b. 001D7410's Z read-back (Far light, "Not modelled").
 1c. The haze ring's vf23 (Haze ring, open item): the logic walk's last
     vf23 writer before each ring.
