@@ -54,7 +54,7 @@ COMMON  := src/main.c src/em_model.c src/em_input.c src/em_settings.c \
            src/game/em_face_slot.c \
            src/game/em_examine.c src/game/em_panel.c src/game/em_panel_program.c src/game/em_panel_runtime.c src/game/em_battery_ui.c src/game/em_battery_page_live.c src/game/em_status_page_record.c src/game/em_camera_retarget.c \
            src/game/em_camera_rotation.c src/game/em_camera_live.c src/game/em_camera_commit_original.c \
-           src/game/em_camera_follow_original.c src/game/em_camera_area11_specials.c src/game/em_camera_aim.c src/game/em_area22_port.c src/game/em_area00_low.c \
+           src/game/em_camera_follow_original.c src/game/em_camera_area11_specials.c src/game/em_camera_aim.c src/game/em_sight.c src/game/em_sight_live.c src/game/em_area22_port.c src/game/em_area00_low.c \
            src/game/em_area06_port.c src/game/em_area06_port_node.c \
            src/game/em_area06_port_overlay.c src/game/em_level8_port_gap.c src/game/em_level8_port_creature.c \
            src/game/em_level8_port_lift.c src/game/em_level8_port_overlay.c src/game/em_level8_port_probe.c \
@@ -1887,6 +1887,22 @@ test-panel-program:
 # sections 6 and 7). EM_TEST_FULL=1 runs every case.
 test-camera-aim-reference:
 	python3 tools/test_camera_aim_reference.py
+
+.PHONY: test-sight-reference
+# The weapon sights 001999C0 draws (em_sight.c: 001DB830..001DCFF0,
+# 00199770, the packet builders 002082B0 / 002081A0) against the original
+# instructions over designed memory, each arm of 001999C0 as a chain
+# (docs/CAMERA_LIVE.md section 7). EM_TEST_FULL=1 runs every case.
+test-sight-reference:
+	python3 tools/test_sight_reference.py
+
+.PHONY: test-sight-live
+# The five sights live from their start points (build/start_saves/sight_*,
+# built on demand), R2 held: no fault, the arm's drawers run, and the zoom
+# scope's slot-1 bytes equal the original's capture (decomp
+# build/sights_ref/zoom) on every byte the original writes.
+test-sight-live: all
+	python3 tools/test_sight_live.py
 
 .PHONY: test-aim-fire-marker-reference
 # The round's impact marker 0018ABA0 (em_aim_fire_marker.c, bound in

@@ -36,6 +36,7 @@ level.
 | 0019A910 / 0019B7D0 | the camera's segment / ground queries | em_coll_segment_walkers / em_coll_list_passes_walkers | over the collision world's one probe state |
 | **00197D20, 00198650, 0018CA90** | camera actions 1 (R1 aim), 2 (R2 aim), 5 (the over-the-shoulder seat) | **em_camera_aim** (new, section 7) | 0018BC20's dispatch (`lw_00197D20`, `lw_00198650`, `lw_0018CA90`) |
 | **00197740, 00197870, 00198050, 00198440, 00198240, 001912B0, 001999C0, 001DB800** | the aim camera's draw-ins, holds, wall test, area-0x10 lift, sight switch and sight bytes | **em_camera_aim** (new) | from the actions; 00197870 / 00198440 / 001912B0 also as 00197490's workers (`sp_*`) |
+| **001DB830, 001DB9D0, 001DBCB0, 001DBD50, 001DBE20, 001DBF00, 001DC020, 001DC610, 001DC890, 001DC960, 00199770** (and 001DCD40, 001DCF40, 001DCFF0, 002082B0, 002081A0) | the weapon sights 001999C0's equipment arms draw | **em_sight** (new), served by em_sight_live | from 001999C0 through aim_call (section 7) |
 | 00197490 | the aim release (CAM-16) | em_camera_area11_specials (`em_cam_specials_00197490`) | from 00197D20 / 00198650 (`aim_call`) |
 | 0018C850 / 0018C920 / 00183010 / 001028E8 | the aim camera's chases, the push out of a wall, the VU0 multiply | em_area22_port (bound here, its one owner) | `aim_call` |
 
@@ -486,17 +487,41 @@ collision world; the math through em_sdk_math_original; 001D2610 /
 
 **Reached only outside what AREA11 sets up** (fail-stops, each reported
 when reached): 00182F90 (001912B0's area-0x10 lift; AREA11 is area 0xB);
-0022E7F0 (D_00810CA5 == 6); the sight drawers 001DB830, 001DBE20, 00199770,
-001DB9D0, 001DC610, 001DC890, 001DBF00, 001DC020, 001DC960, 001DBCB0,
-001DBD50 and D_00810248 (D_00810CA4 0 / 1 / 2, D_00810CA7 8 / 9); 001B0300
-(camera +5 == 1; the specials module requires its worker before it runs
-00197490, so it is bound to a fail-stop). Evidence: every route and AIM
-capture holds D_00810CA4..CA7 = FF 05 00 07 and camera +5 = 0; their
-writers are the New Game reset 001AF2C0 (FF 05 00 07) and the status
-screen's equipment selectors (00217090 / 002177B0 / 00218640 / 00218D90,
-which offer only the items the inventory flags D_0081070A.. name), and
-none of the AIM captures' census runs reached any of these callees (decomp
-CAPTURES_C10.md "AIM").
+0022E7F0 (D_00810CA5 == 6); 001B0300 (camera +5 == 1; the specials module
+requires its worker before it runs 00197490, so it is bound to a
+fail-stop). Evidence: every route and AIM capture holds D_00810CA4..CA7 =
+FF 05 00 07 and camera +5 = 0; their writers are the New Game reset
+001AF2C0 (FF 05 00 07) and the status screen's equipment selectors
+(00217090 / 002177B0 / 00218640 / 00218D90, which offer only the items the
+inventory flags D_0081070A.. name), and none of the AIM captures' census
+runs reached any of these callees (decomp CAPTURES_C10.md "AIM").
+
+**The sight drawers** (lane PORT-SIGHTS, 2026-11-18): the eleven calls of
+001999C0's equipment arms are translated in `src/game/em_sight.c` (with
+their callees 001DCD40, 001DCF40, 001DCFF0 and the packet builders
+002082B0 / 002081A0) and served by `src/game/em_sight_live.c` from
+`aim_call`. Which item selects which arm: D_00810CA4 0 the DELTA auto sight
+(item 0x0A: 001DB9D0, 001DBF00, 001DC020 with the zoom word), 1 the
+interceptor unit (0x0B: 001DB9D0, 001DC610, 001DC890 with the zoom word),
+2 the missile launcher (0x0C..0x0E: 001DB830, 001DBE20, 00199770); else
+D_00810CA7 8 the zoom scope (0x08: 001DB9D0, 001DC960, 001DBCB0 with
+D_00810248), 9 the night vision scope (0x09: 001DB830, 001DBD50). The
+drawers' locals live at their original sp-relative offsets in a stack
+window 0x7F000000..0x7F000FFF below the aim host's sp (001D64A0, 001CBA50,
+002082B0, 002081A0 and 00102948 get pointers to them); their .data
+(D_00253240..D_002533CF, the strings D_0026E6F0..) is
+`assets/sight_tables.emst` (tools/export_sight_tables.py). They write the
+slot-1 packets byte-exact into the render context (001D64A0 em_rcl_001D64A0,
+00207F80 em_sgp_00207F80, 001CBA50 em_sgp_001CBA50, 001DB9D0 / 002082B0 /
+002081A0 directly). The Original profile's GS frame does not draw a
+gameplay frame's slot-1 2D packets yet (as AREA21's Gatling gauge bars):
+the sights are exact in memory, not on the field. One fail-stop remains:
+00199770's lock mark 001DD170 (the missile launcher with a class-2 target
+within 360 and on screen), whose vf23 input has no certified value at the
+camera step (AIM_FIRE.md section 7). Verified by `make
+test-sight-reference` (tools/test_sight_reference.py; the original
+instructions of all sixteen over designed memory, each 001999C0 arm as a
+chain at one sp).
 
 **Verification.** `make test-camera-aim-reference`
 (tools/test_camera_aim_reference.py, ~10 s; `EM_TEST_FULL=1` ~30 s): the

@@ -380,6 +380,38 @@ CONSTRUCTED['k01'] = dict(CONSTRUCTED['k00'], patches=CONSTRUCTED['k00']['patche
 CONSTRUCTED['area14k'] = {'state': 'levels-recordings-20261102-1/s87/route_k01/k01_02_item26', 'area': 14,
                           'patches': [], 'check_area00_sub': False}
 
+# The weapon sights (lane PORT-SIGHTS, docs/WHOLE_GAME_LEDGER.md section 4.2): g67's start (g66's
+# end, the AREA16 bed room) with a sight fitted, so the aim camera's sight switch 001999C0 draws it
+# under R2. sight_zoom is what the original's own SCOPE MOUNT page (00218640) leaves after a pad-only
+# equip from that state (decomp build/sights_ref/zoom: the 0x640-byte block differs from g66's end
+# only in D_00810CA7 and the play timer D_00810750). The others are constructed (no recording owns
+# the item): the item byte, then CA4..CA7 as the commit of MULTIPLE ATTACHMENT (002177B0) or SCOPE
+# MOUNT (00218640) leaves them.
+_G66 = 'guided-20261117/s87/route_g16/g66_area16_bed'
+
+
+def _sight(patches):
+    return {'state': _G66, 'area': 0x10, 'check_area00_sub': False, 'patches': patches}
+
+
+CONSTRUCTED['sight_zoom'] = _sight([
+    (0x810CA7, bytes((0x08,)), 'CA7 = 8: SCOPE MOUNT commits the zoom scope (item 0x08, owned since g09)')])
+CONSTRUCTED['sight_night'] = _sight([
+    (0x810C6D, bytes((0x01,)), 'item 0x09 (the night vision scope, AREA08 s0 g[2]) owned'),
+    (0x810CA7, bytes((0x09,)), 'CA7 = 9: SCOPE MOUNT commits the night vision scope (CA4 stays 0xFF)')])
+CONSTRUCTED['sight_delta'] = _sight([
+    (0x810C6E, bytes((0x01,)), 'item 0x0A (the DELTA auto sight, AREA07 s0 g[0]) owned'),
+    (0x810CA4, bytes((0x00, 0xFF, 0x01, 0xFF)),
+     'CA4 = 0, CA5 = CA7 = 0xFF, CA6 kept: MULTIPLE ATTACHMENT commits item 0x0A')])
+CONSTRUCTED['sight_interceptor'] = _sight([
+    (0x810C6F, bytes((0x01,)), 'item 0x0B (the interceptor unit, AREA03 s1 g[1]) owned'),
+    (0x810CA4, bytes((0x01, 0xFF, 0x01, 0xFF)),
+     'CA4 = 1, CA5 = CA7 = 0xFF, CA6 kept: MULTIPLE ATTACHMENT commits item 0x0B')])
+CONSTRUCTED['sight_missile'] = _sight([
+    (0x810C70, bytes((0x01, 0x01, 0x01)), 'items 0x0C..0x0E (the missile launcher\'s three parts) owned'),
+    (0x810CA4, bytes((0x02, 0xFF, 0xFF, 0xFF)),
+     'CA4 = 2, CA5..CA7 = 0xFF: MULTIPLE ATTACHMENT commits the launcher (all three parts held)')])
+
 
 def constructed(name):
     """The arrival dict of a constructed start: the beat folder's own state, patched."""
@@ -650,6 +682,9 @@ def main(argv):
         for n, p in START_POINTS.items():
             print('%-15s %s (%s*), block area %d' % (n, p['route'], p['first'], p['area']))
         return 0
+    out = OUT
+    if len(argv) >= 2 and argv[0] == '--out':      # a lane's cards (EM_START_AT_DIR), not build/start_saves
+        out, argv = Path(argv[1]).resolve(), argv[2:]
     names = argv or list(START_POINTS)
     unknown = [n for n in names if n not in START_POINTS and n not in CONSTRUCTED]
     if unknown:
@@ -659,7 +694,7 @@ def main(argv):
         print('build_start_saves: a start point is named twice', file=sys.stderr)
         return 2
     try:
-        result = build(names)
+        result = build(names, out=out)
     except AssertionError as ex:       # a check of the harness (the two sides, the card read back)
         print(f'build_start_saves: refused: a check failed: {ex}', file=sys.stderr)
         return 2
@@ -667,7 +702,7 @@ def main(argv):
         print(f'build_start_saves: refused: {ex}', file=sys.stderr)
         return 2
     for n, (status, folder, (commands, entries)) in result.items():
-        print(f'{n}: {status}: {folder.relative_to(ROOT)} (the save: {commands} card commands, both sides equal; '
+        print(f'{n}: {status}: {folder} (the save: {commands} card commands, both sides equal; '
               f'read back: {entries} callee entries equal to the original\'s)')
     return 0
 
