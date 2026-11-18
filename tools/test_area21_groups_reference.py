@@ -5,7 +5,9 @@ the scripts 0x82B5E0 / 0x82C5C0 place, 0x823580 (its effect position a
 frame local, compared at its original stack address), 0x8237B0, 0x823860,
 0x8238E0 and the empty 0x823AA0, the effect nodes 0x824CF0 and 0x824FE0
 (no static reference, but reached in the boss fight: lane PORT-A21-BOSS;
-their packets frame locals; 0x824FE0's parent node and its 32 child
+their packets frame locals; 0x825B00, 0014EC00's 001EFD90 node, g77
+row 5893, and 0x823B40, 0x824FE0's 001EFD20 node, g77 row 12708, the
+same; 0x824FE0's parent node and its 32 child
 objects are designed at PAR), and the sub 0 placement [52] 0x8243B0 (its
 packet a frame local). Decomp docs/AREA21_OVERLAY.md.
 
@@ -39,6 +41,7 @@ import re
 import struct
 from pathlib import Path
 import gen_area21_groups as G
+import ee_float_model as M
 import test_level14_port_reference as O
 import reference_root as refs
 ROOT = Path(__file__).resolve().parents[1]
@@ -53,6 +56,8 @@ FUNCS = {
     0x824CF0: ('em_area21_groups_00824CF0', 0x2F0, [U, S], None),
     0x8243B0: ('em_area21_groups_008243B0', 0x93C, [U, S], None),
     0x824FE0: ('em_area21_groups_00824FE0', 0xB18, [U, S], None),
+    0x825B00: ('em_area21_groups_00825B00', 0x160, [U, S], None),
+    0x823B40: ('em_area21_groups_00823B40', 0x868, [U, S], None),
 }
 OVERLAY_ID = 0x12
 AREA21 = ROOT.parent / 'Extermination/extract/OVERLAY/AREA21.BIN'
@@ -63,8 +68,10 @@ FREE = 0x1E61000             # zero in the capture
 A = FREE + 0x1000            # the designed node (0x2F0 bytes)
 # the pure helpers run as original code (their writes replayed): the
 # vector copy, the sine, the matrix identity, rotation and translation and
-# the float -> unsigned helper 001281C0 (0x8243B0's casts)
-MATH = frozenset((0x102948, 0x11DE90, 0x1029C0, 0x102C58, 0x102918, 0x1281C0, 0x1026A0, 0x102BB0))
+# the float -> unsigned helper 001281C0 (0x8243B0's and 0x823B40's casts),
+# sinf 0011E2A8 and the row scale 00102900 (0x823B40)
+MATH = frozenset((0x102948, 0x11DE90, 0x1029C0, 0x102C58, 0x102918, 0x1281C0, 0x1026A0, 0x102BB0, 0x11E2A8,
+                  0x102900))
 # Words the static walk reaches that no input can reach, and why.
 DEAD = {
     # 0x824FE0's mode 10 picks k by a switch on its loop index j, which is
@@ -316,6 +323,109 @@ def fe0_cases(add, st, ulp):
          0x1EFD20: [O.Scribble(0, [(D_70003B68, s32(13)), (A + 0x24, w(PAR + 4))])] * 3 + [EFFECT]})
 
 
+def b40_rand(seed):
+    """0x823B40's random of a seed (EE float arithmetic): bits 16..31 /
+    65535 + 0.0001."""
+    return M.ee_add(M.ee_div(M.ee_cvt_s_w((seed >> 16) & 0xFFFF), fbits(65535.)), fbits(0.0001))
+
+
+def b40_phase(seed, life):
+    """A phase that makes the first particle's life (phase - 0.5 * r0)
+    exactly `life` (bits), searched over the ulps around it; None if no
+    phase gives it exactly."""
+    half = M.ee_mul(fbits(0.5), b40_rand(seed))
+    guess = M.ee_add(life, half)
+    for d in sorted(range(-64, 65), key=abs):
+        p_ = (guess + d) & 0xFFFFFFFF if guess >> 31 == 0 else (guess - d) & 0xFFFFFFFF
+        if M.ee_sub(p_, half) == life:
+            return p_
+    return None
+
+
+def b40_cases(add, st):
+    W = A + 0x1F0
+    D_A20 = 0x70003A20
+
+    def base(state, kind, phase=0., seed=0x12345678, frac=.375, flag=1):
+        return st(state) + [(A + 0xD, b(kind)), (A + 0x38, s32(flag)),
+                            (W, f(phase) if isinstance(phase, float) else phase), (W + 4, f(frac)),
+                            (W + 8, s32(seed)), (A + 0x80, fw(128., 64., 32., 255.)), (0x28A56C, s32(3)),
+                            (A + 0xD0, fw(0., 0., -1., 0., 0., 1., 0., 0., 1., 0., 0., 0., 7., 3., -2., 1.))]
+
+    for state in (2, 3, 4, 0x80, 0x81, 0xFF):
+        add(f'3b40/{state:x}', 0x823B40, st(state))
+    for kind in (0, 1, 2, 3, 0x81, 0xFF):
+        for r in (0x12345678, -1, 0, 0x7FFF0000):
+            add(f'3b40/0/{kind}/{r & 0xFFFFFFFF:x}', 0x823B40, st(0) + [(A + 0xD, b(kind)), (A + 0x38, s32(1))],
+                {0x122BB8: [r, r * 3 + 1], 0x1CCF70: [5], 0x1CA7B0: [2] * 10})
+    for kind in (3, 4, 0x80, 0x82):
+        add(f'3b40/1/kind{kind:x}', 0x823B40, base(1, kind))
+    # +0xD 0: the 2.0 bound one ulp either side
+    edge0 = M.ee_sub(fbits(2.), fbits(0.01))
+    for name, ph in (('0', f(0.)), ('1.5', f(1.5)), ('e-1', w(edge0 - 1)), ('e', w(edge0)), ('e+1', w(edge0 + 1)),
+                     ('2', f(2.)), ('-1', f(-1.))):
+        for h_ in (0, 3, -1):
+            add(f'3b40/1/0/{name}/{h_}', 0x823B40, base(1, 0, ph), {0x1CCF70: [h_]})
+    # +0xD 2: +0x38 1 or not, the 1.2 bound one ulp either side of each step
+    for flag in (1, 0, 2, -1, 0x101):
+        step = fbits(0.025) if flag == 1 else fbits(0.015)
+        edge = M.ee_sub(fbits(1.2), step)
+        for name, ph in (('0', f(0.)), ('e-1', w(edge - 1)), ('e', w(edge)), ('e+1', w(edge + 1)), ('1.2', f(1.2)),
+                         ('-1', f(-1.))):
+            add(f'3b40/1/2/{flag}/{name}', 0x823B40, base(1, 2, ph, flag=flag), {0x1CCF70: [4]})
+    # +0xD 1: the 1.5 bound one ulp either side
+    edge1 = M.ee_sub(fbits(1.5), fbits(0.015))
+    for name, ph in (('e-1', w(edge1 - 1)), ('e', w(edge1)), ('e+1', w(edge1 + 1)), ('1.5', f(1.5))):
+        add(f'3b40/1/1/end/{name}', 0x823B40, base(1, 1, ph), {0x1CA7B0: [1] * 10})
+    # +0xD 1: phases and seeds that put the lives below 0, in 0..0.5, above
+    # 0.5 and above 1; 001CA7B0's results negative, zero and positive
+    seeds = (0x12345678, 0, -1, 0x7FFFFFFF, -0x80000000, 0x0000FFFF, 0xFFFF0000 - 0x100000000, 0x00010000, 0x7FFF8000)
+    for ph in (-0.6, -0.01, 0., 0.2, 0.45, 0.5, 0.55, 0.75, 1., 1.02, 1.3, 1.6, 3.):
+        for seed in seeds:
+            add(f'3b40/1/1/{ph}/{seed & 0xFFFFFFFF:x}', 0x823B40, base(1, 1, ph, seed),
+                {0x1CA7B0: [3, -1, 0, 7, 0x7FFFFFFF, -0x80000000, 1, 0, -5, 2]})
+    # the first particle's life exactly 0, 0.5 and 1, and the phases one and
+    # two ulps either side (the nearest lives below and above each)
+    for seed in (0x00000000, 0x7FFF1234, 0xFFFF0000 - 0x100000000):
+        for life in (0., .5, 1.):
+            ph = b40_phase(seed, fbits(life))
+            assert ph is not None, (seed, life)
+            for d in (-2, -1, 0, 1, 2):
+                add(f'3b40/1/1/life/{seed & 0xFFFFFFFF:x}/{life}/{d}', 0x823B40, base(1, 1, w(ph + d), seed),
+                    {0x1CA7B0: [4] * 10})
+    # colours and matrices that saturate and clamp the size at 255
+    add('3b40/1/1/big', 0x823B40, base(1, 1, 0.9) + [
+        (A + 0x80, fw(3e38, -3e38, 0., 1.)), (A + 0xD0, fw(3e38, 1., 1., 1., 1., 3e38, 1., 1., 1., 1., 3e38, 1.,
+                                                           3e38, -3e38, 0., 1.))], {0x1CA7B0: [1] * 10})
+    # a matrix whose y column is all -0: positions with y = -0 before the
+    # (zero) gravity term is added
+    add('3b40/1/1/negzero', 0x823B40, base(1, 1, 0.6) + [
+        (A + 0xD0, fw(1., -0., 0., 0., 0., -0., 1., 0., 0., -0., 0., 0., 7., -0., -2., 1.))], {0x1CA7B0: [1] * 10})
+    # the size rows rewritten by a draw callee between particles: a blend
+    # below 0 and above 255 (the clamps)
+    for n, rows in ((0, (-5., -1., -100., 1., -7., 3., -2., -1.)), (1, (300., 1000., -3e38, 1., 2000., 0., 3e38, 1.))):
+        add(f'3b40/1/1/rows/{n}', 0x823B40, base(1, 1, 0.9, 0x7FFF1234),
+            {0x1CA940: [O.Scribble(None, [(0x700036A0, fw(*rows))])] * 10, 0x1CA7B0: [1] * 10})
+    # callees that rewrite what the original reads after them (the seed is
+    # read once; the phase, the life, the spread, the size rows, the colour,
+    # the matrix and D_0028A56C again)
+    add('3b40/1/1/scribble', 0x823B40, base(1, 1, 0.7),
+        {0x1CA7B0: [O.Scribble(2, [(D_A20, f(0.9)), (A + 0x80, f(9.)), (W + 8, s32(77))])] * 10,
+         0x1C7900: [O.Scribble(None, [(0x28A56C, s32(5)), (A + 0x8C, f(2.))])] * 10,
+         0x1CA940: [O.Scribble(None, [(W, f(1.4)), (W + 8, s32(5)), (0x700038A0, f(1.)), (0x700036B0, f(9.)),
+                                      (A + 0xD0, f(2.)), (A + 0xD, b(0)), (A + 4, b(2))])] * 10})
+    add('3b40/1/1/scribble2', 0x823B40, base(1, 1, 0.3),
+        {0x1C6120: [O.Scribble(9, [(W, f(-2.)), (0x70003A24, f(1.)), (0x700038C0, f(5.))])] * 10})
+    add('3b40/1/0/scribble', 0x823B40, base(1, 0, 1.98),
+        {0x1CCF70: [O.Scribble(4, [(W, f(1.)), (W + 4, f(-.25))])],
+         0x1CFBE0: [O.Scribble(None, [(W, f(1.999)), (A + 4, b(7))])]})
+    add('3b40/1/2/scribble', 0x823B40, base(1, 2, 1.17),
+        {0x1CCF70: [O.Scribble(4, [(A + 0x38, s32(0))])],
+         0x1CFB50: [O.Scribble(None, [(W, f(0.)), (A + 0xD, b(0))])]})
+    add('3b40/0/scribble', 0x823B40, st(0) + [(A + 0xD, b(2)), (A + 0x38, s32(1))],
+        {0x122BB8: [O.Scribble(-7, [(W, f(2.)), (A + 4, b(3))]), O.Scribble(9, [(W + 4, f(3.)), (A + 0xD, b(0))])]})
+
+
 def hook_values(rng):
     def ints(*values, n=4): return [rng.choice(values) for _ in range(n)]
     return {0x122BB8: ints(*RANDS), 0x1C6190: ints(*DISTANCES), 0x1CCF70: ints(0, 7, -1, 0xFFFFFF, n=14)}
@@ -420,6 +530,25 @@ def cases():
         {0x1CFBE0: [O.Scribble(None, [(A + 0x1F0, f(1.995)), (A + 0x1FC, s32(500)), (A + 0x1F4, f(.001))])]})
     add('4cf0/1/3/scribble', 0x824CF0, st(1) + [(A + 0xD, b(3))],
         {0x1CFBE0: [0, O.Scribble(None, [(A + 0x1F0, f(1.19))])]})
+    # ---- 0x825B00 (no static reference; 0014EC00's 001EFD90 node, g77 row 5893)
+    for state in (2, 3, 4, 0x80, 0x81, 0x82, 0x83, 0xFF):
+        add(f'5b00/{state:x}', 0x825B00, st(state))
+    for r in RANDS:
+        add(f'5b00/0/{r & 0xFFFFFFFF:x}', 0x825B00, st(0), {0x122BB8: [r], 0x1CCF70: [5]})
+    for name, phase in (('0', f(0.)), ('1.49', f(1.49)), ('1.5-', ulp(1.5 - 1. / 120, 1)),
+                        ('1.5-1', ulp(1.5 - 1. / 120, -1)), ('1.5-0', f(1.5 - 1. / 120)), ('1.5', f(1.5)),
+                        ('-1', f(-1.)), ('inf', w(0x7F800000)), ('-0', w(0x80000000))):
+        for h_ in (0, 3, -1):
+            add(f'5b00/1/{name}/{h_}', 0x825B00, st(1) + [(A + 0x1F0, phase), (A + 0x1F4, f(.375))], {0x1CCF70: [h_]})
+    add('5b00/1/scribble', 0x825B00, st(1) + [(A + 0x1F0, f(.5))],
+        {0x1CCF70: [O.Scribble(4, [(A + 0x1F0, f(1.)), (A + 0x1F4, f(-.25))])],
+         0x1CFBE0: [O.Scribble(None, [(A + 0x1F0, f(1.495)), (A + 4, b(7))])]})
+    add('5b00/1/scribble2', 0x825B00, st(1) + [(A + 0x1F0, f(1.49))],
+        {0x1CFAE0: [O.Scribble(None, [(A + 0x1F0, f(0.)), (A + 4, b(2))])]})
+    add('5b00/0/scribble', 0x825B00, st(0),
+        {0x122BB8: [O.Scribble(-7, [(A + 0x1F0, f(2.)), (A + 4, b(3))])], 0x1CCF70: [1]})
+    # ---- 0x823B40 (no static reference; 0x824FE0's 001EFD20 node, g77 row 12708)
+    b40_cases(add, st)
     # ---- 0x8243B0, placement [52]
     W = A + 0x1F0
     D_8101E4, D_81024E, D_3A20, D_3A24 = 0x8101E4, 0x81024E, 0x70003A20, 0x70003A24

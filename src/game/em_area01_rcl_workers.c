@@ -11,11 +11,12 @@ static int fail(uint32_t *fault, uint32_t address)
  * directly, each over its one live translation (em_render_context_live):
  * 001D8060 (AREA16's 0x825780 light lookup) and the channel-3 set-up of
  * AREA17's creature haze 001E04E0 (00133E30): 001D6B10, 001D1F80,
- * 001D6BA0, 001D1FF0, 001D1F20. */
+ * 001D6BA0, 001D1FF0, 001D1F20; and 001D7510, which AREA21's ring 001E0AC0
+ * (the effect node 001E76A0, em_haze_ring) calls with 001D1F80 / 001D1FF0. */
 static int context_entry(uint32_t fn)
 {
     return fn==0x001D8060u || fn==0x001D6B10u || fn==0x001D1F80u || fn==0x001D6BA0u ||
-           fn==0x001D1FF0u || fn==0x001D1F20u;
+           fn==0x001D1FF0u || fn==0x001D1F20u || fn==0x001D7510u;
 }
 
 int em_area01_rcl_workers_handles(uint32_t fn)
@@ -27,7 +28,7 @@ int em_area01_rcl_workers_handles(uint32_t fn)
 static int context_call(EmArea01Call *c, uint32_t *fault)
 {
     const uint32_t fn=c->function;
-    const unsigned na=fn==0x001D6BA0u ? 6u : fn==0x001D6B10u ? 4u : fn==0x001D1F80u ? 3u
+    const unsigned na=fn==0x001D6BA0u ? 6u : fn==0x001D6B10u ? 4u : fn==0x001D1F80u || fn==0x001D7510u ? 3u
                      : fn==0x001D1FF0u ? 2u : 1u;
     if (c->na!=na || c->nf) return fail(fault,fn);
     const int32_t a0=(int32_t)c->a[0], a1=(int32_t)c->a[1], a2=(int32_t)c->a[2];
@@ -39,6 +40,7 @@ static int context_call(EmArea01Call *c, uint32_t *fault)
     case 0x001D1F80u: rc=em_rcl_001D1F80(a0,a1,a2); break;
     case 0x001D6BA0u: rc=em_rcl_001D6BA0(a0,a1,a2,(int32_t)c->a[3],(int32_t)c->a[4],(int32_t)c->a[5]); break;
     case 0x001D1FF0u: rc=em_rcl_001D1FF0(a0,a1); break;
+    case 0x001D7510u: rc=em_rcl_001D7510(a0,a1,a2); break;
     default: rc=em_rcl_001D1F20(a0); break;
     }
     if (rc<0) return fail(fault,em_rcl_fault() ? em_rcl_fault() : fn);

@@ -237,6 +237,9 @@ int em_rcl_001D6BA0(int32_t chan, int32_t a1, int32_t a2, int32_t a3, int32_t t0
 int em_rcl_001D6C90(const int32_t args[15]);
 int em_rcl_001D1FF0(int32_t chan, int32_t a1);
 int em_rcl_001D1F20(int32_t chan);
+/* 001D7510(chan, a1, a2): the channel's GS register packet (AREA21's ring
+ * 001E0AC0 calls it from an owner). 0, or -1. */
+int em_rcl_001D7510(int32_t chan, int32_t a1, int32_t a2);
 int em_rcl_001D7080(int32_t chan, uint32_t a1, uint32_t f12);
 int em_rcl_001CB760(uint32_t table, int32_t id, uint32_t address);
 /* The gun lamp's cone shell callees (001D91A0 / 001D4E20 / 001D4B80, from
