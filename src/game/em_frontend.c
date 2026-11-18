@@ -209,7 +209,11 @@ static const struct {
     {"assets/movies/e007.mov", "E007.PSS", {691, 2, 1510}},      /* 3: \MOVIE\E007.PSS */
     {"assets/movies/e008s4.mov", "E008S4.PSS", {315, 2, 755}},   /* 4: \MOVIE\E008S4.PSS */
     {"assets/movies/e010.mov", "E010.PSS", {826, 2, 1778}},      /* 5: \MOVIE\E010.PSS */
-    {NULL, NULL, {0, 0, 0}},                                     /* 6: \MOVIE\E39S2.PSS, not on a played route */
+    /* 6: \MOVIE\E39S2.PSS (AREA19 sub 0's event, script 0x82B6E0 that 0x8250F0's sub-state
+     * 0x825240 starts; the guided g11 vsync 3177): 240 pictures (tools/export_movie.py);
+     * feed_end from the take's movie.tbl, one main-loop step of 641 vblanks (vsync 3177 ->
+     * 3818), less the same 22 as E46S4's; derived, not a probe of its own. */
+    {"assets/movies/e39s2.mov", "E39S2.PSS", {240, 2, 619}},
     /* 7: \MOVIE\E46S4.PSS (AREA15 sub 1's event, script 0x8277C0, a15b_01):
      * feed_end from the recording's one main-loop step of 747 vblanks, less
      * the 22 the fork's probes measured around E006S1's and E007's feed loop. */
