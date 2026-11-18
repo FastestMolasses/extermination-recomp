@@ -568,6 +568,9 @@ record: +0x04, +0x05, +0x2E and +0xC8 are EmActor's (`u04[0]`, `u04[1]`,
   0021E9C0 consume (live; 4.3). The exit box is on the level smoke's route
   since chain C11 EXIT (its `exit` phase: after Roger it starts his
   departure 0x828A10; FIRST_LEVEL_EXIT.md section 7); the hit box is not.
+  On the return visit the exit box's 001B0C60 (3B8D = 3, no owner) stops
+  the player on the next frame through 0015B130's prelude (lane
+  PORT-CHAIN3, AREA17_PORT.md: the guided run's g49 row 3085).
 
 ### 5.4 Evidence (live)
 

@@ -42,8 +42,11 @@ int em_interaction_runtime_claim(EmInteractionRuntime *runtime, const void *owne
 /* An owner whose own script opened the scripted frame (op07 already wrote
  * the selector, e.g. the truck trigger 008251E0's 0x8292C0): the player
  * takeover the next player stage performs serves that owner. Requires a
- * nonzero selector and a free player; writes nothing to the frame. 1
- * claimed, 0 refused. */
+ * nonzero selector and no owner; a player 0015B130's prelude already
+ * admitted with no owner (the area-change fade after 001B0C60: 3B8F = 1)
+ * serves it as well (the original's k01_02 row 282885: +1F0 = 0x41 with
+ * 3B8D = 3 and no owner, then 0x826790's script sets 3B8D = 2 over it).
+ * Writes nothing to the frame. 1 claimed, 0 refused. */
 int em_interaction_runtime_claim_scripted(EmInteractionRuntime *runtime, const void *owner);
 /* 00184BA0's claim on the AREA01 / AREA02 live list (em_area11_interaction_
  * host_claim_scan): as em_interaction_runtime_claim, but 3B8F (player_ready)

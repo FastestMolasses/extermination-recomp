@@ -1119,7 +1119,8 @@ static void log_area02(FILE *f)
  * tools/guided_chain.py): one line per script frame: the player's position,
  * heading (the record's +0xC4, when known), the area bytes D_00810700..02,
  * the vitals, the rand() word, and the creatures' first bytes and positions. */
-void em_scene_creature_trace(FILE *f, int t, const float pos[3], const float *heading, uint32_t rand_word)
+void em_scene_creature_trace(FILE *f, int t, const float pos[3], const float *heading, uint32_t rand_word,
+                             int s8d)
 {
     /* AREA11 runs without the AREA01 live composition (its own bindings):
      * its rows carry the player and the vitals, with no record list (the
@@ -1133,10 +1134,13 @@ void em_scene_creature_trace(FILE *f, int t, const float pos[3], const float *he
             t, pos[0], pos[1], pos[2], vit[0], vit[1], (unsigned)rand_word);
     if (heading) fprintf(f, "\"yaw\": %.6f, ", *heading);
     /* The frame machine's state (task 0's +0xB, 0x1AE040) and D_00275BD8:
-     * take.rec's tb and bd8 columns, read at the same point of the frame. */
+     * take.rec's tb and bd8 columns, read at the same point of the frame; s8d is
+     * 0x70003B8D (take.rec's s8d, the 'C' phase when nonzero): the caller's
+     * frame-start value when it has one (s8d >= 0), else the current byte. */
     const EmTask *t0 = em_task_slot(0);
-    fprintf(f, "\"c\": %u, \"tb\": %u, \"bd8\": %u, ", (unsigned)em_frame_counter(), t0 ? (unsigned)t0->user[0x0B - EM_SCENE_TASK_FIRST] : 0u,
-            (unsigned)s_state.d275BD8);
+    fprintf(f, "\"c\": %u, \"tb\": %u, \"bd8\": %u, \"s8d\": %u, ", (unsigned)em_frame_counter(),
+            t0 ? (unsigned)t0->user[0x0B - EM_SCENE_TASK_FIRST] : 0u, (unsigned)s_state.d275BD8,
+            s8d >= 0 ? (unsigned)s8d : (unsigned)s_state.spad3B8D);
     fprintf(f, "\"area\": \"%02x%02x%02x\", \"n\": [", s_state.d810700, s_state.d810701, s_state.d810702);
     /* EM_START_AT_TRACE_KINDS=<hex>,<hex>,...: the behaviours listed
      * (default the bugs 0012A5D0 and the creatures 0013D2D0, 00147390). */

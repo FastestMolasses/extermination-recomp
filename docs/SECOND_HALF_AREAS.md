@@ -770,7 +770,27 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   frame before drawing differently (rand()): g51 row 737 (the door move one
   frame early, as before), g53 row 2458 (20.0 in z: a teleport-sized step),
   g56 row 3019 (4.0, heading 0.12) and g58 row 4637 (3.8 in z); g49's 0.8
-  at row 3086 stays.
+  at row 3086 stays. (The room-move rows were the trace's sample point:
+  lane PORT-A16-G62's em_start_at_frame_end; the rest: lane PORT-CHAIN3
+  below.)
+
+- The guided run g49 .. g58 on the row (lane PORT-CHAIN3, AREA17_PORT.md
+  "Lane PORT-CHAIN3"): both chains now play g49 .. g58 with every compared
+  row on the row but one: g49 4841 / 4841, g50 1037, g51 5346, g52 2602,
+  g53 5071, g54 2745, g55 2300, g56 7664 / 7665, g57 5286, g58 5625; g17
+  (card g45) is unchanged through g48 and now passes g51 row 1236 (the
+  loader's split region, fixed by lane PORT-A16-END). Fixed: 0015B130's prelude admits the
+  walking player under an area-change fade's 0x70003B8D with no owner (g49
+  row 3086, the AREA11 fan's exit box: the original stops the player on
+  the next frame); an owner's script may claim a player so admitted (the
+  original's k01_02). Left: g56 row 7325, the Cindy scene's end one frame
+  early, is disc-drive timing: its voice stream's first read (sector
+  752191) takes 7 seek fields in the original where the drive model serves
+  the class's 6 (a one-field test override puts g56 on the row for all
+  7665 rows); only a fork drive-replay recording of the take
+  (tools/record_drive_replay.py, IOP_STREAM.md "Drive replay") can serve
+  it. rand() still differs (no position change) at g49 row 1 (g11's card
+  only) / row 127 (g17), g51 row 1984 (g17: 1056), g53 row 3987.
 
 ## 6. Boot translations (lane BOOT2)
 

@@ -1139,10 +1139,14 @@ static int live_walk(void *context, EmPlayerLiveActor *a)
  *    +1F2 / +1F4 / +1F8, 001B9A00) and the advance into +200, then 0015B530
  *    (+5 0: 001837A0; 0x70003B8D clear: 00182DF0, which releases the player
  *    and ends the token).
- *  - 0: 0015B130 runs, except on the idle/walk states under 0x70003B8D
- *    without an owner (the area-change fade after 001B0C60): the idle/walk
- *    states keep those stages as before L01 (the prelude's admission there
- *    would lead to 0015B530 with no owner's frame to end it).
+ *  - 0: 0015B130 runs, under 0x70003B8D without an owner too (the
+ *    area-change fade after 001B0C60): its prelude admits the walking
+ *    player (+4 = 4) and the record holds still in 0015B530's empty
+ *    001837A0 until the load's 001B07C0(1) re-states it (the guided run's
+ *    g49 row 3085, the AREA11 fan's exit box: the original stops the player
+ *    on the frame after 001B0C60; the legacy idle/walk path it took before
+ *    lane PORT-CHAIN3 coasted on). Only a scene without the translated
+ *    locomotion keeps the port's idle/walk there.
  *  Nothing else consumes a stage: any other hook result faults. */
 static int live_major1(void *context, EmPlayerLiveActor *a)
 {
@@ -1165,10 +1169,7 @@ static int live_major1(void *context, EmPlayerLiveActor *a)
             return 0;
         }
     }
-    if (live.scene.spad3B8D != 0 && port_family()) {
-        if (!loco_live()) return live_port_state(NULL, a);
-        return em_live_u8(a, 5) == 0 ? live_idle(NULL, a) : live_walk(NULL, a);
-    }
+    if (live.scene.spad3B8D != 0 && port_family() && !loco_live()) return live_port_state(NULL, a);
     /* The prelude admits the player under 0x70003B8D whatever stage
      * reached it (the AREA00 arrival: the entry stance's walk-out returns
      * +4 = 1 and the arrival script's frame selector is already set, so

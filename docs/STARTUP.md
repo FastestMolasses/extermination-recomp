@@ -686,7 +686,9 @@ python3 tools/guided_chain.py g11 --until g50      # stop after a take
 
 Output: build/guided_chain/<chain>/report.txt (per take: compared frames,
 frames on the row, the first frame of each kind of difference, where the run
-stopped) and run.log. A chain's takes may come from two route sets
+stopped) and run.log. The kinds: position, heading, area bytes, the script
+selector (the trace's `s8d`, 0x70003B8D at the frame's start, against the
+row's phase 'C'; lane PORT-CHAIN3), rand() and the hits. A chain's takes may come from two route sets
 (guided_chain.G49_TAKES: route_g49). AREA11 rows are compared too (lane
 PORT-CABLESCENE; before it the trace skipped AREA11). Cards g49 .. g58 are the source states
 of g49 .. g58 (route_g49). EM_START_AT_PAD holds 65536 pad rows and the

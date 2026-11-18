@@ -41,8 +41,10 @@ int em_interaction_runtime_claim_use(EmInteractionRuntime *runtime, const void *
 
 int em_interaction_runtime_claim_scripted(EmInteractionRuntime *runtime, const void *owner)
 {
+    /* A player already admitted with no owner (0015B130's prelude under an
+     * area-change fade's selector, 3B8F = 1) serves the script too. */
     if (!runtime || !owner || runtime->failed || !runtime->frame || runtime->owner ||
-        !runtime->frame->selector || runtime->frame->player_ready)
+        !runtime->frame->selector)
         return 0;
     runtime->owner = owner;
     return 1;

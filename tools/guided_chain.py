@@ -262,7 +262,7 @@ def compare(rows, takes, trace, anchors=()):
     reached = max(port) if port else -1
     for k, take in enumerate(takes):
         mine = [r for r in rows if r['take'] == k]
-        first = dict(pos=None, yaw=None, area=None, rand=None)
+        first = dict(pos=None, yaw=None, area=None, rand=None, held=None)
         compared = exact = 0
         hits_o = [(r['local'], r['hit']) for r in mine if 'hit' in r]
         hits_p = []
@@ -288,6 +288,10 @@ def compare(rows, takes, trace, anchors=()):
                 same = same and turned <= TURNED
             if p.get('area') and p['area'] != r['area4'][:6] and first['area'] is None:
                 first['area'] = (r['local'], p['area'], r['area4'][:6])
+            # The script selector 0x70003B8D: the row's phase 'C' (em_replay.c's rule) against the
+            # port's s8d (traces before it have none).
+            if 's8d' in p and (p['s8d'] != 0) != (r['ph'] == 'C') and first['held'] is None:
+                first['held'] = (r['local'], p['s8d'], r['ph'])
             if r['f'] not in anchors and p['rand'] != int(r['rand'], 16) and first['rand'] is None:
                 first['rand'] = (r['local'], f'{p["rand"]:08x}', r['rand'])
             exact += same
@@ -303,6 +307,9 @@ def compare(rows, takes, trace, anchors=()):
         if first['area']:
             lines.append(f'  area bytes differ at row {first["area"][0]}: port {first["area"][1]}, '
                          f'row {first["area"][2]}')
+        if first['held']:
+            lines.append(f'  script selector differs at row {first["held"][0]}: port 3B8D {first["held"][1]}, '
+                         f'row phase {first["held"][2]}')
         if first['rand']:
             lines.append(f'  rand() word differs at row {first["rand"][0]}: port {first["rand"][1]}, '
                          f'row {first["rand"][2]} (the frame before drew differently)')

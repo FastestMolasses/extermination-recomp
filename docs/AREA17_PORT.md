@@ -553,6 +553,59 @@ return-visit lifecycle (00825B74 code 1, lane PORT-GUNREVISIT's work).
   mid_route_beats.FAULT no longer stops a run on the AREA11 load's
   legacy-mode notes 00199C50 / 001CB590 (the New Game prints them too).
 
+### Lane PORT-CHAIN3 (2026-11-17, branch `chain3`): g49 .. g58 on the row
+
+Both chains, g11 (card g49) and g17 (card g45, `--steer g45`), now play
+g49 .. g58 to the end with every compared row on the row but one (g56 row
+7325, below). Per take, on the row / compared: g49 4841 / 4841, g50 1037 /
+1037, g51 5346 / 5346, g52 2602 / 2602, g53 5071 / 5071, g54 2745 / 2745,
+g55 2300 / 2300, g56 7664 / 7665, g57 5286 / 5286, g58 5625 / 5625; g17's
+g45 .. g48 are as before (g45 667 / 1819 from the card's timers, g46 .. g48
+all).
+
+- **g17's fault at g51 row 1236** (00184BA0 code 2, "the canonical player
+  script banks"): the Use scan's winner maps the script banks of
+  D_0028A490 rows 0x96 / 0x97 / 0x98 / 0x9B into the player record's pose
+  host. In g17, row 0x9B still holds 0x1875700 from the second-half areas
+  (g11's card LOAD GAME leaves it 0). A load at g51 row 1004 (inside AREA02
+  sub 1) split the loader region below it; region_for copied the part
+  above the read into new storage and freed the old, so the pose host's
+  region pointed at freed bytes and the remap was refused. Fixed at the
+  source by lane PORT-A16-END's region_for (both untouched parts keep their
+  storage; AREA16_PORT.md); this lane found the same cause and confirmed
+  g17 passes g51 and plays to g58's end with it.
+- **g49 row 3086** (0.8 in z, the AREA11 fan's exit box): the fan
+  0x827630 calls 001B0C60(1, 1, 4) when the player crosses z < 156
+  (0x70003B8D = 3, the area-change fade). The original stops the player on
+  the next frame (the row holds 155.578 from row 3085 to the load); the
+  port's live_major1 ran the legacy idle/walk callbacks under 3B8D with no
+  owner, which coasted 16 frames. 0015B130 now runs there too: its prelude
+  admits the walking player (+4 = 4, +1F0 = 0x41, 00174A50(p, 8.0)) and
+  the record waits in 0015B530's empty 001837A0 until the load's 001B07C0
+  re-states it. Evidence: g49 4841 / 4841, and the original's k01_02 rows
+  (AREA00 sub 2, 001B0C60 at counter 282881: 3B8D = 3, then +1F0 = 0x41
+  and 3B8F = 1 two frames later with no owner). Then 0x826790's script
+  sets 3B8D = 2 over that admitted player, so
+  em_interaction_runtime_claim_scripted accepts a player admitted with no
+  owner (it refused 3B8F != 0; beat k01_02 failed at 001BA1F0 otherwise).
+- **The trace** writes 0x70003B8D (`s8d`, at the frame's start where
+  em_start_at_frame_end has it) and guided_chain compares it with the
+  row's phase 'C' ("script selector differs").
+- **g56 row 7325** (the Cindy scene's op01 placement one frame early):
+  the scene's op07 sub 0xC waits in phase 3 for its voice stream; the port
+  serves the first read (sector 752191, 16 sectors, at engine frame 29497)
+  the drive model's 6 seek fields. Every rand() count from row 3033 to
+  7325 is the original's shifted one frame early. With a temporary
+  one-field override on that read (not committed) g56 is on the row for
+  7665 / 7665 and its rand() words equal from row 3034 on: the original's
+  read took 7 fields, the spread the model cannot predict (IOP_STREAM.md
+  "Drive replay": a01_03's far seeks took 6 or 7). The fix is a drive
+  replay recording of g56 (tools/record_drive_replay.py on the fork), not
+  a model change.
+- Left: rand() differs with no position change at g49 row 1 (g11's card
+  only; g17 matches there) / row 127 (g17), g51 row 1984 (g17 1056), g53
+  row 3987; g45 from row 1 (the card).
+
 ## Not done
 
 - **The live area** (section "Live"; 001F1F60 and 001BAD40 done by
