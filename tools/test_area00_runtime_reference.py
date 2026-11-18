@@ -174,7 +174,7 @@ def main():
     assert native.a01rt_call(C.byref(call)) == -1
     assert native.a01rt_fault() == 0x825350 and seen == [0x825350] and not access
     assert native.a01rt_call(C.byref(call)) == -1 and seen == [0x825350]
-    assert native.a01rt_bind_area(C.byref(host), 2) == -1
+    assert native.a01rt_bind_area(C.byref(host), 5) == -1   # no AREA05 (AREA02 binds since the a02 lanes)
     # A canonical read may succeed where a write must be refused. Refusal
     # cannot retry through a mutable legacy view or publish a partial store.
     record = (C.c_uint8 * 0x10)()

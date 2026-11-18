@@ -28,7 +28,9 @@ int main(int argc, char **argv)
             ++slices;
         }
     }
-    assert(!em_effects_live_window(base - 1, 1));
+    /* The byte below is D_00248200's last (0015A750's descriptor, exported
+     * since; its window ends at the table): a slice across the edge is
+     * still refused. */
     assert(!em_effects_live_window(base - 1, 2));
     assert(!em_effects_live_window(base + surface_size, 1));
     assert(!em_effects_live_window(base + surface_size - 1, 2));

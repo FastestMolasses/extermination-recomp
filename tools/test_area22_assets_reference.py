@@ -695,10 +695,11 @@ def check_loaders(lib, tree):
 
 def message_findings_ok(rc, diag):
     """The loader verdicts docs/AREA22_ASSETS.md records: the message file
-    (no area records, no area bank) is refused, and a diagnostic copy with
+    (no area records, no area bank) loads since lane C1 (port 6c6d8323: an
+    area request faults in the service instead), and a diagnostic copy with
     one zero area record and the global bank repeated as an area bank loads
-    (so nothing else in the file is refused)."""
-    return rc == 0 and diag == 1
+    too."""
+    return rc == 1 and diag == 1
 
 
 def message_diagnostic(lib, mm):
@@ -1229,8 +1230,8 @@ def controls(K, caps, lib):
     finally:
         dpath.unlink(missing_ok=True)
     # the loader-finding verdict
-    expect(not message_findings_ok(0, 1), 'the recorded loader verdicts', accept=True)
-    for rc, d in ((1, 1), (0, 0), (1, 0)):
+    expect(not message_findings_ok(1, 1), 'the recorded loader verdicts', accept=True)
+    for rc, d in ((0, 1), (0, 0), (1, 0)):
         expect(not message_findings_ok(rc, d), f'loader verdicts {rc} / {d} taken as the finding')
     # the load map
     lmap = K.lmap

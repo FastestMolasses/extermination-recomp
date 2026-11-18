@@ -269,7 +269,7 @@ int em_effects_live_load(void)
         for (u32 i = 0; i < S.windows; ++i)
             placed |= S.window[i].address == programs[k][0] && S.window[i].size == programs[k][1];
         if (!placed) {
-            fprintf(stderr, "effects: %s lacks the program packet %08X (re-run tools/export_effect_tables.py)\n",
+            fprintf(stderr, "effects: %s lacks the program packet %08X (re-run tools/export_area00_runtime_tables.py)\n",
                     EM_EFFECTS_LIVE_TABLES_PATH, (unsigned)programs[k][0]);
             ok = 0;
         }

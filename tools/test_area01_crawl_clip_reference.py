@@ -41,11 +41,16 @@ def main():
         flag = C.c_uint8()
         data = C.create_string_buffer(table, 4)
         errors = []
+        # The runtime's routing reads the sub byte D_00810701 (AREA01 sub 1
+        # dispatches apart since PORT-A01S1); served read-only from the capture.
+        sub = C.c_uint8(capture.ram[0x810701])
         def resolve(_, address, size, write):
             if write:
                 errors.append(('write', address, size)); return None
             if (address, size) == (0x8102B0+0x235, 1):
                 return C.addressof(flag)
+            if (address, size) == (0x810701, 1):
+                return C.addressof(sub)
             if size == 2 and address in (0x2754D8, 0x2754DA):
                 return C.addressof(data)+address-0x2754D8
             errors.append(('read', address, size)); return None
@@ -61,7 +66,7 @@ def main():
             call = R.Call(function=0x188610, sp=STACK_TOP, na=1)
             call.a[0] = 0x8102B0
             assert native.a01rt_call(C.byref(call)) == 0, hex(native.a01rt_fault())
-            assert not errors and call.v0 == original.r[2]
+            assert not errors and call.v0 == original.r[2], (errors[:4], hex(call.v0), hex(original.r[2]), value)
             assert flag.value == value and data.raw == table
             total += 1
     report = dict(status='PASS', captures=len(captures), cases=total,
