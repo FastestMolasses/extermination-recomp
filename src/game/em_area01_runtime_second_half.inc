@@ -121,10 +121,11 @@ static int a16_owner(uint32_t fn)
  * callbacks, each translated from the decomp C and checked against the
  * original instructions (make test-area21-overlay-reference). Frames from
  * each function's first instruction; `sp` the entry stack pointer for the
- * six that keep frame locals their callees read (0x8297C0, 0x823580,
- * 0x8243B0, 0x824FE0, 0x824CF0, 0x825B00). 0x824FE0, 0x824CF0 and 0x825B00
- * have no static reference but are reached: the boss fight's 001EFD20 /
- * 001EFD90 effect nodes (g77, lanes PORT-A21-BOSS and PORT-A21-PHASES). */
+ * seven that keep frame locals their callees read (0x8297C0, 0x823580,
+ * 0x8243B0, 0x824FE0, 0x824CF0, 0x825B00, 0x823B40). 0x824FE0, 0x824CF0,
+ * 0x825B00 and 0x823B40 have no static reference but are reached: the boss
+ * fight's 001EFD20 / 001EFD90 effect nodes (g77, lanes PORT-A21-BOSS,
+ * PORT-A21-PHASES and PORT-A21-3B40). */
 #include "game/em_area21_use.h"
 #include "game/em_haze_ring_live.h"
 
@@ -199,7 +200,9 @@ static int dispatch_area21(EmArea01Runtime *r, EmArea01Call *c, int *out, int *x
         /* an effect node 0014EC00's 001EFD20 starts in the boss fight (frame 0xA0; packet at sp - 0x60) */
         {0x00824CF0u, 0xA0u, 1, 'p'},
         /* the node 0014EC00's 001EFD90 starts (g77 row 5893; frame 0xA0, packet at sp - 0x60) */
-        {0x00825B00u, 0xA0u, 1, 'p'}};
+        {0x00825B00u, 0xA0u, 1, 'p'},
+        /* the node 0x824FE0's 001EFD20 starts (g77 row 12708; frame 0xE0, packet at sp - 0x70) */
+        {0x00823B40u, 0xE0u, 1, 'p'}};
     const uint32_t fn = c->function;
     const unsigned n = sizeof owners / sizeof owners[0];
     unsigned k = 0;
@@ -270,6 +273,7 @@ static int dispatch_area21(EmArea01Runtime *r, EmArea01Call *c, int *out, int *x
         case 0x00824FE0u: *x = em_area21_groups_00824FE0(&h, a0, sp, &f); break;
         case 0x00824CF0u: *x = em_area21_groups_00824CF0(&h, a0, sp, &f); break;
         case 0x00825B00u: *x = em_area21_groups_00825B00(&h, a0, sp, &f); break;
+        case 0x00823B40u: *x = em_area21_groups_00823B40(&h, a0, sp, &f); break;
         default: *x = em_area21_groups_00823AA0(&h, a0, &f); break;
         }
         *where = f.address;

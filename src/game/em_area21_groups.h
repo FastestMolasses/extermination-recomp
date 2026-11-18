@@ -4,7 +4,8 @@
  * 0x823860, 0x8238E0 and the empty 0x823AA0 (their 0x823A10 / 0x823AB0 are
  * in em_level17_boot.c), the sub 0 placement [52] 0x8243B0 (decomp
  * func_overlay_AREA21_00824370, NEARMISS C), and the effect nodes 0x824CF0
- * and 0x824FE0 (and 0x825B00, 0014EC00's 001EFD90 node, g77 row 5893):
+ * and 0x824FE0 (and 0x825B00, 0014EC00's 001EFD90 node, g77 row 5893, and
+ * 0x823B40, 0x824FE0's 001EFD20 node, g77 row 12708):
  * no table names them statically, but the boss fight's
  * 001EFD20 effect nodes run them (the guided run's g77, lane
  * PORT-A21-BOSS: 0x824FE0 from row 2858, 0x824CF0 from row 3024; 001EFD20's
@@ -35,16 +36,22 @@ typedef struct {
     uint8_t *(*bytes)(void *ctx, uint32_t address, uint32_t size);
 /* BEGIN GENERATED HOOKS */
     int (*w_001026A0)(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2);
+    int (*w_00102900)(void *ctx, uint32_t a0, uint32_t a1, float a2);
     int (*w_00102918)(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2);
     int (*w_00102948)(void *ctx, uint32_t a0, uint32_t a1);
     int (*w_001029C0)(void *ctx, uint32_t a0);
     int (*w_00102BB0)(void *ctx, uint32_t a0, uint32_t a1, float a2);
     int (*w_00102C58)(void *ctx, uint32_t a0, uint32_t a1, uint32_t a2);
     int (*w_0011DE90)(void *ctx, float a0, float *result);
+    int (*w_0011E2A8)(void *ctx, float a0, float *result);
     int (*w_00122BB8)(void *ctx, int32_t *result);
     int (*w_001281C0)(void *ctx, float a0, int32_t *result);
     int (*w_001AFC10)(void *ctx, uint32_t a0);
+    int (*w_001C6120)(void *ctx, int32_t a0, int32_t a1, int32_t *result);
     int (*w_001C6190)(void *ctx, uint32_t a0, int32_t *result);
+    int (*w_001C7900)(void *ctx, uint32_t a0, uint32_t a1, int32_t a2, int32_t a3);
+    int (*w_001CA7B0)(void *ctx, uint32_t a0, float a1, int32_t *result);
+    int (*w_001CA940)(void *ctx, int32_t a0, int32_t a1);
     int (*w_001CCF70)(void *ctx, uint32_t a0, int32_t *result);
     int (*w_001CD520)(void *ctx, int32_t a0, int32_t a1, uint32_t a2, uint64_t a3, uint32_t a4, float a5, float a6, float a7);
     int (*w_001CFAE0)(void *ctx, uint32_t a0, int32_t a1, uint32_t a2, float a3, float a4, float a5, float a6);
@@ -74,6 +81,10 @@ int em_area21_groups_00824CF0(const EmArea21GroupsHooks *h, uint32_t a0, uint32_
  * keeps a packet (0x60 bytes) in its 0xA0 frame below sp. */
 int em_area21_groups_00825B00(const EmArea21GroupsHooks *h, uint32_t a0, uint32_t sp, EmArea21GroupsFault *fault);
 int em_area21_groups_00824FE0(const EmArea21GroupsHooks *h, uint32_t a0, uint32_t sp, EmArea21GroupsFault *fault);
+/* 0x823B40, the effect node 0x824FE0's 001EFD20 starts (g77 row 12708):
+ * keeps a packet (0x60 bytes) at sp - 0x70 and its blend pair at sp - 0x10
+ * in its 0xE0 frame. */
+int em_area21_groups_00823B40(const EmArea21GroupsHooks *h, uint32_t a0, uint32_t sp, EmArea21GroupsFault *fault);
 #ifdef __cplusplus
 }
 #endif

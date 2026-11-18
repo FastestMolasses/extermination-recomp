@@ -4125,7 +4125,8 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
      * (em_area21_overlay / _owners / _doors / _groups; 0x823A10 / 0x823AB0
      * as em_level17_boot's twins; [52] 0x8243B0 in _groups, lane
      * PORT-A21-52; the effect nodes 0x824FE0 / 0x824CF0 in _groups, lane
-     * PORT-A21-BOSS, and 0x825B00, lane PORT-A21-PHASES). Its boot owners bind as the later areas' do (lane
+     * PORT-A21-BOSS, 0x825B00, lane PORT-A21-PHASES, and 0x823B40, lane
+     * PORT-A21-3B40). Its boot owners bind as the later areas' do (lane
      * PORT-LIVE-A2021: the area loads from the guided run's g75). */
     if (s_state.d810700 == 0x15 && fn >= 0x00823500u) {
         switch (fn) {
@@ -4135,7 +4136,7 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
         case 0x00827640u: case 0x00827880u: case 0x00827A30u: case 0x00827E70u: case 0x00828350u:
         case 0x00823580u: case 0x008237B0u: case 0x00823860u: case 0x008238E0u: case 0x00823A10u:
         case 0x00823AA0u: case 0x00823AB0u: case 0x008243B0u: case 0x00824FE0u: case 0x00824CF0u:
-        case 0x00825B00u:
+        case 0x00825B00u: case 0x00823B40u:
             goto bind;
         default:
             return -1;
