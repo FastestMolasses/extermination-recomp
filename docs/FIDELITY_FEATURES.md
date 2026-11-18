@@ -3061,9 +3061,11 @@ and the run plays on at 59.94 Hz to the end of the recording or the port's curre
 frontier. The fast part is the game's own logic at full speed on one core, so a start
 deep in the run waits for it: measured 2026-11-18 on a machine at load average 30 to 45,
 114,000 ticks (to g10) took 697 s (164 ticks a second; 99% of the main thread is the area's
-actor walk, nothing of the frame loop is left to skip), so the exact frontier (stitched row
-377,800, chain time 1:50:39, segment 913) is about 38 minutes away on such a machine, less on an
-idle one. Starts in the first hour or so are quick (g01 to g02: about 9 s).
+actor walk, nothing of the frame loop is left to skip). Since PERFORMANCE.md P19 (2026-11-18:
+the VU0 lanes inlined, 001D5370's clip corners shared, bounded pool scans; every computed value
+the same) the first 120,000 ticks take 571 s instead of 697 s at load 17 to 25 (210 ticks a
+second; test1 359 instead of 300), so the exact frontier (stitched row 377,800, chain time
+1:50:39, segment 913) is about 30 minutes away on a loaded machine, less on an idle one. Starts in the first hour or so are quick (g01 to g02: about 9 s).
 The tool warns when the chosen point lies past the first tick of the last full
 `--check` run that left the recording (`build/guided_takes/<first take>/frontier.json`,
 written by `--check` with no `--ticks`); after that point the recorded pad no longer fits the

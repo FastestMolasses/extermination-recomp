@@ -96,6 +96,11 @@ static struct {
      * draw's REF target both come from it. */
     EmWorldModels models;
     EmOwnerServicesOwner view;               /* 001CAA00's owner view */
+    /* (docs/PERFORMANCE.md P19) One past the highest slot ever made live
+     * since the slots were cleared: every slot at or above it has live == 0
+     * (live is set only by em_equipment_live_tick, which raises the mark), so
+     * a scan for a current slot stops here with the same result. */
+    unsigned live_hi;
 } S;
 
 static int fail(u32 address, const char *what)
@@ -171,7 +176,7 @@ void *em_equipment_live_field(uint32_t address, size_t size, int write)
     if (!S.attached || !S.pool || S.fault || !size || size > EM_ACTOR_RECORD_SIZE) return NULL;
     /* Bone matrices live in the shared slot stack; expose their existing
      * world storage, never a second palette. */
-    for (unsigned i=0;i<EM_ACTOR_POOL_CAPACITY;++i) {
+    for (unsigned i=0;i<S.live_hi;++i) {
         Slot *slot=&S.slot[i];
         if (!current_slot(slot,&S.pool->records[i])) continue;
         for (unsigned k=0;k<slot->held;++k) {
@@ -864,6 +869,7 @@ int em_equipment_live_attach(EmActorPool *pool, EmSceneState *scene)
     const EmRogerActorWorld *slots = em_area11_boxes_slot_world();
     if (!slots || !slots->d00275BCC) return -1;
     memset(S.slot, 0, sizeof S.slot);
+    S.live_hi = 0;
     memset(&S.models, 0, sizeof S.models);
     S.pool = pool;
     S.scene = scene;
@@ -945,6 +951,7 @@ int em_equipment_live_tick(EmActor *actor)
         memset(s, 0, sizeof *s);
         s->generation = actor->generation;
         s->live = 1;
+        if ((unsigned)i >= S.live_hi) S.live_hi = (unsigned)i + 1u;
         s->n.flavour = actor->model;
         s->n.variant = actor->param;
         s->n.self = &s->n;

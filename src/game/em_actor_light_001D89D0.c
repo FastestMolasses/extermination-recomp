@@ -61,7 +61,7 @@ static int latched(const EmActorLight *s) { return s->fault.code != EM_OWNER_FAU
  * reports a nonzero status nothing later executes and the caller faults.
  * ==================================================================== */
 
-static void vu(int *st, em_vu_op op, unsigned dest, int bc, const u32 fs[4], const u32 ft[4], u32 q,
+static inline __attribute__((always_inline)) void vu(int *st, em_vu_op op, unsigned dest, int bc, const u32 fs[4], const u32 ft[4], u32 q,
                const u32 acc[4], u32 dst[4])
 {
     if (*st != EM_EE_FLOAT_OK) return;

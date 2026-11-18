@@ -87,6 +87,12 @@ typedef struct {
 
 static struct {
     Box box[BOX_MAX];
+    /* (docs/PERFORMANCE.md P19) One past the highest box ever taken since
+     * the table was cleared: every box at or above it has actor == NULL
+     * (box_for is the one writer of +actor, and it raises the mark), so the
+     * scans below, each of which needs a box with an actor, stop here with
+     * the same result. */
+    unsigned box_hi;
     /* 001AF710's bone-slot stack (em_slg_001AF710): the D_007D5840 records,
      * the D_007D4640 address words, the cursor D_00275BD0 and the count
      * D_00275BCC. 001AF780 / 001AF800 / 001AF890 work on it through
@@ -260,7 +266,7 @@ int em_area11_boxes_bind_world_bank(const char *path, uint32_t resource_word)
 {
     if (!path || !*path || !resource_word)
         return report("world model bank bind needs an export and loader D_0028A59C");
-    for (unsigned i = 0; i < BOX_MAX; ++i) {
+    for (unsigned i = 0; i < S.box_hi; ++i) {
         const Box *b = &S.box[i];
         if (b->actor && !b->freed && b->actor->generation == b->generation && b->view.model)
             return report("world model bank bind while an owner still holds a model; reset the area first");
@@ -899,6 +905,7 @@ void em_area11_boxes_area_reset(void)
     em_area11_boxes_bind_registry(NULL,NULL);
     em_area11_boxes_bind_children(NULL, NULL);
     memset(S.box, 0, sizeof S.box);
+    S.box_hi = 0;
     memset(&S.library, 0, sizeof S.library);
     S.library_word = 0;
     /* The owner services' typed view of the slots 001AF710 cleared. */
@@ -919,13 +926,16 @@ void em_area11_boxes_area_reset(void)
 static Box *box_for(EmActor *actor)
 {
     Box *free_slot = NULL;
-    for (unsigned i = 0; i < BOX_MAX; ++i) {
+    for (unsigned i = 0; i < S.box_hi; ++i) {
         Box *b = &S.box[i];
         if (b->actor == actor && b->generation == actor->generation && !b->freed) return b;
         if (!free_slot && (!b->actor || b->freed || b->actor->generation != b->generation))
             free_slot = b;
     }
+    /* Past the mark every box is untaken: the first of them is the first free. */
+    if (!free_slot && S.box_hi < BOX_MAX) free_slot = &S.box[S.box_hi];
     if (!free_slot) return NULL;
+    if ((unsigned)(free_slot - S.box) >= S.box_hi) S.box_hi = (unsigned)(free_slot - S.box) + 1u;
     memset(free_slot, 0, sizeof *free_slot);
     free_slot->actor = actor;
     free_slot->generation = actor->generation;
@@ -957,7 +967,7 @@ int em_area11_boxes_001AF800(void *ctx, EmActor *actor)
     /* The bone-burst node (0022BBC0) keeps its in em_bone_burst. */
     int burst = em_bone_burst_001AF800(actor);
     if (burst != 0) return burst < 0 ? -1 : 0;
-    for (unsigned i = 0; i < BOX_MAX; ++i) {
+    for (unsigned i = 0; i < S.box_hi; ++i) {
         Box *b = &S.box[i];
         if (b->actor != actor || b->generation != actor->generation || b->freed) continue;
         /* 001AF800 (em_roger_actor_001AF800, its own slot loop) over the
@@ -1022,7 +1032,7 @@ int em_area11_boxes_door_draw(EmActor *actor, uint32_t record, const float *node
 {
     if (!actor || !nodes || actor->callback != DOOR_CALLBACK) return -1;
     Box *b = NULL;
-    for (unsigned i = 0; i < BOX_MAX && !b; ++i)
+    for (unsigned i = 0; i < S.box_hi && !b; ++i)
         if (S.box[i].actor == actor && S.box[i].generation == actor->generation && !S.box[i].freed &&
             S.box[i].door)
             b = &S.box[i];
@@ -1094,11 +1104,25 @@ static void owner_view_sync(Box *b)
     memcpy(v->rot, a->rot, sizeof v->rot);
 }
 
+/* (docs/PERFORMANCE.md P19) At most one box holds a given (actor,
+ * generation) unfreed: box_for, the one writer of +actor, returns that box
+ * when it exists instead of taking another. So a remembered box that passes
+ * the full test is the one the scan finds, and the hint only skips the scan;
+ * it never decides the answer. */
 static Box *owner_box(const EmActor *actor)
 {
-    for (unsigned i = 0; i < BOX_MAX; ++i) {
-        Box *b = &S.box[i];
+    static uint16_t hint[256];
+    const unsigned h = (unsigned)(((uintptr_t)actor / sizeof *actor) & 255u);
+    if (hint[h] < S.box_hi) {
+        Box *b = &S.box[hint[h]];
         if (b->actor == actor && b->world && !b->freed && b->generation == actor->generation) return b;
+    }
+    for (unsigned i = 0; i < S.box_hi; ++i) {
+        Box *b = &S.box[i];
+        if (b->actor == actor && b->world && !b->freed && b->generation == actor->generation) {
+            hint[h] = (uint16_t)i;
+            return b;
+        }
     }
     return NULL;
 }
@@ -1583,7 +1607,7 @@ unsigned em_area11_boxes_effect_spawns(void)
 
 int em_area11_boxes_truck_state(uint32_t *record, uint8_t header[16], float position[3], uint8_t t2dc[20])
 {
-    for (unsigned i = 0; i < BOX_MAX; ++i) {
+    for (unsigned i = 0; i < S.box_hi; ++i) {
         const Box *b = &S.box[i];
         if (!b->truck || !b->actor || b->freed || b->actor->generation != b->generation || !b->pool) continue;
         uint8_t image[EM_ACTOR_RECORD_SIZE];
@@ -1615,14 +1639,14 @@ static void dump_if_requested(void)
     FILE *f = fopen(path, "wb");
     if (!f) return;
     uint32_t count = 0;
-    for (unsigned i = 0; i < BOX_MAX; ++i) {
+    for (unsigned i = 0; i < S.box_hi; ++i) {
         const Box *b = &S.box[i];
         count += b->actor && !b->freed && !b->truck && !b->world && b->actor->generation == b->generation && b->pool;
     }
     const uint32_t head[2] = {0x58424D45u /* "EMBX" */, 1};
     fwrite(head, sizeof head, 1, f);
     fwrite(&count, sizeof count, 1, f);
-    for (unsigned i = 0; i < BOX_MAX; ++i) {
+    for (unsigned i = 0; i < S.box_hi; ++i) {
         const Box *b = &S.box[i];
         if (!b->actor || b->freed || b->truck || b->world || b->actor->generation != b->generation || !b->pool)
             continue;
@@ -1650,7 +1674,7 @@ int em_area11_boxes_draw_count(void)
 {
     dump_if_requested();
     S.draw_count = 0;
-    for (unsigned i = 0; i < BOX_MAX; ++i) {
+    for (unsigned i = 0; i < S.box_hi; ++i) {
         const Box *b = &S.box[i];
         if (b->actor && !b->freed && b->drawn && b->actor->generation == b->generation)
             S.draw_order[S.draw_count++] = (int)i;

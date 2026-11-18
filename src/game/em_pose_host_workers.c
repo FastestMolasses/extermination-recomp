@@ -92,7 +92,7 @@ static uint32_t ucvt(uint32_t x)
 }
 
 /* VU0 lane operations; a form the original never executes is refused. */
-static int vu(em_vu_op op, unsigned dest, int bc, const uint32_t fs[4], const uint32_t ft[4],
+static inline __attribute__((always_inline)) int vu(em_vu_op op, unsigned dest, int bc, const uint32_t fs[4], const uint32_t ft[4],
               const uint32_t acc[4], uint32_t dst[4])
 {
     return em_vu_vec_bits(op, dest, bc, fs, ft, 0, acc, dst) == EM_EE_FLOAT_OK ? 0 : -1;

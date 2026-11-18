@@ -769,3 +769,182 @@ int em_sf_001ACEC0(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w)
         return 0;
     }
 }
+
+/* ------------------------------------------------------------ 001ACE70 */
+
+/* 001ACE70 (byte-matched, src/func_001ACE70.c). */
+int em_sf_001ACE70(const EmSceneState *s)
+{
+    if (s->req[EM_SCENE_REQ_CE] != 0)
+        return 3;
+    if (s->req[EM_SCENE_REQ_C5] != 0 || s->req[EM_SCENE_REQ_B0] != 0)
+        return 2;
+    return 0;
+}
+
+/* ------------------------------------------------------------ 001ACA20 */
+
+/* One store into the progress block at its original address (the demo's
+ * seeds); the block is canonical, so a failure is a fault. */
+static int demo_seed(EmSceneState *s, uint32_t address, uint32_t value, uint32_t size)
+{
+    uint8_t *p = em_scene_progress_at(s, address, size);
+    if (!p)
+        return em_scene_fault(s, 0x001ACA20u, EM_SCENE_FAULT_BAD_INDEX);
+    for (uint32_t i = 0; i < size; ++i)
+        p[i] = (uint8_t)(value >> (8 * i));
+    return 0;
+}
+
+/* The attract demo's 0x9F0 gate on the held word D_00810E70 (lhu): START,
+ * SELECT, TRIANGLE, CIRCLE, CROSS, SQUARE in the original layout. */
+#define DEMO_EXIT_MASK 0x9F0u
+
+/* 001ACA20 anim_frame_top_a (byte-matched, src/anim_frame_top_a.c). The
+ * order of the stores and calls is the C's (each store before or after the
+ * call it sits beside there); the oracle test_attract_demo_reference.py
+ * executes the original instructions over the same state. */
+int em_sf_001ACA20(EmSceneState *s, uint8_t *user, const EmSceneWorkers *w, int32_t d275BD4)
+{
+    enum { F = 0x001ACA20u };
+    int r;
+    int16_t fade;
+    if (core_begin(s, user, F) < 0)
+        return -1;
+    switch (TB(user, 0x09)) {
+    case 0:
+        if (ST_CALL0(s, w, F, 0x001D1EF0u, w_001D1EF0) < 0)
+            return -1;
+        if (s->d810E70 & DEMO_EXIT_MASK)
+            return 2;
+        TB(user, 0x09) = (uint8_t)(TB(user, 0x09) + 1);
+        if (ST_CALL0(s, w, F, 0x001AF2C0u, w_001AF2C0) < 0)
+            return -1;
+        s->d275BE0 = 2;
+        s->d275BD8 = 1;
+        return ST_CALL(s, w, F, 0x001FF080u, w_001FF080, 0, 3, 0, 0, ((w)->ctx, 0, 3)) < 0 ? -1 : 0;
+    case 1:
+        if (ST_CALL0(s, w, F, 0x001D1EF0u, w_001D1EF0) < 0)
+            return -1;
+        if (s->d275BD8 != 0)
+            return 0;
+        if (s->d810E70 & DEMO_EXIT_MASK)
+            return 2;
+        if (em_scene_reader_ready(s, w, 0x0028A564u, w != NULL && w->r_0028A564 != NULL) < 0)
+            return -1;
+        {
+            const int32_t chain = w->r_0028A564(w->ctx);
+            if (ST_CALL(s, w, F, 0x00200830u, w_00200830, chain, 0, 0, 0, ((w)->ctx, chain)) < 0)
+                return -1;
+        }
+        if (ST_CALL0(s, w, F, 0x001D19D0u, w_001D19D0) < 0)
+            return -1;
+        TB(user, 0x09) = (uint8_t)(TB(user, 0x09) + 1);
+        TB(user, 0x0A) = 0;
+        TB(user, 0x0B) = 0;
+        if (demo_seed(s, 0x00810C61u, 1, 1) < 0)
+            return -1;
+        if (d275BD4 == 0) {
+            s->d810700 = 6;
+        } else if (d275BD4 == 1) {
+            s->d810700 = 0x0D;
+            s->d810702 = 8;
+            if (demo_seed(s, 0x00810C7Eu, 1, 1) < 0 || demo_seed(s, 0x00810C68u, 1, 1) < 0 ||
+                demo_seed(s, 0x00810CACu, 0x0A, 2) < 0 || demo_seed(s, 0x00810CA6u, 4, 1) < 0 ||
+                demo_seed(s, 0x00810774u, 0xFF, 1) < 0 || demo_seed(s, 0x008107F4u, 0xFF, 1) < 0 ||
+                demo_seed(s, 0x0081079Au, 0xFF, 1) < 0)
+                return -1;
+        } else {
+            s->d810700 = 3;
+            s->d810701 = 1;
+            if (demo_seed(s, 0x00810C65u, 1, 1) < 0 || demo_seed(s, 0x00810CA6u, 1, 1) < 0 ||
+                demo_seed(s, 0x00810CA8u, 0x28, 2) < 0)
+                return -1;
+        }
+        return 0;
+    case 2:
+        if (core_call(s, w, F, 0x001ADF50u, 0, 0, 0) < 0)
+            return -1;
+        r = em_sf_001ADF50(s, user, w);
+        if (r <= 0)
+            return r < 0 ? -1 : 0;
+        TB(user, 0x09) = (uint8_t)(TB(user, 0x09) + 1);
+        TB(user, 0x0A) = 0;
+        s->d275BD8 = 1;
+        return ST_CALL(s, w, F, 0x001FF080u, w_001FF080, 0, 0x36, 0, 0, ((w)->ctx, 0, 0x36)) < 0 ? -1 : 0;
+    case 3:
+        if (s->d275BD8 != 0)
+            return 0;
+        if (s->d810E70 & DEMO_EXIT_MASK)
+            return 2;
+        TB(user, 0x09) = (uint8_t)(TB(user, 0x09) + 1);
+        TB(user, 0x0A) = 0;
+        TB(user, 0x0B) = 0;
+        return 0;
+    case 4:
+        switch (TB(user, 0x0B)) {
+        case 0:
+            if (s->d810E70 & DEMO_EXIT_MASK)
+                return 2;
+            if (ST_CALL(s, w, F, 0x00122BA8u, w_00122BA8, 0x45, 0, 0, 0, ((w)->ctx, 0x45u)) < 0)
+                return -1;
+            s->spad3B68 = 0;
+            if (em_scene_reader_ready(s, w, 0x70003B64u, w != NULL && w->s_70003B64 != NULL) < 0 ||
+                store_result(s, 0x70003B64u, w->s_70003B64(w->ctx, 0)) < 0)
+                return -1;
+            TB(user, 0x0B) = (uint8_t)(TB(user, 0x0B) + 1);
+            em_scene_task_set_u16(user, EM_SCENE_TASK_1A, 0);
+            em_scene_task_set_u16(user, 0x16, 0);
+            if (ST_CALL0(s, w, F, 0x001AFCA0u, w_001AFCA0) < 0)
+                return -1;
+            if (core_call(s, w, F, 0x001AFCF0u, 0, 0, 0) < 0 || em_sf_001AFCF0(s, w) < 0)
+                return -1;
+            if (ST_CALL(s, w, F, 0x001B07C0u, w_001B07C0, 0, 0, 0, 0, ((w)->ctx, 0)) < 0)
+                return -1;
+            if (ST_CALL0(s, w, F, 0x001B6990u, w_001B6990) < 0 || ST_CALL0(s, w, F, 0x001D19E0u, w_001D19E0) < 0 ||
+                ST_CALL0(s, w, F, 0x001C1DC0u, w_001C1DC0) < 0 || ST_CALL0(s, w, F, 0x00199C50u, w_00199C50) < 0)
+                return -1;
+            if (ST_CALL(s, w, F, 0x001AEE10u, w_001AEE10, 4, 0, 0, 0, ((w)->ctx, 4, 0)) < 0)
+                return -1;
+            if (ST_CALL0(s, w, F, 0x001C5C50u, w_001C5C50) < 0 || ST_CALL0(s, w, F, 0x001D1EF0u, w_001D1EF0) < 0)
+                return -1;
+            return 0;
+        case 1: {
+            const uint16_t n = task_u16(user, 0x16);
+            if (n >= 0xE10)
+                return 3;
+            if (s->d810E70 & DEMO_EXIT_MASK)
+                return 2;
+            if (ST_CALL(s, w, F, 0x001B5BC0u, w_001B5BC0, n, 0, 0, 0, ((w)->ctx, n)) < 0)
+                return -1;
+            em_scene_task_set_u16(user, 0x16, (uint16_t)(task_u16(user, 0x16) + 1));
+            if (core_call(s, w, F, 0x001ACE70u, 0, 0, 0) < 0)
+                return -1;
+            if (em_sf_001ACE70(s) != 0)
+                return 2;
+            if (s->spad3B8D == 0) {
+                if (ST_CALL0(s, w, F, 0x001AE5E0u, w_001AE5E0) < 0)
+                    return -1;
+            } else if (ST_CALL0(s, w, F, 0x001AE6B0u, w_001AE6B0) < 0) {
+                return -1;
+            }
+            if (s->req[EM_SCENE_REQ_B9] != 0) {
+                if (read_0028A9A0(s, w, &fade) < 0)
+                    return -1;
+                if (fade == 2)
+                    return 3;
+            } else if (s->req[EM_SCENE_REQ_B8] != 0) {
+                if (read_0028A9A0(s, w, &fade) < 0)
+                    return -1;
+                if (fade == 2)
+                    return 3;
+            }
+            return 0;
+        }
+        default:
+            return 0;
+        }
+    default:
+        return 0;
+    }
+}
