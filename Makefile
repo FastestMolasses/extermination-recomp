@@ -1833,7 +1833,8 @@ test-status-runtime:
 	    src/game/em_gs_texture.c src/game/em_page_draw.c src/game/em_message_glyph_original.c src/game/em_status_pages_live.c src/game/em_status_pages_helpers.c \
 	    src/game/em_status_pages_item.c src/game/em_status_pages_spr4.c src/game/em_status_pages_parts.c \
 	    src/game/em_area01_ui_pages.c src/game/em_pickup_items_original.c \
-	    src/game/em_status_scene_original.c src/game/em_module_loader.c src/game/em_task.c -lm -o build/status_page_reference/status_runtime_test
+	    src/game/em_status_scene_original.c src/game/em_module_loader.c src/game/em_task.c \
+	    src/game/em_area06_port.c src/game/em_sfx.c -lm -o build/status_page_reference/status_runtime_test
 	build/status_page_reference/status_runtime_test assets/scene_snow/panel/battery.emba assets/scene_snow/panel/item_root.emir \
 	    assets/scene_snow/panel/status_hub.emhs assets/scene_snow/panel/status_hub_atlas.emha \
 	    assets/module_loader/modules.emml

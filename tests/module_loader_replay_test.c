@@ -194,6 +194,15 @@ static Load case_load(const char *pack, EmModuleLoaderReplayRead *reads, uint32_
     return L;
 }
 
+/* The fitted attachment's sound bank (module 0x32..0x35) is not on this
+ * replay's path (no sound registry is linked): reaching it is a failure. */
+void em_sfx_set_attachment(int index)
+{
+    (void)index;
+    fprintf(stderr, "FAIL: em_sfx_set_attachment reached in module_loader_replay_test\n");
+    abort();
+}
+
 int main(int argc, char **argv)
 {
     const char *pack = write_pack(argc > 1 ? argv[1] : "build/module_loader_replay/pack.emml");
