@@ -157,6 +157,10 @@ FUNCS = {
     0x823EB0: ('em_area00_ovl_00823EB0', 0x274, 'owner_sp'),
     0x824130: ('em_area00_ovl_00824130', 0x78, 'owner'),
     0x826CB0: ('em_area00_ovl_00826CB0', 0x10, 'op09'),
+    # script 0x82ABC0's op14 nodes' 001C7EB0 callbacks (lane PORT-A00-BOSS)
+    0x823C50: ('em_area00_ovl_00823C50', 0xA0, 'owner_sp'),
+    0x823E10: ('em_area00_ovl_00823E10', 0xA0, 'owner'),
+    0x823CF0: ('em_area00_ovl_00823CF0', 0x120, 'owner'),
 }
 # 0x825E80 and 0x825FC0 are 0x825D70's (it calls them); they have no
 # placement of their own, so their capture cases are 0x825D70's nodes.
@@ -237,11 +241,16 @@ HOOKS = [
     ('w_00102760', 0x102760, [(U, 4), (U, 5)], None),
     ('w_001C6190', 0x1C6190, [(U, 4)], I),
     ('w_001EFEB0', 0x1EFEB0, [(I, 4), (U, 5)], None),
+    ('w_001EFD90', 0x1EFD90, [(I, 4), (U, 5), (U, 6)], None),
+    ('w_00102C58', 0x102C58, [(U, 4), (U, 5), (U, 6)], None),
+    ('w_001D04B0', 0x1D04B0, [(U, 4), (I, 5), (U, 6), (F, 12), (F, 13)], None),
 ]
 # Stack bytes a function writes itself and a callee then reads: appended to
-# that callee's arguments at its first call in the entry (both sides): 0x823EB0
-# sets its matrix copy's last row before 001026A0 moves it.
-STACK_VALUES = {(0x823EB0, 'w_001026A0'): 16}
+# that callee's arguments at its first call in the entry (both sides), as
+# (argument index of the local's address, byte count): 0x823EB0 sets its
+# matrix copy's last row before 001026A0 moves it; 0x823C50 fills the vector
+# it passes to 001EFD90.
+STACK_VALUES = {(0x823EB0, 'w_001026A0'): (0, 16), (0x823C50, 'w_001EFD90'): (2, 16)}
 # 001B1EA0's quad is a local of 0x825E80's frame that the function itself
 # fills (lq/sq from 0x82B740): its 16 words are compared as part of the
 # call's arguments (the oracle's private stack, the native STACK buffer).
@@ -251,7 +260,7 @@ BY_ADDRESS = {address: (name, args, result) for name, address, args, result in H
 # Callees that run as original code inside the oracle (writes replayed to
 # the native side). Pure helpers only: none of them reaches hardware.
 RUN = {0x1026A0, 0x1028B8, 0x1028D0, 0x102948, 0x102958, 0x1029C0, 0x122BB8, 0x1281C0, 0x1BA1A0, 0x1CFA60,
-       0x102738, 0x102760}
+       0x102738, 0x102760, 0x102C58}
 
 # The two dispatchers' step tables (runtime addresses), keyed by the
 # runtime address of their jump.
@@ -622,7 +631,7 @@ class Oracle:
             sv = STACK_VALUES.get((self.entry, name))
             if sv and name not in self.stack_seen:
                 self.stack_seen.add(name)
-                values += struct.unpack('<%dI' % (sv // 4), bytes(EE.read(e, values[0], sv)))
+                values += struct.unpack('<%dI' % (sv[1] // 4), bytes(EE.read(e, values[sv[0]], sv[1])))
             if address == QUAD_HOOK:
                 values += struct.unpack('<16I', bytes(EE.read(e, values[2], 64)))
             if address in self.run_set:
@@ -873,9 +882,9 @@ class Replay:
             sv = STACK_VALUES.get((self.entry, name))
             if sv and name not in self.stack_seen:
                 self.stack_seen.add(name)
-                at = normal[0] - STACK_BASE
-                if 0 <= at <= STACK_SIZE - sv:
-                    normal += struct.unpack('<%dI' % (sv // 4), C.string_at(C.addressof(STACK) + at, sv))
+                at = normal[sv[0]] - STACK_BASE
+                if 0 <= at <= STACK_SIZE - sv[1]:
+                    normal += struct.unpack('<%dI' % (sv[1] // 4), C.string_at(C.addressof(STACK) + at, sv[1]))
             if name == 'w_001B1EA0':
                 at = normal[2] - STACK_BASE
                 if 0 <= at <= STACK_SIZE - 64:
@@ -1944,6 +1953,32 @@ def targeted_sub2(add):
         add('s2 emit s%d' % state, beat, 0x824130, [lamp], base + [(lamp + 0x10, w32(0x824130)), (lamp + 4, b8(state))])
     for step in (3, 9):
         add('s2 832 step%d' % step, beat, 0x826CC0, [n32, STACK_TOP], st(n32, 1, step) + [(0x810803, b8(3))])
+    # script 0x82ABC0's op14 nodes (group 0x82A920): 001C7EB0's callbacks on a free node
+    spark = free_node(ram)
+    sbase = [(spark, b8(1)), (spark + 0x10, w32(0x1C7EB0)), (spark + 0x2EC, w32(0x823C50)),
+             (spark + 0xC0, struct.pack('<4f', 0.5, -1.25, 2.0, 1.0)),
+             (spark + 0x100, struct.pack('<4f', -94.0, -47.5, -1543.0, 1.0))]
+    for state in (0, 1, 2, 3, 5):
+        for clock in (0, 1, 19, 20, 21, 340460, 340461, 0x7FFFFFFC, 0x80000000, 0xFFFFFFEC, 0xFFFFFFFF):
+            if state != 1 and clock not in (0, 1):
+                continue
+            add('s2 spark s%d %X' % (state, clock), beat, 0x823C50, [spark, STACK_TOP],
+                sbase + [(spark + 4, b8(state))], spad=[(0x70003B68, w32(clock))])
+    for state in (0, 1, 2, 3, 5):
+        for effect in (0x7B8AB0, 0):
+            add('s2 trail s%d %X' % (state, effect), beat, 0x823E10, [spark],
+                sbase + [(spark + 0x2EC, w32(0x823E10)), (spark + 4, b8(state))], queues={0x1F00A0: [effect]})
+    # 0x823CF0, effect 1's node: its timer around the 1.5 end, the turn +0xC0 and the place +0xB0
+    pbase = sbase + [(spark + 0x10, w32(0x823CF0)), (spark + 0xB0, struct.pack('<4f', -94.0, -47.5, -1543.0, 1.0))]
+    for state in (0, 1, 2, 3, 5):
+        add('s2 puff s%d' % state, beat, 0x823CF0, [spark], pbase + [(spark + 4, b8(state)),
+            (spark + 0x1F0, f32b(0.25)), (spark + 0x1F4, f32b(0.75))])
+    for t in (0.0, 1.0, 1.492, 1.4919999, 1.5, 1.4920001, 1.6, -1.0):
+        add('s2 puff t%r' % t, beat, 0x823CF0, [spark], pbase + [(spark + 4, b8(1)), (spark + 0x1F0, f32b(t)),
+            (spark + 0x1F4, f32b(0.5))])
+    for rnd in (0, 1, 0x7FFFFFFF, -1, -0x80000000):
+        add('s2 puff rand %X' % (rnd & MASK), beat, 0x823CF0, [spark], pbase + [(spark + 4, b8(0))],
+            queues={0x122BB8: [rnd]}, run_set=RUN - {0x122BB8})
 
 
 def reachable_words(ram, entry, size):

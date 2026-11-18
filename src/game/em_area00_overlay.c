@@ -1738,3 +1738,85 @@ int em_area00_ovl_00826CB0(const EmArea00OvlHooks *h, uint32_t a0, uint32_t bloc
     *result = 1;
     return 0;
 }
+
+/* ----------------------------------------------------------------------
+ * Script 0x82ABC0's op14 nodes (group 0x82A920 [3..13], 0x270E entries:
+ * 001C8140 places a node running 001C7EB0 that follows one bone of the
+ * pose; the record's routine is the callback at node +0x2EC, which 001C7EB0
+ * calls with the node).
+ *
+ * 0x823C50 (func_overlay_AREA00_00823C10) — entries [3..7]: +0x04 1 and the
+ * world clock D_70003B68 a multiple of 20 (signed remainder 0): a vector
+ * (pi/2, 0, 0, 1.0) in its frame (sp - 0x20 + 0x10, the four words stored in
+ * that order before the call) and 001EFD90(1, +0x100, that vector). Other
+ * states: nothing.
+ * ---------------------------------------------------------------------- */
+#define S_70003B68 0x70003B68u /* the world clock */
+
+int em_area00_ovl_00823C50(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    if (a00_u8(&o, self + 4) == 1 && (int32_t)a00_u32(&o, S_70003B68) % 20 == 0) {
+        const uint32_t v = sp - 0x20u + 0x10u;
+        a00_w32(&o, v + 0, F_HALF_PI);
+        a00_w32(&o, v + 4, F_ZERO);
+        a00_w32(&o, v + 8, F_ZERO);
+        a00_w32(&o, v + 12, F_ONE);
+        (void)a00_c_001EFD90(&o, 1, self + 0x100, v);
+    }
+    return a00_end(&o);
+}
+
+/* 0x823E10 (func_overlay_AREA00_00823DD0) — entries [8..13]: +0x04 1:
+ * e = 001F00A0(0x80000014, +0x100, +0xC0, 0); when e is nonzero,
+ * 001029C0(e + 0xD0) and 00102948(e + 0x100, +0x100). Other states:
+ * nothing. */
+int em_area00_ovl_00823E10(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    if (a00_u8(&o, self + 4) == 1) {
+        uint32_t e = 0;
+        (void)a00_c_001F00A0(&o, (int32_t)0x80000014u, self + 0x100, self + 0xC0, 0, &e);
+        if (!a00_failed(&o) && e != 0) {
+            (void)a00_c_001029C0(&o, e + 0xD0);
+            (void)a00_c_00102948(&o, e + 0x100, self + 0x100);
+        }
+    }
+    return a00_end(&o);
+}
+
+/* 0x823CF0 (func_overlay_AREA00_00823CB0) — the node of effect 1 (0x823C50's
+ * 001EFD90). State 0: +0xD0 = identity (001029C0) turned by +0xC0 (00102C58)
+ * and moved to +0xB0 (00102918), +0x1F0 = 0, +0x1F4 = 00122BB8() / 2^31,
+ * state 1, and on into state 1 the same call. State 1: 001D04B0(+0xD0, 1,
+ * 0x828900, +0x1F0, +0x1F4), +0x1F0 += 0.008, state 3 once +0x1F0 is not at
+ * most 1.5. States 2 / 3: 001AFC10. */
+#define A00_PUFF_TABLE_828900 0x00828900u
+
+int em_area00_ovl_00823CF0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault)
+{
+    A00Ovl o;
+    if (a00_begin(&o, h, fault)) return -1;
+    uint32_t state = a00_u8(&o, self + 4);
+    if (state == 0) {
+        (void)a00_c_001029C0(&o, self + 0xD0);
+        (void)a00_c_00102C58(&o, self + 0xD0, self + 0xD0, self + 0xC0);
+        (void)a00_c_00102918(&o, self + 0xD0, self + 0xD0, self + 0xB0);
+        a00_w32(&o, self + 0x1F0, F_ZERO);
+        a00_w32(&o, self + 0x1F4, a00_rand_fraction(&o));
+        a00_w8(&o, self + 4, 1);
+        state = 1;
+    }
+    if (state == 1) {
+        (void)a00_c_001D04B0(&o, self + 0xD0, 1, A00_PUFF_TABLE_828900, fb(a00_u32(&o, self + 0x1F0)),
+                             fb(a00_u32(&o, self + 0x1F4)));
+        const uint32_t t = em_ee_add_bits(a00_u32(&o, self + 0x1F0), F_0_008);
+        a00_w32(&o, self + 0x1F0, t);
+        if (!em_ee_c_le_bits(t, F_1_5)) a00_w8(&o, self + 4, 3);
+    } else if (state == 2 || state == 3) {
+        (void)a00_c_001AFC10(&o, self);
+    }
+    return a00_end(&o);
+}

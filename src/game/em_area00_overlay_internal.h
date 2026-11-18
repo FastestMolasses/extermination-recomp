@@ -520,6 +520,27 @@ static inline int a00_c_001EFEB0(A00Ovl *o, int32_t id, uint32_t matrix)
     return o->h->w_001EFEB0(o->h->ctx, id, matrix) < 0 ? a00_latch(o, 0x001EFEB0u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
 }
 
+static inline int a00_c_00102C58(A00Ovl *o, uint32_t dst, uint32_t a, uint32_t b)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_00102C58) return a00_latch(o, 0x00102C58u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_00102C58(o->h->ctx, dst, a, b) < 0 ? a00_latch(o, 0x00102C58u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_001D04B0(A00Ovl *o, uint32_t matrix, int32_t count, uint32_t table, float f12, float f13)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_001D04B0) return a00_latch(o, 0x001D04B0u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_001D04B0(o->h->ctx, matrix, count, table, f12, f13) < 0 ? a00_latch(o, 0x001D04B0u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
+static inline int a00_c_001EFD90(A00Ovl *o, int32_t id, uint32_t point, uint32_t vector)
+{
+    if (a00_failed(o)) return -1;
+    if (!o->h->w_001EFD90) return a00_latch(o, 0x001EFD90u, EM_AREA00_OVL_FAULT_NULL_WORKER);
+    return o->h->w_001EFD90(o->h->ctx, id, point, vector) < 0 ? a00_latch(o, 0x001EFD90u, EM_AREA00_OVL_FAULT_WORKER_FAILED) : 0;
+}
+
 /* The actor's own callback: the function at self +0x4C, called with self. */
 static inline void a00_callback(A00Ovl *o, uint32_t self)
 {

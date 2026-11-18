@@ -2436,6 +2436,10 @@ test-area18-overlay-reference:
 test-area16-overlay-reference:
 	python3 tools/test_area16_overlay_reference.py
 
+.PHONY: test-area00-overlay-reference
+test-area00-overlay-reference:
+	python3 tools/test_area00_overlay_reference.py
+
 .PHONY: test-area21-overlay-reference
 test-area21-overlay-reference:
 	python3 tools/test_area21_overlay_reference.py

@@ -87,6 +87,9 @@ extern "C" {
 #define EM_AREA00_OVL_S2_FX      0x008241B0u /* the effect node 0014D260's 001EFE00 spawns */
 #define EM_AREA00_OVL_S2_LAMP    0x00823EB0u /* group 0x82CDD0's nodes (script 0x82D070's op14) */
 #define EM_AREA00_OVL_S2_EMIT    0x00824130u /* group 0x82CDD0's nodes (script 0x82D070's op14) */
+#define EM_AREA00_OVL_S2_SPARK   0x00823C50u /* group 0x82A920 [3..7] (script 0x82ABC0's op14): 001C7EB0 callback */
+#define EM_AREA00_OVL_S2_TRAIL   0x00823E10u /* group 0x82A920 [8..13] (script 0x82ABC0's op14): 001C7EB0 callback */
+#define EM_AREA00_OVL_S2_PUFF    0x00823CF0u /* effect 1's node (0x823C50's 001EFD90) */
 
 enum {
     EM_AREA00_OVL_FAULT_NONE = 0,
@@ -173,6 +176,11 @@ typedef struct {
     int (*w_00102760)(void *ctx, uint32_t dst, uint32_t src);
     int (*w_001C6190)(void *ctx, uint32_t actor, int32_t *result);
     int (*w_001EFEB0)(void *ctx, int32_t id, uint32_t matrix);
+    /* script 0x82ABC0's op14 nodes' 001C7EB0 callbacks (0x823C50, 0x823E10) */
+    int (*w_001EFD90)(void *ctx, int32_t id, uint32_t point, uint32_t vector);
+    /* the effect node 0x823CF0 (effect 1, which 0x823C50 spawns) */
+    int (*w_00102C58)(void *ctx, uint32_t dst, uint32_t a, uint32_t b);
+    int (*w_001D04B0)(void *ctx, uint32_t matrix, int32_t count, uint32_t table, float f12, float f13);
 
     /* ---- the actor's own callback: the function at actor +0x4C, called with the actor */
     int (*w_callback)(void *ctx, uint32_t function, uint32_t actor);
@@ -213,6 +221,14 @@ int em_area00_ovl_008241B0(const EmArea00OvlHooks *h, uint32_t self, EmArea00Ovl
  * matrix's last row and the colour copy itself, through `bytes`. */
 int em_area00_ovl_00823EB0(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault);
 int em_area00_ovl_00824130(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
+/* Script 0x82ABC0's op14 nodes (group 0x82A920), the callbacks their 001C7EB0
+ * calls (node +0x2EC). 0x823C50 keeps a four-float vector in its frame
+ * (sp - 0x20 + 0x10), writes it itself through `bytes` and passes its address
+ * to 001EFD90. */
+int em_area00_ovl_00823C50(const EmArea00OvlHooks *h, uint32_t self, uint32_t sp, EmArea00OvlFault *fault);
+int em_area00_ovl_00823E10(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
+/* The effect node 0x823CF0 (effect 1, the one 0x823C50 spawns through 001EFD90). */
+int em_area00_ovl_00823CF0(const EmArea00OvlHooks *h, uint32_t self, EmArea00OvlFault *fault);
 /* Script 0x82D070's op09 callback 0x826CB0 (a0 = [28]): its +0x2EC = 2 (the
  * count to 824 starts), *result = 1. */
 int em_area00_ovl_00826CB0(const EmArea00OvlHooks *h, uint32_t a0, uint32_t block, uint32_t a2,

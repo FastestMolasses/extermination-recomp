@@ -339,7 +339,13 @@ static int dispatch_overlay00(EmArea01Runtime *r, EmArea01Call *c)
     OVERLAY00(00826BE0);
     OVERLAY00(008241B0);
     OVERLAY00(00824130);
+    OVERLAY00(00823E10);   /* script 0x82ABC0's op14 nodes' 001C7EB0 callback */
+    OVERLAY00(00823CF0);   /* effect 1's node (0x823C50's 001EFD90) */
 #undef OVERLAY00
+    case 0x00823C50u:   /* the same nodes' other callback; frame 0x20: its vector */
+        if (c->na < 1 || c->nf || c->sp < 0x20u) return fail(r, c->function);
+        r->sp = c->sp - 0x20u;
+        return em_area00_ovl_00823C50(&r->overlay00, (uint32_t)c->a[0], c->sp, &r->overlay00_fault);
     /* 0x825D70 (frame 0x20) calls 0x825E80 (frame 0x70, a quad local it
      * writes); 0x826CC0 (frame 0x30) passes a local to 001EFD20. Nested
      * hooks get sp below the deepest frame (as 0x823820 / 0x825600). */

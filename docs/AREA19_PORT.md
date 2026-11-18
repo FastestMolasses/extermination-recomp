@@ -270,3 +270,33 @@ position is (-0.84, 0.21, -0.62), then (-94, -59, -1543); the port stays at (-49
 sub 2's overlay routine 0x823C50, which has no binding in the live composition: fail-stop, and the
 playback overruns. Not diagnosed: the next lane should read 001C7EB0 and 0x823C50 (and what moves
 the player record to the origin for one tick) before binding anything.
+
+**Segment 914, the AREA00 boss cutscene (lane PORT-A00-BOSS, 2026-11-18), partly closed.** The player's
+one-tick move is the original's own script, not a missing input: script 0x82ABC0 on owner 0x7AEF00 runs
+op0A sub 5 at take tick 2569 (00182F90 to the +0xC0 of the record the player's +0x114 points at, y less
+11: (-0.84, 0.21, -0.62)) and at 2570 op0A then op01 kind 9 (001B6F80: yaw, then 00182F90 to
+(-94, -59, -1543)). Hidden fork replay of g33 (memwatch on 0x810350, log probes on 00182F90,
+001B9A00, 001B94F0, 001BAC00, 001C8140 and every AREA00 overlay entry). The port's script stopped long
+before: its op14 (record 0x82AD00, group 0x82A920) runs 70 ticks into the cutscene as the original's
+does (take tick 1908), and the eleven 001C7EB0 nodes it places call their callbacks 0x823C50 /
+0x823E10 at once, which had no binding (fail-stop; the game task stops, so the script never reaches
+tick 2569). 0x823C50, 0x823E10 and effect 1's node 0x823CF0 are now translated, oracle-checked and
+bound (AREA00_OVERLAY_PORT.md, "Script 0x82ABC0's op14 callbacks").
+
+Chain now: unchanged in compared ticks (segments 0 .. 913 exact but for segment 454's last tick),
+but the game now stops later in segment 914, at the cutscene's tick 71: 0x823E10 (node 0x7B9F40) calls
+001F00A0, which the live composition does not bind. In the original 0x823E10 first calls 001F00A0 at
+take tick 2415, not 1909: 001C7EB0 calls its callback in state 1 only when one of the pose's
+D_00275B40 +0x18 / +0x1C / +0x20 is at least 0.9 (or the clip's end flags are set), and 0x823C50's
+first state-1 call is at 2089. So the port's pose words for these bones differ from the original's
+from tick 1909 (the next lane should tabulate D_00275B40's record for nodes 0x7B87C0 .. 0x7B9F40,
+ticks 1908 .. 2100, before binding 001F00A0). Then 0x824BB0 (the arc effect at take tick 2602) is
+the next untranslated overlay routine.
+
+**Segment 454's two ticks** (g15, AREA03 sub 1): traced to the dialogue wait. The cutscene script on
+owner 0x7AC8D0 (records 0x827170 .. 0x8275F0) has the same record durations in the port and the
+original except op0C sub 2 at 0x8274B0 (001B7D60: waits for D_002821B4 == 2 or D_002821B0 == 0), 362
+ticks in the original and 360 in the port. That wait ends with the message started by op0C sub 1 at
+0x827330: 13 voiced lines whose D_008106F4 goes 2 -> 1 -> 0 per line (the original's start latencies
+11, 24, 71, 16, 55, 15, 13, 34, 11, 40, 11, 22 and 35 ticks), then a 177-tick tail. Which of those the
+port shortens (the drive-timing switch's start latency or the tail) was not traced.
