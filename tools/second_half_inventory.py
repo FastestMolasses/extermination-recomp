@@ -20,7 +20,7 @@ macro tables (e.g. em_area02_math.c's VOID1 rows) and not named in a ledger
 show as missing: an area lane confirms each one. Overlay addresses mean another
 function in every area, so an overlay behaviour of these areas counts as
 translated only through a port file of its own area: a body of
-em_areaNN_overlay_<address> in src/game/em_areaNN_overlay*.c (own_overlay).
+em_areaNN_<module>_<address> in src/game/em_areaNN_*.c (own_overlay).
 
 Usage (port root): python3 tools/second_half_inventory.py [--overviews DIR] [--doc docs/SECOND_HALF_AREAS.md | --check ...]
 """
@@ -62,12 +62,15 @@ def port_index():
 
 
 def own_overlay(n):
-    """{address: file} of the overlay functions the area's own module
-    defines (a body `int em_areaNN_overlay_XXXXXXXX(` at a line start)."""
+    """{address: file} of the overlay functions the area's own modules
+    define: a body `int em_areaNN_<module>_XXXXXXXX(` at a line start in any
+    src/game/em_areaNN_*.c, at an overlay address (>= 0x823500; the boot and
+    creature modules' addresses are lower)."""
     out = {}
-    for path in sorted((ROOT / 'src/game').glob(f'em_area{n:02d}_overlay*.c')):
-        for m in re.finditer(rf'^int em_area{n:02d}_overlay_([0-9A-F]{{8}})\(', path.read_text(), re.M):
-            out[int(m.group(1), 16)] = path.name
+    for path in sorted((ROOT / 'src/game').glob(f'em_area{n:02d}_*.c')):
+        for m in re.finditer(rf'^int em_area{n:02d}_[a-z0-9_]*?_([0-9A-F]{{8}})\(', path.read_text(), re.M):
+            if int(m.group(1), 16) >= 0x823500:
+                out[int(m.group(1), 16)] = path.name
     return out
 
 

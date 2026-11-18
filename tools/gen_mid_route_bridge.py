@@ -54,6 +54,11 @@ SOURCES = (('src/game/em_area22_port.h', 'EmArea22PortHooks', 'm22'),
            ('src/game/em_area20_overlay.h', 'EmArea20OverlayHooks', 'a20o'),
            ('src/game/em_area17_overlay.h', 'EmArea17OverlayHooks', 'a17o'),
            ('src/game/em_area16_overlay.h', 'EmArea16OverlayHooks', 'a16o'),
+           # AREA21's own overlay owners (lane PORT-A21, docs/AREA21_PORT.md)
+           ('src/game/em_area21_overlay.h', 'EmArea21OverlayHooks', 'b21g'),
+           ('src/game/em_area21_owners.h', 'EmArea21OwnersHooks', 'b21w'),
+           ('src/game/em_area21_doors.h', 'EmArea21DoorsHooks', 'b21d'),
+           ('src/game/em_area21_groups.h', 'EmArea21GroupsHooks', 'b21p'),
            ('src/game/em_area15_route.h', 'EmArea15RouteHooks', 'r15'),
            ('src/game/em_area03_route.h', 'EmArea03RouteHooks', 'r03'),
            ('src/game/em_area03_arrival.h', 'EmArea03ArrivalHooks', 'a03'),
@@ -64,7 +69,10 @@ SOURCES = (('src/game/em_area22_port.h', 'EmArea22PortHooks', 'm22'),
 # itself: the generated file includes them before their adapters.
 OWN_INCLUDES = ('src/game/em_area00s2_creature.h', 'src/game/em_area14_overlay.h',
                 'src/game/em_area16_overlay.h', 'src/game/em_area17_overlay.h',
-                'src/game/em_area20_overlay.h')
+                'src/game/em_area20_overlay.h',
+                # lane PORT-A21
+                'src/game/em_area21_overlay.h', 'src/game/em_area21_owners.h', 'src/game/em_area21_doors.h',
+                'src/game/em_area21_groups.h')
 HOOK = re.compile(r'int \(\*w_([0-9A-F]{8}|callback)\)\(void \*ctx(?:, )?([^)]*)\);')
 
 

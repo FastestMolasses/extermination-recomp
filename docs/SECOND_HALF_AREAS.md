@@ -465,31 +465,31 @@ yet.
 | 001C48C0 | boot | s0[48] | `em_area02_math.c` |
 | 001C4AF0 | boot | s0[41] | `em_area02_math.c` |
 | 00219550 | boot | sub0 g 0x82a380 [0], sub0 g 0x82a380 [1], sub0 g 0x82a380 [2], sub0 g 0x82a380 [3] | census: live (level 1) |
-| 0x823580 | overlay | group 0x82b500 [1], group 0x82b500 [3] | missing |
-| 0x8237B0 | overlay | group 0x82ba70 [4], group 0x82ba70 [5], group 0x82ba70 [6], group 0x82ba70 [7], group 0x82ba70 [8], group 0x82ba70 [9] (+6) | missing |
-| 0x823860 | overlay | group 0x82ba70 [16], group 0x82ba70 [17], group 0x82ba70 [18] | missing |
-| 0x8238E0 | overlay | group 0x82ba70 [19], group 0x82ba70 [20], group 0x82ba70 [21] | missing |
+| 0x823580 | overlay | group 0x82b500 [1], group 0x82b500 [3] | `em_area21_groups.c` |
+| 0x8237B0 | overlay | group 0x82ba70 [4], group 0x82ba70 [5], group 0x82ba70 [6], group 0x82ba70 [7], group 0x82ba70 [8], group 0x82ba70 [9] (+6) | `em_area21_groups.c` |
+| 0x823860 | overlay | group 0x82ba70 [16], group 0x82ba70 [17], group 0x82ba70 [18] | `em_area21_groups.c` |
+| 0x8238E0 | overlay | group 0x82ba70 [19], group 0x82ba70 [20], group 0x82ba70 [21] | `em_area21_groups.c` |
 | 0x823A10 | overlay | group 0x82b500 [2] | missing; twin of AREA01 0x8239C0, AREA19 0x825030 |
-| 0x823AA0 | overlay | group 0x82ba70 [22] | missing |
+| 0x823AA0 | overlay | group 0x82ba70 [22] | `em_area21_groups.c` |
 | 0x823AB0 | overlay | group 0x82ba70 [23] | missing; twin of AREA01 0x8239C0, AREA19 0x825030 |
 | 0x8243B0 | overlay | s0[52] | missing |
-| 0x8261A0 | overlay | s0[42] | missing |
-| 0x8262D0 | overlay | s0[43], s0[44] | missing |
-| 0x8266F0 | overlay | s0[45] | missing |
-| 0x826BB0 | overlay | s0[30] | missing |
-| 0x826E60 | overlay | s0[27], s0[33] | missing |
-| 0x827040 | overlay | s0[53] | missing |
-| 0x8272C0 | overlay | s0[47] | missing |
-| 0x8273C0 | overlay | s0[49], s0[50] | missing |
-| 0x827640 | overlay | s0[51] | missing |
-| 0x827880 | overlay | s0[56] | missing |
-| 0x827A30 | overlay | s0[57] | missing |
-| 0x827CD0 | overlay | s0[58] | missing |
-| 0x827E70 | overlay | s0[59], s0[60] | missing |
-| 0x828350 | overlay | sub0 g 0x82a380 [7] | missing |
-| 0x828700 | overlay | s0[61] | missing |
-| 0x8297C0 | overlay | s0[62] | missing |
-| 0x82A1D0 | overlay | s0[54], s0[55] | missing |
+| 0x8261A0 | overlay | s0[42] | `em_area21_owners.c` |
+| 0x8262D0 | overlay | s0[43], s0[44] | `em_area21_owners.c` |
+| 0x8266F0 | overlay | s0[45] | `em_area21_owners.c` |
+| 0x826BB0 | overlay | s0[30] | `em_area21_doors.c` |
+| 0x826E60 | overlay | s0[27], s0[33] | `em_area21_doors.c` |
+| 0x827040 | overlay | s0[53] | `em_area21_owners.c` |
+| 0x8272C0 | overlay | s0[47] | `em_area21_doors.c` |
+| 0x8273C0 | overlay | s0[49], s0[50] | `em_area21_doors.c` |
+| 0x827640 | overlay | s0[51] | `em_area21_doors.c` |
+| 0x827880 | overlay | s0[56] | `em_area21_doors.c` |
+| 0x827A30 | overlay | s0[57] | `em_area21_doors.c` |
+| 0x827CD0 | overlay | s0[58] | `em_area21_owners.c` |
+| 0x827E70 | overlay | s0[59], s0[60] | `em_area21_doors.c` |
+| 0x828350 | overlay | sub0 g 0x82a380 [7] | `em_area21_doors.c` |
+| 0x828700 | overlay | s0[61] | `em_area21_overlay_cannon.c` |
+| 0x8297C0 | overlay | s0[62] | `em_area21_overlay.c` |
+| 0x82A1D0 | overlay | s0[54], s0[55] | `em_area21_doors.c` |
 
 | Chain | Records | Started by | op09 callbacks | Op/sub pairs the census snapshot flags |
 |---|---:|---|---|---|
@@ -507,9 +507,9 @@ yet.
 | 0 | [30] | 0x826bb0 | 1 | room move: entries 3 / 4 |
 | 0 | [33] | 0x826e60 | 2 | room move: entries 5 / 6 |
 
-Boot functions reachable from this area's owners and not in the first-level census: 276 (122,056 bytes); the port defines or ledgers 203 of them; 5 more are named in the sources only (a comment, a table or another name: read each): 001B1CE0, 001CAE30, 001CAF70, 001CB070, 001CB130; 68 appear nowhere: 0010BBF0, 0010BDB0, 0010BE50, 0010BE60, 0010C858, 0010C888, 0010C8B0, 0010C8E8, 0010C9C8, 0010C9F0, 0010CA30, 0010CA70, 0010CC08, 0010CD58, 0010D008, 0010D160, 0010D2C8, 0010D890, 00119AA0, 00119D38, 0011DB10, 0011DB58, 0011E878, 0011E938, 0011E990, 0011EBA8, 00120038, 001200E8, 00120408, 001209B0, 00120B38, 00121AF8, 00121BA0, 00121BD0, 00121E30, 00121EB8, 00121F78, 00121FB0, 001221E0, 001222E0, 00122458, 001224C0, 00122868, 00122BE8, 00122D80, 00122E68, 00122ED0, 00123620, 00124C68, 00124E18, 00125068, 00125758, 00125848, 001258E0, 00125FA8, 00126578, 00126C88, 00126EC8, 00126F20, 00126F88, 00127230, 00127500, 001275B8, 00127650, 001CACC0, 001CEEE0, 001D39A0, 001D3DA0.
+Boot functions reachable from this area's owners and not in the first-level census: 276 (122,056 bytes); the port defines or ledgers 203 of them; 6 more are named in the sources only (a comment, a table or another name: read each): 001B1CE0, 001CAE30, 001CAF70, 001CB070, 001CB130, 001CEEE0; 67 appear nowhere: 0010BBF0, 0010BDB0, 0010BE50, 0010BE60, 0010C858, 0010C888, 0010C8B0, 0010C8E8, 0010C9C8, 0010C9F0, 0010CA30, 0010CA70, 0010CC08, 0010CD58, 0010D008, 0010D160, 0010D2C8, 0010D890, 00119AA0, 00119D38, 0011DB10, 0011DB58, 0011E878, 0011E938, 0011E990, 0011EBA8, 00120038, 001200E8, 00120408, 001209B0, 00120B38, 00121AF8, 00121BA0, 00121BD0, 00121E30, 00121EB8, 00121F78, 00121FB0, 001221E0, 001222E0, 00122458, 001224C0, 00122868, 00122BE8, 00122D80, 00122E68, 00122ED0, 00123620, 00124C68, 00124E18, 00125068, 00125758, 00125848, 001258E0, 00125FA8, 00126578, 00126C88, 00126EC8, 00126F20, 00126F88, 00127230, 00127500, 001275B8, 00127650, 001CACC0, 001D39A0, 001D3DA0.
 
-Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commit); none has a port translation.
+Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commit); 41 have a translation in the area's own module (em_area21_doors.c, em_area21_groups.c, em_area21_overlay.c, em_area21_overlay_cannon.c, em_area21_owners.c).
 <!-- second_half:area21 end -->
 
 ## 5. Open
@@ -519,8 +519,9 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   AREA14_PORT.md), AREA16's (em_area16_overlay, AREA16_PORT.md: proven over
   designed states, no capture exists), AREA17's and AREA18's (below),
   AREA20's (all: em_area20_overlay and four twins, AREA20_PORT.md) and
-  AREA21's two twins is untranslated; the area lanes translate them against
-  captures. The twins and AREA16's owners are bound only in the shared
+  AREA21's (all but [52] 0x8243B0, which has no decomp C; AREA21_PORT.md)
+  is untranslated; the area lanes translate them against captures. The
+  twins and the translated owners are bound only in the shared
   composition's dispatch; of these areas only AREA14 runs there yet.
 - AREA17 and AREA18 (lane PORT-A17A18, AREA17_PORT.md, AREA18_PORT.md):
   every AREA17 overlay function but the init and the pad (22, the
@@ -557,6 +558,19 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   yet. AREA20's owners (lane PORT-A20) are proven by their oracles only:
   the guided run's g73 .. g75 AREA20 tries are not kept recordings (the
   chain was forked at g69), so its SUBS row still waits.
+- AREA21 (lane PORT-A21, docs/AREA21_PORT.md): every overlay owner the
+  placements, groups, scripts and spawns name but [52] 0x8243B0 (no decomp
+  C) is translated from the decomp C into em_area21_overlay (the Gatling
+  [62] 0x8297C0, the cannon [61] 0x828700 and its projectile 0x828F30),
+  em_area21_owners (counters, scripts, the ending request [53]),
+  em_area21_doors (the doors, [54] / [55], the rounds 0x825C70, the
+  effects) and em_area21_groups (the group members); `make
+  test-area21-overlay-reference` runs the original instructions of each
+  (AREA21.BIN over capture a03b_03_item2a, designed states: no AREA21
+  recording exists) with every reachable word. They are bound in
+  dispatch_second_half and em_scene_bindings for area 0x15, but AREA21
+  has not loaded live: its SUBS row, capture kinds and 001A2370 /
+  0019C6F0 rules (section 2) wait for a recording. Section 4's blocks list them by module.
 - No other of these areas has loaded live: their module pack rows, state and
   script windows are checked only by the oracle and the static export.
 
@@ -595,8 +609,8 @@ and 0x15 only):
 | AREA21 0x823A10 (group 0x82B500 [2]), 0x823AB0 (group 0x82BA70 [23]) | AREA01 0x8239C0, AREA19 0x825030 | 35 of 36 equal; the one that differs is the rate's float immediate: 40.0 and 8.0 (AREA01's and AREA19's 5.0), so AREA01's translation (which fixes 5.0) is not reused | `em_level17_boot_a21_00823A10` / `_00823AB0`; `make test-level17-boot-reference` runs them on AREA21's header and text over the capture (27/27 words each; a 5.0 mutation fails) |
 | AREA14 0x823FC0 (sub 0 group 0x826180 [13], [15], [17], [19]) with 0x825530 and 0x825A10 (lane P14b) | AREA19 0x827DD0, 0x829370, 0x829840 | aligned word for word but the owner's three overlay calls and its missed-probe effect (kind 5: 0x8000002C, else 0x80000003), the probe's tint record (0x828100) and register-only set-up of its 001CD520 call, the spawner's colour (0x828110) | `em_area19_route_00823FC0`, `em_level10_port_00825530`, `em_level13_port_00825A10`; test_area19_route_reference / test_level10_port_reference / test_level13_port_reference rerun the AREA19 cases on AREA14's overlay, plus the 16 captured nodes of k01_02 .. k01_05 (docs/AREA14_PORT.md) |
 
-Section 4's tables still show these rows as missing: the generator counts an
-overlay owner only through a port file of its own area.
+Section 4's tables list an overlay owner by the port module of its own area
+(tools/second_half_inventory.py own_overlay).
 
 **The rest of the reachable boot functions** (section 4's lines for AREA17
 and AREA21), by the owners that reach them:
