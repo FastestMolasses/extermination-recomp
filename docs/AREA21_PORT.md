@@ -660,6 +660,38 @@ em_equipment_live) faults at address 0x7A6DE4. g80 not reached.
   multi-node glyph models and pose their nodes in em_status_models (the
   menu player's skeleton path), then rerun g79 from row 848.
 
+## Status glyph nodes (lane PORT-A21-G79B, 2026-11-18, branch `a21g79b`)
+
+- **g79 row 848's glyph model 0x35** (the fitted unit 3: 0020E250 spawns
+  code 3, 0020E3A0 names 0x35): tools/export_status_models.py now exports
+  every glyph 0020E3A0 can name with its own nodes. 001C6120 (byte-matched C)
+  returns bank + the directory word, 001C6150 the byte at model + 8 (0x35: 3;
+  0x33 / 0x34 / 0x3D: 2, until now collapsed to one rigid node), 0020E460's
+  state 0 takes that many slots and 001C62C0 copies each node's parent and
+  bind, state 1's 001C6380 composes +0x90 = bind x parent's +0x90 (node 1 of
+  0x35 moves its part by (5.52, 0.31, 0), node 2 moves it back). The posing
+  was already the translated em_owner_services path; what was missing was the
+  node-local mesh (each vertex on the node its position-W slot names) and the
+  full skeleton records in models.emsk. Oracle:
+  `make test-status-glyph-nodes-reference` executes the original 0020E1E0,
+  001CB590 and 0020E460 (both states, the 001D2040 packets and the 001CB580
+  draw recorded) over the status-hub capture for 0x35, 0x33, 0x34, 0x3D and
+  the single-node 0x30, and compares the port's record fields and every
+  node's +0x90 bit for bit (all equal), plus the export's node counts and
+  vertex slots against the library. The single-node letters' files are
+  byte-identical to before. Unverified: the equipment page's picture (no
+  original capture of a page with 0x35; the port's chain has no frame grab).
+- **Chain g20** (card g73): g73 .. g78 unchanged; **g79 6603 / 6603 on the
+  row to its end (row 6867), all 24 hits equal** (row, health after: 519 65,
+  673 60, 782 45, 1481 85, 2137 70, 2254 55, 2386 40, 3050 85, 3147 80,
+  3259 75, 3371 70, 3483 65, 3595 60, 3722 45, 4311 95, 4412 80, 4537 65,
+  4645 50, 4881 35, 5064 20, 5622 35, 5806 20, 6410 35, 6566 20).
+  **g80 is reached**: 332 / 332 on the row to row 331, where the ending
+  script 0x827040's op09 callback 0x827250 calls 0015C750 on the player
+  record (em_area02_misc fault 3 at 0015C750, address 007BD134: no
+  translation on that path in main): the same step as chain g21's row 407
+  (Ending), which lane PORT-A21-ENDING2 owns.
+
 ## Ending (lane PORT-A21-ENDING, 2026-11-18, branch `a21ending`)
 
 - **001AD740** (byte-matched C) is translated: em_sf_001AD740 in
@@ -802,13 +834,13 @@ em_equipment_live) faults at address 0x7A6DE4. g80 not reached.
 
 ## Next
 
-0. Next: g79 row 848's glyph model 0x35 (Sub-weapon projectile), then
-   the rest of g79 (21 hits); g80's ending script ending 27 frames late
-   (Ending 2); a fork capture of the credits and the pictures. (done: g79's
-   rand() word at row 418 and g76's at row 6386, Final phase; row 667's
-   0018AF50, the blast 001EE190 and 001A8970's f20, Sub-weapon projectile;
-   g80 from its card through row 407, the credits, the pictures and the
-   clear save, Ending 2.)
+0. Next: g80 through chain g20 (it reaches g80, row 331) with this lane's
+   ending; g80's ending script ending 27 frames late from card g80 (Ending
+   2); a fork capture of the credits and the pictures. (done: g79's rand()
+   word at row 418 and g76's at row 6386, Final phase; row 667's 0018AF50,
+   the blast 001EE190 and 001A8970's f20, Sub-weapon projectile; row 848's
+   glyph 0x35 and the rest of g79, Status glyph nodes; g80 from its card
+   through row 407, the credits, the pictures and the clear save, Ending 2.)
 1. (done) 0x825B00, the AREA21 op09 callbacks, D_00275C48 (Phases);
    001E76A0 (Haze ring); 0x823B40 and 001B7670's gate (lane
    PORT-A21-3B40); 001741D0 and the seated frame's workers (The Gatling

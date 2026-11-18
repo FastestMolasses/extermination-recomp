@@ -11,9 +11,10 @@
  *                         slots are this module's own EmOwnerBone records.
  *   001C6120, 001CA6E0, 001C6150   model lookup and bind over the exported
  *                         models (tools/export_status_models.py): the menu
- *                         player D_0028A57C and the glyph models of the
- *                         library D_0028A56C that the status-hub capture
- *                         binds. Any other model faults.
+ *                         player D_0028A57C and every glyph model 0020E3A0
+ *                         names in the library D_0028A56C, each with its
+ *                         own nodes (001C6150 = model +8; 0x35 has three).
+ *                         Any other model faults.
  *   001C63E0, 001C67E0, 001C64F0   the player bank D_0028A580 clips 0x1C2 and
  *                         0x0A through em_player_pose (the original channel
  *                         evaluator, docs/PLAYER_POSE.md).

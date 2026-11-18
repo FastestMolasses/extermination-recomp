@@ -2247,6 +2247,10 @@ test-area01-sfx-registry:
 test-status-pose69-reference:
 	python3 tools/test_status_pose69_reference.py
 
+.PHONY: test-status-glyph-nodes-reference
+test-status-glyph-nodes-reference:
+	python3 tools/test_status_glyph_nodes_reference.py
+
 .PHONY: test-area01-rcl-workers test-area01-flame-services-reference
 test-area01-rcl-workers:
 	python3 tools/test_area01_rcl_workers_reference.py
