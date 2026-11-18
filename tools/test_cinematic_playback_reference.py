@@ -44,6 +44,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CAMERA, TABLE, SYNTH = 0x8101E0, 0x1400000, 0x1500000
 CLOCK = 0x0123456789ABCDEF
 OPENING_EVENTS = 0x26AE00
+CABLE_EVENTS, CABLE_FADES, CABLE_LETTERBOX = 0x26AB98, 0x26ADA0, 0x26AB98   # scene 0x1A (export_cable_scene.py)
 
 
 class Projection(C.Structure):
@@ -64,7 +65,8 @@ class Playback(C.Structure):
 
 
 Emit = C.CFUNCTYPE(C.c_int, C.c_void_p, C.c_int, C.POINTER(Playback))
-PUBLISH, RESTORE, EFFECT_OFF, FLAG_OFF, RUMBLE, FADE_OUT, FADE_IN, EFFECT, GREY, EFFECT_CLOCK, FLAG_ON = range(11)
+PUBLISH, RESTORE, EFFECT_OFF, FLAG_OFF, RUMBLE, FADE_OUT, FADE_IN, EFFECT, GREY, EFFECT_CLOCK, FLAG_ON, CUE26 = range(12)
+RENDER_INIT = 100   # 001C1DC0, the second half of the native CUE26 (its first: 001D2830(8, 0))
 PLAIN = {0, 1, 3, 4, 9, 11, 14, 18, 36}
 
 
@@ -90,6 +92,7 @@ def native_args(kind, p):
     if kind == EFFECT_OFF: return (0, 0, 0)
     if kind == EFFECT: return (5, 0, bits(p.value))
     if kind in (FLAG_OFF, FLAG_ON): return (2, 0 if kind == FLAG_OFF else 1)
+    if kind == CUE26: return (8, 0)
     if kind in (RUMBLE, FADE_OUT, FADE_IN): return (p.arg[0], p.arg[1])
     if kind == GREY: return (0x80, 0x80, 0x80)
     return (s64(p.start_clock),)
@@ -111,6 +114,7 @@ def hooks(o, log):
     o.calls[0x1AEE10] = lambda _: record(FADE_IN, (a(0), a(1)))
     o.calls[0x21BA80] = lambda _: record(GREY, (a(0), a(1), a(2)))
     o.calls[0x21BA70] = lambda _: record(EFFECT_CLOCK, (s64(o.r[4]),))
+    o.calls[0x1C1DC0] = lambda _: record(RENDER_INIT, ())
 
 
 def main():
@@ -119,6 +123,7 @@ def main():
     data = (ROOT.parent/'Extermination/extract/chunk15/f12_id44.bin').read_bytes()
     roger_at = 0x41000+(struct.unpack_from('<I', data, 0x41004)[0] & ~3)
     opening_at = 0xD0800+(struct.unpack_from('<I', data, 0xD0804)[0] & ~3)
+    cable_at = 0x60000+(struct.unpack_from('<I', data, 0x60004)[0] & ~3)   # bank 0x97 (scene 0x1A)
     out = ROOT/'build/cinematic_playback_reference'
     out.mkdir(parents=True, exist_ok=True)
     library = out/'camera.dylib'
@@ -138,15 +143,16 @@ def main():
                                                    C.c_uint64]
     native.em_cinematic_playback_tick.argtypes = [C.POINTER(Playback), C.POINTER(Projection), Emit, C.c_void_p]
     native.em_cinematic_playback_wait.argtypes = [C.POINTER(Playback), Emit, C.c_void_p]
-    roger, opening, projection = Track(), Track(), Projection()
+    roger, opening, cable, projection = Track(), Track(), Track(), Projection()
     assets = ROOT/'assets/scene_snow'
     assert native.em_cinematic_camera_load(C.byref(roger), str(assets/'roger/encounter_camera.emcc').encode()) == 0
     assert native.em_cinematic_camera_load(C.byref(opening), str(assets/'opening_camera.emcc').encode()) == 0
+    assert native.em_cinematic_camera_load(C.byref(cable), str(assets/'cable_scene/camera.emcc').encode()) == 0
     assert native.em_cinematic_projection_load(C.byref(projection),
                                                str(assets/'roger/camera_projection.emcp').encode())
     assert bytes(projection) == elf[0x26C598-0x100000+0x300:0x26C598-0x100000+0x300+52]
     # The exported tracks are the extract's banks.
-    for track, at in ((roger, roger_at), (opening, opening_at)):
+    for track, at in ((roger, roger_at), (opening, opening_at), (cable, cable_at)):
         assert struct.unpack_from('<f', data, at)[0] == track.duration
         assert data[at+16:at+16+32*track.sample_count] == bytes(
             C.cast(track.samples, C.POINTER(C.c_ubyte*(32*track.sample_count))).contents)
@@ -156,6 +162,11 @@ def main():
                                            str(assets/'opening.emfx').encode()) == 0
     count = opening_events.count
     assert bytes(words)[:4*count] == elf[OPENING_EVENTS-0x100000+0x300:OPENING_EVENTS-0x100000+0x300+4*count]
+    cable_words = (C.c_float*134)()
+    cable_events = Events()
+    assert native.em_cinematic_events_load(C.byref(cable_events), cable_words, 134, CABLE_EVENTS,
+                                           str(assets/'cable_scene/events.emfx').encode()) == 0
+    assert bytes(cable_words) == elf[CABLE_EVENTS-0x100000+0x300:CABLE_EVENTS-0x100000+0x300+4*134]
     # D: the other records over tables of their own (scene 1 carries no
     # table, so they ride on it): the +0x7C effect, off, grey, clock; the
     # +0x80 colours, an unknown negative and a truncated speed; the +0x84 flag.
@@ -166,10 +177,10 @@ def main():
     synth_c = (C.c_float*len(synth_words))(*synth_words)
     synth = Events(SYNTH, C.cast(synth_c, C.POINTER(C.c_float)), len(synth_words))
     synth_cursors = (SYNTH, SYNTH+4*len(t7c), SYNTH+4*(len(t7c)+len(t80)))
-    tracks = {1: (roger, roger_at), 0x22: (opening, opening_at)}
+    tracks = {1: (roger, roger_at), 0x22: (opening, opening_at), 0x1A: (cable, cable_at)}
 
     def oracle(scene):
-        track, at = tracks[1 if scene != 0x22 else 0x22]
+        track, at = tracks[scene if scene in tracks else 1]
         o = Original(elf)
         o.write(TABLE, data[at:at+16+32*track.sample_count])
         o.save(CAMERA+0x6E, scene, 2)
@@ -179,7 +190,7 @@ def main():
         return o
 
     def native_playback(scene, events):
-        track = tracks[1 if scene != 0x22 else 0x22][0]
+        track = tracks[scene if scene in tracks else 1][0]
         p = Playback()
         assert native.em_cinematic_playback_start(C.byref(p), C.byref(track), events, scene, CLOCK)
         return p
@@ -212,6 +223,10 @@ def main():
 
         @Emit
         def emit(_context, kind, state):
+            if kind == CUE26:   # D_008106C8 |= 0x40, 001D2830(8, 0), 001C1DC0()
+                nlog.append((FLAG_OFF, (8, 0), view(state.contents)))
+                nlog.append((RENDER_INIT, (), view(state.contents)))
+                return 1
             nlog.append((kind, native_args(kind, state.contents), view(state.contents)))
             return 1
         o.run(0x22EEF0, (CAMERA,))
@@ -240,13 +255,13 @@ def main():
         p = Playback()
         for i in range(3): p.cursor[i] = 0x5a5a5a5a
         for i in range(3): p.state[i] = 0x5a
-        track = opening if scene == 0x22 else roger
-        admitted = native.em_cinematic_playback_start(C.byref(p), C.byref(track), C.byref(opening_events),
-                                                      scene, CLOCK)
+        track = tracks[scene if scene in tracks else 1][0]
+        admitted = native.em_cinematic_playback_start(
+            C.byref(p), C.byref(track), C.byref(cable_events if scene == 0x1A else opening_events), scene, CLOCK)
         bound = o.read(CAMERA+0x7C, 12) != bytes(12)
-        assert admitted == (scene in PLAIN or scene == 0x22), (scene, admitted)
+        assert admitted == (scene in PLAIN or scene in (0x22, 0x1A)), (scene, admitted)
         assert admitted or bound or scene in cued, scene
-        assert not admitted or scene == 0x22 or (not bound and scene not in cued), scene
+        assert not admitted or scene in (0x22, 0x1A) or (not bound and scene not in cued), scene
         if admitted:
             assert tuple(p.cursor) == tuple(o.load(CAMERA+0x7C+4*i) for i in range(3)), scene
             assert bytes(p.state) == o.read(CAMERA+0x88, 3) and p.start_clock == CLOCK, scene
@@ -346,6 +361,43 @@ def main():
             seen.add(p.cursor[1])
         assert (0 in seen) == (window[-1] >= 1269), seen
     assert (RUMBLE, (6, 0)) in emitted and (FADE_OUT, (16, 0)) in emitted, sorted(emitted)
+    # E. scene 0x1A (the cable ride's scene, bank 0x97's clip 0): sequences
+    # from the start and over its cue (2670), the letterbox on / off (2671,
+    # 2715), the fade (3402) and the end (3436); each window is seeded on
+    # both sides alike. D_008106C8 |= 0x40 is the cue's memory write.
+    emitted.clear()
+    windows = [range(0, 6880)] if FULL else [range(0, 6), range(5336, 5348), range(5426, 5434), range(6800, 6880)]
+    seeds = {0: None, 5336: ((0, CABLE_FADES+4, CABLE_LETTERBOX), (0, 1, 0)),
+             5426: ((0, CABLE_FADES+4, CABLE_LETTERBOX+4), (0, 1, 1)),
+             6800: ((0, CABLE_FADES+4, 0), (0, 1, 0))}
+    cue_seen = False
+    for window in windows:
+        o = oracle(0x1A)
+        p = native_playback(0x1A, C.byref(cable_events))
+        seed(o, p, 0.0, tuple(p.cursor), tuple(p.state))
+        o.calls[0x21BAB0] = lambda oo: oo.r.__setitem__(2, CLOCK)
+        o.run(0x22EC30, (CAMERA,))
+        assert tuple(p.cursor) == tuple(o.load(CAMERA+0x7C+4*i) for i in range(3))
+        first = window[0]
+        if first:
+            p.time = first*.5
+            o.save(CAMERA+0x74, bits(p.time))
+            cursors, states = seeds[first]
+            for i in range(3):
+                p.cursor[i], p.state[i] = cursors[i], states[i]
+                o.save(CAMERA+0x7C+4*i, cursors[i])
+            o.write(CAMERA+0x88, bytes(states))
+        o.save(0x8106C8, 0)
+        for k in window:
+            before = o.load(0x8106C8)
+            _, n = tick(o, p, ('scene 0x1A sequence', k))
+            sequence_ticks += 1
+            calls += n
+            if (RENDER_INIT, ()) in emitted and not cue_seen:
+                cue_seen = True
+                assert o.load(0x8106C8) == before | 0x40, hex(o.load(0x8106C8))
+    assert cue_seen and (FLAG_ON, (2, 1)) in emitted and (FLAG_OFF, (2, 0)) in emitted, sorted(emitted)
+    assert (FADE_OUT, (4, 0)) in emitted and (RESTORE, ()) in emitted, sorted(emitted)
     # D. the other records, as a sequence on scene 1.
     o = oracle(1)
     p = native_playback(1, C.byref(synth))
@@ -365,6 +417,7 @@ def main():
 
     native.em_cinematic_camera_free(C.byref(roger))
     native.em_cinematic_camera_free(C.byref(opening))
+    native.em_cinematic_camera_free(C.byref(cable))
     raw = (assets/'roger/camera_projection.emcp').read_bytes()
     invalid = [raw[:11], raw[:-1], raw+b'\0', b'BAD!'+raw[4:],
                raw[:8]+struct.pack('<I', 14)+raw[12:],
@@ -389,7 +442,7 @@ def main():
     report = {'mode': MODE, 'starts': starts, 'scene1_frames': len(cases), 'scene1_waits': waits,
               'scene22_frames': len(singles), 'sequence_ticks': sequence_ticks, 'ordered_calls': calls,
               'exact_state_bytes': True, 'original_capture': captured, 'sanitizer': 'PASS',
-              'scope': '0022EC30 for scene ids 0..0x25; 0022EEF0 for scenes 1 and 0x22 and the three tracks\' '
+              'scope': '0022EC30 for scene ids 0..0x25; 0022EEF0 for scenes 1, 0x1A and 0x22 and the three tracks\' '
                        'records; 001B7B30 sub 0'}
     (out/'result.json').write_text(json.dumps(report, indent=2)+'\n')
     print('Original cinematic timeline PASS:', json.dumps(report))

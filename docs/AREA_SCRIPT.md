@@ -60,7 +60,8 @@ D_00810813 = 1 the director's beat 0 waits for.
   op00 kind 8; the battery runs 0x266620, section 2). Those programs stay on
   `em_pickup_program`, which translates both. op14 (001BAC00 spawn) is used only
   by the opening 0x828FC0 (hosted here since chain C8b OPENING) and by 00823CE0's
-  0x828C70, which is dormant in the first visit (FIRST_LEVEL_AUDIT INV-08).
+  0x828C70, which is dormant in the first visit (FIRST_LEVEL_AUDIT INV-08) and
+  hosted since lane PORT-CABLESCENE (AREA11 entered from AREA17).
 
 ### Data and calls
 
@@ -165,7 +166,7 @@ Start sites are the `jal 001BA1A0` in each owner with its resolved `a1`.
 | 0x2482C0 / 0x266620 pickup, grab program (**not admitted**) | 0015AFA0 / 00219550 | 0x266620: 07/13, 0E/1, 0A/0 (clip 0x42), 00/8, 0A/3, 09 (0x1B6EA0), 07/4. The battery (route beat 01) runs this program. It stays on `em_pickup_program`. |
 | 0x828FC0 opening | controller 00823E80 (0x823F3C) | 07/12, 06/0 (0x39), 0C/1 (0x66), 0A/1 (bank 0x98), 14 (0x828F30), 00/6, 0D/0, 18, 0A/5, 01/9, 00/0, 07/5 (0x39) |
 
-Not hosted: 0x828C70 (00823CE0, 0x823D8C; op14) is revisit content.
+| 0x828C70 the cable ride's scene (revisit) | flag-0x30 manager 00823CE0 (0x823D8C) | 07/12 (0x19), 0A/1 (bank 0x97), 14 (0x828BE0: keys 0x50 / 0x5A), 0C/1 (0x19), 00/6 (scene 0x1A), 0D/0, 18, 0A/5, 01/9 (460, 269, 424), 0D/1, 07/5 (0x30). Hosted since lane PORT-CABLESCENE (AREA17_PORT.md). |
 The two manager callbacks are tiny: 0x825900 calls 001DFE10() and returns 1;
 0x825920 calls 001DFE40() and returns 1.
 

@@ -75,7 +75,7 @@ int em_cinematic_events_load(EmCinematicEvents *events, float *storage, size_t c
         !memcmp(header, "EMFX", 4) && word(header+4) == 1;
     uint32_t count = valid ? word(header+8) : 0;
     valid = valid && count && count <= capacity;
-    float next[64];
+    float next[256];
     if (valid && count > sizeof next / sizeof next[0]) valid = 0;
     for (uint32_t i = 0; valid && i < count; ++i) {
         unsigned char raw[4];
@@ -120,9 +120,12 @@ int em_cinematic_playback_start(EmCinematicPlayback *playback, const EmCinematic
 {
     if (!playback || !track || !track->samples || track->sample_count < 2 ||
         track->duration != track->sample_count - 1) return 0;
-    uint32_t c80 = 0;
+    uint32_t c80 = 0, c84 = 0;
     if (scene_id == EM_CINEMATIC_SCENE_OPENING) c80 = EM_CINEMATIC_OPENING_EVENTS;
-    else if (!plain_scene(scene_id)) return 0;       /* not admitted */
+    else if (scene_id == EM_CINEMATIC_SCENE_CABLE) {
+        c80 = EM_CINEMATIC_CABLE_FADES;
+        c84 = EM_CINEMATIC_CABLE_LETTERBOX;
+    } else if (!plain_scene(scene_id)) return 0;     /* not admitted */
     EmCinematicPlayback next = *playback;
     next.track = track;
     next.events = events;
@@ -133,7 +136,9 @@ int em_cinematic_playback_start(EmCinematicPlayback *playback, const EmCinematic
     next.cursor[0] = next.cursor[1] = next.cursor[2] = 0;
     next.state[0] = next.state[1] = next.state[2] = 0;
     next.cursor[1] = c80;
+    next.cursor[2] = c84;
     if (c80 && !event_word(&next, c80)) return 0;
+    if (c84 && !event_word(&next, c84)) return 0;
     *playback = next;
     return 1;
 }
@@ -264,6 +269,10 @@ int em_cinematic_playback_events(EmCinematicPlayback *playback, EmCinematicPlayb
     if (playback->scene == EM_CINEMATIC_SCENE_OPENING) {
         if (em_ee_c_eq(playback->time, 1.0f) &&
             !call(playback, emit, context, EM_CINEMATIC_CAMERA_RUMBLE, 6, 0, 0)) return -1;
+    } else if (playback->scene == EM_CINEMATIC_SCENE_CABLE) {
+        /* 0022EEF0 case 26 (decomp func_0022EEF0.c). */
+        if (em_ee_c_eq(playback->time, 2670.0f) &&
+            !call(playback, emit, context, EM_CINEMATIC_CAMERA_SCENE26_CUE, 0, 0, 0)) return -1;
     } else if (!plain_scene(playback->scene)) {
         return -1;
     }

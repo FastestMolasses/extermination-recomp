@@ -114,8 +114,22 @@ EmScriptImage *em_area11_script_host_door_program(void);
 #define EM_AREA11_OPENING_IMAGE_PATH "assets/scene_snow/opening.emsc"
 #define EM_AREA11_OPENING_IMAGE_BASE 0x00828F30u
 #define EM_AREA11_OPENING_IMAGE_END  0x008292C0u
-/* Bytes [address, address + size) of the opening's image (the placement
- * entries the 001BB0E0 records' +0x20 name), or NULL. */
+/* The cable ride's scene (AREA11 entered from AREA17, entry 3): 0x828BE0..
+ * 0x828F30 of the user's AREA11 overlay, the op14 placement list 0x828BE0
+ * and the script 0x828C70 that the flag-0x30 manager 00823CE0 starts when
+ * D_00810788 is set, exported by tools/export_area11_opening.py. */
+#define EM_AREA11_CABLE_IMAGE_PATH "assets/scene_snow/cable_scene.emsc"
+#define EM_AREA11_CABLE_IMAGE_BASE 0x00828BE0u
+#define EM_AREA11_CABLE_IMAGE_ENTRY 0x00828C70u
+#define EM_AREA11_CABLE_IMAGE_END  0x00828F30u
+/* Its camera timeline (0022EC30 on bank 0x97's clip 0, scene 0x1A) and the
+ * event window of scene 0x1A's tables, tools/export_cable_scene.py. */
+#define EM_AREA11_CABLE_CAMERA_PATH "assets/scene_snow/cable_scene/camera.emcc"
+#define EM_AREA11_CABLE_EVENTS_PATH "assets/scene_snow/cable_scene/events.emfx"
+#define EM_AREA11_CABLE_EVENTS_BASE 0x0026AB98u
+#define EM_AREA11_CABLE_EVENTS_WORDS 134u
+/* Bytes [address, address + size) of the opening's or the cable scene's
+ * image (the placement entries the 001BB0E0 records' +0x20 name), or NULL. */
 const uint8_t *em_area11_script_host_opening_bytes(uint32_t address, uint32_t size);
 
 /* The director 008253F0's three quads 0x82ABE0 / 0x82AC20 / 0x82AC60 from

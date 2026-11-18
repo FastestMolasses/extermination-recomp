@@ -95,10 +95,11 @@ static struct {
     /* trigger.empg: the quad 0x82AB80 (four x, y, z, w records) */
     float polygon[4][4];
     int polygon_loaded;
-    /* Roger and his equipment (pair 0), the opening's two actors (pair 1);
-     * `cur` is the pair whose record the running call works on (every
-     * worker below reads it). */
-    Pair pair[2];
+    /* Roger and his equipment (pair 0), the opening's two actors (pair 1),
+     * the cable ride's scene's two actors (pairs 2 and 3: a body each, no
+     * equipment); `cur` is the pair whose record the running call works on
+     * (every worker below reads it). */
+    Pair pair[4];
     Pair *cur;
     EmActorPool *pool;
     EmSceneState *scene;
@@ -716,8 +717,8 @@ static int w_001F0120(void *ctx, uint32_t owner14, int32_t key)
 }
 
 /* 001DA6A0(actor) (001BA580, every call while +0x56 != 0; Roger's kind
- * +0x96 = 0x29): em_shadow_live's translation over his record and its 21
- * node records (the +0x110 slots), drawn after the walk's owner units
+ * +0x96 = 0x29; the cable scene's actors): em_shadow_live's translation
+ * over the record and its +0x0C node records (the +0x110 slots), drawn after the walk's owner units
  * (docs/SHADOW_ORIGINAL.md "Roger"). */
 static int w_001DA6A0(void *ctx, EmRogerActorRecord *actor)
 {
@@ -726,10 +727,14 @@ static int w_001DA6A0(void *ctx, EmRogerActorRecord *actor)
     if (actor != &o->typed) return report("001DA6A0 on a record other than the body's");
     typed_store(o);
     const uint8_t *r = o->rec.bytes;
+    /* Its node records: the record's +0x0C (21 for Roger, 20 for the cable
+     * scene's two actors; em_shadow_live admits 19..21 for the NPC kinds). */
+    const unsigned count = r[0x0C];
+    if (count == 0 || count > ROGER_NODES) return report("001DA6A0: a +0x0C node count outside 1..21");
     const uint8_t *nodes[ROGER_NODES];
-    for (unsigned i = 0; i < ROGER_NODES; ++i)
+    for (unsigned i = 0; i < count; ++i)
         if (!(nodes[i] = slot_bytes(rd32(r + 0x110 + 4 * i)))) return report("001DA6A0: a +0x110 word outside the slot arena");
-    return em_shadow_live_actor_001DA6A0(o->address, r, RECORD, nodes, ROGER_NODES) < 0
+    return em_shadow_live_actor_001DA6A0(o->address, r, RECORD, nodes, count) < 0
                ? report("001DA6A0 faulted (em_shadow_live)")
                : 0;
 }
@@ -1122,7 +1127,7 @@ static uint8_t *collision_record_bytes(void *context, uint32_t address, uint32_t
  * 001F0120 spawned for either reads its owner through this view). */
 const uint8_t *em_area11_roger_record_bytes(uint32_t address, uint32_t size)
 {
-    for (unsigned i = 0; i < 2; ++i) {
+    for (unsigned i = 0; i < sizeof R.pair / sizeof R.pair[0]; ++i) {
         Owner *o = &R.pair[i].body;
         if (!o->actor || o->freed || o->actor->generation != o->generation || address < o->address ||
             size > RECORD || address - o->address > RECORD - size)
@@ -1555,7 +1560,8 @@ static int slg_method_4C(void *ctx, const EmSlgScriptActor *a)
     (void)a;
     OpeningCall *c = ctx;
     if (c->o != &c->pair->body) return report("001BB0E0's +0x4C on a record other than the opening body");
-    if (c->o->rec.bytes[0x0C] != ROGER_NODES) return report("the opening body's +0x0C is not 21");
+    if (c->pair == &R.pair[1] && c->o->rec.bytes[0x0C] != ROGER_NODES)
+        return report("the opening body's +0x0C is not 21");   /* the cable scene's: owner_draw checks the model's count */
     return owner_draw(c->o);
 }
 
@@ -1565,12 +1571,24 @@ int em_area11_roger_opening_tick(EmActor *actor, EmActorPool *pool, EmSceneState
     if (!actor || !pool || !scene || !entry || !controller || actor->callback != EM_AREA11_ROGER_OPENING_CALLBACK)
         return -1;
     if (ready(pool, scene) < 0) return -1;
-    R.cur = &R.pair[1];
+    /* The entry's list: the opening's 0x828F30 (pair 1), or the cable
+     * scene's 0x828BE0 (its entries 0 and 1: pairs 2 and 3). */
+    if (entry_address >= EM_AREA11_CABLE_IMAGE_BASE && entry_address < EM_AREA11_CABLE_IMAGE_ENTRY) {
+        uint32_t index = (entry_address - EM_AREA11_CABLE_IMAGE_BASE) / EM_SDF_ENTRY_SIZE;
+        if (index > 1 || (entry_address - EM_AREA11_CABLE_IMAGE_BASE) % EM_SDF_ENTRY_SIZE)
+            return report("a cable-scene actor whose entry is not the list's 0 or 1");
+        R.cur = &R.pair[2 + index];
+    } else if (entry_address >= EM_AREA11_OPENING_IMAGE_BASE && entry_address < EM_AREA11_OPENING_IMAGE_END) {
+        R.cur = &R.pair[1];
+    } else {
+        return report("a script actor whose entry is in neither scene's list");
+    }
     Pair *pair = R.cur;
-    /* The entry's command (+0x0A): 0 the body, 5 the equipment node. */
+    /* The entry's command (+0x0A): 0 the body, 5 the equipment node (the
+     * opening's alone). */
     int16_t command = (int16_t)rd16(entry + 0x0A);
-    Owner *o = command == 0 ? &pair->body : command == 5 ? &pair->equip : NULL;
-    if (!o) return report("an opening actor whose entry command is neither 0 nor 5");
+    Owner *o = command == 0 ? &pair->body : command == 5 && pair == &R.pair[1] ? &pair->equip : NULL;
+    if (!o) return report("a script actor whose entry command is not 0 (or 5 in the opening)");
     int fresh = o->actor != actor || o->generation != actor->generation || o->freed;
     if (owner_for(o, actor) < 0) return -1;
     if (fresh) {
@@ -1614,7 +1632,7 @@ int em_area11_roger_001AF800(EmActor *actor)
 {
     Owner *o = NULL;
     Pair *pair = NULL;
-    for (unsigned i = 0; i < 2 && !o; ++i) {
+    for (unsigned i = 0; i < sizeof R.pair / sizeof R.pair[0] && !o; ++i) {
         pair = &R.pair[i];
         o = actor == pair->body.actor ? &pair->body : actor == pair->equip.actor ? &pair->equip : NULL;
     }

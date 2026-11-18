@@ -690,10 +690,11 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   g49 .. g58, the g17 chain extended to g58 and a chain `g11` from card g49.
   Fixed: the AREA11 load from AREA17 (the costume-2 catalog,
   tools/export_area11_player_variants.py), the breath 001E7050 in AREA11,
-  the AREA11 loop 0x44E. Open, in order: the cable ride's scene 0x828C70
-  (g48 row 19885: its script image, the two bank-0x97 001BB0E0 actors). These
-  are second-half state carried into a first-half area (D_00810788 set by
-  AREA17's [38], the harness costume), as the takes after g49 will be.
+  the AREA11 loop 0x44E; the cable ride's scene 0x828C70 (lane
+  PORT-CABLESCENE: g48 on the row to row 26791, its draw not checked against
+  a capture). These are second-half state carried into a first-half area
+  (D_00810788 set by AREA17's [38], the harness costume), as the takes after
+  g49 will be.
 - The security gun's return visit (lane PORT-GUNREVISIT, SECURITY_GUN.md 5.1):
   lifecycles 4 / 1 are bound live (src/game/em_area11_gun_live.c over the
   gun's storage; its callees 0019AA80 / 0019A570 / 0019B6C0 / 001CD520 /
