@@ -233,7 +233,7 @@ static int mid_area(unsigned area, unsigned sub)
     /* AREA00 sub 2 (chunk04.n2, another level than subs 0 / 1; tools/
      * export_area00s2_assets.py, docs/AREA14_PORT.md) keeps its folder
      * assets/area00/sub2 in the later areas' layout. */
-    return (area == 0u && sub == 2u) || ((area == 0x16u || area == 6u || area == 0x0Du || area == 0x0Eu) && sub == 0) ||
+    return (area == 0u && sub == 2u) || ((area == 0x16u || area == 6u || area == 0x0Du || area == 0x0Eu || area == 0x11u) && sub == 0) ||
            ((area == 0x0Fu || area == 0x13u) && sub <= 1) || (area == 3u && sub <= 2) || (area == 4u && sub == 1) ||
            ((area == 8u || area == 7u) && (sub == 0 || sub == 2 || sub == 3));
 }
@@ -2894,7 +2894,8 @@ static int arrival_scene(void)
            strcmp(g.scene_dir, "assets/area07/sub2") == 0 ||
            strcmp(g.scene_dir, "assets/area07/sub3") == 0 ||
            strcmp(g.scene_dir, "assets/area00/sub2") == 0 ||
-           strcmp(g.scene_dir, "assets/area14/sub0") == 0;
+           strcmp(g.scene_dir, "assets/area14/sub0") == 0 ||
+           strcmp(g.scene_dir, "assets/area17/sub0") == 0;
 }
 
 /* A scene with the original's world: its collision world, live camera,

@@ -95,6 +95,9 @@ A02C_ROUTE = 'levels-recordings-20261102-1/s87/route_a02c'
 # Constructed starts (docs/EIGHTEENTH_LEVEL_ROUTE.md "Constructed starts"): the k01 beats run on
 # from the original's LOAD of the constructed card k01; the cards below are their source states.
 K01_ROUTE = 'levels-recordings-20261102-1/s87/route_k01'
+# AREA17 from Claude's guided run (lane PORT-LIVE2): the kept takes g45 .. g48 as a route set
+# (tools/capture_from_take.py; each beat's end is its take's end.p2s, its rows and pad the take's).
+G17_ROUTE = 'guided-20261117/s87/route_g17'
 # beat: (start card, route recording, beat folder). A group's first beat
 # starts from the group's arrival card; a01u_s1 starts where a01u_00 does.
 BEATS = {
@@ -265,6 +268,9 @@ BEATS = {
     'k01_03': ('k01_03', K01_ROUTE, 'k01_03_item19'),
     'k01_04': ('k01_04', K01_ROUTE, 'k01_04_face'),
     'k01_05': ('k01_05', K01_ROUTE, 'k01_05_plateau'),
+    'g46': ('g46', G17_ROUTE, 'g46_area17_ramp'),
+    'g47': ('g47', G17_ROUTE, 'g47_area17_roger'),
+    'g48': ('g48', G17_ROUTE, 'g48_area17_cable'),
 }
 GROUPS = {'a22': ('a22_',), 'a01u': ('a01u_',), 'a06': ('a06_',), 'a06b': ('a06b_',), 'a01v': ('a01v_',),
           'a22b': ('a22b_',), 'a04b': ('a04b_0',), 'boss': ('a04b_s',), 'bossg': ('a04b_g',),
@@ -382,7 +388,7 @@ def raw_rows(beats, traces, lead):
         at = None
         actions = RAW_ACTIONS + RAW_BEAT.get(beat, ())
         for r in t['rows']:
-            if r['m1F0'] in actions:
+            if r.get('m1F0') in actions:     # a guided take's rows carry it at row 0 only
                 at = r['f'] if at is None else at
                 end = r['f']
             elif at is not None:

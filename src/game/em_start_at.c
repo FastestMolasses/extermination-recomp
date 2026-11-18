@@ -190,6 +190,11 @@ static const struct {
     {"k01_03", 0x0E},
     {"k01_04", 0x0E},
     {"k01_05", 0x0E},
+    /* AREA17 from the guided run's takes (lane PORT-LIVE2, tools/capture_from_take.py): the
+     * source state of g46 (g45's end: entry 0), g47 and g48 */
+    {"g46", 0x11},
+    {"g47", 0x11},
+    {"g48", 0x11},
 };
 
 static struct {
@@ -595,7 +600,7 @@ int em_start_at_check(void)
                              "a22_02, a01u, a01u_01, a01u_02, a01u_s0, area06, a06_01 .. a06_05, a06b, "
                              "a06b_01, a01v, a01v_01, a01v_02, a22b, a22b_01, a04_00 .. a04_05, a04b_00 .. "
                              "a04b_04, boss, area13, a13_01 .. a13_05, a13b_01 .. a13b_05, "
-                             "a13c_00 .. a13c_06, a13d_00 .. a13d_07, k01_01 .. k01_05, area14k)", NULL);
+                             "a13c_00 .. a13c_06, a13d_00 .. a13d_07, k01_01 .. k01_05, area14k, g46 .. g48)", NULL);
     }
     const char *ng = getenv("EM_NEW_GAME");
     if (ng && ng[0] && strcmp(ng, "0") != 0)

@@ -314,20 +314,23 @@ int em_snow_runtime_tick_outdoor(EmWeather *weather, uint32_t self, uint32_t fla
     *d8106BF = frame.intensity;
     if (frame.draw == 0) return 0;
     if (frame.draw != 2) {
-        /* 001E67C0's branch. AREA15 sub 1's weather is AREA11's emission (flags
-         * & 2 clear) with D_002551F0 = 0xA, its case 0xF01; the camera is
-         * D_008105D0. The other keys of its switch (AREA21) and the reversed
-         * row (flags & 2) are not this translation's. AREA13 never takes it. */
-        if (area != 0x0F || sub != 1 || (flags & 2u))
-            return refuse("001E67C0 outside AREA11 and AREA15 sub 1", 0x001E67C0u);
+        /* 001E67C0's branch: AREA11's emission (flags & 2 clear) with the
+         * count D_002551F0 its area switch sets: 0xA for key 0xF01 (AREA15
+         * sub 1), 0x14 for every key the switch does not list (AREA17's
+         * 0x1100 among them); the camera is D_008105D0. Key 0x1500 (AREA21,
+         * its camera cases) and the reversed row (flags & 2) are not this
+         * translation's. AREA13 never takes it. */
+        if (((area << 8) + sub) == 0x1500u || (flags & 2u))
+            return refuse("001E67C0 in AREA21 or with the reversed row", 0x001E67C0u);
         static EmSnowConfig config15;
         static int config15_loaded;
         if (!config15_loaded) {
             if (!em_snow_config_load(&config15, "assets/scene_snow/snow.emsn"))
                 return refuse("no assets/scene_snow/snow.emsn", 0x001E67C0u);
-            memcpy(&config15.descriptor[8][0], (const uint32_t[]){0xAu}, 4);  /* D_002551F0 */
             config15_loaded = 1;
         }
+        const uint32_t count = ((area << 8) + sub) == 0xF01u ? 0xAu : 0x14u;      /* D_002551F0 */
+        memcpy(&config15.descriptor[8][0], &count, 4);
         const uint8_t *eye_bytes = em_camera_live_bytes(0x008105D0u, 12);
         if (!eye_bytes) return refuse("D_008105D0 is not mapped", 0x008105D0u);
         float eye[3];

@@ -61,7 +61,12 @@ FORK_ROUTES = {'06': ('s87/route_a06', 's87/route_a06b'), '22': ('s87/route_a22'
                       'levels-recordings-20261018-14/s87/route_a19c', 'levels-recordings-20261018-17/s87/route_a19c'),
                '19s1': ('levels-recordings-20261018-17/s87/route_a19c', 'levels-recordings-20261018-19/s87/route_a19d'),
                '00s2': ('levels-recordings-20261102-1/s87/route_k01',),
-               '14': ('levels-recordings-20261102-1/s87/route_k01',)}
+               '14': ('levels-recordings-20261102-1/s87/route_k01',),
+               '17': ('guided-20261117/s87/route_g17',)}     # tools/capture_from_take.py
+# Sets that hold a capture taken before the area's load with its area bytes already set (the
+# guided g45 end: AREA14's overlay and textures still resident): only a capture with the area's
+# own overlay resident (MWo3 id at 0x823504) is a recording of the area.
+RESIDENT_OVERLAY = {'17': 0x0E}
 MODEL_FILES = {0x3D: 'chunk28/f02_id3d.bin', 0x3E: 'chunk28/f03_id3e.bin', 0x3F: 'chunk28/f04_id3f.bin', 0x40: 'chunk28/f05_id40.bin'}
 
 
@@ -92,6 +97,8 @@ def export(profile, sub, iso=None):
     for route in FORK_ROUTES[profile]:
         for folder in sorted(refs.capture(route).glob('*/eeMemory.bin')):
             ram = folder.read_bytes()
+            if profile in RESIDENT_OVERLAY and ram[0x823504] != RESIDENT_OVERLAY[profile]:
+                continue
             if (ram[0x810700], ram[0x810701]) == (C.AREA, sub) and (ram[0x810707], ram[0x810C60]) in PAIRS:
                 recorded.setdefault((ram[0x810707], ram[0x810C60]), []).append(folder.parent / 'gs.bin')
     for (mode, costume), kind in PAIRS.items():
