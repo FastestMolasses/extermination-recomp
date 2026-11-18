@@ -18,6 +18,7 @@ BRIDGE = r'''
 #include "game/em_aim_fire_runtime.c"
 static EmActorPool pool;
 float *em_area11_boxes_owner_world(EmActor *a) { (void)a;return NULL; }
+int em_scene_bindings_actor_snapshot(uint32_t a,uint32_t n,void *o) { (void)a;(void)n;(void)o;return -1; }
 uint32_t em_actor_pool_address(const EmActorPool *p,const EmActor *a) {
     return a ? EM_ACTOR_POOL_BASE+(uint32_t)(a-p->records)*EM_ACTOR_RECORD_SIZE : 0;
 }
