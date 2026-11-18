@@ -496,7 +496,8 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
 
 - Every overlay owner of the six areas (66 behaviours, their op09 callbacks
   and helpers) but AREA14's (section 6's twins and em_area14_overlay,
-  AREA14_PORT.md) and AREA21's two twins is untranslated; the area lanes
+  AREA14_PORT.md) and AREA21's (the two twins and lane PORT-A21's
+  modules, AREA21_PORT.md; all but [52] 0x8243B0) is untranslated; the area lanes
   translate them against captures. The twins are bound only in the
   shared composition's dispatch; none of these areas runs there yet.
 - Every boot behaviour of the six areas is now in a census ledger or
@@ -518,6 +519,21 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   the beats k01_02 .. k01_05 pass from their cards (AREA14_PORT.md). The capture
   kinds of AREA18 and AREA17 wait for their recordings (the next guided
   run); AREA16, AREA20 and AREA21 have no recording planned yet.
+- AREA21 (lane PORT-A21, docs/AREA21_PORT.md): every overlay owner the
+  placements, groups, scripts and spawns name but [52] 0x8243B0 (no decomp
+  C) is translated from the decomp C into em_area21_overlay (the Gatling
+  [62] 0x8297C0, the cannon [61] 0x828700 and its projectile 0x828F30),
+  em_area21_owners (counters, scripts, the ending request [53]),
+  em_area21_doors (the doors, [54] / [55], the rounds 0x825C70, the
+  effects) and em_area21_groups (the group members); `make
+  test-area21-overlay-reference` runs the original instructions of each
+  (AREA21.BIN over capture a03b_03_item2a, designed states: no AREA21
+  recording exists) with every reachable word. They are bound in
+  dispatch_second_half and em_scene_bindings for area 0x15, but AREA21
+  has not loaded live: its SUBS row, capture kinds and 001A2370 /
+  0019C6F0 rules (section 2) wait for a recording. Section 4's table
+  still shows these rows as missing (the generator does not see overlay
+  translations).
 - No other of these areas has loaded live: their module pack rows, state and
   script windows are checked only by the oracle and the static export.
 

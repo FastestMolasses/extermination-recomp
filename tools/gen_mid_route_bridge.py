@@ -51,6 +51,11 @@ SOURCES = (('src/game/em_area22_port.h', 'EmArea22PortHooks', 'm22'),
            ('src/game/em_area21_creature_c.h', 'EmArea21CreatureCHooks', 'a21cc'),
            ('src/game/em_area00s2_creature.h', 'EmArea00s2CreatureHooks', 'a0s2'),
            ('src/game/em_area14_overlay.h', 'EmArea14OverlayHooks', 'a14o'),
+           # AREA21's own overlay owners (lane PORT-A21, docs/AREA21_PORT.md)
+           ('src/game/em_area21_overlay.h', 'EmArea21OverlayHooks', 'b21g'),
+           ('src/game/em_area21_owners.h', 'EmArea21OwnersHooks', 'b21w'),
+           ('src/game/em_area21_doors.h', 'EmArea21DoorsHooks', 'b21d'),
+           ('src/game/em_area21_groups.h', 'EmArea21GroupsHooks', 'b21p'),
            ('src/game/em_area15_route.h', 'EmArea15RouteHooks', 'r15'),
            ('src/game/em_area03_route.h', 'EmArea03RouteHooks', 'r03'),
            ('src/game/em_area03_arrival.h', 'EmArea03ArrivalHooks', 'a03'),
@@ -59,7 +64,10 @@ SOURCES = (('src/game/em_area22_port.h', 'EmArea22PortHooks', 'm22'),
            ('src/game/em_area07_probe.h', 'EmArea07ProbeHooks', 'p07'))
 # Headers of SOURCES the runtime (em_area01_runtime.c) does not include
 # itself: the generated file includes them before their adapters.
-OWN_INCLUDES = ('src/game/em_area00s2_creature.h', 'src/game/em_area14_overlay.h')
+OWN_INCLUDES = ('src/game/em_area00s2_creature.h', 'src/game/em_area14_overlay.h',
+                # lane PORT-A21
+                'src/game/em_area21_overlay.h', 'src/game/em_area21_owners.h', 'src/game/em_area21_doors.h',
+                'src/game/em_area21_groups.h')
 HOOK = re.compile(r'int \(\*w_([0-9A-F]{8}|callback)\)\(void \*ctx(?:, )?([^)]*)\);')
 
 

@@ -22,6 +22,105 @@ static int a14_owner(uint32_t fn)
            fn == 0x00823E30u || fn == 0x00825C40u || fn == 0x00825FD0u;
 }
 
+/* AREA21's own overlay owners (lane PORT-A21, docs/AREA21_PORT.md): the
+ * placements', groups' and spawned nodes' behaviours and the scripts' op09
+ * callbacks, each translated from the decomp C and checked against the
+ * original instructions (make test-area21-overlay-reference). Frames from
+ * each function's first instruction; `sp` the entry stack pointer for the
+ * two that keep frame locals their callees read (0x8297C0, 0x823580).
+ * 0x824CF0 (translated, unreached in the original) is not bound. */
+static int dispatch_area21(EmArea01Runtime *r, EmArea01Call *c, int *out, int *x, uint32_t *where, int32_t *code)
+{
+    static const struct { uint32_t fn, frame; unsigned na; char module; } owners[] = {
+        /* em_area21_overlay: the Gatling, the cannon, its projectile */
+        {0x008297C0u, 0x50u, 1, 'g'}, {0x00828700u, 0x40u, 1, 'g'}, {0x00828F30u, 0x30u, 1, 'g'},
+        /* em_area21_owners: counters, scripts, the ending request; op09 callbacks */
+        {0x008261A0u, 0x20u, 1, 'w'}, {0x008262D0u, 0x10u, 1, 'w'}, {0x008266F0u, 0x20u, 1, 'w'},
+        {0x00827040u, 0x30u, 1, 'w'}, {0x00827CD0u, 0x20u, 1, 'w'}, {0x008269A0u, 0x10u, 0, 'w'},
+        {0x008269F0u, 0x40u, 3, 'w'}, {0x00827250u, 0x10u, 0, 'w'},
+        /* em_area21_doors: doors, the rounds and their code pointer, the effects */
+        {0x00826BB0u, 0x30u, 1, 'd'}, {0x00826E60u, 0x30u, 1, 'd'}, {0x0082A1D0u, 0x30u, 1, 'd'},
+        {0x00825C70u, 0x40u, 1, 'd'}, {0x00825C60u, 0x00u, 1, 'd'}, {0x008272C0u, 0x20u, 1, 'd'},
+        {0x008273C0u, 0x20u, 1, 'd'}, {0x00827640u, 0x20u, 1, 'd'}, {0x00827880u, 0x20u, 1, 'd'},
+        {0x00827A30u, 0x30u, 1, 'd'}, {0x00827E70u, 0x30u, 1, 'd'}, {0x00828350u, 0x20u, 1, 'd'},
+        /* em_area21_groups: the members of groups 0x82B500 / 0x82BA70 */
+        {0x00823580u, 0x40u, 1, 'p'}, {0x008237B0u, 0x20u, 1, 'p'}, {0x00823860u, 0x10u, 1, 'p'},
+        {0x008238E0u, 0x20u, 1, 'p'}, {0x00823AA0u, 0x00u, 1, 'p'}};
+    const uint32_t fn = c->function;
+    const unsigned n = sizeof owners / sizeof owners[0];
+    unsigned k = 0;
+    while (k < n && owners[k].fn != fn) ++k;
+    if (k == n) return 0;
+    const uint32_t sp = c->sp;
+    const uint32_t a0 = (uint32_t)c->a[0];
+    if (area_frame(r, c, owners[k].na, owners[k].frame, out) < 0) return -1;
+    int32_t result = 0;
+    int has_result = 0;
+    if (owners[k].module == 'g') {
+        EmArea21OverlayHooks h;
+        b21g_hooks(r, &h);
+        EmArea21OverlayFault f = {0, 0};
+        *x = fn == 0x008297C0u ? em_area21_overlay_008297C0(&h, a0, sp, &f)
+           : fn == 0x00828700u ? em_area21_overlay_00828700(&h, a0, &f) : em_area21_overlay_00828F30(&h, a0, &f);
+        *where = f.address;
+        *code = f.code;
+    } else if (owners[k].module == 'w') {
+        EmArea21OwnersHooks h;
+        b21w_hooks(r, &h);
+        EmArea21OwnersFault f = {0, 0};
+        switch (fn) {
+        case 0x008261A0u: *x = em_area21_owners_008261A0(&h, a0, &f); break;
+        case 0x008262D0u: *x = em_area21_owners_008262D0(&h, a0, &f); break;
+        case 0x008266F0u: *x = em_area21_owners_008266F0(&h, a0, &f); break;
+        case 0x00827040u: *x = em_area21_owners_00827040(&h, a0, &f); break;
+        case 0x00827CD0u: *x = em_area21_owners_00827CD0(&h, a0, &f); break;
+        case 0x008269A0u: *x = em_area21_owners_008269A0(&h, &result, &f); has_result = 1; break;
+        case 0x00827250u: *x = em_area21_owners_00827250(&h, &result, &f); has_result = 1; break;
+        default:
+            *x = em_area21_owners_008269F0(&h, a0, (uint32_t)c->a[1], (uint32_t)c->a[2], &result, &f);
+            has_result = 1;
+            break;
+        }
+        *where = f.address;
+        *code = f.code;
+    } else if (owners[k].module == 'd') {
+        EmArea21DoorsHooks h;
+        b21d_hooks(r, &h);
+        EmArea21DoorsFault f = {0, 0};
+        switch (fn) {
+        case 0x00826BB0u: *x = em_area21_doors_00826BB0(&h, a0, &f); break;
+        case 0x00826E60u: *x = em_area21_doors_00826E60(&h, a0, &f); break;
+        case 0x0082A1D0u: *x = em_area21_doors_0082A1D0(&h, a0, &f); break;
+        case 0x00825C70u: *x = em_area21_doors_00825C70(&h, a0, &f); break;
+        case 0x00825C60u: *x = em_area21_doors_00825C60(&h, a0, &f); break;
+        case 0x008272C0u: *x = em_area21_doors_008272C0(&h, a0, &f); break;
+        case 0x008273C0u: *x = em_area21_doors_008273C0(&h, a0, &f); break;
+        case 0x00827640u: *x = em_area21_doors_00827640(&h, a0, &f); break;
+        case 0x00827880u: *x = em_area21_doors_00827880(&h, a0, &f); break;
+        case 0x00827A30u: *x = em_area21_doors_00827A30(&h, a0, &f); break;
+        case 0x00827E70u: *x = em_area21_doors_00827E70(&h, a0, &f); break;
+        default: *x = em_area21_doors_00828350(&h, a0, &f); break;
+        }
+        *where = f.address;
+        *code = f.code;
+    } else {
+        EmArea21GroupsHooks h;
+        b21p_hooks(r, &h);
+        EmArea21GroupsFault f = {0, 0};
+        switch (fn) {
+        case 0x00823580u: *x = em_area21_groups_00823580(&h, a0, sp, &f); break;
+        case 0x008237B0u: *x = em_area21_groups_008237B0(&h, a0, &f); break;
+        case 0x00823860u: *x = em_area21_groups_00823860(&h, a0, &f); break;
+        case 0x008238E0u: *x = em_area21_groups_008238E0(&h, a0, &f); break;
+        default: *x = em_area21_groups_00823AA0(&h, a0, &f); break;
+        }
+        *where = f.address;
+        *code = f.code;
+    }
+    if (*x >= 0 && has_result) c->v0 = (uint64_t)(int64_t)result;
+    return 1;
+}
+
 static int dispatch_second_half(EmArea01Runtime *r, EmArea01Call *c, int *out)
 {
     const uint32_t fn = c->function;
@@ -29,6 +128,7 @@ static int dispatch_second_half(EmArea01Runtime *r, EmArea01Call *c, int *out)
     int x;
     uint32_t where;
     int32_t code;
+    int a21 = 0;   /* lane PORT-A21 */
     if (r->area == 0x0E && fn == 0x00825AA0u) {
         if (area_frame(r, c, 1, 0x20u, out) < 0) return 1;
         EmArea03RouteHooks h;
@@ -92,6 +192,8 @@ static int dispatch_second_half(EmArea01Runtime *r, EmArea01Call *c, int *out)
         if (x >= 0 && (fn == 0x008238C0u || fn == 0x00825C40u)) c->v0 = (uint64_t)(int64_t)result;
         where = f.address;
         code = f.code;
+    } else if (r->area == 0x15 && (a21 = dispatch_area21(r, c, out, &x, &where, &code)) != 0) {
+        if (a21 < 0) return 1;   /* area_frame refused: *out holds its fault */
     } else if (r->area == 0x15 && (fn == 0x00823A10u || fn == 0x00823AB0u)) {
         if (area_frame(r, c, 1, 0x10u, out) < 0) return 1;
         EmLevel17BootHooks h;
