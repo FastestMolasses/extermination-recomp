@@ -6,9 +6,8 @@ arrival from AREA14, Roger's fight (00133E30, `em_area17_creature`, lane
 BOOT2), the item exchange (item 0x28 for 0x2B) and the cable ride to AREA11
 entry 3. This lane translated every overlay function of AREA17 but the init
 (em_area01_state's, `make test-second-half-state-reference`) and the entry
-pad, each proven by an original-instruction oracle. Nothing here has run
-live: AREA17 has no asset export, start card or live binding yet (section
-"Not done").
+pad, each proven by an original-instruction oracle. Since lane PORT-LIVE2 AREA17
+loads live from a guided-run card (section "Live"); no frame is row-checked yet.
 
 Ground truth: the decomp's C under `src/overlays/AREA17/` (lane OVLC,
 decomp `docs/AREA17_OVERLAY.md`): 22 functions byte-identical and 0x825560
@@ -105,16 +104,71 @@ run with the original's.
   through a body `em_areaNN_overlay_<address>` in the area's own
   `em_areaNN_overlay*.c` (SECOND_HALF_AREAS.md section 4's AREA17 rows).
 
+## Live (lane PORT-LIVE2, 2026-11-17)
+
+Branch `live2`. AREA17 now loads live in the shared composition, from a
+start card made of Claude's guided run. Nothing past the load is
+row-exact yet: the run diverges two frames after control (below).
+
+**Capture source.** `tools/capture_from_take.py` turns kept guided takes
+(decomp `build/guided_play/`) into a route set under the decomp's
+`build/fork_refs/guided-20261117/s87/route_g17/` (ignored, disc-derived):
+per take, the end.p2s entries eeMemory.bin / Scratchpad.bin / GS.bin (what
+pcsx2_session's snapshot extracts from its own save), a hard link to
+end.p2s, snapshot.json (the take, the save's SHA-256, ee_sha256) and
+trace.json (rows and pad from take.rec / rows.tbl; a pad change read at
+tick k is an input at f = k - 2, route_capture's rule; row 0's fade and
+m1F0 from the source state's RAM). Every capture is a take's END. Set:
+g44 (AREA14, before), g45 (the area bytes 11 00 00 0E with AREA14's overlay
+and textures still resident: the request, not the load), g46 (the ramp)
+and g47 (after Roger) in AREA17, g48 (ends in AREA11 entry 3).
+
+**Exports** (`export_second_half_common`): SUBS[('area17', 0)] = g46, g47,
+previous g45. CREATURES 0x825560 with its own matrix rule (node + 0xD0,
+MATRIX_AT_NODE); FLAG_RULES `area17_flag_calls` ((0xE, 1), (0xF, 1) from
+[30] once D_00810805 >= 3 after a load that began at 0; (0xF, 0) from [34]
+at D_00810806 = 0xFF; anything else not modelled); EXPLICIT_MODELS [31]
+0x8243E0 state 2 = model 0xD. Two relaxations, both named: the drums [20],
+[21], [23] (uids 19, 20, 22) are freed before g46 and no capture holds them
+live, so their moved hulls are accepted as `orphan-unproven` (every moved
+word one the original 001A2370 writes, equal in both captures;
+ORPHANS_UNPROVEN); group 3 bank 0 is the fitted attachment's bank
+(chunk50, the attachment scope's), refused in the area binding with that
+reason. `--kind all` passes: level 602 objects + dynamic list (80
+entries), collision, cells (45 uids), roster 43, scripts 7 chains,
+messages 132 area records, world models 25, sound (2 captures). Profile
+17 (`level_asset_profiles`; 001D5370's dynamic arms 0x1000, 0x1001,
+0x1100, 0x1500 in export_level_world_textures; the player variants read
+only captures with AREA17's overlay resident); sfx scope (0x11, 0);
+export_streams adds AREA17 (D_00264DD0[0x12], its spawn music).
+
+**Runtime**: a mid area (assets/area17/sub0), a later area for the boot
+dispatch, bound by em_area01_runtime_bind_area; op14's data window
+0x826280 .. 0x828E80; shadow receivers and world textures of profile 17;
+the snow 001E67C0 takes its count from the original's area switch (0x14
+for every key it does not list, AREA17's 0x1100 included; 0xF01 0xA;
+0x1500 and the reversed row still refuse).
+
+**Start cards** g46, g47, g48 (`build_start_saves.py`, the source state of
+each take; `em_start_at.c`), beats g46 .. g48 in `mid_route_beats.py`.
+
+**Where it stands** (`python3 tools/mid_route_beats.py --single g46`):
+LOAD GAME of card g46 loads AREA17 (level, collision, cells, textures,
+streams), places the player at the load pose (223.9, 888.85, 1185.5) and
+runs about 400 frames with no fault, then stops at the fail-stop of
+00133E30's 001DA6A0 (the creature's record has 44 bones and kind 0; the
+shadow gate takes 21 bones or the NPC kinds, and no proxy is exported for
+that kind). Before that the run already differs from the recording: the
+original moves the player to (320, 220, 270) two frames after control
+(row 311, the arrival's script) and the skip to (156.5, 220, 300); the port
+leaves the player at the load pose. So the beat fails; no AREA17 frame is
+row-checked yet.
+
 ## Not done
 
-- **The live area.** AREA17 has no `SUBS` row, asset export (level,
-  collision, cells, world models, messages, sound), texture profile, start
-  card or beat. Its 001A2370 caller 0x825560 passes (self, self + 0xD0), not
-  export_area13_level's creature rule (`*(node + 0x11C) + 0x90`), so
-  `CREATURES['area17']` needs its own rule; its 0019C6F0 callers are 0x823BA0
-  (flags 0xE and 0xF set at D_00810805 == 2 and in the skip) and 0x824700
-  (flag 0xF cleared after script 0x8275E0), for `FLAG_RULES['area17']`. The
-  guided run's AREA17 takes (g45 .. g48) are the recordings to bind it from.
+- **The live area** (section "Live"): why [30]'s arrival does not place
+  the player in the port (row 311); the 44-bone creature's shadow
+  (001DA6A0: its proxy, the node capacity); then the beats g46 .. g48.
 - The muzzle node 001F5040 and the other live-only bindings AREA14 needed
   (AREA14_PORT.md "Pieces the live run needed") are not added for AREA17.
 - 0x8235E0 and 0x823860, and the group holding 0x823580 / 0x8236F0 /

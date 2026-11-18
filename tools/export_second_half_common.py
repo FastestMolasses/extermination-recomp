@@ -67,6 +67,9 @@ C = A13.C
 ROOT, DECOMP = A13.ROOT, A13.DECOMP
 SCRATCH = ROOT / 'build/second_half/assets'
 K01 = DECOMP / 'build/fork_refs/levels-recordings-20261102-1/s87/route_k01'
+# Claude's guided run as capture folders (tools/capture_from_take.py: each folder is a kept
+# take's end.p2s entries; the take's end is the next take's start)
+G17 = DECOMP / 'build/fork_refs/guided-20261117/s87/route_g17'
 
 # SHA-256 of the user's extract/OVERLAY files (hashes, not disc data)
 AREA14_SHA256 = '43f7e9bbb9fb18bf398f197689231ec1b91ff5ece7e6eb05abbbba98d86690f7'
@@ -102,7 +105,11 @@ SUBS = {
                         previous=K01 / 'k01_01_slab', dynamic=False),
     ('area16', 0): dict(paths=None, previous=None, dynamic=True),
     ('area16', 1): dict(paths=None, previous=None, dynamic=True),
-    ('area17', 0): dict(paths=None, previous=None, dynamic=True),
+    # AREA17 sub 0 (lane PORT-LIVE2): the guided takes' end states in AREA17 after its load, in
+    # route order (g46: the ramp after the skipped intro; g47: after Roger); the capture before
+    # the load is g45's end (the area bytes already 0x11 entry 0, AREA14's overlay still resident)
+    ('area17', 0): dict(paths=tuple(G17 / b for b in ('g46_area17_ramp', 'g47_area17_roger')),
+                        previous=G17 / 'g45_area14_area17', dynamic=True),
     ('area18', 0): dict(paths=None, previous=None, dynamic=False),
     ('area20', 0): dict(paths=None, previous=None, dynamic=False),
     ('area21', 0): dict(paths=None, previous=None, dynamic=True),
@@ -146,7 +153,134 @@ CREATURES = {}            # target -> the modelled 001A2370 behaviour (LV.CREATU
 # REC_B + 0x90, REC_B = *(D_00275B40 + 0xC) with D_00275B40 = node + 0x110 while
 # its behaviour runs: *(node + 0x11C) + 0x90, export_area13_level's rule.
 CREATURES['area14'] = 0x823FC0
+# AREA17's 0x825560 (func_overlay_AREA17_00825520.c, NEARMISS: the call is the C's
+# func_001A2370(self, self + 0xD0) in its state-1 arm, which the original's words make too
+# (test_area17_overlay_reference runs them)) passes the node's own +0xD0 matrix, the pickup's
+# and the drum's rule (MATRIX_AT_NODE), not export_area13_level's *(node + 0x11C) + 0x90.
+CREATURES['area17'] = 0x825560
+MATRIX_AT_NODE = {'area17': 0xD0}
 FLAG_RULES = {}           # target -> flag_calls(ram) for its 0019C6F0 callers, filled by an area lane
+
+
+def area17_flag_calls(ram):
+    """AREA17's 0019C6F0 calls in this load, from the byte-identical C:
+      * [30] 0x823BA0 (func_overlay_AREA17_00823B60.c) calls (0xE, 1), (0xF, 1) in state 2 when
+        D_00810805 is 2 (then stores 3) and in the skip state 0x19 always (then stores 4); its
+        state 0 goes to state 3 with no call when counter 0x2D is set. Nothing else stores 3 or 4
+        in D_00810805. So with D_00810805 0 in the capture before the load (the first arrival)
+        and at least 3 in the capture, this load made both calls; 0 .. 2 in the capture: none yet;
+      * [34] 0x824700 (func_overlay_AREA17_008246C0.c) calls (0xF, 0) when script 0x8275E0 ends,
+        storing D_00810806 = 0xFF: so 0xFF in the capture and not in the one before the load
+        means this load made it, after [30]'s.
+    A previous capture with D_00810805 other than 0, or D_00810806 already 0xFF, is not modelled
+    (ValueError): whether this load's [30] / [34] called again is not in the RAM."""
+    t = A13.current()
+    if ram[0x810700] != t.area or ram[0x810701] != t.sub:
+        return ()
+    before = LV.previous_word(t.name, 0x810804)
+    if before is None:
+        raise ValueError('area17: the capture before the load is missing (D_00810805 / D_00810806 there)')
+    b805, b806 = (before >> 8) & 0xFF, (before >> 16) & 0xFF
+    if b805 != 0 or b806 == 0xFF:
+        raise ValueError(f'area17: D_00810805 {b805:#x} / D_00810806 {b806:#x} before the load: not modelled')
+    calls = ()
+    if ram[0x810805] >= 3:
+        calls += ((0xE, 1), (0xF, 1))
+    if ram[0x810806] == 0xFF:
+        if not calls:
+            raise ValueError('area17: D_00810806 0xFF with no [30] calls: not modelled')
+        calls += ((0xF, 0),)
+    return calls
+
+
+FLAG_RULES['area17'] = area17_flag_calls
+
+# Orphaned hulls no capture can prove (a known gap, recorded in level.json's cells report as
+# 'orphan-unproven'): AREA17's drums [20], [21] and [23] (placements of 0x156620 with uids 19,
+# 20, 22) are freed before the first capture after the load (g46: no shot was fired, so the
+# arrival freed them) and no capture holds them live, so export_area13_level's rule (equal to a
+# derivation in another capture) has nothing to compare with. The export writes the disc bytes
+# either way (the runtime's own owners re-transform hulls); what is relaxed is only the check
+# that the captures' moved bytes are explained. Accepted only when every differing word is one
+# the ORIGINAL 001A2370 writes for that hull (export_area02_level.written_words, the EE
+# interpreter) and the bytes are equal in every capture.
+# Model owners whose +0x44 is not 001C6120(table, +0x0D) (export_area13_tables.EXPLICIT_MODELS,
+# {behaviour: (state, model id)}): AREA17's [31] 0x8243E0 (func_overlay_AREA17_008243A0.c,
+# byte-identical) sets func_001CA6E0(self, func_001C6120(D_0028A59C, 0xD)) on its way to state
+# 2 and leaves +0x0D as it was.
+EXPLICIT_MODELS = {'area17': {0x8243E0: (2, 0xD)}}
+ORPHANS_UNPROVEN = {('area17', 0): {19: 0x156620, 20: 0x156620, 22: 0x156620}}
+UNPROVEN_REPORT = {}
+
+
+def _verify_directory_with_gap(original, key):
+    def verify(elf, disc, caps):
+        rows, problems, calls = original(elf, disc, caps)
+        import export_area02_level as E02
+        gap = ORPHANS_UNPROVEN[key]
+        _count, hulls, _size = LV.L.cell_directory(disc, 0)
+        keep, seen = [], {}
+        for line in problems:
+            hit = next((u for u in gap if f': hull {u} differs, no live node owns it' in line), None)
+            if hit is None:
+                keep.append(line)
+                continue
+            cap = next(c for c in caps if line.startswith(c.name + ':'))
+            table = C.u32(cap.spad, LV.L.SPAD_CELLS)
+            st, en, _f = hulls[hit]
+            data = cap.ram[table + st:table + en]
+            moved = {k for k in range(0, en - st, 4) if data[k:k + 4] != disc[st + k:st + k + 4]}
+            written = E02.written_words(elf, disc, cap, hit, hulls)
+            if not moved <= written:
+                keep.append(f'{cap.name}: hull {hit} orphan words outside 001A2370\'s writes')
+            elif seen.setdefault(hit, data) != data:
+                keep.append(f'{cap.name}: hull {hit} orphan bytes differ between the captures')
+            else:
+                UNPROVEN_REPORT.setdefault(key, {})[hit] = dict(
+                    owner=hex(gap[hit]), words=len(moved), captures=sorted({*UNPROVEN_REPORT.get(key, {}).get(
+                        hit, {}).get('captures', ()), cap.name}))
+                row = next(r for r in rows if r['capture'] == cap.name)
+                row['proofs'][hit] = 'orphan-unproven (export_second_half_common.ORPHANS_UNPROVEN)'
+        return rows, keep, calls
+    return verify
+
+
+# Group 3 bank 0 is the fitted attachment's bank (export_sfx_registry ATTACHMENT_SCOPES: 001FEF70's
+# modules 0x32..0x35 from extract/chunk50..53/f00_id86.bin, the scope em_sfx_set_attachment
+# selects). A capture with an attachment fitted (the guided run's AREA17 takes: its header, at
+# D_0028A740 + 0x30, is chunk50's container byte for byte) binds it there; the area's own binding
+# leaves the slot to that scope, as the areas whose captures show no attachment do (refused).
+ATTACHMENTS = tuple(f'extract/chunk{50 + i}/f00_id86.bin' for i in range(4))
+_ATTACHED = {}
+
+
+def _attachment_aware(bindings_from_captures, refusal_reasons):
+    def bind(caps, containers):
+        extra = {}
+        for name in ATTACHMENTS:
+            data = (DECOMP / name).read_bytes()
+            parsed = SX.X.A.parse_container(data)
+            if parsed is not None:
+                extra[name] = (data, parsed)
+        bound, refused, report = bindings_from_captures(caps, {**containers, **extra})
+        for key, value in list(bound.items()):
+            if value[0][0] in extra:
+                if key != (3, 0):
+                    raise SystemExit(f'slot {key}: an attachment bank outside group 3 bank 0')
+                _ATTACHED[key] = value[0][0]
+                refused[key] = value[1]
+                del bound[key]
+        return bound, refused, report
+
+    def reasons(caps, refused):
+        plain = {k: v for k, v in refused.items() if k not in _ATTACHED}
+        out = refusal_reasons(caps, plain)
+        for key in refused:
+            if key in _ATTACHED:
+                out[key] = (f'group 3 bank 0 = handle {refused[key]}, the fitted attachment\'s bank '
+                            f'({_ATTACHED[key]}; the attachment scope holds it, export_sfx_registry ATTACHMENT_SCOPES)')
+        return out
+    return bind, reasons
 
 
 def subs_of(target):
@@ -216,7 +350,7 @@ def install(target, sub, tree=None, need_captures=True):
     A13.capture_paths = lambda: list(v['paths'] or ())
     A13.configure(t)
     LV.PREVIOUS[target] = v['previous']
-    LV.CREATURES[target] = CREATURES.get(target)
+    LV.CREATURES[target] = None if target in MATRIX_AT_NODE else CREATURES.get(target)
     LV.FLAG_OWNERS[target] = None
     LV.flag_calls = FLAG_RULES.get(target, no_flag_calls)
     # the colour windows D_00251BE0 / D_00251C20 hold the last class-6 draw's
@@ -228,7 +362,18 @@ def install(target, sub, tree=None, need_captures=True):
     TB.WRITERS[target] = ()
     TB.DOOR_ROW[target] = DOOR_ROW[target]
     TB.DOOR_BEHAVIOURS = DOORS[target]
-    TB.EXPLICIT_MODELS = {}
+    TB.EXPLICIT_MODELS = dict(EXPLICIT_MODELS.get(target, {}))
     TB.PLACEMENTS[target], TB.GROUPS[target], TB.SPAWN_SUB0[target] = pins(target, sub)
     LV.install(target)
+    if not getattr(SX.S.bindings_from_captures, 'attachments', False):
+        SX.S.bindings_from_captures, SX.E04.refusal_reasons = _attachment_aware(SX.S.bindings_from_captures,
+                                                                                SX.E04.refusal_reasons)
+        SX.S.bindings_from_captures.attachments = True
+    if (target, sub) in ORPHANS_UNPROVEN and not getattr(LV.verify_directory, 'gap', None):
+        LV.verify_directory = _verify_directory_with_gap(LV.verify_directory, (target, sub))
+        LV.verify_directory.gap = (target, sub)
+    if target in MATRIX_AT_NODE:
+        # the creature's matrix at the node itself (MATRIX_AT_NODE), around LV's owner_matrix
+        rule, owner, at = LV.L.owner_matrix, CREATURES[target], MATRIX_AT_NODE[target]
+        LV.L.owner_matrix = lambda ram, node: node + at if C.u32(ram, node + 0x10) == owner else rule(ram, node)
     return C

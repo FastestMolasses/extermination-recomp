@@ -299,6 +299,10 @@ START_POINTS = {
     'k01_03': {'route': 'levels-recordings-20261102-1/s87/route_k01', 'first': 'k01_03_', 'area': 14},
     'k01_04': {'route': 'levels-recordings-20261102-1/s87/route_k01', 'first': 'k01_04_', 'area': 14},
     'k01_05': {'route': 'levels-recordings-20261102-1/s87/route_k01', 'first': 'k01_05_', 'area': 14},
+    # AREA17 (lane PORT-LIVE2): Claude's guided run as a route set (tools/capture_from_take.py: each
+    # beat folder is a kept take's end.p2s entries); the source state of g46 (g45's end, AREA17
+    # entry 0 with the load still ahead), g47 (g46's end, the ramp) and g48 (g47's end, after Roger)
+    **{f'g4{k}': {'route': 'guided-20261117/s87/route_g17', 'first': f'g4{k}_', 'area': 0x11} for k in (6, 7, 8)},
 }
 
 

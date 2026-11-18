@@ -285,10 +285,10 @@ int em_area01_runtime_bind(EmArea01Runtime *r, const EmArea01RuntimeHost *host)
 int em_area01_runtime_bind_area(EmArea01Runtime *r, const EmArea01RuntimeHost *host, unsigned area)
 {
     /* the areas em_area01_state binds: AREA00..02, AREA04, AREA06, AREA13, AREA15, AREA03, AREA19, AREA22,
-     * AREA08, AREA07 and AREA14 */
+     * AREA08, AREA07, AREA14 and AREA17 */
     if (!r || !host || !host->bytes || !host->worker || !(area <= 2 || area == 4 || area == 6 || area == 0x0D ||
                                                      area == 0x16 || area == 0x0F || area == 3 || area == 0x13 ||
-                                                     area == 8 || area == 7 || area == 0x0E))
+                                                     area == 8 || area == 7 || area == 0x0E || area == 0x11))
         return -1;
     memset(r, 0, sizeof *r);
     r->host = *host;
@@ -671,7 +671,7 @@ int em_area01_runtime_later(EmArea01Runtime *r, EmArea01Call *c, int *rc)
 static int mid_host(unsigned area)
 {
     return area == 0x16 || area == 6 || area == 0x0D || area == 0x0F || area == 3 || area == 0x13 || area == 8 ||
-           area == 7 || area == 0x0E;
+           area == 7 || area == 0x0E || area == 0x11;
 }
 
 /* AREA00 sub 2 (D_00810701 == 2: chunk04.n2, the constructed start k01's
@@ -713,6 +713,8 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
         return dispatch_area19(r, c);
     if ((r->area == 0x0E || r->area == 0x11 || r->area == 0x15) && dispatch_second_half(r, c, &rc))
         return rc;
+    if (r->area == 0x10 && dispatch_second_half(r, c, &rc)) /* AREA16 (lane PORT-A16) */
+        return rc;
     if (r->area == 0x14 && dispatch_second_half(r, c, &rc)) /* AREA20 (lane PORT-A20) */
         return rc;
     /* The creature family's boot entries and the script actors serve AREA13,
@@ -720,7 +722,7 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
      * to their own dispatch or reach the host's fail-stop below). */
     const int sub2 = area00_sub2(r);
     const int later = (r->area == 0x0D || r->area == 0x0F || r->area == 3 || r->area == 0x13 || r->area == 8 ||
-                       r->area == 7 || r->area == 0x0E || sub2) &&
+                       r->area == 7 || r->area == 0x0E || r->area == 0x11 || sub2) &&
                       c->function < 0x00823500u;
     const int creatures = r->area == 4 || later;
     if (creatures && dispatch_level8(r, c, &rc))

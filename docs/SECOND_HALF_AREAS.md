@@ -536,6 +536,17 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   start card or live run yet; the guided run's takes g41 .. g48 are their
   recordings. section 4's generator names an own-area overlay module
   (tools/second_half_inventory.py own_overlay); all blocks are regenerated.
+- AREA17 live (lane PORT-LIVE2, AREA17_PORT.md "Live"): its SUBS row holds
+  the guided run's g46 / g47 end states (tools/capture_from_take.py turns
+  kept guided takes into capture folders under the decomp's
+  build/fork_refs/guided-20261117/), with its CREATURES / FLAG_RULES /
+  EXPLICIT_MODELS rules, the named orphan-unproven drums and the attachment
+  bank; all kinds, profile 17, sfx scope (0x11, 0) and its stream cues are
+  exported; cards g46 .. g48 load it live. The beat g46 fails: the port
+  leaves the player at the load pose where the original's arrival moves it
+  (row 311), and 00133E30's shadow (44 bones, kind 0) fail-stops after ~400
+  frames. AREA16's owners now bind in the live composition too (area 0x10:
+  dispatch_second_half, scene bindings, 001B6660's window, op09 callbacks).
 - Every boot behaviour of the six areas is now in a census ledger or
   defined (section 6 for the six BOOT2 added); those marked only "defined"
   by an earlier lane still need their oracle named before they count. The
