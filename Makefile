@@ -98,7 +98,7 @@ COMMON  := src/main.c src/em_model.c src/em_input.c src/em_settings.c \
            src/game/em_aim_fire_live.c src/game/em_aim_fire_marker.c src/game/em_aim_fire_flash.c src/game/em_aim_fire_trail.c src/game/em_aim_fire_burst.c src/game/em_bone_burst.c src/game/em_effect_001F77B0.c src/game/em_aim_fire_binding.c src/game/em_aim_fire_soft_float.c \
            src/game/em_aim_fire_lamp.c \
            src/game/em_aim_fire_render_live.c src/game/em_aim_fire_world_live.c src/game/em_aim_fire_runtime.c \
-           src/game/em_aim_fire_sdk_memory.c src/game/em_aim_fire_cable_live.c src/game/em_area06_port_strip.c \
+           src/game/em_aim_fire_sdk_memory.c src/game/em_aim_fire_cable_live.c src/game/em_area11_gun_live.c src/game/em_area06_port_strip.c \
            src/game/em_area00_hud.c src/game/em_area00_world.c src/game/em_area00_fx_exit.c src/game/em_area00_fx_spawn.c src/game/em_area00_fx_gs.c \
            src/game/em_area00_fx_debris.c src/game/em_area00_fx_trail.c src/game/em_area00_fx_burst.c src/game/em_area00_fx_glow.c src/game/em_area02_misc.c src/game/em_level8_port_fx.c \
            src/game/em_area01_side.c src/game/em_area02_math.c \

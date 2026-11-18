@@ -62,6 +62,7 @@
 #include "game/em_area11_bindings.h"
 
 #include <stdio.h>
+#include <stddef.h>
 #include <string.h>
 
 #include "game/em_area11_boxes.h"
@@ -101,6 +102,7 @@
 #include "game/em_script_door_fan.h"
 #include "game/em_security_gun.h"
 #include "game/em_security_gun_rest.h"
+#include "game/em_area11_gun_live.h"
 #include "game/em_sfx.h"
 #include "game/em_snow_runtime.h"
 #include "game/em_status_ui_leftovers.h"
@@ -140,13 +142,16 @@ struct Node {
      * timer, the cable's fall counter, the fan's phase timer), +0x34 (the
      * cable's) and +0x38 (the fan's spin). Zero at the bind; each owner
      * writes them before it reads them. */
-    int16_t h28, h34;
+    int16_t h28, h2A; /* +0x2A: the gun's second tick counter (lifecycles 4 / 1) */
+    int16_t h34;
     float f38;
     /* The opening script's 001BB0E0 records (001BAC00): +0x20, their
      * placement entry's address (the controller that spawned them is
      * `parent`, their +0x24). */
     uint32_t entry_20;
 };
+
+_Static_assert(offsetof(Node, h2A) == offsetof(Node, h28) + 2, "+0x28 / +0x2A adjacent");
 
 static Node s_nodes[EM_ACTOR_POOL_CAPACITY];
 static EmActor *s_panel_child; /* 00159210's +0x20 */
@@ -727,9 +732,25 @@ static void gun_workers(GunCall *c, EmGunWorkers *w)
     w->r_link_18 = cable_link_18;
 }
 
+/* A pool record's +0xA0 (the lamp's colour; em_area11_gun_live). */
+static float *node_a0(EmActor *actor)
+{
+    Node *n = node_of(actor);
+    return n ? n->a0 : NULL;
+}
+
 static int tick_gun(EmActor *actor, Node *node, const EmArea11World *world)
 {
     (void)world;
+    /* The return-visit lifecycles 4 and 1 (D_00810788 == 0xFF): the verified
+     * em_gun_rest_tick over the gun's live storage (em_area11_gun_live). */
+    if (actor->u04[0] == 4 || actor->u04[0] == 1) {
+        const EmArea11GunLive g = {s_pool, s_scene, actor, &node->h28, node_a0};
+        EmGunFault f = {0, 0};
+        if (em_area11_gun_live_tick(&g, &f) < 0)
+            return gun_fault(&f, "security gun 00825940 (lifecycle 4 / 1)");
+        return 1;
+    }
     GunCall c;
     memset(&c, 0, sizeof c);
     c.actor = actor;
@@ -1081,6 +1102,57 @@ int em_area11_bindings_gun_fan_log(const EmActor *actor, EmArea11GunFanLog *out)
             }
     }
     return 1;
+}
+
+static uint32_t image_word(const uint8_t *ram, uint32_t address)
+{
+    uint32_t v;
+    memcpy(&v, ram + address, 4);
+    return v;
+}
+
+int em_area11_bindings_restore_owners(const uint8_t *ram)
+{
+    if (!s_pool || !ram)
+        return -1;
+    static const uint32_t kinds[] = {0x00825940u, 0x00827630u};
+    const uint32_t end = EM_ACTOR_POOL_BASE + EM_ACTOR_POOL_CAPACITY * EM_ACTOR_RECORD_SIZE;
+    int count = 0;
+    for (unsigned k = 0; k < sizeof kinds / sizeof kinds[0]; ++k) {
+        uint32_t from = EM_ACTOR_POOL_BASE;
+        for (unsigned i = 0; i < EM_ACTOR_POOL_CAPACITY; ++i) {
+            EmActor *a = &s_pool->records[i];
+            Node *node = &s_nodes[i];
+            if (!a->allocated || a->callback != kinds[k] || !node->binding)
+                continue;
+            while (from < end && !(ram[from] && image_word(ram, from + 0x10) == kinds[k]))
+                from += EM_ACTOR_RECORD_SIZE;
+            if (from >= end)
+                return -1;
+            const uint8_t *src = ram + from;
+            from += EM_ACTOR_RECORD_SIZE;
+            a->u04[0] = src[4];
+            memcpy(&node->h28, src + 0x28, 2);
+            if (kinds[k] == 0x00825940u) {
+                memcpy(&node->h2A, src + 0x2A, 2);
+                memcpy(a->scratch + 4, src + 0x1F4, 0x220 - 0x1F4);
+                memcpy(a->scratch + 0x34, src + 0x224, 4);
+                for (unsigned b = 2; b <= 3; ++b) {
+                    EmOwnerBone *bone = em_area11_boxes_owner_slot(a, b, NULL);
+                    const uint32_t at = image_word(ram, (uint32_t)(src - ram) + 0x110u + 4u * b);
+                    if (!bone || at >= 0x2000000u - 0xD0u)
+                        return -1;
+                    memcpy(&bone->rot[b - 1], ram + at + 0x70u + 4u * (b - 1), 4);
+                }
+            } else {
+                a->u04[1] = src[5];
+                memcpy(&node->f38, src + 0x38, 4);
+                memcpy(&a->rot[2], src + 0xC8, 4);
+            }
+            ++count;
+        }
+    }
+    return count;
 }
 
 /* 001BC350, the fence door (census L18): its original owner

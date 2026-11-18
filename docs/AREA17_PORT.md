@@ -503,6 +503,10 @@ Where it stands:
   does for the cable's 0021AAC0 / 0021A500) and the revisit-only callees
   0019AA80, 0011E520 and 001E2BA0 bound. g50 .. g58 are not reached yet:
   no furthest frame and no divergence to report for them.
+  **Since lane PORT-GUNREVISIT** the gun's lifecycles are bound
+  (SECURITY_GUN.md 5.1) and g11 plays g49 on the row through row 3085; it
+  stops at row 3148, the area change into AREA01 sub 1, which has no port
+  scene export (SECOND_HALF_AREAS.md section 5).
 
 ## Not done
 

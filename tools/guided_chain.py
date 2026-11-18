@@ -105,6 +105,10 @@ CHAINS = {
 
 # The behaviours the trace lists per frame (EM_START_AT_TRACE_KINDS): the creatures that roam.
 KINDS = {'g17': '141d20,133e30', 'g16': '12a5d0,1c1030'}
+# Chains whose card rebuilds records the recording had mid-cycle: at frame 0 they take the source
+# state's bytes (EM_START_AT_RESTORE, comparison only). g11: AREA11's security gun (its patrol
+# timers ran through the cable ride's scene) and the fan pair's spin (em_area11_bindings_restore_owners).
+RESTORE_AT_START = {'g11'}
 
 
 def load(route, takes):
@@ -176,7 +180,7 @@ def row0_fade(row):
     return fade[4] if fade[0] else 0
 
 
-def run(name, card, rows, files, timeout, kinds, extra=(), steer=False, source_ram=None):
+def run(name, card, rows, files, timeout, kinds, extra=(), steer=False, source_ram=None, restore=False):
     pad, rands, clocks, loads, marks, _ = files
     out = OUT / name
     trace = out / 'trace.jsonl'
@@ -191,6 +195,8 @@ def run(name, card, rows, files, timeout, kinds, extra=(), steer=False, source_r
                EM_START_AT_TRACE=str(trace), EM_START_AT_FRAMES='1')
     if kinds:
         env['EM_START_AT_TRACE_KINDS'] = kinds
+    if restore and source_ram and source_ram.exists():
+        env['EM_START_AT_RESTORE'] = f"{source_ram}:0:{rows[0].get('clock', 0):x}"
     if source_ram and source_ram.exists():
         # The status pages' background D_002655A0 as the card's source state holds it (its pulse
         # timers draw rand(); a card started from boot holds the ELF's .data image instead).
@@ -348,7 +354,8 @@ def main(argv):
         source = json.loads((refs.capture(route) / takes[0] / 'trace.json').read_text()).get('source_state')
         source_ram = Path(source).parent / 'eeMemory.bin' if source else None
         seconds, faults, trace, log_path = run(args.chain, card, rows, files, timeout,
-                                               args.kinds or KINDS.get(args.chain), args.set, steer, source_ram)
+                                               args.kinds or KINDS.get(args.chain), args.set, steer, source_ram,
+                                               args.chain in RESTORE_AT_START)
         print(f'run: {seconds:.0f} s, {log_path.relative_to(ROOT)}')
         for f in faults[:3]:
             print(f'  stopped: {f[:240]}')

@@ -687,7 +687,12 @@ frames on the row, the first frame of each kind of difference, where the run
 stopped) and run.log. A chain's takes may come from two route sets
 (guided_chain.G49_TAKES: route_g49). Cards g49 .. g58 are the source states
 of g49 .. g58 (route_g49). EM_START_AT_PAD holds 65536 pad rows and the
-per-frame tables 240000 frames.
+per-frame tables 240000 frames. Chain g11 (guided_chain.RESTORE_AT_START)
+also passes EM_START_AT_RESTORE=<source eeMemory>:0:<row 0 clock>: at frame
+0 AREA11's security gun timers and the fan pair's spin take the source
+state's bytes (em_area11_bindings_restore_owners; the card's LOAD GAME
+rebuilds them, while the recording's ran through the cable ride's scene;
+comparison only). AREA11 rows are traced without a record list.
 
 ### EM_SKIP_STARTUP=1: the older debug fixture
 

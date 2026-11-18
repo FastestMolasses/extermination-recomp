@@ -43,7 +43,8 @@ from the code, the placement records and every AREA11 capture):
 - `src/game/em_security_gun_rest.{h,c}` (was em_husk_fan, phase B15): the
   rest of the pair's code: the gun's return-visit lifecycles 4 (scan) and 1
   (aim and fire) with the sight probe 0x826F30 and the shot node 0x827400
-  (`em_gun_rest_tick`, not bound in the first level: 5.1), the taken-bit
+  (`em_gun_rest_tick`; bound live for the return visit through
+  `src/game/em_area11_gun_live.c`: 5.1), the taken-bit
   set 001B1190 (bound), and the cable-hit effect nodes 0021AAC0 / 0021A500
   and their spawn 001EFEB0 (bound through the aim / fire composition, in
   ordinary play since 2026-10-02: 5.2, AIM_FIRE.md section 10.5). Oracle:
@@ -477,12 +478,37 @@ are deleted.
   - +0x4C → `em_area11_boxes_owner_draw` (001CAA00 through
     em_owner_draw_live);
   - 001AFC10 → `em_actor_pool_free_001AFC10`.
-- **Fail-stop (not bound, return visit only):** lifecycles 4 and 1 fault at
-  0x825B74 / 0x826190 (`EM_GUN_FAULT_UNTRANSLATED`); so does the
-  lifecycle-2 swing, which only D_00810788 == 0xFF reaches (its lamp view,
-  00102958 and 0x70003A20 are not bound). The verified
-  `em_gun_rest_tick` stays unbound until the port reaches a return visit
-  (it also needs 0011E520, 0019AA80, 001E2BA0 and 001F5040, section 6).
+- **Lifecycles 4 and 1 (the return visit; lane PORT-GUNREVISIT,
+  2026-11-17):** `tick_gun` hands a gun in lifecycle 4 or 1 to
+  `em_area11_gun_live_tick` (src/game/em_area11_gun_live.c), which runs the
+  verified `em_gun_rest_tick` over the gun's live storage. Memory: +0x28 /
+  +0x2A the node's two halfwords (Node.h28 / h2A), +0x1F0.. EmActor.scratch,
+  +0x110.. and +0x4C the bound owner's slot words and draw method, the bones'
+  +0x70 / +0x7C / +0x90 the slots' EmOwnerBone, the lamp's +0xA0 its node
+  colour and its slot copy em_indicator_bind_live_set_node, 0x82A730 /
+  0x82A740 the resident overlay (module loader, MWo3 id 9), everything else
+  the aim / fire composition's map (pool fields, player record, probe
+  scratch, 0x70003B68); the write-first scratchpad words no owner holds
+  (0x700038A0.., 0x70003910, 0x70003A20, 0x70003680, 0x70003600) are the
+  module's. The sight's restore of 0x700031D0 / 0x700031D4 after a missed
+  second probe is held until the next probe of the same call (the
+  composition derives those two words from the probe state and refuses
+  writes; no other owner reads them before probing again: not checked).
+  Workers: the owner services as for the other lifecycles; the SDK leaves on
+  their translations (0011E520 on em_area02_misc's, as em_area01_gun_aux
+  binds it); 0019AA80 / 0019A570 / 0019B6C0 / 001CD520 / 001E2BA0 /
+  001EFD90 through `em_aim_fire_binding_frame` (pointer arguments copied
+  into the depth-0 call temporaries, as em_aim_fire_cable_live's sprite);
+  001AFA90 the pool's allocator, the shot node adopted
+  (`em_aim_fire_runtime_adopt_flash`) and bound to 001F5040 after the call
+  (`em_aim_fire_runtime_bind_flash`). Evidence: the g11 chain plays g49's
+  rows 0 .. 3085 on the row with the gun in lifecycle 4 every tick (no
+  sight hit there, so lifecycle 1 and the shot are not yet exercised live);
+  the binding has no oracle of its own (the translation's is
+  test_security_gun_rest_reference).
+- **Fail-stop:** the lifecycle-2 swing, which only D_00810788 == 0xFF
+  reaches (its lamp view, 00102958 and 0x70003A20 are not bound in
+  em_gun_tick's typed path), still faults.
 - **The lamp** (001C5680 on model 0x7A) keeps its (0, 0, 0, 0.25) colour on
   the first visit and draws its one 001F54E0 rand() per tick
   (`tick_indicator`); its +0x4C 001CACB0 draws nothing yet (OWNER_DRAW.md
@@ -585,15 +611,19 @@ record: +0x04, +0x05, +0x2E and +0xC8 are EmActor's (`u04[0]`, `u04[1]`,
   (D_00810788 set, a return visit) starts 0x828C70, which no exported image
   holds: it faults there. The guided run reaches both return-visit faults
   (lane PORT-CHAIN2, AREA17_PORT.md): the script at g48 row 19885 (the cable
-  ride from AREA17), the gun's lifecycle 4 at g49 row 0 (card g49).
+  ride from AREA17), and the gun's lifecycle 4 at g49 row 0 (card g49), bound
+  since lane PORT-GUNREVISIT (5.1).
 - **The gun's lamp** draws nothing (OWNER_DRAW.md section 11); it is dark
   on the first visit.
 - **The fan's boxes** (the exit bit and the player hit) are off the level
   smoke's route (5.3); the hit's consumer chain is proven by the oracle
   (4.3), not live.
-- **Revisit-only callees** with no verified translation: 0011E520, 0019AA80,
-  001E2BA0, and the shot node's behaviour 001F5040. They are reached only in
-  lifecycles 1/4, which need D_00810788 == 0xFF. They must fault.
+- **Revisit-only callees:** 0011E520 (em_area02_misc), 0019AA80
+  (em_coll_segment, through em_aim_fire_world_live), 001E2BA0 (em_area00_hud,
+  through em_aim_fire_render_live) and the shot node's 001F5040 (em_area00_fx,
+  em_aim_fire_flash) have verified translations with their own oracles and
+  are bound since PORT-GUNREVISIT (5.1). Lifecycle 1's aim, fire and shot
+  are not yet reached live (no route row has the sight see the player).
 - **Revisit-only effect handlers.** The FX ids the gun's shots spawn (3,
   6, 7, 0x26, 0x2C, 0x67: all 001EA240 subtypes) include handlers that fault
   today (EFFECT_MANAGER.md 8.2). This is revisit-only.

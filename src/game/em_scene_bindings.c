@@ -1118,7 +1118,11 @@ static void log_area02(FILE *f)
  * the vitals, the rand() word, and the creatures' first bytes and positions. */
 void em_scene_creature_trace(FILE *f, int t, const float pos[3], const float *heading)
 {
-    if (!s_area01_live.bound || !f || !pos) return;
+    /* AREA11 runs without the AREA01 live composition (its own bindings):
+     * its rows carry the player and the vitals, with no record list (the
+     * guided chain g11 compares them; it compares no records). */
+    const int records = s_area01_live.bound;
+    if (!f || !pos || (!records && s_state.d810700 != 0x0B)) return;
     float vit[2];
     memcpy(&vit[0], &s_state.d810858, 4);
     memcpy(&vit[1], &s_state.d81085C, 4);
@@ -1147,7 +1151,7 @@ void em_scene_creature_trace(FILE *f, int t, const float pos[3], const float *he
         }
     }
     int n = 0;
-    for (uint32_t i = 0; i < EM_ACTOR_POOL_CAPACITY; ++i) {
+    for (uint32_t i = 0; records && i < EM_ACTOR_POOL_CAPACITY; ++i) {
         const EmActor *a = &s_pool.records[i];
         unsigned k = 0;
         while (k < nkinds && a->callback != kinds[k]) ++k;
@@ -1166,7 +1170,8 @@ void em_scene_creature_trace(FILE *f, int t, const float pos[3], const float *he
 
 int em_scene_restore_bugs(const uint8_t *ram)
 {
-    if (!s_area01_live.bound) return -1;
+    /* AREA11 (its own bindings): the security gun and the fan pair. */
+    if (!s_area01_live.bound) return s_state.d810700 == 0x0B ? em_area11_bindings_restore_owners(ram) : -1;
     EmArea01ActorView *v = &s_area01_live.actors;
     int count = 0;
     /* A taken item never allocates its record in a loaded game, so the
