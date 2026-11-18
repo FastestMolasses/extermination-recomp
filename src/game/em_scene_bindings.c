@@ -130,6 +130,8 @@
 #include "game/em_area11_interaction_host.h"
 #include "game/em_camera.h"
 #include "game/em_camera_live.h"
+#include "game/em_status_gs_page.h"
+#include "game/em_sight_live.h"
 #include "game/em_render_context_live.h"
 #include "game/em_load_veil_live.h"
 #include "game/em_owner_draw_live.h"
@@ -3061,6 +3063,11 @@ static int state0_001AF8E0(void *ctx)
     if (world_scene() && rcl_bind() < 0)
         return state0_fault(b, 0x001D1C50u, EM_SCENE_FAULT_NULL_WORKER);
     k_camera_host.area_worker = arrival_scene() ? camera_area_worker : NULL;
+    /* The aim camera's sight drawers (001999C0's; em_sight_live): their
+     * 2D rectangles and text runs into the frame's slot-1 packets, 00183C40
+     * through the aim/fire composition. */
+    static const EmSightLiveServices k_sight = {em_sgp_00207F80, em_sgp_001CBA50, em_aim_fire_binding_frame};
+    em_sight_live_bind(&k_sight);
     if (world_scene() && em_camera_live_bind(&k_camera_host) < 0)
         return state0_fault(b, 0x0018B9C0u, EM_SCENE_FAULT_NULL_WORKER);
     if (!world_scene()) {

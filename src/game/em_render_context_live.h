@@ -403,6 +403,11 @@ int em_rcl_skin_arena_init(void);
  * channel cursors (em_load_veil_particles over this storage). 0, or -1
  * (not bound, or the fault latched here). */
 int em_rcl_001D1F80(int32_t a0, int32_t a1, int32_t a2);
+/* 001D64A0(chan, a1, a2, a3, reg): one 0x60-byte sprite packet at the
+ * channel cursor (the weapon sights' 001DB830 / 001DBCB0, em_sight_live):
+ * a1 / a2 the two corners' three words, a3 the colour quadword's four.
+ * 0, or -1 (not bound, or the fault latched here). */
+int em_rcl_001D64A0(int32_t chan, const uint32_t a1[3], const uint32_t a2[3], const uint32_t a3[4], int32_t reg);
 /* 001D2910(a0) over the one render context (em_render_context_001D2910):
  * *result = its return value (for a0 < 0x20, context +0x0C bit a0). The
  * face attachment's 001D3E40 reaches it (em_owner_draw_live). 0, or -1

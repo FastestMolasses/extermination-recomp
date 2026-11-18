@@ -2556,6 +2556,12 @@ int em_rcl_001D1F80(int32_t a0, int32_t a1, int32_t a2)
     return 0;
 }
 
+int em_rcl_001D64A0(int32_t chan, const uint32_t a1[3], const uint32_t a2[3], const uint32_t a3[4], int32_t reg)
+{
+    if (!R.bound || R.fault || !a1 || !a2 || !a3) return -1;
+    return rcl_001D64A0(chan, a1, a2, a3, reg);
+}
+
 /* The gun lamp's cone shells (001D91A0 / 001D4E20 / 001D4B80, composed by
  * em_aim_fire_runtime): 001D4750, 001D2090 and 001D4F30 / 001D4A90 on a
  * channel of this context, em_static_world's translations over this

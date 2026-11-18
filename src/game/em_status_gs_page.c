@@ -250,6 +250,24 @@ int em_sgp_00207F80(int32_t slot, int32_t x0, int32_t y0, int32_t x1, int32_t y1
     return done(&u, em_uip_00207F80(&u, slot, x0, y0, x1, y1, rgba), "00207F80 (gameplay)");
 }
 
+/* 001CBA50 called from gameplay code (the weapon sights' frame text,
+ * em_sight_live): the same run as the pages' (em_uip_001CBA50), counted
+ * as the frame's other packets. */
+int em_sgp_001CBA50(int32_t slot, int32_t x, int32_t y, int32_t advance, int32_t height, const uint8_t *text,
+                    uint32_t avail, const uint8_t style[8])
+{
+    if (G.fault) return 0;
+    if (!active()) return 1;
+    if (!text || !style) return fault("001CBA50 (gameplay): text or style missing", NULL);
+    uint64_t record = 0;
+    for (unsigned i = 0; i < 8; ++i) record |= (uint64_t)style[i] << (8 * i);
+    const EmMessageTextStyle st = style_of(record);
+    EmUip u;
+    if (!uip(&u)) return 0;
+    G.frame_any = 1;
+    return done(&u, em_uip_001CBA50(&u, slot, x, y, advance, height, text, avail, &st), "001CBA50 (gameplay)");
+}
+
 /* 00207D90(slot, x0, y0, x1, y1): SCISSOR_1 (DATABASE's 00213CC0 scroll:
  * the list's window, then the whole field again; STATUS_FIELD.md 3g). */
 static int s_scissor(void *ctx, int32_t slot, int32_t x0, int32_t y0, int32_t x1, int32_t y1)

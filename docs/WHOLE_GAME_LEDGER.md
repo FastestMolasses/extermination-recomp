@@ -138,20 +138,20 @@ em_camera_live's aim_call does not serve, so they fault).
 | 0x002032C0 | boot | 144 | iop_services | boundary | host file reads of the exported assets (em_frontend's file table note) | Called only by the CD stream service 001FEE60 (class C): fills the 9-entry disc file table D_00821010 through the IOP |
 | 0x0021B860 | boot | 128 | area_state | boundary | em_render_context_live.c load (RENDER_CONTEXT.md section 8) | The boot builder's fog pair and the +0xA0 copies; the area load rewrites them before a bound routine reads them (the +0x100 copy is read only by 001D2730(0, 0)) |
 | 0x00140004 | boot | 1080 | entity_logic | unreachable | none needed | Its only static reach is three overlay words (AREA03 0x827A20, AREA04 0x82A680 / 0x82B5B0) that sit right after a placement record's behaviour pointer: record fields (halfwords 4 and 0x14), not a pointer. No call or code constant reaches it |
-| 0x00199770 | boot | 592 | init_io | missing | none: em_camera_aim calls it (FN_99770) and em_camera_live's aim_call faults | The missile-launcher sight's companion (D_00810CA4 == 2) |
-| 0x001DB830 | boot | 404 | weapon_equip | missing | the same (FN_DB830) | Sight set-up for the missile launcher and the night-vision sight |
-| 0x001DB9D0 | boot | 724 | weapon_equip | missing | the same (FN_DB9D0) | Sight set-up for modes 0 / 1 and the tactical sight |
-| 0x001DBCB0 | boot | 148 | weapon_equip | missing | the same (FN_DBCB0) | The tactical sight's zoom read-out |
-| 0x001DBD50 | boot | 208 | weapon_equip | missing | the same (FN_NIGHT) | The night-vision sight (D_00810CA7 == 9) |
-| 0x001DBE20 | boot | 212 | weapon_equip | missing | the same (FN_MISSILE) | The missile-launcher sight (D_00810CA4 == 2) |
-| 0x001DBF00 | boot | 280 | weapon_equip | missing | the same (FN_DELTA) | The auto-sight (D_00810CA4 == 0) |
-| 0x001DC020 | boot | 1512 | weapon_equip | missing | the same (FN_DC020) | Mode 0's zoom drawing |
-| 0x001DC610 | boot | 636 | weapon_equip | missing | the same (FN_DC610) | Mode 1's sight |
-| 0x001DC890 | boot | 204 | weapon_equip | missing | the same (FN_DC890) | Mode 1's zoom drawing |
-| 0x001DC960 | boot | 992 | weapon_equip | missing | the same (FN_TACTICAL) | The tactical sight (D_00810CA7 == 8) |
-| 0x001DCD40 | boot | 504 | weapon_equip | missing | none | 2D lines of the night-vision and missile sights (001D1F80, then 00207F80 per line) |
-| 0x001DCF40 | boot | 168 | weapon_equip | missing | none | 2D marks of the night-vision and tactical sights |
-| 0x001DCFF0 | boot | 376 | weapon_equip | missing | none | The scope ring (002082B0) of the auto-sight and mode 1 |
+| 0x00199770 | boot | 592 | init_io | live | em_sight.c em_sight_00199770, served by em_sight_live (aim_call); its 001DD170 is a named fail-stop (vf23 uncertified) | test-sight-reference (original instructions); test-sight-live sight_missile: served live, no fault (constructed start; no original capture: no recording owns the item). The missile launcher (D_00810CA4 == 2): lock marks on class-2 entries within 360 |
+| 0x001DB830 | boot | 404 | weapon_equip | live | em_sight.c, served by em_sight_live | test-sight-reference (original instructions); test-sight-live sight_night / sight_missile: served live, no fault (constructed start; no original capture: no recording owns the item). The four corner brackets (001D64A0) of the night vision scope and the missile launcher |
+| 0x001DB9D0 | boot | 724 | weapon_equip | live | em_sight.c (NEARMISS; the instructions followed), served by em_sight_live | test-sight-reference (16 functions as original code); test-sight-live sight_zoom: the live packets equal the original's captured slot-1 bytes (decomp build/sights_ref/zoom) on all 21,443 written bytes at zoom 0, 1.0 and 0.5. The 33-step ring strip of the zoom scope, the DELTA auto sight and the interceptor unit |
+| 0x001DBCB0 | boot | 148 | weapon_equip | live | em_sight.c, served by em_sight_live | test-sight-reference (16 functions as original code); test-sight-live sight_zoom: the live packets equal the original's captured slot-1 bytes (decomp build/sights_ref/zoom) on all 21,443 written bytes at zoom 0, 1.0 and 0.5. The zoom scope's WIDE-ZOOM bar marker (001D64A0 at D_00810248) |
+| 0x001DBD50 | boot | 208 | weapon_equip | live | em_sight.c, served by em_sight_live | test-sight-reference (original instructions); test-sight-live sight_night: served live, no fault (constructed start; no original capture: no recording owns the item). The night vision scope (D_00810CA7 == 9, item 0x09) |
+| 0x001DBE20 | boot | 212 | weapon_equip | live | em_sight.c, served by em_sight_live | test-sight-reference (original instructions); test-sight-live sight_missile: served live, no fault (constructed start; no original capture: no recording owns the item). The missile launcher (D_00810CA4 == 2, items 0x0C..0x0E) |
+| 0x001DBF00 | boot | 280 | weapon_equip | live | em_sight.c, served by em_sight_live | test-sight-reference (original instructions); test-sight-live sight_delta: served live, no fault (constructed start; no original capture: no recording owns the item). The DELTA auto sight (D_00810CA4 == 0, item 0x0A) |
+| 0x001DC020 | boot | 1512 | weapon_equip | live | em_sight.c, served by em_sight_live | test-sight-reference (original instructions); test-sight-live sight_delta: served live, no fault (constructed start; no original capture: no recording owns the item). The DELTA auto sight's zoom frame (two boxes of 00207F80 bars) |
+| 0x001DC610 | boot | 636 | weapon_equip | live | em_sight.c, served by em_sight_live | test-sight-reference (original instructions); test-sight-live sight_interceptor: served live, no fault (constructed start; no original capture: no recording owns the item). The interceptor unit (D_00810CA4 == 1, item 0x0B) |
+| 0x001DC890 | boot | 204 | weapon_equip | live | em_sight.c, served by em_sight_live | test-sight-reference (original instructions); test-sight-live sight_interceptor: served live, no fault (constructed start; no original capture: no recording owns the item). The interceptor unit's zoom ring (002082B0) |
+| 0x001DC960 | boot | 992 | weapon_equip | live | em_sight.c, served by em_sight_live | test-sight-reference (16 functions as original code); test-sight-live sight_zoom: the live packets equal the original's captured slot-1 bytes (decomp build/sights_ref/zoom) on all 21,443 written bytes at zoom 0, 1.0 and 0.5. The zoom scope (D_00810CA7 == 8, item 0x08): ring, marks, 14 bars, 9 text runs, 002081A0 |
+| 0x001DCD40 | boot | 504 | weapon_equip | live | em_sight.c (called by 001DBD50 / 001DBE20) | test-sight-reference (original instructions); test-sight-live sight_night / sight_missile: served live, no fault (constructed start; no original capture: no recording owns the item). 16 bracket bars (00207F80) |
+| 0x001DCF40 | boot | 168 | weapon_equip | live | em_sight.c (called by 001DBD50 / 001DC960) | test-sight-reference (16 functions as original code); test-sight-live sight_zoom: the live packets equal the original's captured slot-1 bytes (decomp build/sights_ref/zoom) on all 21,443 written bytes at zoom 0, 1.0 and 0.5. Four marks (00207F80) |
+| 0x001DCFF0 | boot | 376 | weapon_equip | live | em_sight.c (called by 001DBF00 / 001DC610 / 001DC960) | test-sight-reference (16 functions as original code); test-sight-live sight_zoom: the live packets equal the original's captured slot-1 bytes (decomp build/sights_ref/zoom) on all 21,443 written bytes at zoom 0, 1.0 and 0.5. The scope ring r 200..203 (002082B0) |
 | 0x001E3620 | boot | 8 | weapon_equip | missing | none | The empty callback 001E3630 stores |
 | 0x001E3630 | boot | 1764 | weapon_equip | missing | none | The beam of the kind-0x0D prototype table (0x258740); no placement record names it and its runtime spawner is unknown (decomp CURIOSITIES) |
 | 0x001ECE70 | boot | 124 | hud_objects | missing | none: em_effects_live faults at an untranslated handler | Effect handler (its word at 0x2554B4 in the boot handler table) (001CFB50, then 001CFBE0) |
@@ -163,18 +163,62 @@ em_camera_live's aim_call does not serve, so they fault).
 
 ### 4.1 What remains (next steps)
 
-1. **The weapon sights (14 functions, ~7.0 KB).** Aiming with the
-   auto-sight, the missile launcher, mode 1, the tactical sight or the
-   night-vision sight runs em_camera_aim's 001999C0, whose drawers
-   em_camera_live's aim_call does not serve: the port faults
-   ("aim camera callee ... has no binding"). The census had credited them
-   as bound because their addresses are constants in em_camera_aim.c. They
-   are 2D draws (00207F80 lines, 002082B0 rings) through the em_gfx 2D
-   layer; the next lane translates them with an oracle and serves them in
-   aim_call.
+1. Done by lane PORT-SIGHTS (section 4.2).
 2. AREA00's 0x8247C0 / 0x8247D0 / 0x8260B0 are on the boss chain (g34):
    lane a00boss2.
 3. Effects and prototypes never seen in a recording: 001ECE70, 001EE830,
    001F1AA0, AREA07 0x823590, 001E3630 (with 001E3620), and the script
    commands 001B9FF0 / 001B73A0. Each faults where it would be reached.
 4. 001645D0 and 001CB070 are translated but have no original-instruction run.
+
+### 4.2 Lane PORT-SIGHTS (2026-11-18): the weapon sights
+
+The 14 rows above are live: `src/game/em_sight.{h,c}` translates them and
+the packet builders 002082B0 (the ring) and 002081A0, and
+`src/game/em_sight_live.c` serves the eleven drawer calls of 001999C0 from
+em_camera_live's aim_call (leaves: 001D1F80 / 001D64A0 on the render
+context, 00207F80 / 001CBA50 through em_status_gs_page's gameplay entries,
+the .data tables from `assets/sight_tables.emst`,
+tools/export_sight_tables.py). Which item draws which sight (the
+original's selectors; MULTIPLE ATTACHMENT 002177B0 writes D_00810CA4,
+SCOPE MOUNT 00218640 writes D_00810CA7):
+
+| Sight | Selected by | Drawers | Original capture |
+|---|---|---|---|
+| zoom scope | item 0x08, CA7 = 8 | 001DB9D0, 001DC960 (001DCFF0, 001DCF40), 001DBCB0, then 001D2610 | yes: decomp build/sights_ref/zoom (g66's end, fitted by pad, R2) |
+| night vision scope | item 0x09, CA7 = 9 | 001DB830, 001DBD50 (001DCD40, 001DCF40); its clear path sets the fog (0021B9A0) and 001D2830(1, 0) | no |
+| DELTA auto sight | item 0x0A, CA4 = 0 | 001DB9D0, 001DBF00 (001DCFF0), 001DC020 | no |
+| interceptor unit | item 0x0B, CA4 = 1 | 001DB9D0, 001DC610 (001DCFF0), 001DC890 | no |
+| missile launcher | items 0x0C..0x0E, CA4 = 2 | 001DB830, 001DBE20 (001DCD40), 00199770 | no |
+
+The sight is raised with R2 (camera action 2, 00198650), not R1 (R1's
+lock stance never calls 001999C0); L1 / L2 move the zoom D_00810248 by
+0.02 a tick. No kept recording owns items 0x09..0x0C (every take ends with
+CA4 = 0xFF, CA7 = 7), so only the zoom scope has an original capture.
+
+Evidence: `make test-sight-reference` (the 16 functions as original code
+against the translation: every callee call with its arguments and the
+bytes behind its pointers, every byte of memory, all reachable words;
+quick 170 cases, EM_TEST_FULL=1 594). `make test-sight-live`: one headless
+run per sight from a start point `sight_*` (g67's start with the sight
+fitted; tools/build_start_saves.py: sight_zoom is the state the original's
+own SCOPE MOUNT left after a pad-only equip, the other four are
+constructed), R2 held for 320 ticks with L1 / L2 as in the capture: no
+fault and the arm's drawers run; for the zoom scope, the slot-1 bytes the
+port builds equal the original's capture at zoom 0, 1.0 and 0.5 on every
+byte the original writes (21,443 of 22,496; the mask from two runs of the
+original code over the capture's RAM with different fills, which also
+reproduce the capture).
+
+**Open: the picture.** The sight is packets in slot 1 (the 2D layer). The
+Original profile's GS frame draws a world frame from the recorded world
+draws and the GPU overlay pass draws the message glyphs, letterbox and
+fades; nothing draws a gameplay frame's slot-1 packets, so the sight is
+not on the port's picture (by construction, not measured), like AREA21's
+Gatling gauge bars (em_sgp_00207F80). The capture's fields
+(build/sights_ref/zoom/frame_aim*/original.png) are the reference for the
+step that draws slot 1 in world frames. 00199770's lock mark 001DD170
+stays a named fail-stop (its vf23 input is uncertified at the camera step,
+AIM_FIRE.md); it needs the missile launcher and a class-2 target within
+360 on screen.
+

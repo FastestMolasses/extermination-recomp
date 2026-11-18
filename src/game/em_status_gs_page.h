@@ -104,6 +104,13 @@ int em_sgp_kick(struct EmGfx *gfx);
  * page): the flat rectangle into the frame's slot-1 packets. 1, or 0 when
  * the builder refused (reported once, latched). */
 int em_sgp_00207F80(int32_t slot, int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t rgba);
+/* 001CBA50(slot, x, y, advance, height, text, style) from gameplay code
+ * (the weapon sights' frames, em_sight_live): the small-font run into the
+ * frame's packets; `text` holds its NUL within `avail` bytes, `style` the
+ * 8-byte style record. 1, or 0 when the builder refused (reported once,
+ * latched). */
+int em_sgp_001CBA50(int32_t slot, int32_t x, int32_t y, int32_t advance, int32_t height, const uint8_t *text,
+                    uint32_t avail, const uint8_t style[8]);
 /* The latched fault, or NULL. */
 const char *em_sgp_fault(void);
 /* Packets built so far (all builders), for the tests. */
