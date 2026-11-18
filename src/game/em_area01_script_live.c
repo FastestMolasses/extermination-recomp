@@ -273,6 +273,10 @@ static int record(void *ctx,uint32_t fn,uint32_t actor,uint32_t block,
     case 0x00823F70u: case 0x00824280u: /* AREA17's: script 0x8270A0 (em_area17_overlay) */
         if (s->area!=0x11) return -1;
         break;
+    case 0x008269A0u: case 0x008269F0u: /* AREA21's: script 0x82BEC0 (em_area21_owners) */
+    case 0x00827250u: /* AREA21's: script 0x82CBD0, [53]'s ending request (em_area21_owners) */
+        if (s->area!=0x15) return -1;
+        break;
     case 0x00824E40u: /* AREA00 arrival script 00828D60 */
     case 0x008253E0u: /* AREA00 terminal script 008299E0 */
     case 0x00826CB0u: /* AREA00 sub 2's script 0082D070 ([28]) */
