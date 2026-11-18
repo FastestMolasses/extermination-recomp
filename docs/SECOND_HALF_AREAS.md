@@ -612,7 +612,8 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   gunners 00147390 restarted at their placements (the original's hit at
   row 273 lands at 278); the path then drifts, the area change is missed
   and the player dies in g61 row 425 (AREA16_PORT.md "Lane PORT-A06S1").
-  An earlier start needs AREA01 sub 1 exported (card g59, g58's end).
+  Since lane PORT-A01S1 the chain starts one area earlier, from card g59
+  (AREA01 sub 1; the entry below).
   AREA16's owners now bind in the live composition too (area 0x10:
   dispatch_second_half, scene bindings, 001B6660's window, op09 callbacks).
 - AREA16 live (lane PORT-LIVE-A16, AREA16_PORT.md "Live"): SUBS rows for
@@ -712,6 +713,28 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   DEFAULT_AREAS (0x01, 1)). The rand() word differs from row 1 (one draw
   fewer in frame 0; the gun draws none there: not the gun). g50 .. g58 are
   not reached.
+- AREA01 sub 1 (lane PORT-A01S1, AREA01_ASSETS.md, its section on sub 1, AREA01_REVISIT.md
+  (its sub-1 live section)): exported (tools/export_area01s1_assets.py, profile 01s1,
+  sfx scope (1, 1), module pack row (1, 1)) and live: the placement [19]
+  0x826BA0 translated (em_area06_port_00826BA0, byte-identical C), sub 1's
+  boot owners through the later dispatch. Chain g11 now plays g49 to its end
+  (4778 of 4841 compared rows on the row; still 0.8 ahead at 3086), the real
+  load into AREA01 sub 1, g50 whole (1037 / 1037) with the real area change
+  into AREA02 sub 1, and g51 to row 3332 (3277 / 3279; row 737's door move
+  lands one frame early). It stops at g51 row 3333, the duct's load of
+  AREA02 sub 2: the module pack has no AREA02 room 2 (lsn 548816, 363
+  sectors, room 2's bank) and AREA02 sub 2 has no export. Chain g16 now
+  starts from card g59 (g58's end, AREA01 sub 1 entry 6; route set
+  route_g59): g59, g60 and g61 are on the row for every compared row (1453,
+  1474, 2788) with the real loads into AREA06 sub 1 and AREA16 and the
+  original's hits (g60 274, g61 2345 / 2457); the restarted gunners and aura
+  of the g60 card are gone. g62 leaves the row at 1660 (4.0 away, sub 0) and
+  stays in sub 0 (row 4336); the player dies in g63. rand() differs at g59
+  row 1 (the card) and g60 row 488 without a position change. Chain inputs:
+  a take's first two reads (take.rec row 0's neutral pad, row 1's stick)
+  are kept at f = k - 2 for every take, the first included
+  (EM_START_AT_PAD takes f >= -2); route_g16's traces were rebuilt with the
+  rows ('k'), snapshots and manifest unchanged.
 
 ## 6. Boot translations (lane BOOT2)
 

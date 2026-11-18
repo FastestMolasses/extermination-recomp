@@ -162,6 +162,7 @@ static int dispatch_a06(EmArea01Runtime *r, EmArea01Call *c, int *rc)
     unsigned need_a = 1, need_f = 0;
     switch (fn) {
     case 0x00823580u: case 0x008240E0u: case 0x00824340u: case 0x00823B50u: case 0x00824560u: case 0x00825E20u:
+    case 0x00826BA0u:
     case 0x00219870u: case 0x00219F50u: case 0x0021A180u: case 0x0021AE90u: break;
     case 0x008242C0u: case 0x0021A440u: case 0x001EBE10u: case 0x001ECA20u: case 0x00823B10u: need_a = 2; break;
     case 0x001EA210u: need_a = 0; need_f = 1; break;
@@ -182,6 +183,7 @@ static int dispatch_a06(EmArea01Runtime *r, EmArea01Call *c, int *rc)
     case 0x00823B50u: x = em_area06_port_00823B50(&h, a0, sp, &f); break;
     case 0x00823B10u: x = em_area06_port_00823B10(&h, a0, a1, &f); break;
     case 0x00825E20u: x = em_area06_port_00825E20(&h, a0, &f); break;
+    case 0x00826BA0u: x = em_area06_port_00826BA0(&h, a0, &f); break;     /* AREA01 sub 1's [19] */
     case 0x00824560u: x = em_area06_port_00824560(&h, a0, sp, &f); break;
     case 0x00219870u: x = em_area06_port_00219870(&h, a0, sp, &f); break;
     case 0x0021AE90u: x = em_area06_port_0021AE90(&h, a0, &f); break;
@@ -699,6 +701,15 @@ static int area06_sub1(EmArea01Runtime *r)
     return sub && *sub == 1;
 }
 
+/* AREA01 sub 1 (D_00810701 == 1: chunk05.n1, the guided run's g49 / g58
+ * arrivals; docs/AREA01_ASSETS.md, its section on sub 1). */
+static int area01_sub1(EmArea01Runtime *r)
+{
+    if (r->area != 1) return 0;
+    const uint8_t *sub = bytes(r, 0x00810701u, 1, 0);
+    return sub && *sub == 1;
+}
+
 static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
 {
     if (r->area == 0 && c->function >= 0x00823500u)
@@ -706,6 +717,11 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
     if (r->area == 2 && c->function >= 0x00823500u)
         return dispatch_overlay02(r, c);
     int rc;
+    /* AREA01 sub 1's placement [19] 0x826BA0 (func_overlay_AREA01_00826B60.c):
+     * em_area06_port_00826BA0 (the module that holds AREA01's 0x826950);
+     * sub 1's other overlay owners are sub 0's translations below. */
+    if (r->area == 1 && c->function == 0x00826BA0u && area01_sub1(r) && dispatch_a06(r, c, &rc))
+        return rc;
     /* 001CB1F0, 001CB130, 001CB2B0, 001CB060: the draw methods of kinds 10, 9,
      * 12 and 8 (AREA19's tendril field and worms, AREA08's and AREA07's boxes,
      * AREA03's and AREA04 sub 1's tendrils, AREA15 sub 1's [3]): the draw
@@ -735,8 +751,13 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
      * to their own dispatch or reach the host's fail-stop below). */
     const int sub2 = area00_sub2(r);
     const int a06s1 = area06_sub1(r);
+    /* AREA01 sub 1's group 0x829440 places the creatures 00147390 and 001383C0
+     * (decomp tools/area_overview.py --area 1): its boot calls take the later
+     * areas' dispatch too, as AREA06 sub 1's; its overlay owners stay AREA01's. */
+    const int a01s1 = area01_sub1(r);
     const int later = (r->area == 0x0D || r->area == 0x0F || r->area == 3 || r->area == 0x13 || r->area == 8 ||
-                       r->area == 7 || r->area == 0x0E || r->area == 0x11 || r->area == 0x10 || sub2 || a06s1) &&
+                       r->area == 7 || r->area == 0x0E || r->area == 0x11 || r->area == 0x10 || sub2 || a06s1 ||
+                       a01s1) &&
                       c->function < 0x00823500u;
     const int creatures = r->area == 4 || later;
     if (creatures && dispatch_level8(r, c, &rc))

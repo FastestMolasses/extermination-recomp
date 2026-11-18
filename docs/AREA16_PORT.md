@@ -263,11 +263,8 @@ nearest creature at each, and EM_START_AT_PATH holds the port's player back
 walked on. Not explained further yet.
 
 **Open (lane PORT-A06S1 handback).**
-- An earlier start with a real load into AREA06 sub 1 (card g59 = g58's
-  end, AREA01 sub 1, area bytes 01 01 06 01) needs AREA01 sub 1 exported
-  (chunk05.n1; capture route_g16pre/g58, previous g57's end) and its
-  owners bound; then g59 -> g60 plays the AREA06 sub-1 arrival as the
-  original did, with no restarted gunners or aura timer.
+- Done by lane PORT-A01S1 (below): the chain starts from card g59 (AREA01
+  sub 1) and plays g59 -> g61 on the row.
 - Beat g61's third hit (2410 / 2501) with the path's waits: whether the
   waits come from the first hit's knockback or the bugs' restarted state
   is not established.
@@ -275,6 +272,33 @@ walked on. Not explained further yet.
   frame 100 (no new pad frame line until the 900 s timeout) in the lane and
   in a main baseline (e012ad4e) alike; a06_05, a06b, a06b_01 not run. The chain from
 g60 cannot check it (it dies before g61's end).
+
+### Lane PORT-A01S1 (2026-11-17, branch `a01s1`): the chain from g59
+
+AREA01 sub 1 is exported and live (AREA01_ASSETS.md, its section on sub 1, AREA01_REVISIT.md
+(its sub-1 live section)), so `guided_chain.py g16` starts from the card g59 (g58's end,
+AREA01 sub 1 entry 6 in play; route set route_g59, capture_from_take g58 g59)
+and plays g59 -> g60 -> ... -> g67 with real loads into AREA06 sub 1 (g59
+row 1549) and AREA16 (g60). This answers the PORT-A06S1 open item: the
+gunners 00147390 and the aura countdown are no longer card-restarted.
+
+Results (pad alone, chain inputs at f = k - 2 for every take's first two
+reads, STARTUP.md "Guided chains"):
+- g59 1453 / 1453 compared rows on the row; g60 1474 / 1474 with the
+  original's hit at row 274 (50 -> 35); g61 2788 / 2788 with both hits
+  (2345, 2457). rand() differs at g59 row 1 (the card's frame 0) and g60
+  row 488, with no position change.
+- Before the input fix the port turned one frame late from g59 row 4: the
+  first stick is read at take.rec row 1, and the chain clamped it to f = 0
+  (read at row 2). Every route_g16 take starts with a neutral read at row 0
+  and its stick at row 1; capture_from_take now keeps both with their row.
+- **First divergence:** g62 row 1660, position 4.0 away (port z 191.5, row
+  195.5) in sub 0; rand() from g62 row 428. The player stays in sub 0 (area
+  bytes at row 4336: port 10 00 03, row 10 01 00), takes hits at 2949,
+  4172, 4268 and dies in g63 (row 446).
+
+**D_0081085A / beat g61:** the chain now matches the original's two g61
+hits; beat g61 from its own card still is the PORT-A06S1 case above.
 
 ### Lane PORT-A16-DRAW (2026-11-17, branch `a16draw`): model kind 3's draw
 
