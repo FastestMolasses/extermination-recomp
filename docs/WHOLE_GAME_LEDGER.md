@@ -27,7 +27,8 @@ the title's OPTIONS, and no game formats a float or calls calloc.
 
 | Runtime | Region | Bytes | Group | Status | Port owner | Evidence |
 |---|---|---:|---|---|---|---|
-| 0x00200A40 | boot | 1472 | save_memcard | missing | none: em_startup's title state 6 requests EM_STARTUP_OPTIONS and em_frontend's notify leaves it pending ("awaits native translation") | The title's OPTIONS (001AC070 state 6): stops the sound (001FBC50, 001FABB0), loads screen module 0x2B, then a seven-row menu over D_00264EC0 drawn by 00201290 with the sub-screens 00201720 / 00201C50 / 00201F70 / 00202BA0 / 00202D10 (all translated in em_options_original for the in-game options 0022A650). **A player who picks OPTIONS on the title waits on a black screen forever.** Section 3 |
+| 0x00200A40 | boot | 1472 | save_memcard | live | em_options_original em_options_00200A40, bound by em_frontend options_frame (EM_STARTUP_OPTIONS / EM_STARTUP_OPTIONS_FRAME, em_startup's state 6) through em_options_live on the boot title's own binding (s_card, module 0x2B applied by its loader hook) or, after a death, the AREA11 host's | The title's OPTIONS (001AC070 state 6). `make test-options-reference` group `title` (every state, crafted row tables, every branch both ways under EM_TEST_FULL=1) and `make test-title-options` (lane PORT-OPTIONS, 2026-11-18): the boot title, every page walked by the original capture's closed-loop presses, 56 distinct states equal to the fork capture `../Extermination/build/options_ref` in order, 29 with its exact lengths (the rest end on a press or are module 0x2B's host-speed load). OPTIONS.md section 4.5 |
+| 0x00201290 | boot | 1156 | unknown_04 | live | em_options_original em_options_00201290 (00200A40's list) | `make test-options-reference` group `title`: every row, open or not, every value, both pad modes; drawn on every OPTIONS frame of `make test-title-options` |
 | 0x00229770 | boot | 492 | save_memcard | boundary | em_memcard (the host card) under em_frontend's native_storage_ready | The boot check's GetInfo on port 0 then port 1 (001FECB0). The host card always answers a formatted card (type 2, format 1, free 8000) or, under EM_TEST_CARD_FRESH, an unformatted one (format 0): section 2 |
 | 0x00229960 | boot | 148 | save_memcard | boundary | the same | The boot check's free-space test (00228320, translated as em_card_00228320 and oracle-tested in test-card-screen-reference) on both ports; the host card's 8000 free always passes it: section 2 |
 | 0x00229A00 | boot | 112 | save_memcard | boundary | the same | The boot check's no-save step: 00229960, then the full-card screen 0022A020 only when neither port has room: section 2 |
@@ -82,12 +83,9 @@ already tested.
 
 ## 3. Remaining player-visible gaps of this lane (next steps)
 
-1. **The title's OPTIONS (00200A40) hangs.** Translate it into
-   em_options_original (its sub-screens are there already) with an oracle case
-   beside 0022A650's in test-options-reference, translate its list drawer
-   00201290 (census group unknown_04), and bind it on the title the way LOAD
-   GAME's card screen is bound (SAVE_GAME.md section 6.4: the screen module's
-   upload, here 0x2B).
+1. **The title's OPTIONS (00200A40)**: done by lane PORT-OPTIONS (section 4
+   below; OPTIONS.md section 4.5). Left: its moving background (0020A7A0)
+   draws black on the boot title, see section 4.
 2. **The attract demo (001ACA20, 001ACE70)** shows black. Porting it means
    running AREA06 / AREA13 / AREA03 from the demo's seeds with the recorded
    pad of 001B5BC0 (census group input_io) for 0xE10 frames.
@@ -96,3 +94,22 @@ already tested.
    of test-title-menu-reference (which runs 001AC480 against em_startup) would
    make them verified. The same oracle could execute 0022A460 against
    em_memcard's answers.
+
+## 4. Lane PORT-OPTIONS (2026-11-18): the title's OPTIONS
+
+00200A40 and its list 00201290 are translated (rows in section 1) and bound;
+the title's OPTIONS now opens, walks its seven rows, opens each page, changes
+the settings and returns to the title. Checked against the original's code
+(test-options-reference group `title`) and the fork capture
+(test-title-options). The settings it writes are the one storage the in-game
+options (0022A650) and the saves use, so the effects (vibration, mono, the
+screen offset, the button masks) are the in-game options' (OPTIONS.md
+section 1); no launcher option or host setting conflicts.
+
+Known visible difference: on the boot's title the moving background behind
+the rows (0020A7A0's texture TBP 0x2180 with its CLUT) draws black. The boot
+title's binding starts from cleared GS memory (the status pages' EMSP holds
+the in-game GS state, not the title's), and the texture's CLUT is not in
+module 0x2B's upload. The rows, values and legend match the capture's
+pictures. The fix needs the title's own resident GS state (an export of the
+boot uploads), shared with the boot title's LOAD GAME screen.

@@ -29,6 +29,8 @@ enum {
 /* Original data. */
 #define D_00264CB0 0x00264CB0u /* 001FC770's glyph-run config for these lines */
 #define D_00264D30 0x00264D30u /* 001FCBD0's 128-byte line template */
+#define D_00264EA0 0x00264EA0u /* the title options' row colours: +8 dim, +0x10 lit texture words */
+#define D_00264EC0 0x00264EC0u /* the title options' action of each of the seven rows */
 #define D_00264E30 0x00264E30u
 #define D_00264E34 0x00264E34u
 #define D_00264E38 0x00264E38u
@@ -1070,6 +1072,243 @@ int em_options_0022A650(EmArea01Ui *s, uint32_t *result)
         break;
     case 12:
         r = 1;
+        break;
+    default:
+        break;
+    }
+    if (result) *result = r;
+    return ui_leave(s, fr);
+}
+
+/* ======================================================================
+ * The title's OPTIONS: 00201290 and 00200A40
+ * ====================================================================== */
+
+#define TROW(x, y, line, rgba) \
+    (void)em_options_001FCBD0(s, (x), (y), ui_sx(group), (line), (rgba))
+
+/* 00201290(w, row, open), the title options' list: group = D_00282240;
+ * blend 3; the title 001FCE30(0xD0, 0x25, group, 0); then seven rows at
+ * x 0x6F, each lit (0x80808080) when it is `row`, else dim (0x40404040),
+ * their values at x 0x155:
+ *   0 vibration (y 0x47, line 1; dim while D_00810E6A is not 7), its value
+ *     0x28 (w+1 = 1) or 0x29, lit only while open on that row;
+ *   1 sound (0x53, 0xC), its value 2 (w+4 = 0) or 3, lit only while open;
+ *   2 screen position (0x5F, 0x17); 3 brightness (0x6B, 0x22);
+ *   4 button config (0x77, 0x25), its value 4, 5 or 6 by w+0 (always dim);
+ *   5 default (0x83, 0x26), with open its prompt 0x21 (w+3 = 0) or 0x23;
+ *   6 exit (0x8F, 0x27);
+ * then the legend sprite 00207E40(1, 0x7000, 0x8300, 0x80, 0x80,
+ * 0x80808080, 0x20043845DD422100). */
+int em_options_00201290(EmArea01Ui *s, uint32_t w, int32_t row, int32_t open)
+{
+    if (begin(s, 0x00201290u) < 0) return -1;
+    UiFrame fr = ui_enter(s, 0x00201290u, 0x50);
+    const uint32_t group = ui_lw(s, UI_D_00282240);
+    const uint64_t lit = RGBA_80, dim = 0x40404040u;
+    blend(s, 3);
+    (void)em_options_001FCE30(s, 0xD0, 0x25, ui_sx(group), 0, lit);
+    uint64_t c;
+    if (row == 0 && ui_lhu(s, D_00810E6A) == 7) {
+        TROW(0x6F, 0x47, 1, lit);
+        c = open ? lit : dim;
+    } else {
+        TROW(0x6F, 0x47, 1, dim);
+        c = dim;
+    }
+    TROW(0x155, 0x47, ui_lbu(s, w + 1u) == 1 ? 0x28 : 0x29, c);
+    if (row == 1) {
+        TROW(0x6F, 0x53, 0xC, lit);
+        c = open ? lit : dim;
+    } else {
+        TROW(0x6F, 0x53, 0xC, dim);
+        c = dim;
+    }
+    TROW(0x155, 0x53, ui_lbu(s, w + 4u) == 0 ? 2 : 3, c);
+    TROW(0x6F, 0x5F, 0x17, row == 2 ? lit : dim);
+    TROW(0x6F, 0x6B, 0x22, row == 3 ? lit : dim);
+    TROW(0x6F, 0x77, 0x25, row == 4 ? lit : dim);
+    const uint32_t type = ui_lbu(s, w);
+    TROW(0x155, 0x77, type == 0 ? 4 : type == 1 ? 5 : 6, dim);
+    if (row == 5) {
+        TROW(0x6F, 0x83, 0x26, lit);
+        if (open) TROW(0x155, 0x83, ui_lbu(s, w + 3u) == 0 ? 0x21 : 0x23, lit);
+    } else {
+        TROW(0x6F, 0x83, 0x26, dim);
+    }
+    TROW(0x6F, 0x8F, 0x27, row == 6 ? lit : dim);
+    blit(s, 0x7000, 0x8300, 0x80, 0x80, lit, tex(0x20043845u, 0xDD422100u));
+    return ui_leave(s, fr);
+}
+
+#undef TROW
+
+static int32_t title_action(EmArea01Ui *s)
+{
+    return (int32_t)ui_lw(s, D_00264EC0 + 4u * ui_lhu(s, slot(s) + 0x1Cu));
+}
+
+/* The title cursor's wraps: forward to 0 at 7, backward to 6 when its low
+ * byte (lb) is negative. */
+static void title_step(EmArea01Ui *s, int forward)
+{
+    const uint32_t g = slot(s);
+    if (forward) {
+        ui_sh(s, g + 0x1Cu, ui_lhu(s, g + 0x1Cu) + 1u);
+        if (ui_lhu(s, g + 0x1Cu) >= 7) ui_sh(s, g + 0x1Cu, 0);
+    } else {
+        ui_sh(s, g + 0x1Cu, ui_lhu(s, g + 0x1Cu) - 1u);
+        if (ui_lb(s, g + 0x1Cu) < 0) ui_sh(s, g + 0x1Cu, 6);
+    }
+}
+
+/* State 10 and the fade-out's start: +0xC = 10, +0xD = 0, 001AEDE0(8, 0). */
+static void title_leave(EmArea01Ui *s)
+{
+    set_state(s, 0xA);
+    (void)ui_call2(s, OP_001AEDE0, 8, 0);
+}
+
+/* 00200A40, the title's OPTIONS (001AC070 state 6): 001D2830(3, 1), then
+ * the task's state +0xC:
+ *   0: 001FBC50, 001FABB0, state 1.
+ *   1: once D_00282157 is 0: state 2, D_00275BD8 = 1, 001FF080(0, 0x2B).
+ *   2: once D_00275BD8 is 0: state 3.
+ *   3: D_002821B4 = 0, D_002821B0 = 4, D_00282240 = 8, state 4, the cursor
+ *      +0x1C and +0x12 cleared, 001AEE10(8, 0); on into 4.
+ *   4: vibration off (w+1 = 0) when D_00810E6A is not 7; 0020A7A0; the
+ *      repeat word moves the cursor over the seven rows of D_00264EC0
+ *      (Down 0x4000 forward, Up 0x1000 back, each with the cue 0020CDA0
+ *      and, when D_00810E6A is not 7, a second step over the vibration
+ *      row; with neither, an idle cursor on that row steps forward without
+ *      the wrap); the list 00201290(w, action, 0); Cross (0020CD40) acts on
+ *      the row's action: vibration (only with D_00810E6A 7) and sound go
+ *      to state 5, screen position to 7, brightness to 8, button config to
+ *      9, default to 6, exit leaves. Leaving (exit, Circle or Triangle):
+ *      0020CD60 and state 10 with the fade-out 001AEDE0(8, 0).
+ *   5 / 6: 0020A7A0, the list open, 00201720 / 00201C50(w, 0x86,
+ *      D_00264EA0, D_00264EC0): 1 -> state 4, 2 leaves as above (without
+ *      the cue).
+ *   7 / 8 / 9: 00201F70(w) / 00202BA0() / 00202D10(w): the same.
+ *   10: as state 4's head and list, without the pad; returns 1 once
+ *      D_0028A9A0 is 2 (the fade-out done).
+ * Every other state does nothing; the result is 0 but in state 10. */
+int em_options_00200A40(EmArea01Ui *s, uint32_t *result)
+{
+    if (begin(s, 0x00200A40u) < 0) return -1;
+    UiFrame fr = ui_enter(s, 0x00200A40u, 0x30);
+    const uint32_t w = D_00810118;
+    const uint64_t bg = tex(0x20043525u, 0x9D422180u);
+    uint32_t hit = 0, r = 0, v = 0;
+    (void)ui_call2(s, OP_001D2830, 3, 1);
+    const uint32_t st = ui_lbu(s, slot(s) + 0xCu);
+    switch (st) {
+    case 0: {
+        cue(s, OP_001FBC50);
+        cue(s, OP_001FABB0);
+        const uint32_t g = slot(s);
+        ui_sb(s, g + 0xCu, ui_lbu(s, g + 0xCu) + 1u);
+        break;
+    }
+    case 1:
+        if (ui_lb(s, D_00282157) == 0) {
+            const uint32_t g = slot(s);
+            ui_sb(s, g + 0xCu, ui_lbu(s, g + 0xCu) + 1u);
+            ui_sb(s, D_00275BD8, 1);
+            (void)ui_call2(s, OP_001FF080, 0, 0x2B);
+        }
+        break;
+    case 2:
+        if (ui_lbu(s, D_00275BD8) == 0) {
+            const uint32_t g = slot(s);
+            ui_sb(s, g + 0xCu, ui_lbu(s, g + 0xCu) + 1u);
+        }
+        break;
+    case 3: {
+        ui_sw(s, UI_D_002821B4, 0);
+        ui_sw(s, UI_D_002821B0, 4);
+        ui_sw(s, UI_D_00282240, 8);
+        const uint32_t g = slot(s);
+        ui_sb(s, g + 0xCu, ui_lbu(s, g + 0xCu) + 1u);
+        ui_sh(s, slot(s) + 0x1Cu, 0);
+        ui_sb(s, slot(s) + 0x12u, 0);
+        (void)ui_call2(s, OP_001AEE10, 8, 0);
+    }
+    /* fall through */
+    case 4: {
+        if (ui_lhu(s, D_00810E6A) != 7) ui_sb(s, w + 1u, 0);
+        background(s, bg);
+        const uint32_t repeat = ui_lhu(s, UI_D_00810E78);
+        if (repeat & 0x4000u) {
+            cue(s, OP_0020CDA0);
+            title_step(s, 1);
+            if (ui_lhu(s, D_00810E6A) != 7 && title_action(s) == 0) title_step(s, 1);
+        } else if (repeat & 0x1000u) {
+            cue(s, OP_0020CDA0);
+            title_step(s, 0);
+            if (ui_lhu(s, D_00810E6A) != 7 && title_action(s) == 0) title_step(s, 0);
+        } else if (ui_lhu(s, D_00810E6A) != 7 && title_action(s) == 0) {
+            const uint32_t g = slot(s);
+            ui_sh(s, g + 0x1Cu, ui_lhu(s, g + 0x1Cu) + 1u);
+        }
+        (void)em_options_00201290(s, w, title_action(s), 0);
+        if (ui_lhu(s, UI_D_00810E74) & 0x40u) {
+            cue(s, OP_0020CD40);
+            switch (title_action(s)) {
+            case 0:
+                if (ui_lhu(s, D_00810E6A) != 7) break;
+                set_state(s, 5);
+                break;
+            case 1: set_state(s, 5); break;
+            case 2: set_state(s, 7); break;
+            case 3: set_state(s, 8); break;
+            case 4: set_state(s, 9); break;
+            case 5: set_state(s, 6); break;
+            case 6: hit = 1; break;
+            default: break;
+            }
+        }
+        if (hit == 1 || (ui_lhu(s, UI_D_00810E74) & 0x20u) || (ui_lhu(s, UI_D_00810E74) & 0x10u)) {
+            cue(s, OP_0020CD60);
+            title_leave(s);
+        }
+        break;
+    }
+    case 5:
+    case 6:
+        background(s, bg);
+        (void)em_options_00201290(s, w, title_action(s), 1);
+        if (st == 5) (void)em_options_00201720(s, w, 0x86, D_00264EA0, D_00264EC0, &v);
+        else (void)em_options_00201C50(s, w, 0x86, D_00264EA0, D_00264EC0, &v);
+        if (v == 1) {
+            if (st == 5) {
+                const uint32_t g = slot(s);
+                ui_sb(s, g + 0xCu, ui_lbu(s, g + 0xCu) - 1u);
+            } else {
+                ui_sb(s, slot(s) + 0xCu, 4);
+            }
+        } else if (v == 2) {
+            title_leave(s);
+        }
+        break;
+    case 7:
+    case 8:
+    case 9:
+        if (st == 7) (void)em_options_00201F70(s, w, &v);
+        else if (st == 8) (void)em_options_00202BA0(s, &v);
+        else (void)em_options_00202D10(s, w, &v);
+        if (v == 1) ui_sb(s, slot(s) + 0xCu, 4);
+        else if (v == 2) title_leave(s);
+        break;
+    case 10:
+        if (ui_lhu(s, D_00810E6A) != 7) ui_sb(s, w + 1u, 0);
+        background(s, bg);
+        if (ui_lhu(s, D_00810E6A) != 7 && title_action(s) == 0) {
+            const uint32_t g = slot(s);
+            ui_sh(s, g + 0x1Cu, ui_lhu(s, g + 0x1Cu) + 1u);
+        }
+        (void)em_options_00201290(s, w, title_action(s), 0);
+        if ((int16_t)ui_lhu(s, D_0028A9A0) == 2) r = 1;
         break;
     default:
         break;

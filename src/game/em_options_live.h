@@ -108,6 +108,9 @@ void em_options_live_free(EmOptionsLive *live);
 int em_options_live_0022A650(EmOptionsLive *live, const EmOptionsFrame *frame, uint32_t *result);
 int em_options_live_00225AC0(EmOptionsLive *live, const EmOptionsFrame *frame, uint32_t mode,
                              uint32_t *result);
+/* One call of 00200A40 (the title's OPTIONS, 001AC070 state 6): 0 and its
+ * result (1 once its fade-out is done), or -1 on a fault. */
+int em_options_live_00200A40(EmOptionsLive *live, const EmOptionsFrame *frame, uint32_t *result);
 int em_options_live_001AF1C0(EmOptionsLive *live, const EmOptionsFrame *frame);
 int em_options_live_001AF150(EmOptionsLive *live, const EmOptionsFrame *frame);
 /* The last call's draw stream. 1 drawn. */

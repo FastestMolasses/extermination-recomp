@@ -25,6 +25,7 @@ original's; no instruction of the original is reproduced here.
 | Quit | 0022B420 (No: back; Yes: r == 3, 001AD140 as the death does) | live; Yes is bound but no recording plays it | test-options-reference; opt_08 |
 | Closing | r == 1: 001AF1C0 (the settings into the progress block, 001AF470), the cue 0xD, 001FAE70(0) | live | test-options-reference; opt_00..08 |
 | The title's LOAD GAME after a death | 001AC070 state 2's 00225A00 and D_00275BE0 = 1, state 5's 00225AC0(0) every tick, its r == 2: 001AF150 and state 4's loaded game | live (section 4.3; the loaded game: SAVE_GAME.md section 6.3); on the boot's title too, on the title's own binding (SAVE_GAME.md section 6.4) | test-title-menu-reference, test-options-reference; dmg_load, dmg_load_game; test-title-load-game |
+| The title's OPTIONS | 001AC070 state 6: 00200A40 every tick (its list 00201290, the row screens 00201720 / 00201C50 / 00201F70 / 00202BA0 / 00202D10 over the seven-row table D_00264EC0, screen module 0x2B at its entry), back to the menu when it returns 1 | live since lane PORT-OPTIONS (2026-11-18; section 4.5); its moving background draws black on the boot title | test-options-reference (group title), test-title-options (the fork capture build/options_ref) |
 | Saving | 00225AC0(1) from 0020CDC0 (request 6) and 001AD740 | unreachable in AREA11 (section 7); live from a save terminal since 2026-11-01 (SAVE_GAME.md section 6.5); 001AD740 not wired | test-options-card-live; the original's own save (SAVE_GAME.md 6.2) |
 
 ## 2. Opening and closing
@@ -166,8 +167,7 @@ D_00810E74 / E70 / E50 from the frame's step C (em_frame_scene_input). The
 boot's title has no AREA11 world: its LOAD GAME runs the same screen on a
 binding of the title's own (SAVE_GAME.md section 6.4; no recording, the
 first level's recordings reach the load screen only after a death). The
-title's OPTIONS entry (00200A40) is not on the
-first level's recordings and stays pending.
+title's OPTIONS entry (00200A40) is section 4.5.
 
 ### 4.4 Mono
 
@@ -176,6 +176,41 @@ through 00119870, to the EE sound library's D_0027F778. Both readers have
 their mono arm now: 001FBF50's (em_sfx_compute_gains: both channels the
 volume) and 001179E0's (em_sfx_volume_words). `make
 test-area11-sfx-reference` pass M runs the original over both arms.
+
+### 4.5 The title's OPTIONS
+
+On the menu's OPTIONS (cursor 2) the verdict sets the record's +0xC = 0 and
+001AC070 state 6 calls 00200A40 every tick (em_startup emits
+EM_STARTUP_OPTIONS at the state's first tick, then EM_STARTUP_OPTIONS_FRAME
+every tick; em_frontend options_begin / options_frame) through the same
+binding as the title's load screen: after a death the AREA11 host's, on the
+boot's title its own (s_card), whose loader hook now applies screen module
+0x2B as well as 0x2A. 00200A40 stops the sounds, loads module 0x2B, fades in,
+then runs the seven-row menu over D_00264EC0 / D_00264EA0 (the status pages'
+EMSP carries that window since this lane: re-export with
+`python3 tools/export_status_pages.py`; an older EMSP is refused with that
+message). Its pages are the in-game options' translations with x 0x86;
+screen position, brightness and button config are called directly (module
+0x2B is already loaded). Exit, Circle or Triangle fade out; the result 1 when
+the fade is done returns the flow to state 2 in the same tick, whose sub 0
+loads the title's module 1 again. The boot title's binding is closed after
+that tick's draw, as after its load screen.
+
+Evidence: test-options-reference group `title` (the original instructions
+of 00200A40 and 00201290 over the OPTIONS images, every branch both ways
+under EM_TEST_FULL=1) and test-title-options: the fork capture
+`../Extermination/build/options_ref` (tools/capture_title_options.py, a
+hidden session from the title state, policy "title_options_v1") against the
+port's EM_STARTUP_TEST=options run of the same closed-loop policy: 56
+distinct states (the record's options bytes, the settings, the offset, the
+masks, the fade, the committed mono byte) equal in order, 29 with the
+capture's exact lengths, the others ending on a press (pad latencies differ)
+or module 0x2B's load (host speed). The page pictures
+(build/title_options/*.bmp beside the capture's original.png) match in the
+rows, values and legend; **the moving background (0020A7A0, texture TBP
+0x2180 and its CLUT) draws black on the boot title**: the boot title's
+binding starts from cleared GS memory and the CLUT is not in module 0x2B's
+upload (WHOLE_GAME_LEDGER.md section 4).
 
 ## 5. The memory card (platform boundary)
 
@@ -265,8 +300,7 @@ stand-in and leaves zeros. Nothing reads the record before 001AF6F0 /
   host's clock; the two agree if no timeline plays while the card screen
   runs, which no recording shows (SAVE_GAME.md section 6.1).
 - **Quit, Yes** (r == 3 -> 001AD140): bound, not recorded.
-- **The title's OPTIONS entry** (00200A40). LOAD GAME on the boot's title
-  runs since save2 round 5 (SAVE_GAME.md section 6.4), checked against the
+- **LOAD GAME on the boot's title** runs since save2 round 5 (SAVE_GAME.md section 6.4), checked against the
   original code's steps only (no recording loads a game).
 
 ## 8. Curiosity

@@ -1657,6 +1657,15 @@ test-start-saves:
 test-title-load-game: $(BIN)
 	python3 tools/test_title_load_game.py
 
+# The title's OPTIONS (00200A40; docs/OPTIONS.md section 4.5): boot, Down
+# twice to OPTIONS, every page with the original capture's closed-loop
+# presses, back to the title; the distinct states and their lengths
+# against ../Extermination/build/options_ref (tools/capture_title_options.py;
+# about 2 s).
+.PHONY: test-title-options
+test-title-options: $(BIN)
+	python3 tools/test_title_options.py
+
 # EM_START_AT=<name>, the developer switch (docs/STARTUP.md "Developer
 # switches"): area01 through the boot title's LOAD GAME on the start-point
 # card itself (read-only) into control in AREA01, checked as
