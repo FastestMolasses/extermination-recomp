@@ -527,6 +527,103 @@ int em_level14_port_00824510(const H14 *h, uint32_t self, F14 *fault)
 }
 
 /* ------------------------------------------------------------------------
+ * 0x824B40 (self; func_overlay_AREA15_00824B00.c, byte-identical): 0x824990's
+ * state 1 with D_008107FF 0. +0xD 0x50 while D_0081077F != 1: 001C64F0(self,
+ * 1.0), 001C68C0(self), the +0x4C method, 001B17A0(self). +0xD 0x5A: +5 0:
+ * with D_00810702 1 the script 0x828CA0 on self + 0x1F0, +5 = 1; +5 1: at
+ * the script's end +5 = 0, +0x2E = 0xFFFF, 001C47E0(0x2B, 1),
+ * 001C4760(0x1C, 1), D_008107FF = 1, D_00810847 |= 4, 001FB0B0(0); then
+ * 001B17A0(self) and +1 = 1.
+ * ---------------------------------------------------------------------- */
+static void a15_00824B40(L14 *o, uint32_t self)
+{
+    int32_t r = 0;
+    if (l14_u8(o, self + 0xD) == 0x50 && l14_u8(o, 0x0081077Fu) != 1) {
+        if (l14_c_001C64F0(o, self, F_ONE, &r)) return;
+        if (l14_c_001C68C0(o, self)) return;
+        if (l14_method(o, self)) return;
+        if (l14_c_001B17A0(o, self, &r)) return;
+    }
+    if (l14_failed(o)) return;
+    if (l14_u8(o, self + 0xD) != 0x5A) return;
+    uint32_t sub = l14_u8(o, self + 5);
+    if (sub == 0) {
+        if (l14_u8(o, 0x00810702u) == 1) {
+            if (l14_c_001BA1A0(o, self + 0x1F0, 0x00828CA0u)) return;
+            l14_w8(o, self + 5, 1);
+        }
+    } else if (sub == 1) {
+        if (a15_done(o, self)) {
+            l14_w8(o, self + 5, 0);
+            l14_w16(o, self + 0x2E, 0xFFFF);
+            if (l14_c_001C47E0(o, 0x2B, 1)) return;
+            if (l14_c_001C4760(o, 0x1C, 1)) return;
+            l14_w8(o, 0x008107FFu, 1);
+            l14_w8(o, 0x00810847u, (uint8_t)(l14_u8(o, 0x00810847u) | 4u));
+            if (l14_c_001FB0B0(o, 0)) return;
+        }
+    }
+    if (l14_failed(o)) return;
+    if (l14_c_001B17A0(o, self, &r)) return;
+    l14_w8(o, self + 1, 1);
+}
+
+int em_level14_port_00824B40(const H14 *h, uint32_t self, F14 *fault)
+{
+    L14 o;
+    if (l14_begin(&o, h, fault)) return -1;
+    a15_00824B40(&o, self);
+    return l14_end(&o);
+}
+
+/* ------------------------------------------------------------------------
+ * 0x824C90 (self; func_overlay_AREA15_00824C50.c, byte-identical): 0x824990's
+ * state 1 with D_008107FF 1. +0xD 0x50: +5 0: with +0xB bit 2 the script
+ * 0x828FA0 on self + 0x1F0, +5 = 1; +5 1: at the script's end +0xB = 0,
+ * +5 = 0, 001C67E0(self, 4, 20.0, 0.0). +0xD 0x5A: the same with the script
+ * 0x8290E0 and no 001C67E0. Then 001BA580(self, +0xD), 001C64F0(self, 1.0),
+ * 001B17A0(self), 001C68C0(self), the +0x4C method.
+ * ---------------------------------------------------------------------- */
+static void a15_00824C90_kind(L14 *o, uint32_t self, uint32_t script, int animate)
+{
+    uint32_t sub = l14_u8(o, self + 5);
+    if (sub == 0) {
+        if (l14_u8(o, self + 0xB) & 4u) {
+            if (l14_c_001BA1A0(o, self + 0x1F0, script)) return;
+            l14_w8(o, self + 5, 1);
+        }
+    } else if (sub == 1) {
+        if (a15_done(o, self)) {
+            l14_w8(o, self + 0xB, 0);
+            l14_w8(o, self + 5, 0);
+            if (animate && l14_c_001C67E0(o, self, 4, F_20, F_ZERO)) return;
+        }
+    }
+}
+
+static void a15_00824C90(L14 *o, uint32_t self)
+{
+    int32_t r = 0;
+    if (l14_u8(o, self + 0xD) == 0x50) a15_00824C90_kind(o, self, 0x00828FA0u, 1);
+    if (l14_failed(o)) return;
+    if (l14_u8(o, self + 0xD) == 0x5A) a15_00824C90_kind(o, self, 0x008290E0u, 0);
+    if (l14_failed(o)) return;
+    if (l14_c_001BA580(o, self, (int32_t)l14_u8(o, self + 0xD))) return;
+    if (l14_c_001C64F0(o, self, F_ONE, &r)) return;
+    if (l14_c_001B17A0(o, self, &r)) return;
+    if (l14_c_001C68C0(o, self)) return;
+    l14_method(o, self);
+}
+
+int em_level14_port_00824C90(const H14 *h, uint32_t self, F14 *fault)
+{
+    L14 o;
+    if (l14_begin(&o, h, fault)) return -1;
+    a15_00824C90(&o, self);
+    return l14_end(&o);
+}
+
+/* ------------------------------------------------------------------------
  * 0x824990 (self). State 0: story bit 0x30 clear -> state 3; +0xD 0x50:
  * 001B10B0(self, 0x50, 0x52), 001C63E0(self, 5), 001CA6F0(self, 2), +0x58 =
  * D_0028A5DC, +0x30 = 0x829260; +0xD 0x5A: 001B10B0(self, 0x5A, 0x5B),

@@ -403,6 +403,13 @@ def export_target(target, el, elf, out_root, iso, skip_collision):
         raise SystemExit('the descriptor relocates id 0x45; the stale-pointer model does not apply')
     for ident, word in ((0x41, D_0028A594), (0x42, D_0028A598), (0x43, D_0028A59C), (0x44, D_0028A5A0),
                         (0x46, D_0028A5A8)):
+        if (ident == 0x41 and ident not in rwhere and previous_word(target, word) is not None
+                and all(C.u32(cap.ram, word) == previous_word(target, word) for cap in caps)):
+            # a nested list without id 0x41, the area message bank (AREA02
+            # sub 2, as sub 1: AREA02_ASSETS.md finding 2), leaves D_0028A594
+            # as the previous load left it: the word must be the previous
+            # capture's
+            continue
         if rwhere.get(ident) != C.u32(caps[0].ram, word):
             raise SystemExit(f'D_{word:08X} is not the relocated id {ident:#x}')
     cells_table = C.u32(caps[0].ram, D_0028A5A8)

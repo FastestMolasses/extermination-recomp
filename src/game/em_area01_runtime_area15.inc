@@ -26,6 +26,8 @@ static int dispatch_a15(EmArea01Runtime *r, EmArea01Call *c, int *out)
         {0x00824560u, 0x20u}, {0x008247B0u, 0x20u}, {0x00824990u, 0x20u}, {0x00824E00u, 0x20u},
         {0x00824E50u, 0x20u}, {0x00825030u, 0x20u}, {0x008252D0u, 0x10u}, {0x00825320u, 0x20u},
         {0x00825430u, 0x40u}, {0x00825D10u, 0x40u}, {0x00826600u, 0x30u}, {0x00826850u, 0x20u},
+        /* 0x824990's state 1 with D_008107FF 0 (lane PORT-A02S2: the guided g56) */
+        {0x00824B40u, 0x30u}, {0x00824C90u, 0x30u},
         /* em_area15_route's */
         {0x00823B40u, 0x20u}, {0x00823C80u, 0x20u}, {0x00824240u, 0x30u}, {0x00824350u, 0x20u},
         {0x008243E0u, 0x20u}, {0x00823F60u, 0x40u}};
@@ -34,7 +36,7 @@ static int dispatch_a15(EmArea01Runtime *r, EmArea01Call *c, int *out)
     const unsigned n = sizeof owners / sizeof owners[0];
     while (k < n && owners[k].fn != fn) ++k;
     if (k == n) return 0;
-    const unsigned route = k >= 20;
+    const unsigned route = k >= 22;
     if (area_frame(r, c, fn == 0x00823F60u ? 3 : 1, owners[k].frame, out) < 0) return 1;
     const uint32_t a0 = (uint32_t)c->a[0];
     int x;
@@ -56,6 +58,8 @@ static int dispatch_a15(EmArea01Runtime *r, EmArea01Call *c, int *out)
         case 0x00824560u: x = em_level14_port_00824560(&h, a0, &f); break;
         case 0x008247B0u: x = em_level14_port_008247B0(&h, a0, &f); break;
         case 0x00824990u: x = em_level14_port_00824990(&h, a0, &f); break;
+        case 0x00824B40u: x = em_level14_port_00824B40(&h, a0, &f); break;
+        case 0x00824C90u: x = em_level14_port_00824C90(&h, a0, &f); break;
         case 0x00824E00u: x = em_level14_port_00824E00(&h, a0, &f); break;
         case 0x00824E50u: x = em_level14_port_00824E50(&h, a0, &f); break;
         case 0x00825030u: x = em_level14_port_00825030(&h, a0, &f); break;

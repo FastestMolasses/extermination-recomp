@@ -131,6 +131,8 @@ FUNCS = {
     0x824560: ('em_level14_port_00824560', 0x244, [U], None),
     0x8247B0: ('em_level14_port_008247B0', 0x1D4, [U], None),
     0x824990: ('em_level14_port_00824990', 0x1B0, [U], None),
+    0x824B40: ('em_level14_port_00824B40', 0x148, [U], None),
+    0x824C90: ('em_level14_port_00824C90', 0x164, [U], None),
     0x824E00: ('em_level14_port_00824E00', 0x4C, [U], None),
     0x824E50: ('em_level14_port_00824E50', 0x1E0, [U], None),
     0x825030: ('em_level14_port_00825030', 0x294, [U], None),
@@ -250,6 +252,7 @@ HOOKS = [
     ('w_001BA580', 0x1BA580, [(U, 4), (I, 5)], None),
     ('w_001BA8E0', 0x1BA8E0, [(U, 4), (I, 5)], None),
     ('w_001C4760', 0x1C4760, [(I, 4), (I, 5)], None),
+    ('w_001C47E0', 0x1C47E0, [(I, 4), (I, 5)], None),
     ('w_001C4820', 0x1C4820, [(U, 4)], None),
     ('w_001C5C90', 0x1C5C90, [(U, 4)], None),
     ('w_001C6160', 0x1C6160, [(U, 4)], I),
@@ -274,6 +277,7 @@ HOOKS = [
     ('w_001F5940', 0x1F5940, [(I, 4), (U, 5), (I, 6)], None),
     ('w_001F66F0', 0x1F66F0, [(U, 4)], None),
     ('w_001FAE70', 0x1FAE70, [(I, 4)], None),
+    ('w_001FB0B0', 0x1FB0B0, [(I, 4)], None),
     ('w_001FBD50', 0x1FBD50, [(U, 4), (I, 5), (I, 6), (F, 12)], I),
     ('w_001FC3C0', 0x1FC3C0, [(U, 4), (U, 5), (I, 6), (F, 12), (F, 13)], None),
     ('w_001FC520', 0x1FC520, [(U, 4)], None),
@@ -696,7 +700,8 @@ class Oracle:
         self.script, self.run_set = script, run_set
         ee.save, ee.write, ee.load = self.save, self.write, self.load
         for address in BY_ADDRESS:
-            ee.hooks[address] = self.handler(address)
+            if address != entry:    # an entry that is also a hook of another entry (0x824B40) runs as itself
+                ee.hooks[address] = self.handler(address)
         for callback in args[1]:
             assert callback not in ee.hooks, hex(callback)
             ee.hooks[callback] = self.callback_hook(callback)
@@ -1629,7 +1634,7 @@ def load_captures(elf):
 # the entries that reach a node's +0x4C method (directly or through a
 # translated callee); its function word is stubbed as the callback
 SELF_ENTRIES = {0x8235A0, 0x8236B0, 0x823780, 0x823850, 0x8239F0, 0x824070, 0x824510, 0x824560, 0x8247B0,
-                0x824E00, 0x824E50, 0x825030, 0x825320, 0x825430, 0x825D10, 0x826600, 0x826850, 0x131650,
+                0x824B40, 0x824C90, 0x824E00, 0x824E50, 0x825030, 0x825320, 0x825430, 0x825D10, 0x826600, 0x826850, 0x131650,
                 0x153950, 0x153A90}
 SCRIBBLED_CALLBACKS = set()
 HEAVY = {0x825430, 0x825D10, 0x1EDE40, 0x1EF1C0, 0x1ED450, 0x1B4CF0}
@@ -1785,6 +1790,7 @@ def area15_cases(add, rng):
     placements that end at once on the route."""
     B = B20
     ram, _ = CAPTURES[B]
+    area15_824B40_cases(add, B, ram)
     # 0x8235A0 ([0]) and its sub-handlers 0x8236B0 / 0x823780
     n = A15S0[0x8235A0][0]
     base = bones(n)
@@ -1976,6 +1982,38 @@ def area15_cases(add, rng):
                                                             (0x810702, b8(a702)), (0x810784, b8(b784)),
                                                             (0x810804, b8(b804)), (NODE_A + 0xB, b8(bb))],
                                 queues={0x1BA1F0: [done]})
+
+
+def area15_824B40_cases(add, B, ram):
+    """0x824B40 (0x824990's state 1 with D_008107FF 0) on a designed node:
+    +0xD 0x50 with D_0081077F 0 / 1, 0x5A with +5 0 (D_00810702 0 / 1),
+    +5 1 (the script running / ended; D_00810847 0 / 0xFB), +5 2, other
+    kinds."""
+    src = A15S0[0x8235A0][0]
+    node = node_copy(ram, src, NODE_A, 0x824990) + bones(NODE_A) + [(NODE_A + 4, b8(1))]
+    for b77f in (0, 1, 2):
+        add('a15 824B40 50 77F %d' % b77f, B, 0x824B40, [NODE_A],
+            node + [(NODE_A + 0xD, b8(0x50)), (0x81077F, b8(b77f))])
+    for a702 in (0, 1, 2):
+        add('a15 824B40 5A +5 0 %d' % a702, B, 0x824B40, [NODE_A],
+            node + [(NODE_A + 0xD, b8(0x5A)), (NODE_A + 5, b8(0)), (0x810702, b8(a702))])
+    for done in (0, 1):
+        for b847 in (0, 0xFB, 4):
+            add('a15 824B40 5A +5 1 %d %X' % (done, b847), B, 0x824B40, [NODE_A],
+                node + [(NODE_A + 0xD, b8(0x5A)), (NODE_A + 5, b8(1)), (0x810847, b8(b847)),
+                        (0x8107FF, b8(0))], queues={0x1BA1F0: [done]})
+    for sub in (2, 0xFF):
+        add('a15 824B40 5A +5 %X' % sub, B, 0x824B40, [NODE_A],
+            node + [(NODE_A + 0xD, b8(0x5A)), (NODE_A + 5, b8(sub))])
+    for kind in (0x10, 0x59):
+        add('a15 824B40 %X' % kind, B, 0x824B40, [NODE_A], node + [(NODE_A + 0xD, b8(kind))])
+    # 0x824C90 (D_008107FF 1): +0xD 0x50 / 0x5A / other, +5 0 with +0xB bit
+    # 2 clear / set, +5 1 with the script running / ended, +5 2
+    for kind in (0x50, 0x5A, 0x10):
+        for sub, bb, done in ((0, 0, 0), (0, 4, 0), (0, 0xFB, 0), (1, 4, 0), (1, 4, 1), (2, 4, 0)):
+            add('a15 824C90 %X +5 %d %X %d' % (kind, sub, bb, done), B, 0x824C90, [NODE_A],
+                node + [(NODE_A + 0xD, b8(kind)), (NODE_A + 5, b8(sub)), (NODE_A + 0xB, b8(bb)),
+                        (0x8107FF, b8(1))], queues={0x1BA1F0: [done]})
 
 
 def area19_cases(add, rng):
@@ -2912,6 +2950,10 @@ def hook_contract_site(site):
 # with the capture cases the default run reaches every word the whole set
 # reaches (greedy, cheapest first); SURVIVORS are the mutation sweep's cases.
 DEFAULT_KEEP = frozenset([
+   'a15 824C90 50 +5 0 0 0', 'a15 824C90 50 +5 0 4 0', 'a15 824C90 50 +5 1 4 0', 'a15 824C90 50 +5 1 4 1',
+   'a15 824C90 50 +5 2 4 0', 'a15 824C90 5A +5 0 4 0', 'a15 824C90 5A +5 1 4 1', 'a15 824C90 5A +5 1 4 0', 'a15 824C90 10 +5 0 0 0', 'a15 824C90 5A +5 0 0 0', 'a15 824C90 5A +5 2 4 0', 'a15 824C90 10 +5 1 4 1',
+   'a15 824B40 50 77F 0', 'a15 824B40 5A +5 0 0', 'a15 824B40 5A +5 0 1', 'a15 824B40 5A +5 1 0 0',
+   'a15 824B40 5A +5 1 1 FB', 'a15 824B40 50 77F 1', 'a15 824B40 10', 'a15 824B40 5A +5 2',
    'a15 8235A0 s0 0',
    'a15 8235A0 s0 1',
    'a15 8235A0 s1 0 +5 1 1 0',

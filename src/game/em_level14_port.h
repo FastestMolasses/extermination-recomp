@@ -122,6 +122,7 @@ typedef struct {
     int (*w_001BA580)(void *ctx, uint32_t a0, int32_t n1);
     int (*w_001BA8E0)(void *ctx, uint32_t a0, int32_t n1);
     int (*w_001C4760)(void *ctx, int32_t n0, int32_t n1);
+    int (*w_001C47E0)(void *ctx, int32_t n0, int32_t n1);
     int (*w_001C4820)(void *ctx, uint32_t a0);
     int (*w_001C5C90)(void *ctx, uint32_t a0);
     int (*w_001C6160)(void *ctx, uint32_t a0, int32_t *result);
@@ -146,6 +147,7 @@ typedef struct {
     int (*w_001F5940)(void *ctx, int32_t n0, uint32_t a1, int32_t n2);
     int (*w_001F66F0)(void *ctx, uint32_t a0);
     int (*w_001FAE70)(void *ctx, int32_t n0);
+    int (*w_001FB0B0)(void *ctx, int32_t n0);
     int (*w_001FBD50)(void *ctx, uint32_t a0, int32_t n1, int32_t n2, float f3, int32_t *result);
     int (*w_001FC3C0)(void *ctx, uint32_t a0, uint32_t a1, int32_t n2, float f3, float f4);
     int (*w_001FC520)(void *ctx, uint32_t a0);
@@ -201,6 +203,8 @@ int em_level14_port_00824510(const H14 *h, uint32_t self, F14 *fault);
 int em_level14_port_00824560(const H14 *h, uint32_t self, F14 *fault);
 int em_level14_port_008247B0(const H14 *h, uint32_t self, F14 *fault);
 int em_level14_port_00824990(const H14 *h, uint32_t self, F14 *fault);
+int em_level14_port_00824B40(const H14 *h, uint32_t self, F14 *fault);
+int em_level14_port_00824C90(const H14 *h, uint32_t self, F14 *fault);
 int em_level14_port_00824E00(const H14 *h, uint32_t self, F14 *fault);
 int em_level14_port_00824E50(const H14 *h, uint32_t self, F14 *fault);
 int em_level14_port_00825030(const H14 *h, uint32_t self, F14 *fault);

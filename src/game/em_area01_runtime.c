@@ -710,6 +710,15 @@ static int area01_sub1(EmArea01Runtime *r)
     return sub && *sub == 1;
 }
 
+/* AREA02 sub 2 (D_00810701 == 2: chunk06.n2, the guided run's duct at g51;
+ * docs/AREA02_ASSETS.md, its section on sub 2). */
+static int area02_sub2(EmArea01Runtime *r)
+{
+    if (r->area != 2) return 0;
+    const uint8_t *sub = bytes(r, 0x00810701u, 1, 0);
+    return sub && *sub == 2;
+}
+
 static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
 {
     if (r->area == 0 && c->function >= 0x00823500u)
@@ -755,9 +764,12 @@ static int dispatch(EmArea01Runtime *r, EmArea01Call *c)
      * (decomp tools/area_overview.py --area 1): its boot calls take the later
      * areas' dispatch too, as AREA06 sub 1's; its overlay owners stay AREA01's. */
     const int a01s1 = area01_sub1(r);
+    /* AREA02 sub 2's group 0x826080 places 00147390 ([7] .. [9]), 001C06E0 and
+     * 001BECC0 (decomp tools/area_overview.py --area 2): the same. */
+    const int a02s2 = area02_sub2(r);
     const int later = (r->area == 0x0D || r->area == 0x0F || r->area == 3 || r->area == 0x13 || r->area == 8 ||
                        r->area == 7 || r->area == 0x0E || r->area == 0x11 || r->area == 0x10 || sub2 || a06s1 ||
-                       a01s1) &&
+                       a01s1 || a02s2) &&
                       c->function < 0x00823500u;
     const int creatures = r->area == 4 || later;
     if (creatures && dispatch_level8(r, c, &rc))

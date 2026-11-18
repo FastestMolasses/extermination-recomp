@@ -736,6 +736,20 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   (EM_START_AT_PAD takes f >= -2); route_g16's traces were rebuilt with the
   rows ('k'), snapshots and manifest unchanged.
 
+- AREA02 sub 2 (lane PORT-A02S2, AREA02_ASSETS.md, its section on sub 2):
+  exported (tools/export_area02s2_assets.py over the fork captures
+  a04e_01 / a02c_00, profile 02s2, sfx scope (2, 2), module pack rows
+  (2, 2)) and live (AREA02's per-sub layout, its boot owners through the
+  later dispatch, the creature 00147390's beam node). The AREA15 owners
+  0x824B40 and 0x824C90 (0x824990's state 1 by D_008107FF; byte-identical
+  C) are translated in em_level14_port (test_level14_port_reference: 16 /
+  18 designed cases, 61 / 61 and 63 / 63 words). Chain g11 now plays g49 ..
+  g58 to the end (STARTUP.md "Guided chains"). Open, one frame each, the
+  frame before drawing differently (rand()): g51 row 737 (the door move one
+  frame early, as before), g53 row 2458 (20.0 in z: a teleport-sized step),
+  g56 row 3019 (4.0, heading 0.12) and g58 row 4637 (3.8 in z); g49's 0.8
+  at row 3086 stays.
+
 ## 6. Boot translations (lane BOOT2)
 
 Each module translates byte-matched decomp C (NEARMISS C where noted; the

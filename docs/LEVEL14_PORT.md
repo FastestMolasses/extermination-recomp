@@ -537,6 +537,19 @@ delta inventory: `00823B40` countdown/range gate, `00823C80` transition,
 new module has no live caller. `00824C90` is still a worker boundary outside
 this new six-entry inventory; this extension does not certify it.
 
+**0x824B40 and 0x824C90 (lane PORT-A02S2, 2026-11-17).** 0x824990's state 1
+calls one of them by D_008107FF (0: 0x824B40, the room's script start and
+its end, which sets D_008107FF = 1; 1: 0x824C90). Both are now entries of
+this module (`em_level14_port_00824B40` / `_00824C90`, from the
+byte-identical func_overlay_AREA15_00824B00.c / _00824C50.c) with two new
+hooks 001C47E0 and 001FB0B0; 0x824990 still reaches them through its hooks,
+which em_area01_runtime's dispatch_a15 now binds to the entries (frames
+0x30). Oracle: 16 / 18 designed cases on a copy of a19d_20's [0], 61 / 61
+and 63 / 63 words; the default run keeps 18 of them. An entry that is also
+another entry's hook runs as itself in its own cases (the oracle no longer
+hooks the entry's own address). The guided g56 (AREA15 sub 0, Cindy's room)
+plays through both.
+
 `make test-area15-route-reference` passes 562 cases and 326/326 reachable words,
 including the full fail-stop sweep. The source-fingerprinted full receipt is
 `build/levels/oracle-area15-full-1/`. Inputs are explicitly retained original
