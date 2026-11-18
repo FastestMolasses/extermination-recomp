@@ -6,6 +6,7 @@
 
 #include "game/em_actor_pool.h"
 #include "game/em_area02_misc.h"
+#include "game/em_effect_001E3630.h"
 #include "game/em_ee_float.h"
 #include "game/em_aim_fire_runtime.h"
 #include "game/em_level11_port.h"
@@ -20,6 +21,8 @@ typedef struct {
     uint32_t node;
     uint32_t word34;   /* the node's +0x34 word store (see finish_34) */
     int wrote34;
+    uint32_t self;     /* 001E3630: the node's +0x14 (the pool's self word) */
+    uint32_t sp;       /* 001E3630: its callees' stack pointer */
 } Host;
 
 static uint8_t *view(Host *h, uint32_t a, uint32_t n, int write)
@@ -157,12 +160,150 @@ static int w_001CF470(void *c, uint32_t a0, uint32_t a1, int32_t *result)
     return 0;
 }
 
+/* ---- 001E3630: the flamethrower burst, em_effect_001E3630 over the
+ * composition. Its +0x14 is the pool's self word (001AFA90 writes the
+ * record's own address); its +0x34 store goes through finish_34. ---- */
+
+static uint8_t *flame_view(void *ctx, uint32_t a, uint32_t n, int write)
+{
+    Host *h = ctx;
+    if (!write && a >= h->node + 0x14u && n <= 4u && a - (h->node + 0x14u) <= 4u - n)
+        return (uint8_t *)&h->self + (a - (h->node + 0x14u));
+    return view(h, a, n, write);
+}
+
+static int fwd(void *ctx, uint32_t fn, unsigned na, const uint64_t *a, unsigned nf, const uint32_t *f,
+               uint64_t *v0, uint32_t *f0)
+{
+    Host *h = ctx;
+    EmAimFireTargetCall c = {0};
+    c.function = fn;
+    c.sp = h->sp;
+    c.na = na;
+    c.nf = nf;
+    for (unsigned k = 0; k < na; ++k) c.a[k] = a[k];
+    for (unsigned k = 0; k < nf; ++k) c.f[k] = f[k];
+    if (em_aim_fire_live_call(h->live, &c) < 0) return -1;
+    if (v0) *v0 = c.v0;
+    if (f0) *f0 = c.f0;
+    return 0;
+}
+static int fl_2(void *c, uint32_t fn, uint32_t a0, uint32_t a1)
+{
+    const uint64_t a[2] = {ADDR(a0), ADDR(a1)};
+    return fwd(c, fn, 2, a, 0, NULL, NULL, NULL);
+}
+static int fl_00102948(void *c, uint32_t a0, uint32_t a1) { return fl_2(c, 0x00102948u, a0, a1); }
+static int fl_00102958(void *c, uint32_t a0, uint32_t a1) { return fl_2(c, 0x00102958u, a0, a1); }
+static int fl_001CD390(void *c, uint32_t a0, uint32_t a1) { return fl_2(c, 0x001CD390u, a0, a1); }
+static int fl_001EFD20(void *c, uint32_t a0, uint32_t a1) { return fl_2(c, 0x001EFD20u, a0, a1); }
+static int fl_001F0460(void *c, int32_t a0, uint32_t a1) { return fl_2(c, 0x001F0460u, (uint32_t)a0, a1); }
+static int fl_3(void *c, uint32_t fn, uint32_t a0, uint32_t a1, uint32_t a2)
+{
+    const uint64_t a[3] = {ADDR(a0), ADDR(a1), ADDR(a2)};
+    return fwd(c, fn, 3, a, 0, NULL, NULL, NULL);
+}
+static int fl_001026A0(void *c, uint32_t a0, uint32_t a1, uint32_t a2) { return fl_3(c, 0x001026A0u, a0, a1, a2); }
+static int fl_001028D0(void *c, uint32_t a0, uint32_t a1, uint32_t a2) { return fl_3(c, 0x001028D0u, a0, a1, a2); }
+static int fl_00102918(void *c, uint32_t a0, uint32_t a1, uint32_t a2) { return fl_3(c, 0x00102918u, a0, a1, a2); }
+static int fl_0011E748(void *c, uint32_t f12, uint32_t *f0) { return fwd(c, 0x0011E748u, 0, NULL, 1, &f12, NULL, f0); }
+static int fl_00122BB8(void *c, int32_t *v0)
+{
+    uint64_t v = 0;
+    if (fwd(c, 0x00122BB8u, 0, NULL, 0, NULL, &v, NULL) < 0) return -1;
+    *v0 = (int32_t)v;
+    return 0;
+}
+static int fl_0019A570(void *c, uint32_t a0, uint32_t a1, int32_t a2, int32_t a3, int32_t *v0)
+{
+    const uint64_t a[4] = {ADDR(a0), ADDR(a1), ADDR(a2), ADDR(a3)};
+    uint64_t v = 0;
+    if (fwd(c, 0x0019A570u, 4, a, 0, NULL, &v, NULL) < 0) return -1;
+    *v0 = (int32_t)v;
+    return 0;
+}
+static int fl_0019B6C0(void *c, uint32_t a0, uint32_t a1, int32_t *v0)
+{
+    const uint64_t a[2] = {ADDR(a0), ADDR(a1)};
+    uint64_t v = 0;
+    if (fwd(c, 0x0019B6C0u, 2, a, 0, NULL, &v, NULL) < 0) return -1;
+    *v0 = (int32_t)v;
+    return 0;
+}
+static int fl_001AFC10(void *c, uint32_t a0) { const uint64_t a[1] = {ADDR(a0)}; return fwd(c, 0x001AFC10u, 1, a, 0, NULL, NULL, NULL); }
+static int fl_001B17A0(void *c, uint32_t a0) { const uint64_t a[1] = {ADDR(a0)}; return fwd(c, 0x001B17A0u, 1, a, 0, NULL, NULL, NULL); }
+static int fl_001CCF70(void *c, uint32_t a0, int32_t *v0)
+{
+    const uint64_t a[1] = {ADDR(a0)};
+    uint64_t v = 0;
+    if (fwd(c, 0x001CCF70u, 1, a, 0, NULL, &v, NULL) < 0) return -1;
+    *v0 = (int32_t)v;
+    return 0;
+}
+static int fl_001CFA60(void *c, uint32_t a0, uint32_t a1, uint32_t f12, uint32_t f13)
+{
+    const uint64_t a[2] = {ADDR(a0), ADDR(a1)};
+    const uint32_t f[2] = {f12, f13};
+    return fwd(c, 0x001CFA60u, 2, a, 2, f, NULL, NULL);
+}
+static int fl_001CFBE0(void *c, int32_t a0, int32_t a1, uint32_t a2, uint32_t a3, int32_t t0)
+{
+    const uint64_t a[5] = {ADDR(a0), ADDR(a1), ADDR(a2), ADDR(a3), ADDR(t0)};
+    return fwd(c, 0x001CFBE0u, 5, a, 0, NULL, NULL, NULL);
+}
+static int fl_001F0190(void *c, uint32_t f12, uint32_t f13)
+{
+    const uint32_t f[2] = {f12, f13};
+    return fwd(c, 0x001F0190u, 0, NULL, 2, f, NULL, NULL);
+}
+static int fl_001F0290(void *c) { return fwd(c, 0x001F0290u, 0, NULL, 0, NULL, NULL, NULL); }
+
+static int flame_run(Host *h)
+{
+    EmEffect001E3630Hooks w;
+    memset(&w, 0, sizeof w);
+    w.ctx = h;
+    w.bytes = flame_view;
+    w.w_00102948 = fl_00102948;
+    w.w_00102958 = fl_00102958;
+    w.w_001026A0 = fl_001026A0;
+    w.w_001028D0 = fl_001028D0;
+    w.w_00102918 = fl_00102918;
+    w.w_0011E748 = fl_0011E748;
+    w.w_00122BB8 = fl_00122BB8;
+    w.w_0019A570 = fl_0019A570;
+    w.w_0019B6C0 = fl_0019B6C0;
+    w.w_001AFC10 = fl_001AFC10;
+    w.w_001B17A0 = fl_001B17A0;
+    w.w_001CCF70 = fl_001CCF70;
+    w.w_001CD390 = fl_001CD390;
+    w.w_001CFA60 = fl_001CFA60;
+    w.w_001CFBE0 = fl_001CFBE0;
+    w.w_001EFD20 = fl_001EFD20;
+    w.w_001F0190 = fl_001F0190;
+    w.w_001F0290 = fl_001F0290;
+    w.w_001F0460 = fl_001F0460;
+    /* The node's frame below the composition's private stack (the burst's
+     * BURST_SP); its callees run below that frame. */
+    h->self = h->node;
+    h->sp = BURST_SP - EM_EFFECT_001E3630_FRAME;
+    EmEffect001E3630Fault fault = {0, 0};
+    int rc = em_effect_001E3630(&w, h->node, BURST_SP, &fault);
+    if (rc < 0)
+        fprintf(stderr, "aim/fire: 001E3630 fault code %d at %08X\n", (int)fault.code, (unsigned)fault.address);
+    return rc;
+}
+
 int em_aim_fire_burst_call(EmAimFireLive *live, EmAimFireTargetCall *f)
 {
-    if (f->function != EM_AIM_FIRE_BURST_CALLBACK && f->function != EM_AIM_FIRE_RING_CALLBACK) return 0;
-    Host h = {live, (uint32_t)f->a[0], 0, 0};
+    if (f->function != EM_AIM_FIRE_BURST_CALLBACK && f->function != EM_AIM_FIRE_RING_CALLBACK &&
+        f->function != EM_EFFECT_001E3630_CALLBACK)
+        return 0;
+    Host h = {live, (uint32_t)f->a[0], 0, 0, 0, 0};
     int rc;
-    if (f->function == EM_AIM_FIRE_BURST_CALLBACK) {
+    if (f->function == EM_EFFECT_001E3630_CALLBACK) {
+        rc = flame_run(&h);
+    } else if (f->function == EM_AIM_FIRE_BURST_CALLBACK) {
         EmArea02Misc m;
         memset(&m, 0, sizeof m);
         m.call = misc_call;

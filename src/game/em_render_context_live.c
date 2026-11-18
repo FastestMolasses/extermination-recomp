@@ -2053,7 +2053,7 @@ int em_rcl_001D6B60(int32_t chan, int32_t a1, int32_t a2, int32_t a3, const uint
     return done(em_load_veil_particles_001D6B60(&R.veil, chan, a1, a2, a3, src, NULL), 0x001D6B60u);
 }
 int em_rcl_001D40E0(int32_t chan, int six, uint32_t model, uint32_t model_w04, const uint32_t rgb[3],
-                    const uint8_t copy[16], const uint8_t xy[64], const uint8_t colours[64])
+                    const uint8_t copy[16], const uint8_t xy[64], uint8_t colours[64])
 {
     READY(1);
     return done(em_load_veil_particles_001D40E0(&R.veil, chan, six, model, model_w04, rgb, copy, xy, colours),
