@@ -691,11 +691,26 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   Fixed: the AREA11 load from AREA17 (the costume-2 catalog,
   tools/export_area11_player_variants.py), the breath 001E7050 in AREA11,
   the AREA11 loop 0x44E. Open, in order: the cable ride's scene 0x828C70
-  (g48 row 19885: its script image, the two bank-0x97 001BB0E0 actors), the
-  security gun's return-visit lifecycles 4 / 1 (g49 row 0: em_security_gun_rest
-  is translated and proven but not bound live). These are second-half state
-  carried into a first-half area (D_00810788 set by AREA17's [38], the
-  harness costume), as the takes after g49 will be.
+  (g48 row 19885: its script image, the two bank-0x97 001BB0E0 actors). These
+  are second-half state carried into a first-half area (D_00810788 set by
+  AREA17's [38], the harness costume), as the takes after g49 will be.
+- The security gun's return visit (lane PORT-GUNREVISIT, SECURITY_GUN.md 5.1):
+  lifecycles 4 / 1 are bound live (src/game/em_area11_gun_live.c over the
+  gun's storage; its callees 0019AA80 / 0019A570 / 0019B6C0 / 001CD520 /
+  001E2BA0 / 001EFD90 through the aim / fire composition, 0011E520 through
+  em_area02_misc, the shot node adopted by em_aim_fire_runtime). The g11
+  chain (card g49) now plays g49 in AREA11: rows 0 .. 3085 on the row
+  (position and heading; 3149 compared), with AREA11's trace rows written
+  (em_scene_creature_trace) and the card's gun timers and fan spin taken from
+  the source state at frame 0 (EM_START_AT_RESTORE, comparison only:
+  em_area11_bindings_restore_owners). Open, in order: at row 3086 the player
+  is 0.8 ahead of the row in the fan's box (z 154.8 against 155.6; not
+  traced yet); at row 3148 the area change into AREA01 sub 1 faults, as
+  AREA01 sub 1 has no port scene export ("001FF080(1, 0): area 01 room 1 is
+  not exported"; its module-pack rows are added: export_module_loader
+  DEFAULT_AREAS (0x01, 1)). The rand() word differs from row 1 (one draw
+  fewer in frame 0; the gun draws none there: not the gun). g50 .. g58 are
+  not reached.
 
 ## 6. Boot translations (lane BOOT2)
 

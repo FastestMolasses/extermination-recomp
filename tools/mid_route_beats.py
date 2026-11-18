@@ -287,8 +287,12 @@ GROUPS = {'a22': ('a22_',), 'a01u': ('a01u_',), 'a06': ('a06_',), 'a06b': ('a06b
           'a13': ('a13_',), 'a19': ('a19_',), 'a19b': ('a19b_',), 'a19c': ('a19c_',), 'a19d': ('a19d_',),
           'a03b': ('a03b_',), 'a08': ('a08_',), 'a03c': ('a03c_',), 'a04c': ('a04c_',), 'a07': ('a07_',),
           'a03d': ('a03d_',), 'a04d': ('a04d_',), 'a07b': ('a07b_',), 'a04e': ('a04e_',), 'a02c': ('a02c_',), 'k01': ('k01_0',)}
+# Legacy-mode notes that are not faults: 001D1EF0 / 00200830 (every load), and
+# AREA11's two (em_scene_bindings UM_00199C50 / UM_001CB590: the first level has
+# no reader of the collision scratch metadata, and its walk's current-actor store
+# has no bone-palette tail), which an AREA11 load from a card reports (chain g11).
 FAULT = re.compile(r'FAULT|faulted|fault:|the game task is stopped|refused|Assertion|'
-                   r'(?<!Mkdir, )fail-stop|reached without port code: (?!001D1EF0|00200830)')
+                   r'(?<!Mkdir, )fail-stop|reached without port code: (?!001D1EF0|00200830|00199C50|001CB590)')
 
 
 def beat_dir(beat):

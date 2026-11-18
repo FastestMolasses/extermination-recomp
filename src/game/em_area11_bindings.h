@@ -147,6 +147,14 @@ typedef struct {
 /* 1 and *out for a bound gun, cable or fan node, else 0. */
 int em_area11_bindings_gun_fan_log(const EmActor *actor, EmArea11GunFanLog *out);
 
+/* Comparison only (EM_START_AT_RESTORE through em_scene_restore_bugs; the
+ * guided chain g11): a card's LOAD GAME rebuilds AREA11's records, so the
+ * security gun's patrol timers and sway (+0x04, +0x28, +0x2A, +0x1F4..+0x21F,
+ * +0x224, bone 2 +0x74, bone 3 +0x78) and the fan pair's spin (+0x04, +0x05,
+ * +0x28, +0x38, +0xC8) take the 32 MB source image's values, each record
+ * paired with the image's next record of its behaviour. The count, or -1. */
+int em_area11_bindings_restore_owners(const uint8_t *ram);
+
 /* Instrumentation for the level smoke (tools/level_smoke_overlay11.py): the
  * record bytes of the AREA11 overlay owners chain step A11FIX bound or
  * re-bound, the flame 008235F0, the flag-0x30 manager 00823CE0 and the

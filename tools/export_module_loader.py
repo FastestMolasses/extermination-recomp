@@ -119,11 +119,13 @@ DEFAULT_MODULES = (3,) + PAGE_MODULES + SCREEN_MODULES + SUBAREA_MODULES + ATTAC
 # (0x11), AREA18 (0x12), AREA20 (0x14), AREA21 (0x15); every sub their spawn
 # descriptors name (decomp docs/WORLD_GRAPH.md section 6). AREA00 sub 2 (the
 # constructed start k01) and AREA06 sub 1 (the guided run's g59 / g67 arrivals,
-# AREA16's way in and out; docs/AREA06_ASSETS.md).
+# AREA16's way in and out; docs/AREA06_ASSETS.md). AREA01 sub 1 (the guided
+# run's g49: the return visit's way from AREA11 past the fan; its room-1 bank).
 DEFAULT_AREAS = ((0x0B, 0), (0x01, 0), (0x00, 0), (0x00, 1), (0x02, 1), (0x02, 0), (0x04, 0), (0x16, 0),
                  (0x06, 0), (0x0D, 0), (0x0F, 0), (0x0F, 1), (0x03, 0), (0x13, 0), (0x13, 1), (0x08, 0), (0x08, 2),
                  (0x08, 3), (0x07, 0), (0x07, 2), (0x07, 3), (0x03, 1), (0x03, 2), (0x04, 1),
-                 (0x0E, 0), (0x10, 0), (0x10, 1), (0x11, 0), (0x12, 0), (0x14, 0), (0x15, 0), (0x00, 2), (0x06, 1))
+                 (0x0E, 0), (0x10, 0), (0x10, 1), (0x11, 0), (0x12, 0), (0x14, 0), (0x15, 0), (0x00, 2), (0x06, 1),
+                 (0x01, 1))
 HEADER = 0x120
 AREA_FILES = 0x17
 D_00264E40, D_00275304, D_00264890 = 0x264E40, 0x275304, 0x264890
