@@ -8,9 +8,9 @@ of 001ACA20 sub 1) and requires the title back. Records 1..300 are compared
 with the original's capture (decomp build/demo_ref/run1/rows.jsonl, made by
 tools/capture_attract_demo.py): the pad the demo fed, the area block, the
 player's position and yaw, the fade and the rand() state, record by record.
-EM_TEST_FULL=1 also plays demos 0 and 2 to their end (0xE10 records) and
-reports the equal counts (demo 2 must be all equal; demo 0 diverges at
-record 2430, section 4)."""
+EM_TEST_FULL=1 also plays each of demos 0, 1 and 2 to its end (0xE10
+records; demos 1 and 2 as constructed runs, EM_ATTRACT_DEMO_ID) and requires
+all 3600 records of each equal to the capture (section 4)."""
 import os
 import subprocess
 import sys
@@ -36,12 +36,14 @@ def run(name, extra):
     return log
 
 
-def compare(log, demo, first=None):
+def compare(log, demo, first=None, require=None):
     cmd = [sys.executable, str(ROOT / 'tools/compare_attract_demo.py'), str(log), str(CAPTURE), '--demo', str(demo)]
     if first:
         cmd += ['--first', str(first)]
     r = subprocess.run(cmd, capture_output=True, text=True)
     print(r.stdout.rstrip())
+    if require is not None and f'records 1..{require} compared: {require}/{require} equal' not in r.stdout:
+        return 1
     return r.returncode
 
 
@@ -52,10 +54,11 @@ def main():
     if compare(log, 0, 300) != 0:
         sys.exit('test_attract_demo: FAIL (demo 0, records 1..300)')
     if os.environ.get('EM_TEST_FULL') == '1':
-        compare(run('demo0', {}), 0)
-        if compare(run('demo2', {'EM_ATTRACT_DEMO_ID': '2'}), 2) != 0:
-            sys.exit('test_attract_demo: FAIL (demo 2 to its end)')
-    print('test_attract_demo: PASS (demo 0: records 1..300 equal to the original, CROSS exit back to the title)')
+        for demo, extra in ((0, {}), (1, {'EM_ATTRACT_DEMO_ID': '1'}), (2, {'EM_ATTRACT_DEMO_ID': '2'})):
+            if compare(run(f'demo{demo}', extra), demo, require=3600) != 0:
+                sys.exit(f'test_attract_demo: FAIL (demo {demo} to its end)')
+    print('test_attract_demo: PASS (demo 0: records 1..300 equal to the original, CROSS exit back to the title' +
+          ('; demos 0, 1 and 2: 3600/3600 records equal' if os.environ.get('EM_TEST_FULL') == '1' else '') + ')')
 
 
 if __name__ == '__main__':

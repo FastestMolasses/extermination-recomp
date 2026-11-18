@@ -47,6 +47,7 @@ static struct {
     EmGfx       *gfx;
     bool         quit;
     uint32_t     counter;     /* 0x70003B64 lifetime frame counter */
+    uint32_t     serial;      /* frame steps run; never stored or reset (host only) */
     uint32_t     parity;      /* 0x00810E80 frame index (0/1) */
     uint16_t     field;       /* 0x00810E88 field bit (em_frame_d810E88) */
     uint16_t     top_field;   /* D_00810E88 at the loop top, before this step's vblank */
@@ -289,6 +290,7 @@ void em_frame_scene_input(EmSceneState *scene)
 EmWindow *em_frame_window(void)         { return s_frame.win; }
 EmGfx    *em_frame_gfx(void)            { return s_frame.gfx; }
 uint32_t  em_frame_counter(void)        { return s_frame.counter; }
+uint32_t  em_frame_serial(void)         { return s_frame.serial; }
 const uint32_t *em_frame_counter_storage(void) { return &s_frame.counter; }
 uint32_t  em_frame_parity(void)         { return s_frame.parity; }
 
@@ -673,6 +675,7 @@ movie_phase:
     s_frame.movie_frame = false;
     if (s_frame_tail) s_frame_tail();
     s_frame.counter++;
+    s_frame.serial++;
     return !s_frame.quit;
 }
 

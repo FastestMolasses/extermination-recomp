@@ -1029,11 +1029,14 @@ int em_render_kick_background(EmGfx *gfx)
         return 0;
     EmBackgroundLiveLog l;
     em_background_live_log(&l);
-    if (l.draws && l.frame == em_frame_counter())
+    if (l.draws && l.serial == em_frame_serial())
         return 0; /* the frame close drew it (the world frames) */
     EmLoadVeilLiveLog veil;
     em_load_veil_live_log(&veil);
-    if (veil.draws && veil.frame == em_frame_counter()) {
+    /* By the frame serial: the attract demo stores 0x70003B64 = 0 (001ACA20
+     * sub 0), so a counter stamp of its own area load's veil comes round
+     * again at the same count during the demo (demo 1, counter 2554). */
+    if (veil.draws && veil.serial == em_frame_serial()) {
         fprintf(stderr, "render: the kicked list CALLs the background (001E0DF0) in a frame the load veil drew "
                         "(counter %u): the original draws the background first, under the veil; not modelled\n",
                 (unsigned)em_frame_counter());

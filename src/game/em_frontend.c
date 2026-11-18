@@ -464,28 +464,11 @@ static void attract_row_tail(void)
            (unsigned)attract_player_word(0x1F0));
 }
 
-/* The demos the port runs (docs/ATTRACT_DEMO.md section 4): demo 0 (AREA06)
- * and demo 2 (AREA03) play to their end. Demo 1 (AREA13) stops at its
- * record 1436 on an aim/fire fault, so it keeps the stand-in (a black screen
- * that serves only the state-0 gate's button exit) unless EM_ATTRACT_ALL=1
- * (comparison runs). */
-static int attract_live(int demo)
-{
-    const char *all = getenv("EM_ATTRACT_ALL");
-    return demo == 0 || demo == 2 || (all && all[0] == '1');
-}
-
 static void attract_tick(int begin)
 {
+    /* All three demos play (docs/ATTRACT_DEMO.md section 4: 3600 of 3600
+     * records equal to the original's capture each). */
     if (!f.attract_serial) return;
-    if (!attract_live(f.attract_demo)) {
-        if (!(em_frame_input()->held & EM_STARTUP_ATTRACT_EXIT)) return;
-        uint32_t serial = f.attract_serial;
-        f.attract_serial = 0;
-        f.attract_exit_seen = 1;
-        em_startup_complete(&f.flow, serial, 2);
-        return;
-    }
     if (attract_test()) {
         const EmTask *t = em_task_current();
         const char *at = getenv("EM_ATTRACT_EXIT_AT");
@@ -1604,7 +1587,7 @@ static void startup_task(void)
     EmGfx *gfx = em_frame_gfx();
     const float black[4] = {0, 0, 0, 1};
     /* The demo's world frame draws itself (001AE5E0 / 001AE6B0). */
-    if (!f.attract_serial || !attract_live(f.attract_demo))
+    if (!f.attract_serial)
         em_gfx_overlay_rect(gfx, 0, 0, EM_GFX_OVERLAY_W, EM_GFX_OVERLAY_H, black);
     int screen = -1;
     if (view.screen >= EM_STARTUP_SCREEN_LOGO_A && view.screen <= EM_STARTUP_SCREEN_LOGO_C)

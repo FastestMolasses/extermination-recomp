@@ -150,6 +150,7 @@ int em_load_veil_live_draw(EmGfx *gfx)
                 if (p->v[k].rgba[c] > max_rgb) max_rgb = p->v[k].rgba[c];
     }
     S.log.frame = em_frame_counter();
+    S.log.serial = em_frame_serial();
     S.log.draws++;
     S.log.start = start;
     S.log.end = end;

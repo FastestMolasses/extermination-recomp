@@ -3502,8 +3502,11 @@ static int c1f0_00200890(void *ctx)
     (void)ctx;
     /* A room move's 001B07C0 can change D_00810C60 (AREA13's outdoor entries
      * with the coat): the packet goes up as at a rebind. An area load sends
-     * it from the loader's state 7 (the boundary, see above). */
-    if (s_entry_state == 4)
+     * it from the loader's state 7 (the boundary, see above). The attract
+     * demo's 001ACA20 state 4 sub 0 runs 001B07C0 after its own area load,
+     * and its D_00810C60 can differ from the one the loader sent (demo 1,
+     * AREA13 entry 8: the coat): sent there as well. */
+    if (s_entry_state == 4 || demo_in(4))
         return em_scene_bindings_00200890();
     return 0;
 }

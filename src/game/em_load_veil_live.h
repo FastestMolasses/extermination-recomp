@@ -50,6 +50,7 @@ uint32_t em_load_veil_live_fault(void);
 /* The level smoke's view of the last veil frame (the tick log's "veil_draw"). */
 typedef struct {
     uint32_t frame;            /* em_frame_counter() at the draw           */
+    uint32_t serial;           /* em_frame_serial() at the draw            */
     uint32_t draws;            /* veil frames drawn so far                */
     uint32_t start, end, slot; /* the channel-0 run and the buffer index  */
     uint32_t chain;            /* the list step V kicked                  */

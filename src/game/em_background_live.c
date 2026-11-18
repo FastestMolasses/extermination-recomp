@@ -69,6 +69,7 @@ int em_background_live_draw(EmGfx *gfx)
         return fail(start, "the renderer refused the grid triangles");
     EmBackgroundLiveLog *l = &S.log;
     l->frame = em_frame_counter();
+    l->serial = em_frame_serial();
     l->draws++;
     l->start = start;
     l->prims = p->prim_count;
