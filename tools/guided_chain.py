@@ -70,11 +70,30 @@ SAME = 0.01
 PAD_LAG = 2     # capture_from_take / route_capture: a pad read at row k is an input at f = k - 2
 TURNED = 0.001
 
+# Takes whose route set is not the chain's own (tools/capture_from_take.py --set ... g48 .. g58).
+G49_ROUTE = 'guided-20261117/s87/route_g49'
+G49_TAKES = ('g49_area11_area01', 'g50_area01_area02', 'g51_area02_area04', 'g52_area04_area03',
+             'g53_area03_tag7', 'g54_area03_tag10', 'g55_area03_area19', 'g56_area15_cindy',
+             'g57_area19_area04', 'g58_area04_area01')
+
+
+def take_route(route, take):
+    return G49_ROUTE if take in G49_TAKES else route
+
+
 # chain: (start card, route set, takes in order). The card is the first take's source state.
 CHAINS = {
     # AREA14 entry 1 (g44's end, in play) -> [6]'s Use -> AREA17 entry 0 (a real area change) -> ...
+    # ... -> [38]'s cable: AREA11 entry 3 -> AREA01 sub 1 -> AREA02 sub 1 -> AREA04 sub 1 -> AREA03 ...
+    # (the takes after g48 are in route_g49: G49_TAKES)
     'g17': ('g45', mrb.G17_ROUTE, ('g45_area14_area17', 'g46_area17_ramp', 'g47_area17_roger',
-                                   'g48_area17_cable')),
+                                   'g48_area17_cable', 'g49_area11_area01', 'g50_area01_area02',
+                                   'g51_area02_area04', 'g52_area04_area03', 'g53_area03_tag7',
+                                   'g54_area03_tag10', 'g55_area03_area19', 'g56_area15_cindy',
+                                   'g57_area19_area04', 'g58_area04_area01')),
+    # AREA11 entry 3 in play after the cable ride's scene (g48's end; the scene itself, script
+    # 0x828C70, is not ported yet: the g17 chain stops there) -> AREA01 sub 1 -> AREA02 sub 1 -> ...
+    'g11': ('g49', G49_ROUTE, G49_TAKES),
     # AREA16 sub 0 at control after the real load from AREA06 sub 1 (g60's end) -> the barrier ->
     # the curtains -> sub 1 -> ... The card g60 (g59's end, AREA06 sub 1, before the area change) is
     # built but does not load yet: AREA06 sub 1 is not exported (assets/area06 holds sub 0 only and
@@ -95,7 +114,7 @@ def load(route, takes):
     rows, inputs, starts = [], [], []
     base = None
     for k, take in enumerate(takes):
-        t = json.loads((refs.capture(route) / take / 'trace.json').read_text())
+        t = json.loads((refs.capture(take_route(route, take)) / take / 'trace.json').read_text())
         assert not t.get('teleports') and len(t['rows']) == t['frames'] + 1, take
         if base is None:
             base = t['first_counter']
@@ -126,7 +145,7 @@ def write_inputs(out, rows, inputs, starts):
             lines.append(f'{r["f"]} {value[0]:x} {value[1]} {value[2]}')
             sent = value
     last = len(rows) - 1
-    assert len(lines) <= 4096, 'more pad rows than EM_START_AT_PAD holds'
+    assert len(lines) <= 32768, 'more pad rows than EM_START_AT_PAD holds'
     pad.write_text('\n'.join([f'EMA1 1 {last} 1'] + lines) + '\n')
     rands = out / 'chain.rands'
     rands.write_text(''.join(f'{r["f"]} {r["rand"]}\n' for r in rows))

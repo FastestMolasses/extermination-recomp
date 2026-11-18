@@ -20,6 +20,8 @@
 #include "game/em_aim_fire_render_live.h"
 #include "game/em_aim_fire_world_live.h"
 #include "game/em_area00_low.h"
+#include "game/em_level9_port.h"
+#include "game/em_weather_packets.h"
 #include "game/em_effects_live.h"
 #include "game/em_equipment_live.h"
 #include "game/em_render_context_live.h"
@@ -445,6 +447,63 @@ static int flash_call(void *ctx,EmArea00LowCall *in)
     TRY(em_aim_fire_live_call(ctx,&c));
     in->v0=c.v0;in->f0=c.f0;return 0;
 }
+/* The breath emitter 001E7050 (em_level9_port's translation; effect
+ * 0x80000018, which 001B07C0 spawns at an area entry when the area's flags
+ * D_008106C8 hold 4 and 0x60: AREA11 entered from AREA17 in the guided
+ * run, g48 -> g49): its record and frame through the composition's map,
+ * each callee back through the composition, as the flash node's. */
+static int breath_call(void *ctx,uint32_t fn,uint32_t na,const uint64_t *a,uint32_t nf,const float *fl,
+                       EmAimFireTargetCall *out)
+{
+    EmAimFireTargetCall c={0};
+    c.function=fn;c.na=na;c.nf=nf;
+    for (uint32_t i=0;i<na;++i) c.a[i]=a[i];
+    for (uint32_t i=0;i<nf;++i) memcpy(&c.f[i],&fl[i],4);
+    TRY(em_aim_fire_live_call(ctx,&c));
+    if (out) *out=c;
+    return 0;
+}
+static uint8_t *breath_bytes(void *ctx,uint32_t a,uint32_t n) { return em_aim_fire_live_map(ctx,a,n,1); }
+static int breath_00102948(void *ctx,uint32_t a0,uint32_t a1)
+{ const uint64_t a[2]={a0,a1}; return breath_call(ctx,0x102948u,2,a,0,NULL,NULL); }
+static int breath_001029C0(void *ctx,uint32_t a0)
+{ const uint64_t a[1]={a0}; return breath_call(ctx,0x1029C0u,1,a,0,NULL,NULL); }
+static int breath_00122BB8(void *ctx,int32_t *result)
+{
+    EmAimFireTargetCall c;
+    TRY(breath_call(ctx,0x122BB8u,0,NULL,0,NULL,&c));
+    *result=(int32_t)c.v0;return 0;
+}
+static int breath_001AFC10(void *ctx,uint32_t a0)
+{ const uint64_t a[1]={a0}; return breath_call(ctx,0x1AFC10u,1,a,0,NULL,NULL); }
+static int breath_001CD070(void *ctx,uint32_t a0,int32_t n1,int32_t *result)
+{
+    const uint64_t a[2]={a0,(uint64_t)(int64_t)n1};
+    EmAimFireTargetCall c;
+    TRY(breath_call(ctx,0x1CD070u,2,a,0,NULL,&c));
+    *result=(int32_t)c.v0;return 0;
+}
+static int breath_001CD2B0(void *ctx,float f0,float f1,float f2,float f3,float *result)
+{
+    const float fl[4]={f0,f1,f2,f3};
+    EmAimFireTargetCall c;
+    TRY(breath_call(ctx,0x1CD2B0u,0,NULL,4,fl,&c));
+    memcpy(result,&c.f0,4);return 0;
+}
+static int breath_001CFAE0(void *ctx,uint32_t a0,int32_t n1,uint32_t a2,float f3,float f4,float f5,float f6)
+{
+    /* 001CFAE0 is not a composition callee: the weather's translation
+     * over the composition's map (as em_area01_flame_services binds it). */
+    uint32_t f[4],fault=0;
+    memcpy(&f[0],&f3,4);memcpy(&f[1],&f4,4);memcpy(&f[2],&f5,4);memcpy(&f[3],&f6,4);
+    return em_weather_packets_001CFAE0_view(ctx,flash_view,a0,n1,a2,f,&fault)<0 ? -1 : 0;
+}
+static int breath_001CFBE0(void *ctx,int32_t n0,int32_t n1,uint32_t a2,uint32_t a3,int32_t n4)
+{
+    const uint64_t a[5]={(uint64_t)(int64_t)n0,(uint64_t)(int64_t)n1,a2,a3,(uint64_t)(int64_t)n4};
+    return breath_call(ctx,0x1CFBE0u,5,a,0,NULL,NULL);
+}
+
 static const uint8_t *piece_resource(void *ctx,uint32_t a,uint32_t n)
 {
     (void)ctx;
@@ -762,6 +821,18 @@ static int external_call(void *context,EmAimFireLive *live,EmAimFireTargetCall *
             fprintf(stderr,"aim/fire: 001E7310 fault code %d at %08X\n",(int)low.fault,(unsigned)low.fault_address);
         return rc;
     }
+    case 0x1E7050: {
+        EmLevel9PortHooks h;memset(&h,0,sizeof h);
+        h.ctx=live;h.bytes=breath_bytes;
+        h.w_00102948=breath_00102948;h.w_001029C0=breath_001029C0;h.w_00122BB8=breath_00122BB8;
+        h.w_001AFC10=breath_001AFC10;h.w_001CD070=breath_001CD070;h.w_001CD2B0=breath_001CD2B0;
+        h.w_001CFAE0=breath_001CFAE0;h.w_001CFBE0=breath_001CFBE0;
+        EmLevel9PortFault fault={0,0};
+        const int rc=em_level9_port_001E7050(&h,(uint32_t)f->a[0],f->sp,&fault);
+        if (rc<0)
+            fprintf(stderr,"aim/fire: 001E7050 fault code %d at %08X\n",(int)fault.code,(unsigned)fault.address);
+        return rc<0 ? -1 : 0;
+    }
     case 0x1E7440: {
         /* Its twin 001E7440 (em_area00_low's translation; the player
          * stage's 0x80000062 node: an area change's flash, a22_02): the
@@ -1016,6 +1087,7 @@ static int other_tick(void *context,uint32_t node,uint32_t callback)
         return a->allocated && a->generation==generation ? 1 : 0;
     }
     if (callback==0x001E2E80u || callback==0x001F6FB0u || callback==0x001E7310u || callback==0x001E7440u ||
+        callback==0x001E7050u ||
         callback==0x001E7570u || callback==EM_AIM_FIRE_BURST_CALLBACK || callback==EM_AIM_FIRE_RING_CALLBACK) {
         /* The spat hazard node 001E2E80 (em_area00_hud) and the creatures'
          * glow node 001F6FB0 (em_area00_fx), through the composition, with

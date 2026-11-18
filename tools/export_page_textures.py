@@ -98,7 +98,9 @@ SOURCE_BLOCKS = [0x00253670] + [0x002565E0 + 0x90 * k for k in range(8)] + [
     0x00255620,                       # 001EACF0's (the impact effect 0x80000060)
     0x002561F0,                       # 001EBBB0's (the effect 0x8000000E of 001F0460's ring decal)
     0x00255590,                       # 001EAB50's (the cable hit's effect 0x80000045)
-    0x00268480, 0x00268510]           # 0022BBC0's burst 0 (the flame contact's 0x80000027; DAMAGE.md)
+    0x00268480, 0x00268510,           # 0022BBC0's burst 0 (the flame contact's 0x80000027; DAMAGE.md)
+    0x00255320]                       # 001E7050's (the breath 0x80000018 001B07C0 spawns when D_008106C8
+                                      # holds 4 and 0x60: AREA11 entered again, the guided run's g49)
 WEATHER_DESCRIPTOR = 0x00255170       # D_00255170 (001E67C0 / 001CFFE0)
 FLAME_DESCRIPTOR, FLAME_FILE_OFFSET = 0x00828340, 0x4E40   # 008235F0's D_00828340 in AREA11.BIN
 CLD_MASK = eot.CLD_MASK

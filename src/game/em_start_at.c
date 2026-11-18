@@ -210,6 +210,19 @@ static const struct {
     {"g65", 0x10},
     {"g66", 0x10},
     {"g67", 0x10},
+    /* After the cable (lane PORT-CHAIN2, route_g49): the source state of g49 (g48's end, AREA11
+     * entry 3 in play after the cable ride's scene) .. g58 (g57's end, AREA04 sub 1): the chained
+     * start g11 (tools/guided_chain.py) and the later takes' cards */
+    {"g49", 0x0B},
+    {"g50", 0x01},
+    {"g51", 0x02},
+    {"g52", 0x04},
+    {"g53", 0x03},
+    {"g54", 0x03},
+    {"g55", 0x03},
+    {"g56", 0x13},
+    {"g57", 0x13},
+    {"g58", 0x04},
 };
 
 static struct {
@@ -221,9 +234,9 @@ static struct {
 /* EM_START_AT_PAD=<file>: a recorded pad script (the level smoke's EMA1
  * format: "EMA1 1 <frames> <gap>", then "<frame> <buttons hex> <lx> <ly>"
  * rows in frame order) played from control as the whole pad. */
-enum { PAD_MAX = 4096 };
+enum { PAD_MAX = 32768 };   /* a chain of guided takes (tools/guided_chain.py) */
 typedef struct { int f; uint16_t buttons; uint8_t lx, ly; } PadRow;
-enum { PATH_MAX_ROWS = 80000 };
+enum { PATH_MAX_ROWS = 240000 };
 static struct {
     int loaded, active, done;
     unsigned count, last, start;

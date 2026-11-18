@@ -583,7 +583,9 @@ record: +0x04, +0x05, +0x2E and +0xC8 are EmActor's (`u04[0]`, `u04[1]`,
   +0x00 = 1 and calls 001B17A0 every tick, as the captures hold (+0x04 = 1,
   +0x00 = 1, +0x05 = 0 in the playable, 04 and 11 RAM). Its script path
   (D_00810788 set, a return visit) starts 0x828C70, which no exported image
-  holds: it faults there.
+  holds: it faults there. The guided run reaches both return-visit faults
+  (lane PORT-CHAIN2, AREA17_PORT.md): the script at g48 row 19885 (the cable
+  ride from AREA17), the gun's lifecycle 4 at g49 row 0 (card g49).
 - **The gun's lamp** draws nothing (OWNER_DRAW.md section 11); it is dark
   on the first visit.
 - **The fan's boxes** (the exit bit and the player hit) are off the level

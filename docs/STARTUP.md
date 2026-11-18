@@ -665,6 +665,30 @@ make start-saves                      # once, and after the recordings change
 EM_START_AT=area01 build/extermination
 ```
 
+### Guided chains (tools/guided_chain.py)
+
+Claude's kept guided takes played as one continuous run from one card, every
+frame compared with the takes' rows (AREA17_PORT.md "Lane PORT-CHAIN" ..
+"Lane PORT-CHAIN2"). Native arm64 macOS; build/extermination first.
+
+```sh
+python3 tools/capture_from_take.py --set guided-20261117/s87/route_g49 \
+    g48_area17_cable g49_area11_area01 ... g58_area04_area01   # route sets (once)
+python3 tools/build_start_saves.py g45 g49 g50 g51 g52 g53 g54 g55 g56 g57 g58   # cards
+python3 tools/guided_chain.py --list
+python3 tools/guided_chain.py g17 --steer g45      # card g45: g45 .. g58 (AREA14 -> AREA17 -> AREA11 -> ...)
+python3 tools/guided_chain.py g11                  # card g49 (g48's end, AREA11 entry 3): g49 .. g58
+python3 tools/guided_chain.py g16                  # card g60: g60 .. g67 (AREA06 sub 1 -> AREA16)
+python3 tools/guided_chain.py g11 --until g50      # stop after a take
+```
+
+Output: build/guided_chain/<chain>/report.txt (per take: compared frames,
+frames on the row, the first frame of each kind of difference, where the run
+stopped) and run.log. A chain's takes may come from two route sets
+(guided_chain.G49_TAKES: route_g49). Cards g49 .. g58 are the source states
+of g49 .. g58 (route_g49). EM_START_AT_PAD holds 32768 pad rows and the
+per-frame tables 240000 frames.
+
 ### EM_SKIP_STARTUP=1: the older debug fixture
 
 `em_game_install` (em_game.c): no frontend and no New Game. It reads the
