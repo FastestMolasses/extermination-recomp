@@ -228,11 +228,10 @@ int em_rcl_001D40E0(int32_t chan, int six, uint32_t model, uint32_t model_w04, c
                     const uint8_t copy[16], const uint8_t xy[64], const uint8_t colours[64]);
 int em_rcl_001D3F60(int32_t chan, uint32_t model, uint32_t model_w04, const uint8_t copy[16]);
 int em_rcl_001D6BA0(int32_t chan, int32_t a1, int32_t a2, int32_t a3, int32_t t0, int32_t t1);
-/* 001D6B10(a0..a3) and 001D6C90(args: a0..a3, t0..t3 and the seven stack
+/* 001D6C90(args: a0..a3, t0..t3 and the seven stack
  * words at the caller's sp + 0x00..+0x30) over the context's channel
  * state (em_render_context's translations; the AREA16 water grid's
  * 001DB480 set-up from an owner's tick). 0, or -1. */
-int em_rcl_001D6B10(int32_t a0, int32_t a1, int32_t a2, int32_t a3);
 int em_rcl_001D6C90(const int32_t args[15]);
 int em_rcl_001D1FF0(int32_t chan, int32_t a1);
 int em_rcl_001D1F20(int32_t chan);

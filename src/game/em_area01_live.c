@@ -966,7 +966,7 @@ static int water_render(EmArea01Live *l,EmArea01Call *c)
     switch(c->function) {
     case 0x001D6B10u:
         if(c->na!=4 || c->nf)return worker_result(l,-1,c->function);
-        rc=em_rcl_001D6B10(a[0],a[1],a[2],a[3]);break;
+        rc=em_rcl_001D6B10(a[0],a[1],a[2],a[3],NULL);break;
     case 0x001D6BA0u:
         if(c->na!=6 || c->nf)return worker_result(l,-1,c->function);
         rc=em_rcl_001D6BA0(a[0],a[1],a[2],a[3],a[4],a[5]);break;
