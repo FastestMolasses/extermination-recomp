@@ -209,6 +209,11 @@ struct EmModuleLoader {
     int drive;
     uint32_t field, busy_until;
     Region regions[MAX_REGIONS];
+    /* (docs/PERFORMANCE.md P19) The live regions are always regions[0 ..
+     * region_count): region_for, their one writer, packs them to the front
+     * and zeroes the rest, so the lookups stop at the count with the same
+     * first match as a scan of the whole table. */
+    unsigned region_count;
     /* hooks */
     EmModuleLoaderChainHook chain_hook;
     void *chain_ctx;
@@ -340,6 +345,7 @@ static uint8_t *region_for(EmModuleLoader *ml, uint32_t buf, uint32_t size)
         if (!kept) free(r->base);
     }
     memcpy(ml->regions, next, sizeof next);
+    ml->region_count = count;
     return dst;
 failed:
     /* Every region in `next` borrows an existing allocation (dst is the
@@ -490,7 +496,7 @@ static int dma_send(void *ctx, uint32_t base, uint32_t chain)
     void *hook_ctx = area ? ml->area_chain_ctx : ml->chain_ctx;
     if (!hook)
         return fail(&ml->io_fault, 0x00101F08u, EM_STATUS_SCENE_FAULT_NULL_WORKER);
-    for (int i = 0; i < MAX_REGIONS; ++i) {
+    for (int i = 0; i < (int)ml->region_count; ++i) {
         const Region *r = &ml->regions[i];
         if (r->bytes && chain >= r->address && chain - r->address < r->size) {
             uint32_t at = chain - r->address;
@@ -544,7 +550,7 @@ static int w_section(void *ctx, uint32_t address)
 /* The host bytes of the one region that holds [address, address + 4), or NULL. */
 static const Region *region_at(const EmModuleLoader *ml, uint32_t address)
 {
-    for (int i = 0; i < MAX_REGIONS; ++i) {
+    for (int i = 0; i < (int)ml->region_count; ++i) {
         const Region *r = &ml->regions[i];
         if (r->bytes && address >= r->address && address - r->address < r->size)
             return r;
@@ -1021,7 +1027,7 @@ const uint8_t *em_module_loader_memory_rest(const EmModuleLoader *ml, uint32_t a
 {
     if (!ml || !size)
         return NULL;
-    for (int i = 0; i < MAX_REGIONS; ++i) {
+    for (int i = 0; i < (int)ml->region_count; ++i) {
         const Region *r = &ml->regions[i];
         if (r->bytes && address >= r->address && address < (uint64_t)r->address + r->size) {
             *size = (uint32_t)(r->address + r->size - address);
@@ -1038,7 +1044,7 @@ const uint8_t *em_module_loader_memory(const EmModuleLoader *ml, uint32_t addres
     if (address >= EM_STATUS_SCENE_D_00289BC0 &&
         (uint64_t)address + size <= (uint64_t)EM_STATUS_SCENE_D_00289BC0 + sizeof ml->ld.header)
         return ml->ld.header + (address - EM_STATUS_SCENE_D_00289BC0);
-    for (int i = 0; i < MAX_REGIONS; ++i) {
+    for (int i = 0; i < (int)ml->region_count; ++i) {
         const Region *r = &ml->regions[i];
         if (r->bytes && address >= r->address &&
             (uint64_t)address + size <= (uint64_t)r->address + r->size)
