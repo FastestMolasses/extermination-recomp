@@ -120,7 +120,7 @@ static EmOwnerServicesChannel *channel(EmAnimRest *r, int32_t chan, size_t room,
 
 /* One VU0 macro instruction; `*st` is sticky (nothing runs after a
  * refusal, and the caller faults). */
-static void vu(int *st, em_vu_op op, unsigned dest, int bc, const u32 fs[4], const u32 ft[4], u32 q,
+static inline __attribute__((always_inline)) void vu(int *st, em_vu_op op, unsigned dest, int bc, const u32 fs[4], const u32 ft[4], u32 q,
                const u32 acc[4], u32 dst[4])
 {
     if (*st != EM_EE_FLOAT_OK) return;

@@ -49,6 +49,10 @@ typedef struct {
     EmArea01ActorWritten written; /* required if project returns mode 2 */
     void *ctx;
     EmArea01ActorRecordView record[EM_ACTOR_POOL_CAPACITY];
+    /* record[i].touched mirrored as bit i (set and cleared with it), so a
+     * window's begin and commit visit only the touched records, in index
+     * order (docs/PERFORMANCE.md P19). */
+    uint64_t touched_bits[EM_ACTOR_POOL_CAPACITY / 64];
     uint32_t fault_address;
     int32_t fault; /* first failure: 1 boundary, 2 lifetime, 3 links,
                      4 shared fields, 5 callback binding */
