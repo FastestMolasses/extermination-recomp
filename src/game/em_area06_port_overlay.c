@@ -464,6 +464,68 @@ int em_area06_port_00825E20(const EmArea06PortHooks *h, uint32_t self, EmArea06P
     return a6_end(&o);
 }
 
+/* ------------------------------------------------------------------------
+ * 0x826BA0 (AREA01, C byte-identical, func_overlay_AREA01_00826B60.c): AREA01
+ * sub 1's placement [19] (placements 0x82C5F0). By the state +4:
+ *  0  001B0FD0(self) zero: 001C6380(self), state 1, +0 = 1.
+ *  1  by the sub-state +5: 0 when the byte D_00810794 is 1: the script
+ *     0x82BAD0 on self + 0x1F0 (001BA1A0), +5 = 1; 1 when 001BA1F0(self) is
+ *     nonzero (the script ended): D_00810814 = 0xFF, 001C4760(0x1B, 1),
+ *     001FABB0(), 001FB0B0(0x14), +5 = 2; 2 nothing. Then 001B17A0(self)
+ *     and the +0x4C method (its word read after 001B17A0).
+ *  2, 3  001AFC10(self).
+ * ---------------------------------------------------------------------- */
+static void a1_00826BA0(A6 *o, uint32_t self)
+{
+    int32_t r = 0;
+    switch (a6_u8(o, self + 4)) {
+    case 0:
+        if (a6_c_001B0FD0(o, self, &r)) return;
+        if (r == 0) {
+            if (a6_c_001C6380(o, self)) return;
+            a6_w8(o, self + 4, 1);
+            a6_w8(o, self, 1);
+        }
+        break;
+    case 1:
+        switch (a6_u8(o, self + 5)) {
+        case 0:
+            if (a6_u8(o, 0x00810794u) == 1) {
+                if (a6_c_001BA1A0(o, self + 0x1F0, 0x0082BAD0u)) return;
+                a6_w8(o, self + 5, 1);
+            }
+            break;
+        case 1:
+            if (a6_c_001BA1F0_result(o, self, &r)) return;
+            if (r != 0) {
+                a6_w8(o, 0x00810814u, 0xFF);
+                if (a6_c_001C4760(o, 0x1B, 1) || a6_c_001FABB0(o) || a6_c_001FB0B0(o, 0x14)) return;
+                a6_w8(o, self + 5, 2);
+            }
+            break;
+        default:
+            break;
+        }
+        if (a6_c_001B17A0(o, self, &r)) return;
+        a6_callback(o, a6_u32(o, self + 0x4C), self);
+        break;
+    case 2:
+    case 3:
+        a6_c_001AFC10(o, self);
+        break;
+    default:
+        break;
+    }
+}
+
+int em_area06_port_00826BA0(const EmArea06PortHooks *h, uint32_t self, EmArea06PortFault *fault)
+{
+    A6 o;
+    if (a6_begin(&o, h, fault)) return -1;
+    a1_00826BA0(&o, self);
+    return a6_end(&o);
+}
+
 int em_area06_port_008242C0(const EmArea06PortHooks *h, uint32_t self, uint32_t st, int32_t *result,
                             EmArea06PortFault *fault)
 {

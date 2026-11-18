@@ -169,11 +169,12 @@ FUNCS = {
     0x8242C0: ('em_area06_port_008242C0', 0x80, [U, U], I),
     0x824290: ('em_area06_port_00824290', 0x30, [], None),
     0x825E20: ('em_area06_port_00825E20', 0x178, [U], None),
+    0x826BA0: ('em_area06_port_00826BA0', 0x150, [U], None),
     0x824560: ('em_area06_port_00824560', 0x18BC, [U, S], None),
     0x826950: ('em_area06_port_00826950', 0x244, [U, U, U], I),
 }
 OVERLAY_OF = {0x823B10: 6, 0x823B50: 6, 0x8240E0: 6, 0x824340: 6, 0x823580: 6, 0x8242C0: 6, 0x824560: 6, 0x826950: 2,
-              0x824290: 6, 0x825E20: 6}
+              0x824290: 6, 0x825E20: 6, 0x826BA0: 2}
 
 
 def has_result(entry):
@@ -1417,7 +1418,7 @@ def poison_patches(oracle, ram, spad):
     return patches, (bytes(stack) if any(stack) else None)
 
 
-SELF_ENTRIES = {0x219870, 0x824560, 0x824340}   # the entries that reach their node's +0x4C method
+SELF_ENTRIES = {0x219870, 0x824560, 0x824340, 0x826BA0}   # the entries that reach their node's +0x4C method
 SCRIBBLED_CALLBACKS = set()
 HEAVY = {0x219870, 0x824560, 0x207350, 0x1944B0, 0x1CE860}
 
@@ -2184,6 +2185,23 @@ def beam_cases(add_case):
 
 
 def area01_cases(add, beat):
+    # 0x826BA0 (self): AREA01 sub 1's placement [19] (the overlay is the same
+    # in both subs; a sub-0 beat's resident overlay runs it on a free node
+    # whose +0x4C names a stub): every state and sub-state, 001B0FD0's
+    # results, D_00810794 at 1 and not, the script end and not
+    d = FREE + 0xC200
+    for state in (0, 1, 2, 3, 4):
+        for sub in (0, 1, 2, 3):
+            if state != 1 and sub:
+                continue
+            for r0 in ((0, 1, -1) if state == 0 else (0,)):
+                for flag in ((1, 0, 2, 0xFF) if (state, sub) == (1, 0) else (1,)):
+                    for done in ((0, 1, -2) if (state, sub) == (1, 1) else (0,)):
+                        add('826BA0 st %d sub %d r0 %d flag %X done %d' % (state, sub, r0, flag, done), beat,
+                            0x826BA0, [d],
+                            [(d, b8(0)), (d + 4, b8(state)), (d + 5, b8(sub)), (d + 0x4C, w32(0x00100100)),
+                             (0x810794, b8(flag)), (0x810814, b8(0x11))],
+                            queues={0x1B0FD0: [r0], 0x1BA1F0: [done], 0x1B17A0: [0]})
     self_, st, prm = 0x7A5640, FREE + 0xC000, FREE + 0xC100
     base = [(prm + 0x30, fw(12.0, 60.0, -665.0, 1.0)), (prm + 0xC, fw(60.0))]
     for s in (0, 3):

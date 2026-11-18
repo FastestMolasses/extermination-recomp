@@ -197,10 +197,11 @@ def beat(take: str, folder: Path, source_state: str, source_ram: bytes) -> dict:
         pad = (int(r['btn'], 16), int(r['lx']), int(r['ly']))
         if pad != sent:
             f = max(k - PAD_LAG, 0)
-            if inputs and inputs[-1]['f'] == f:
-                inputs.pop()
             # 'k': the row whose tick read it; f clamps at 0 for a single beat, but a chain of
-            # takes (tools/guided_chain.py) places it at k - 2 of the previous take's rows.
+            # takes (tools/guided_chain.py) places it at k - 2 of the previous take's rows. Both
+            # of a take's first reads stay (row 0's neutral pad and row 1's stick: every take
+            # starts with a neutral read, take.rec row 0), so a chain keeps the neutral row; a
+            # single beat's two rows share f = 0 and the later one is the pad there, as before.
             inputs.append({'f': f, 'k': k, 'buttons': pad[0], 'lx': pad[1], 'ly': pad[2]})
             sent = pad
     rows[0]['fade'] = source_ram[FADE:FADE + FADE_SIZE].hex()

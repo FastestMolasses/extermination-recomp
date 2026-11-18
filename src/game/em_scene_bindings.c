@@ -234,8 +234,10 @@ static int mid_area(unsigned area, unsigned sub)
      * export_area00s2_assets.py, docs/AREA14_PORT.md) keeps its folder
      * assets/area00/sub2 in the later areas' layout. */
     /* AREA06 sub 1 (chunk10.n1; tools/export_area06s1_assets.py,
-     * docs/AREA06_ASSETS.md) keeps its folder assets/area06/sub1. */
-    return (area == 0u && sub == 2u) || (area == 6u && sub == 1u) ||
+     * docs/AREA06_ASSETS.md) keeps its folder assets/area06/sub1, AREA01
+     * sub 1 (chunk05.n1; tools/export_area01s1_assets.py, docs/
+     * AREA01_ASSETS.md, its section on sub 1) assets/area01/sub1. */
+    return (area == 0u && sub == 2u) || (area == 6u && sub == 1u) || (area == 1u && sub == 1u) ||
            ((area == 0x16u || area == 6u || area == 0x0Du || area == 0x0Eu || area == 0x11u) && sub == 0) ||
            ((area == 0x0Fu || area == 0x13u || area == 0x10u) && sub <= 1) || (area == 3u && sub <= 2) || (area == 4u && sub == 1) ||
            ((area == 8u || area == 7u) && (sub == 0 || sub == 2 || sub == 3));
@@ -255,7 +257,8 @@ static const char *mid_file(unsigned area, const char *name)
         snprintf(out, sizeof path[0], "assets/levels/%02u/sub%u%s%s", area, s_state.d810701, name[0] ? "/" : "", name);
     else
         snprintf(out, sizeof path[0], "assets/area%02u/sub%u%s%s", area,
-                 (area == 0x0Fu || area == 8u || area == 7u || area == 0u || area == 0x10u || area == 6u) ?
+                 (area == 0x0Fu || area == 8u || area == 7u || area == 0u || area == 0x10u || area == 6u ||
+                  area == 1u) ?
                      s_state.d810701 : 0u,
                  name[0] ? "/" : "", name);
     return out;
@@ -2913,6 +2916,7 @@ static int arrival_scene(void)
            strcmp(g.scene_dir, "assets/area22/sub0") == 0 ||
            strcmp(g.scene_dir, "assets/area06/sub0") == 0 ||
            strcmp(g.scene_dir, "assets/area06/sub1") == 0 ||
+           strcmp(g.scene_dir, "assets/area01/sub1") == 0 ||
            strcmp(g.scene_dir, "assets/area13/sub0") == 0 ||
            strcmp(g.scene_dir, "assets/area15/sub0") == 0 ||
            strcmp(g.scene_dir, "assets/area15/sub1") == 0 ||
@@ -4217,6 +4221,16 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
      * when it runs. */
     if (s_state.d810700 == 6 && s_state.d810701 == 1 && fn < 0x00823500u && fn && fn != 0x001F5040u)
         goto bind;
+    /* AREA01 sub 1 (placements 0x82C5F0, group 0x829440; decomp tools/
+     * area_overview.py --area 1): its placement [19] 0x826BA0
+     * (em_area06_port_00826BA0 through em_area01_runtime), its other overlay
+     * owners sub 0's (the final switch); its boot owners as AREA06 sub 1's
+     * (the runtime's owners or its fallback em_area01_runtime_later; an
+     * untranslated one faults at its address when it runs). */
+    if (s_state.d810700 == 1 && s_state.d810701 == 1) {
+        if (fn == 0x00826BA0u || (fn < 0x00823500u && fn && fn != 0x001F5040u))
+            goto bind;
+    }
     if (s_state.d810700 == 0x16 && fn >= 0x00823500u)
         return -1;
     /* AREA13's placements and spawns (em_area01_runtime dispatch_a13). */
@@ -4680,7 +4694,7 @@ static int spawn_area01(void)
     if (!((area == 1 && sub == 0) || ((area == 0 || area == 2) && sub <= 1) || (area == 4 && sub == 0) ||
           mid_area(area, sub)))
         return em_scene_fault(&s_state, 0x001B6990u, EM_SCENE_FAULT_BAD_INDEX);
-    const char *path = area == 1 ? AREA01_ROSTER_PATH :
+    const char *path = area == 1 && sub == 0 ? AREA01_ROSTER_PATH :
                        area == 2 ? area02_file(sub, "roster.emro") :
                        area == 4 && sub == 0 ? AREA04_SCENE_DIR "/roster.emro" :
                        mid_area(area, sub) ? mid_file(area, "roster.emro") :

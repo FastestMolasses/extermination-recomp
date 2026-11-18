@@ -27,6 +27,33 @@ compared access, so the test confirms each one.
 
 ## State (newest first)
 
+### Sub-1 live (lane PORT-A01S1, 2026-11-17, branch `a01s1`)
+
+AREA01 sub 1 (assets: AREA01_ASSETS.md, its section on sub 1) runs in the shared
+composition from the real loads (g49: AREA11's fan; g58: AREA22's door [8])
+and from card g59.
+- **[19] 0x826BA0** (func_overlay_AREA01_00826B60.c, byte-identical; sub
+  1's only overlay owner sub 0 lacks): `em_area06_port_00826BA0` (the module
+  that holds AREA01's 0x826950): state 0 001B0FD0 zero -> 001C6380, state 1,
+  +0 = 1; state 1 sub-state 0 starts script 0x82BAD0 when D_00810794 == 1,
+  sub-state 1 on the script's end D_00810814 = 0xFF, 001C4760(0x1B, 1),
+  001FABB0, 001FB0B0(0x14); then 001B17A0 and the +0x4C method; states 2 /
+  3 001AFC10. `tools/test_area06_port_reference.py`: designed cases on an
+  AREA01 sub-0 beat's resident overlay, 54 of 54 reachable words.
+- **Binding:** em_area01_runtime routes 0x826BA0 in sub 1 to dispatch_a06;
+  sub 1's other overlay owners (0x8261A0, 0x826D40, 0x828850) are sub 0's
+  translations; area01_rebind binds 0x826BA0 and sub 1's boot owners in sub
+  1 only (as AREA06 sub 1's), and sub 1's boot calls take the later areas'
+  dispatch (the creatures 00147390 / 001383C0 of group 0x829440: 001B15D0
+  and the creature family).
+- **Paths:** mid_area / mid_file take (1, 1) as assets/area01/sub1 (the
+  roster path of 001B6990 keeps assets/area01 for sub 0 only); world
+  textures and shadow receivers from assets/levels/01/sub1.
+
+Sub 0's path is unchanged: every new rule is gated on sub 1. Chain results:
+SECOND_HALF_AREAS.md section 5 (g11) and AREA16_PORT.md "Lane PORT-A01S1"
+(g16).
+
 ### AREA02 host (revisit 6d212fb .. 029fc00)
 
 The AREA02 game-logic host runs in the shared composition (area index 2):

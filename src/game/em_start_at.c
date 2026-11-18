@@ -201,7 +201,9 @@ static const struct {
     {"g48", 0x11},
     /* AREA16 from the guided run's takes (lane PORT-LIVE-A16): the source state of g61 (g60's end:
      * sub 0 entry 0), g62 (sub 0) and g63 .. g67 (sub 1); g60 (g59's end, AREA06 sub 1: lane
-     * PORT-CHAIN's chained start into AREA16) */
+     * PORT-CHAIN's chained start into AREA16); g59 (g58's end, AREA01 sub 1 entry 6: lane
+     * PORT-A01S1's chained start, one area earlier; route_g59) */
+    {"g59", 0x01},
     {"g60", 0x06},
     {"g61", 0x10},
     {"g62", 0x10},
@@ -665,7 +667,7 @@ int em_start_at_check(void)
                              "a22_02, a01u, a01u_01, a01u_02, a01u_s0, area06, a06_01 .. a06_05, a06b, "
                              "a06b_01, a01v, a01v_01, a01v_02, a22b, a22b_01, a04_00 .. a04_05, a04b_00 .. "
                              "a04b_04, boss, area13, a13_01 .. a13_05, a13b_01 .. a13b_05, "
-                             "a13c_00 .. a13c_06, a13d_00 .. a13d_07, k01_01 .. k01_05, area14k, g45 .. g48, g60 .. g67)", NULL);
+                             "a13c_00 .. a13c_06, a13d_00 .. a13d_07, k01_01 .. k01_05, area14k, g45 .. g48, g49 .. g58, g59 .. g67)", NULL);
     }
     const char *ng = getenv("EM_NEW_GAME");
     if (ng && ng[0] && strcmp(ng, "0") != 0)
@@ -693,7 +695,9 @@ int em_start_at_check(void)
         int frame, fields = 0;
         unsigned buttons, lx, ly;
         while (ok && (fields = fscanf(f, "%d %x %u %u", &frame, &buttons, &lx, &ly)) == 4) {
-            if (pad.count == PAD_MAX || frame < 0 || frame > last || buttons > 0xFFFF || lx > 255 || ly > 255 ||
+            /* f -2 / -1: a command set before the script's first frame, which the
+             * recording's rows 0 / 1 read (a guided chain's first take). */
+            if (pad.count == PAD_MAX || frame < -2 || frame > last || buttons > 0xFFFF || lx > 255 || ly > 255 ||
                 (pad.count && frame < pad.row[pad.count - 1].f)) ok = 0;
             else pad.row[pad.count++] = (PadRow){frame, (uint16_t)buttons, (uint8_t)lx, (uint8_t)ly};
         }

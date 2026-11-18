@@ -1,4 +1,4 @@
-# AREA01 sub-0 assets: local export and capture checks
+# AREA01 assets: local export and capture checks (sub 0; sub 1 in its own section)
 
 Lane "assets", AREA01 side track, 2026-09-25 (session s87). This lane adds new
 files only. It changes no port source and no decomp file, and nothing it adds is
@@ -1333,6 +1333,64 @@ quick survivors. A crash, and a hang past the timeout, count as killed.
 4. **Script records are rewritten at run time** (word +0x10 of three records),
    so a script image loaded mid-level is not the disc image.
 
+## Sub-1 export (lane PORT-A01S1, 2026-11-17)
+
+`tools/export_area01s1_assets.py` exports AREA01 sub 1 (`chunk05.n1`:
+placements 0x82C5F0, group 0x829440, the overlay owner [19] 0x826BA0)
+through the AREA13 lane's per-(target, sub) exporters, as AREA06 sub 1 and
+AREA00 sub 2 do: a Target for AREA01 (area 1, AREA01.BIN = MWo3 id 2, INDEX
+chunk05, nested) pointed at sub 1. Sub 0's files (this document's sections
+above) are unchanged.
+
+- **Captures:** the guided run's g58 end (AREA22 door [8] -> AREA01 sub 1
+  entry 6, area bytes 01 01 06 01) in the decomp's
+  `build/fork_refs/guided-20261117/s87/route_g49`; previous g57's end (only
+  a report row: sub 1's nested list relocates id 0x45). g49's end (AREA11's
+  exit fan -> entry 4, 01 01 04 01) is the second capture, but its load sits
+  0x15C0 lower (D_0028A73C 0x1349D00 against 0x134B2C0: what the earlier
+  areas left resident), so no one load map fits both. `--cross-check` runs
+  the whole export over g49's end alone and requires every file the port
+  reads to be byte-identical: 9 files are (level EMDL, collision, cells,
+  roster, messages, sound registry and bank, scene line); the raw banks
+  `level/static_bank.emsc` / `dynamic_objects.emsc` carry load addresses and
+  differ (src/ reads neither: the live static bank is the module loader's
+  delivery), and `world_models.emwm` differs only in its header's table
+  address, which the port replaces with the loader's D_0028A59C
+  (em_area11_boxes.c: the span is position-independent).
+- **Rules** (from AREA01's byte-identical overlay C and
+  export_area01_level.owner_matrix, sub 0's reading of the same owners):
+  the matrix-address callers among sub 1's owners are 0x8261A0 ([17], [18];
+  its states 0x826200 / 0x826440: self + 0xD0) and 0x826D40 (group 0x829440:
+  *(node + 0x11C) + 0x90), beside the pickup and drum rules; only 0x825950
+  (sub 0's group 0x828A00) calls 0019C6F0, so sub 1 has no flag call. The
+  cells: 32 uids, hulls of uids 8, 9, 10, 25, 26, 27 re-derived with
+  001A2370 per owner.
+- **Level:** static bank 724 objects -> one zone EMDL (723 objects, 22,013
+  vertices, 107 textures, every decode equal to the GS freeze); the dynamic
+  list (id 0x45, 6 entries) exported raw; collision from `chunk05.n1` id
+  0x42 (2,416 vertices, 1,523 polygons).
+- **Tables:** roster 32 placements + group 0x829440 (22 records); spawn,
+  door row 0x24DFA0, the 14 script chains and the overlay data equal sub 0's
+  files byte for byte, so `assets/area01/` serves both subs (the run's
+  copies stay under `build/area01s1/`). AREA01's C passes a third argument
+  to some chain starts; the tables pattern takes it.
+- **Sound:** container `chunk05.n1` +0 (751,056 bytes, 4 banks); group 3
+  bank 0 holds the fitted attachment's bank in both captures (the
+  attachment scope's, as in the second half's areas); scope (1, 1) is the
+  registry's last mid scope (80 samples; the attachment scopes' indices
+  move up).
+- **Profile 01s1** (`tools/level_asset_profiles.py`): world textures (437
+  fixed textures; func_001D5370's case 0x0101 reads the dynamic list),
+  shadow receivers (723), player texture variants (route_g49's AREA01
+  sub-1 ends); output `assets/levels/01/sub1/`. Module packs: (0x01, 1)
+  in `export_module_loader.DEFAULT_AREAS` (lane PORT-GUNREVISIT) and
+  `export_level_module_pack.AREAS`.
+
+Output (ignored, never committed): `assets/area01/sub1/` (level, collision,
+cells, roster, world models, messages, sfx, tables.json, sub1.json),
+`assets/levels/01/sub1/`. The live wiring is docs/AREA01_REVISIT.md's
+sub-1 live section.
+
 ## What is left
 
 - The dynamic-list entries are not re-derived with the original code
@@ -1341,8 +1399,9 @@ quick survivors. A crash, and a hang past the timeout, count as killed.
   001A2370 per owner in every capture; see Cell directory.)
 - Shadow receivers: the kernel-0x0023C200 passes over bank objects that the
   captures show. There is no AREA01 counterpart of `shadow_receivers.emsr`.
-- Sub 1 (`chunk05.n1`, placement table 0x82C5F0): the export is sub 0 only.
-  No sub-1 capture exists.
+- Sub 1 (`chunk05.n1`, placement table 0x82C5F0) is exported from the
+  guided run's g58 end (the section on sub 1 above); sub 1's dynamic-list entries and
+  the address-bearing raw banks are checked against that one load only.
 - The object textures (`object_textures.emot`) of the AREA01 owners, and the
   door, prop and pickup models, are not part of this lane.
 - SPU residency of the AREA01 samples.

@@ -39,11 +39,11 @@ threats.json: the frame and the health after each). Load rows (phase L) are not
 compared. Per take: the first frame of each kind of difference and where the
 run stopped (a fault line, the script's end).
 
-Usage (native arm64 macOS; build/extermination and the cards g45 / g60 first):
+Usage (native arm64 macOS; build/extermination and the cards g45 / g49 / g59 first):
 
   python3 tools/guided_chain.py --list
   python3 tools/guided_chain.py g17            # g45 -> g46 -> g47 -> g48 from card g45 (AREA14)
-  python3 tools/guided_chain.py g16            # g60 -> g61 -> ... from card g60 (AREA06 sub 1)
+  python3 tools/guided_chain.py g16            # g59 -> g60 -> ... from card g59 (AREA01 sub 1)
   python3 tools/guided_chain.py g16 --until g62   # stop the chain after g62
   python3 tools/guided_chain.py g17 --steer    # steer where the player falls behind the path
 
@@ -94,10 +94,11 @@ CHAINS = {
     # AREA11 entry 3 in play after the cable ride's scene (g48's end; the scene itself, script
     # 0x828C70, is not ported yet: the g17 chain stops there) -> AREA01 sub 1 -> AREA02 sub 1 -> ...
     'g11': ('g49', G49_ROUTE, G49_TAKES),
-    # AREA06 sub 1 (g59's end, in play) -> the area change into AREA16 sub 0 (g60, a real one) -> the
-    # barrier -> the curtains -> sub 1 -> ... The card g60 loads AREA06 sub 1
-    # (tools/export_area06s1_assets.py, lane PORT-A06S1).
-    'g16': ('g60', mrb.G16_ROUTE, ('g60_area06_area16', 'g61_area16_water', 'g62_area16_sub1',
+    # AREA01 sub 1 (g58's end, in play) -> door [15]: AREA06 sub 1 (g59, a real area change) -> the
+    # area change into AREA16 sub 0 (g60, a real one) -> the barrier -> the curtains -> sub 1 -> ...
+    # The card g59 loads AREA01 sub 1 (tools/export_area01s1_assets.py, lane PORT-A01S1; before it
+    # the chain started from card g60, AREA06 sub 1: lane PORT-A06S1).
+    'g16': ('g59', mrb.G16_ROUTE, ('g59_area01_area06', 'g60_area06_area16', 'g61_area16_water', 'g62_area16_sub1',
                                    'g63_area16_recharge', 'g64_area16_booth', 'g65_area16_vaccine', 'g66_area16_bed',
                                    'g67_area16_out')),
 }
@@ -131,7 +132,9 @@ def load(route, takes):
             # A take's first pad changes are read at its rows 0 and 1, so their inputs lie in the
             # previous take's last rows (f = k - 2: capture_from_take clamps them to 0 for a lone
             # beat; 'k' keeps the row): g48's first stick at row 1 is the chain's frame before g48.
-            f = i['k'] - PAD_LAG if 'k' in i and k > 0 else i['f']     # (k: the take's index)
+            # The first take's too: f = -1 / -2 are set before the script's first frame (the card's
+            # row 1 reads g59's first stick in the original; EM_START_AT_PAD takes f >= -2).
+            f = i['k'] - PAD_LAG if 'k' in i else i['f']
             inputs.append(dict(i, f=f + off))
         inputs.sort(key=lambda i: i['f'])
         hits = (t.get('vitals') or {}).get('hits', [])

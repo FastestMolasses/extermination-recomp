@@ -674,11 +674,13 @@ frame compared with the takes' rows (AREA17_PORT.md "Lane PORT-CHAIN" ..
 ```sh
 python3 tools/capture_from_take.py --set guided-20261117/s87/route_g49 \
     g48_area17_cable g49_area11_area01 ... g58_area04_area01   # route sets (once)
-python3 tools/build_start_saves.py g45 g49 g50 g51 g52 g53 g54 g55 g56 g57 g58   # cards
+python3 tools/capture_from_take.py --set guided-20261117/s87/route_g59 \
+    g58_area04_area01 g59_area01_area06                         # card g59's source inside a set
+python3 tools/build_start_saves.py g45 g49 g50 g51 g52 g53 g54 g55 g56 g57 g58 g59   # cards
 python3 tools/guided_chain.py --list
 python3 tools/guided_chain.py g17 --steer g45      # card g45: g45 .. g58 (AREA14 -> AREA17 -> AREA11 -> ...)
 python3 tools/guided_chain.py g11                  # card g49 (g48's end, AREA11 entry 3): g49 .. g58
-python3 tools/guided_chain.py g16                  # card g60: g60 .. g67 (AREA06 sub 1 -> AREA16)
+python3 tools/guided_chain.py g16                  # card g59: g59 .. g67 (AREA01 sub 1 -> AREA06 sub 1 -> AREA16)
 python3 tools/guided_chain.py g11 --until g50      # stop after a take
 ```
 
@@ -693,6 +695,11 @@ also passes EM_START_AT_RESTORE=<source eeMemory>:0:<row 0 clock>: at frame
 state's bytes (em_area11_bindings_restore_owners; the card's LOAD GAME
 rebuilds them, while the recording's ran through the cable ride's scene;
 comparison only). AREA11 rows are traced without a record list.
+Every take's first two pad reads (take.rec row 0's neutral pad and row 1's
+stick: capture_from_take keeps both with their row 'k') are placed at f =
+k - 2, the first take's too: EM_START_AT_PAD accepts f = -2 and -1, rows
+set before the script's first frame (the card's rows 0 and 1 read them;
+lane PORT-A01S1: g59's first stick was read one frame late before).
 
 ### EM_SKIP_STARTUP=1: the older debug fixture
 

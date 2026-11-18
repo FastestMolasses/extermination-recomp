@@ -310,6 +310,10 @@ START_POINTS = {
     # g67 (sub 1: g62's .. g66's ends); g60 (g59's end, AREA06 sub 1 in play: lane PORT-CHAIN's
     # chained start into AREA16)
     'g60': {'route': 'guided-20261117/s87/route_g16', 'first': 'g60_', 'area': 0x06},
+    # g59 (g58's end, AREA01 sub 1 entry 6 in play: lane PORT-A01S1's chained start of g16, one
+    # area before AREA06 sub 1); route_g59 (capture_from_take g58 g59) holds g58's end as g59's source
+    # inside the set (route_g16's g59 names the take's own end.p2s)
+    'g59': {'route': 'guided-20261117/s87/route_g59', 'first': 'g59_', 'area': 0x01},
     **{f'g6{k}': {'route': 'guided-20261117/s87/route_g16', 'first': f'g6{k}_', 'area': 0x10} for k in range(1, 8)},
     # The guided run after the cable (lane PORT-CHAIN2): route_g49 (tools/capture_from_take.py g48 ..
     # g58); the source state of g49 (g48's end: AREA11 entry 3 in play after the cable ride's scene)
