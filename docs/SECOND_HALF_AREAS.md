@@ -306,6 +306,15 @@ Boot functions reachable from this area's owners and not in the first-level cens
 Overlay functions: 30 (AI 1, C 25, NM 4; decomp status at the census commit); none has a port translation.
 <!-- second_half:area16 end -->
 
+AREA16's overlay behaviours above (all 14, with the children 0x825260 /
+0x828200, the op09 callbacks 0x825630 / 0x826C20 and the helpers) are
+translated by lane PORT-A16 (`em_area16_overlay*.c`,
+`make test-area16-overlay-reference`: the original AREA16.BIN over a
+capture's arena with designed states, every reachable word) and bound in
+`dispatch_second_half` for area byte 0x10; the generated rows above still
+say "missing" until the inventory is rerun. The effect functions 0x8237A0 ..
+0x824110 are reached by nothing in the area. AREA16_PORT.md.
+
 ### AREA17
 
 <!-- second_half:area17 begin -->
@@ -496,9 +505,11 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
 
 - Every overlay owner of the six areas (66 behaviours, their op09 callbacks
   and helpers) but AREA14's (section 6's twins and em_area14_overlay,
-  AREA14_PORT.md) and AREA21's two twins is untranslated; the area lanes
-  translate them against captures. The twins are bound only in the
-  shared composition's dispatch; none of these areas runs there yet.
+  AREA14_PORT.md), AREA16's (em_area16_overlay, AREA16_PORT.md: proven over
+  designed states, no capture exists) and AREA21's two twins is
+  untranslated; the area lanes translate them against captures. The twins
+  and AREA16's owners are bound only in the shared composition's dispatch;
+  of these areas only AREA14 runs there yet.
 - Every boot behaviour of the six areas is now in a census ledger or
   defined (section 6 for the six BOOT2 added); those marked only "defined"
   by an earlier lane still need their oracle named before they count. The

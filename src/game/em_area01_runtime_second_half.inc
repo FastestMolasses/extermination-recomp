@@ -14,12 +14,31 @@
  * (test_area14_overlay_reference): 0x823580, 0x823760, 0x8238E0, 0x823B30,
  * 0x823E30, 0x825FD0 and the op09 callbacks 0x8238C0 / 0x825C40; frames from
  * each function's first instruction.
+ * AREA16's own owners (area byte 0x10) are em_area16_overlay's
+ * (test_area16_overlay_reference, docs/AREA16_PORT.md): the behaviours its
+ * placements and groups name, the two children they spawn and the op09
+ * callbacks 0x825630 / 0x826C20; frames from each function's first
+ * instruction, widened by the overlay helper an owner calls.
  * Any other overlay address of these areas reaches the host's workers
  * (fail-stop) as before. */
 static int a14_owner(uint32_t fn)
 {
     return fn == 0x00823580u || fn == 0x00823760u || fn == 0x008238C0u || fn == 0x008238E0u || fn == 0x00823B30u ||
            fn == 0x00823E30u || fn == 0x00825C40u || fn == 0x00825FD0u;
+}
+
+static const struct { uint32_t fn, frame; unsigned na; } a16_owners[] = {
+    {0x00823580u, 0xA0u, 1}, {0x00824440u, 0xB0u, 1}, {0x00824690u, 0x40u, 1}, {0x00824E10u, 0x60u, 1},
+    {0x00825260u, 0x20u, 1}, {0x00825310u, 0xA0u, 1}, {0x00825630u, 0x10u, 3}, {0x00825800u, 0xC0u, 1},
+    {0x008261A0u, 0x20u, 1}, {0x008263D0u, 0x90u, 1}, {0x00826C20u, 0x10u, 1}, {0x00826C50u, 0x30u, 1},
+    {0x00827030u, 0x20u, 1}, {0x008273F0u, 0x40u, 1}, {0x00827B70u, 0x20u, 1}, {0x00827CE0u, 0x30u, 1},
+    {0x00827FA0u, 0x30u, 1}, {0x00828200u, 0x60u, 1}};
+
+static int a16_owner(uint32_t fn)
+{
+    for (unsigned k = 0; k < sizeof a16_owners / sizeof a16_owners[0]; ++k)
+        if (a16_owners[k].fn == fn) return (int)k;
+    return -1;
 }
 
 static int dispatch_second_half(EmArea01Runtime *r, EmArea01Call *c, int *out)
@@ -90,6 +109,39 @@ static int dispatch_second_half(EmArea01Runtime *r, EmArea01Call *c, int *out)
         default: x = em_area14_overlay_00825FD0(&h, a0, &f); break;
         }
         if (x >= 0 && (fn == 0x008238C0u || fn == 0x00825C40u)) c->v0 = (uint64_t)(int64_t)result;
+        where = f.address;
+        code = f.code;
+    } else if (r->area == 0x10 && a16_owner(fn) >= 0) {
+        const int k = a16_owner(fn);
+        const uint32_t sp = c->sp;
+        if (area_frame(r, c, a16_owners[k].na, a16_owners[k].frame, out) < 0) return 1;
+        EmArea16OverlayHooks h;
+        a16o_hooks(r, &h);
+        EmArea16OverlayFault f = {0, 0};
+        int32_t result = 0;
+        switch (fn) {
+        case 0x00823580u: x = em_area16_overlay_00823580(&h, a0, sp, &f); break;
+        case 0x00824440u: x = em_area16_overlay_00824440(&h, a0, sp, &f); break;
+        case 0x00824690u: x = em_area16_overlay_00824690(&h, a0, sp, &f); break;
+        case 0x00824E10u: x = em_area16_overlay_00824E10(&h, a0, sp, &f); break;
+        case 0x00825260u: x = em_area16_overlay_00825260(&h, a0, sp, &f); break;
+        case 0x00825310u: x = em_area16_overlay_00825310(&h, a0, sp, &f); break;
+        case 0x00825630u:
+            x = em_area16_overlay_00825630(&h, a0, (uint32_t)c->a[1], (uint32_t)c->a[2], &result, &f);
+            break;
+        case 0x00825800u: x = em_area16_overlay_00825800(&h, a0, sp, &f); break;
+        case 0x008261A0u: x = em_area16_overlay_008261A0(&h, a0, sp, &f); break;
+        case 0x008263D0u: x = em_area16_overlay_008263D0(&h, a0, sp, &f); break;
+        case 0x00826C20u: x = em_area16_overlay_00826C20(&h, a0, 0, 0, &result, &f); break;
+        case 0x00826C50u: x = em_area16_overlay_00826C50(&h, a0, sp, &f); break;
+        case 0x00827030u: x = em_area16_overlay_00827030(&h, a0, sp, &f); break;
+        case 0x008273F0u: x = em_area16_overlay_008273F0(&h, a0, sp, &f); break;
+        case 0x00827B70u: x = em_area16_overlay_00827B70(&h, a0, sp, &f); break;
+        case 0x00827CE0u: x = em_area16_overlay_00827CE0(&h, a0, sp, &f); break;
+        case 0x00827FA0u: x = em_area16_overlay_00827FA0(&h, a0, sp, &f); break;
+        default: x = em_area16_overlay_00828200(&h, a0, sp, &f); break;
+        }
+        if (x >= 0 && (fn == 0x00825630u || fn == 0x00826C20u)) c->v0 = (uint64_t)(int64_t)result;
         where = f.address;
         code = f.code;
     } else if (r->area == 0x15 && (fn == 0x00823A10u || fn == 0x00823AB0u)) {
