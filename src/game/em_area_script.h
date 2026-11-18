@@ -163,7 +163,7 @@ typedef struct EmAreaScriptWorkers {
     int (*w_001AED80)(void *ctx, uint8_t a0);
     int (*w_001AEDB0)(void *ctx, uint8_t a0);
 
-    /* 001B6FA0 (op15). */
+    /* 001B6FA0 (op15), 001B73A0 (op19). */
     int (*w_001B1380)(void *ctx, const float from[4], const float to[4], float yaw,
                       int32_t *result);
     int (*w_001B1470)(void *ctx, float a0, float *result);
@@ -186,7 +186,8 @@ typedef struct EmAreaScriptWorkers {
     int (*w_001BAC00)(void *ctx, uint32_t actor, uint32_t script, uint32_t record, int32_t *result);
     int (*w_0011DE90)(void *ctx, float a0, float *result); /* SDK cosine, op01 kind8 */
     /* 001B8020 (op0B) subs 2 / 3: anim_advance_time 001C64F0(owner, rec
-     * +0x0C); *result is its halfword flag result (stored at st +0x0E). */
+     * +0x0C); *result is its halfword flag result (stored at st +0x0E).
+     * 001B73A0 (op19) calls it with (owner, 1.0) and drops the result. */
     int (*w_001C64F0)(void *ctx, uint32_t actor, float dt, int32_t *result);
     /* Optional dispatch to an existing original handler owner. The live
      * area binder publishes/reloads the same script block and world around

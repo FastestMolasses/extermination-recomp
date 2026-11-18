@@ -676,7 +676,7 @@ def run_scenario(case):
     o.run(0x1BA1A0, (owner+0x1F0, entry))
     assert lib.em_area_script_start(C.byref(n.host), entry) == 0
     spans = allowed_writes(owner, image_range)
-    ticks, results, math = 0, [], set()
+    ticks, results, math, seen = 0, [], set(), set()
     limit = scenario.get('limit', 4000)
     while True:
         env_o.before_tick(o); env_n.before_tick(n.mem)
@@ -695,11 +695,28 @@ def run_scenario(case):
         assert not stray, (label, ticks, [hex(a) for a in sorted(stray)[:8]])
         o.written.clear()
         math.update(c for c in n.calls if c[0] in ('w_0011E2A8', 'w_001B1470'))
+        seen.update(n.calls)
         results.append(expected)
         ticks += 1
         if expected in (1, 3): break
+        # Handlers that never finish (op19 ids other than 5) run a fixed
+        # number of ticks.
+        if ticks == scenario.get('stop_after'): break
         assert ticks < limit, (label, 'did not finish')
     assert not scenario.get('expect_fault'), (label, 'expected a fault')
+    assert expected == scenario.get('expect_result', expected), (label, 'result', expected)
+    # Coverage: (worker, argument index or 'result', value) each seen at
+    # least once, so a case cannot silently miss the branch it is named for.
+    # A value ('not', x) matches anything but x.
+    def match(c, name, where, value):
+        if c[0] != name: return False
+        got = c[2] if where == 'result' else c[1][where]
+        if isinstance(value, tuple) and value and value[0] == 'not': return got != value[1]
+        return got == value
+    for spec in scenario.get('expect_calls', ()):
+        assert any(match(c, *spec) for c in seen), (label, 'branch not reached', spec)
+    for spec in scenario.get('expect_no_calls', ()):
+        assert not any(match(c, *spec) for c in seen), (label, 'unexpected call', spec)
     return (label, ticks, expected, None, math)
 
 
@@ -712,6 +729,10 @@ def rec(op, sub=0, flags=0, jump=0, f0c=0.0, w14=0, w18=0, w1c=0, v20=(0.,)*4, v
 
 
 END, CONT, JUMP = 0x80000000, 0x20000000, 0x40000000
+OP19_RATES = (0.0, 0.3)
+OP19_POINT = (10., 0., 0., 1.)
+OP19_FROM = (1.5, 0.25, -2.0, 1.)        # the turning subject's +0xB0 (and D_00810350)
+OP19_IDLE_IDS = (0, 1, 3, 4, 6, 0xFFFFFFFF)
 V1, V2 = (310., 290., 180., 1.), (330.5, 285.25, 200., 1.)
 
 
@@ -765,6 +786,17 @@ def synthetic_arena():
     # op0B sub 5 (AREA15's script 0x827D70): +0x40 = D_0028A490[rec +0x1C],
     # 001C63E0 of rec +0x14, st +0x0E = 0.
     script('owner bone', [rec(7, 0, w14=1), rec(0x0B, 5, w14=2, w1c=0x3C), rec(7, 4, END)])
+    # op19 (001B73A0): id 5 turns the player, id 2 the owner, toward
+    # rec +0x30/+0x38 at rate rec +0x24 (v20[1]); clips +0x14/+0x18/+0x1C.
+    # AREA15's script 0x8290E0 (the disc's only op19) is an id 5.
+    for rate in OP19_RATES:
+        script(f'op19 id5 rate {rate}', [rec(0x19, 5, w14=0x31, w18=0x32, w1c=0x33,
+                                             v20=(0., rate, 0., 0.), v30=OP19_POINT), rec(7, 4, END)])
+        script(f'op19 id2 rate {rate}', [rec(0x19, 2, w14=0x41, w18=0x42, w1c=0x43,
+                                             v20=(0., rate, 0., 0.), v30=OP19_POINT), rec(7, 4, END)])
+    for sub in OP19_IDLE_IDS:
+        script(f'op19 id {sub:#x}', [rec(0x19, sub, w14=0x51, w18=0x52, w1c=0x53,
+                                         v20=(0., 0.3, 0., 0.), v30=OP19_POINT), rec(7, 4, END)])
     script('unported opcode', [rec(7, 0, w14=1), rec(0x13), rec(7, 4, END)])
     script('unadmitted kind', [rec(7, 0, w14=1), rec(0, 8, f0c=3.), rec(7, 4, END)])
     return scripts, bytes(data)
@@ -834,6 +866,7 @@ def scenarios():
     scripts, _ = synthetic_arena()
     for name, entry in scripts.items():
         extra = {}
+        if name.startswith('op19'): continue   # op19_scenarios
         if name == 'unported opcode': extra = dict(expect_fault=0x24D880+4*0x13)
         if name == 'unadmitted kind': extra = dict(expect_fault=0x1B8FC0)
         if name == 'skippable':
@@ -842,10 +875,74 @@ def scenarios():
                     keep_durations=1)
         add(f'synthetic {name}', entry, arena=SYNTHETIC, keep_durations=1,
             init=SPAD_IDLE+[(0x810758+0x41, 0x37, 1)], **extra)
+    out += op19_scenarios(scripts)
     # Fail-stop: a missing worker or world pointer faults on first use.
     add('fault missing 001DD980', 0x8292C0, null_workers=('w_001DD980',),
         expect_fault=0x1DD980)
     add('fault missing 3B92', 0x8292C0, null_world=('spad3B92',), expect_fault=0x70003B92)
+    return out
+
+
+def op19_scenarios(scripts):
+    """001B73A0 (op19) over test-generated records. The target bearing T
+    is the original 001B1240's own result for the subject at OP19_FROM; a
+    start yaw of T - 1 makes the original 001B1380 side test 1 (clip +0x18)
+    and T + 1 makes it 0 (clip +0x14), both asserted through the calls.
+    id 5 sub-states: 0 (both side outcomes), 1 (rate 0; rate 0.3 from
+    1 radian away and already aligned), 2 (bit 0x1000 of D_008104B0 clear
+    for some ticks, or already set). id 2 sub-states 0 (both outcomes) and
+    1 (not yet aligned: no clip; aligned: clip +0x1C every tick). ids 0, 1,
+    3, 4 and out-of-range ids only advance the owner's clock."""
+    out = []
+    owner = SYNTHETIC_OWNER
+    elf, ram, spad = CONTEXT['elf'], CONTEXT['ram'], CONTEXT['spad']
+    frm = tuple(fbits(v) for v in OP19_FROM)
+    target = number(scratch_math(elf, ram, spad, 0x1B1240, (frm, fbits(OP19_POINT[0]), fbits(OP19_POINT[2])),
+                                 'vff', 'fo'))
+    point = tuple(fbits(v) for v in OP19_POINT)
+    def side(yaw):
+        return scratch_math(elf, ram, spad, 0x1B1380, (point, frm, yaw), 'vvf', 'io')
+    hit_yaw, miss_yaw, aligned = fbits(target-1.0), fbits(target+1.0), fbits(target)
+    assert (side(hit_yaw), side(miss_yaw)) == (1, 0), 'op19 side-test inputs'
+    def vec(base, words): return [(base+4*i, w, 4) for i, w in enumerate(words)]
+    def add(label, name, init, **s):
+        s.setdefault('keep_durations', 1)
+        out.append((label, scripts[name], owner, SYNTHETIC, dict(init=SPAD_IDLE+init, **s)))
+    def player(yaw, p200):
+        return vec(PLAYER+0xA0, frm)+vec(PLAYER+0xB0, frm)+[(PLAYER+0xC4, yaw, 4), (PLAYER+0x200, p200, 4)]
+    def own(yaw): return vec(owner+0xB0, frm)+[(owner+0xC4, yaw, 4)]
+    f20, f30 = fbits(20.0), fbits(30.0)
+    # id 5: player turn; the script finishes on bit 0x1000.
+    add('op19 id5 hit, turns, waits 0x1000', 'op19 id5 rate 0.3', player(hit_yaw, 0)+own(0),
+        anim_ticks=20, expect_result=1,
+        expect_calls=[('w_001B1380', 'result', 1), ('w_001B12B0', 'result', ('not', aligned)),
+                      ('w_001B12B0', 'result', aligned)])
+    add('op19 id5 miss, turns, 0x1000 set', 'op19 id5 rate 0.3', player(miss_yaw, 0x1000)+own(0),
+        expect_result=1, expect_calls=[('w_001B1380', 'result', 0), ('w_001B12B0', 'result', aligned)])
+    add('op19 id5 rate 0', 'op19 id5 rate 0.0', player(miss_yaw, 0)+own(0), anim_ticks=6,
+        expect_result=1, expect_calls=[('w_001B1380', 'result', 0)],
+        expect_no_calls=[('w_001B1240', 0, frm)])
+    add('op19 id5 aligned', 'op19 id5 rate 0.3', player(aligned, 0x1000)+own(0), expect_result=1,
+        expect_calls=[('w_001B1380', 'result', 1), ('w_001B12B0', 'result', aligned)])
+    # id 2: owner turn; never finishes (clip +0x1C every aligned tick).
+    add('op19 id2 hit, turns', 'op19 id2 rate 0.3', own(hit_yaw), stop_after=10,
+        expect_calls=[('w_001B1380', 'result', 1), ('w_001C67E0', 1, 0x42),
+                      ('w_001B12B0', 'result', ('not', aligned)), ('w_001B12B0', 'result', aligned),
+                      ('w_001C67E0', 1, 0x43)],
+        expect_no_calls=[('w_001C67E0', 1, 0x41)])
+    add('op19 id2 miss, rate 0', 'op19 id2 rate 0.0', own(miss_yaw), stop_after=4,
+        expect_calls=[('w_001B1380', 'result', 0), ('w_001C67E0', 1, 0x41), ('w_001C67E0', 2, f30),
+                      ('w_001C67E0', 2, f20)],
+        expect_no_calls=[('w_001C67E0', 1, 0x42), ('w_001B1240', 0, frm)])
+    for sub in OP19_IDLE_IDS:
+        add(f'op19 id {sub:#x} idle', f'op19 id {sub:#x}', player(hit_yaw, 0)+own(hit_yaw),
+            stop_after=3, expect_calls=[('w_001C64F0', 0, owner)],
+            expect_no_calls=[('w_001C67E0', 0, owner), ('w_001B1380', 0, point)])
+    # Fail-stop: the tail's anim_advance_time, the player yaw pointer.
+    add('op19 fault missing 001C64F0', 'op19 id 0x0', [], null_workers=('w_001C64F0',),
+        expect_fault=0x1C64F0)
+    add('op19 fault missing D_00810370', 'op19 id5 rate 0.3', player(hit_yaw, 0), null_world=('p0C0',),
+        expect_fault=0x810370)
     return out
 
 
