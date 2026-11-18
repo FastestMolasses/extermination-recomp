@@ -37,6 +37,61 @@ static int a20_owner(uint32_t fn)
            fn == 0x008239B0u || fn == 0x00823D30u;
 }
 
+/* AREA17's own owners (area byte 0x11, em_area17_overlay,
+ * test_area17_overlay_reference): every overlay function but the init
+ * (em_area01_state's); frames from each function's first instruction. */
+static const struct { uint32_t fn, frame; unsigned na; } a17_owners[] = {
+    {0x00823580u, 0x10u, 1}, {0x008235E0u, 0x30u, 1}, {0x008236F0u, 0x30u, 1}, {0x00823800u, 0x10u, 1},
+    {0x00823860u, 0xA0u, 1}, {0x008239D0u, 0x10u, 1}, {0x00823BA0u, 0x30u, 1}, {0x00823F70u, 0x30u, 3},
+    {0x00824280u, 0x10u, 0}, {0x008242D0u, 0x20u, 1}, {0x008243E0u, 0x20u, 1}, {0x008245A0u, 0x70u, 1},
+    {0x00824700u, 0x70u, 1}, {0x00824CF0u, 0x20u, 1}, {0x00824E40u, 0x20u, 1}, {0x008250E0u, 0x20u, 1},
+    {0x008251B0u, 0x40u, 1}, {0x00825470u, 0x20u, 1}, {0x00825560u, 0x30u, 1}, {0x00825EA0u, 0x20u, 1},
+    {0x008260C0u, 0x20u, 1}, {0x00826170u, 0x20u, 1}};
+
+static int a17_owner(uint32_t fn)
+{
+    for (unsigned k = 0; k < sizeof a17_owners / sizeof a17_owners[0]; ++k)
+        if (a17_owners[k].fn == fn) return (int)k;
+    return -1;
+}
+
+static int a17_run(const EmArea17OverlayHooks *h, uint32_t fn, EmArea01Call *c, uint32_t sp, EmArea17OverlayFault *f)
+{
+    const uint32_t a0 = (uint32_t)c->a[0];
+    int32_t result = 0;
+    int x;
+    switch (fn) {
+    case 0x00823580u: return em_area17_overlay_00823580(h, a0, f);
+    case 0x008235E0u: return em_area17_overlay_008235E0(h, a0, f);
+    case 0x008236F0u: return em_area17_overlay_008236F0(h, a0, f);
+    case 0x00823800u: return em_area17_overlay_00823800(h, a0, f);
+    case 0x00823860u: return em_area17_overlay_00823860(h, a0, sp, f);
+    case 0x008239D0u: return em_area17_overlay_008239D0(h, a0, f);
+    case 0x00823BA0u: return em_area17_overlay_00823BA0(h, a0, f);
+    case 0x00823F70u:
+        x = em_area17_overlay_00823F70(h, a0, (uint32_t)c->a[1], (uint32_t)c->a[2], &result, f);
+        if (x >= 0) c->v0 = (uint64_t)(int64_t)result;
+        return x;
+    case 0x00824280u:
+        x = em_area17_overlay_00824280(h, &result, f);
+        if (x >= 0) c->v0 = (uint64_t)(int64_t)result;
+        return x;
+    case 0x008242D0u: return em_area17_overlay_008242D0(h, a0, f);
+    case 0x008243E0u: return em_area17_overlay_008243E0(h, a0, f);
+    case 0x008245A0u: return em_area17_overlay_008245A0(h, a0, sp, f);
+    case 0x00824700u: return em_area17_overlay_00824700(h, a0, sp, f);
+    case 0x00824CF0u: return em_area17_overlay_00824CF0(h, a0, f);
+    case 0x00824E40u: return em_area17_overlay_00824E40(h, a0, f);
+    case 0x008250E0u: return em_area17_overlay_008250E0(h, a0, f);
+    case 0x008251B0u: return em_area17_overlay_008251B0(h, a0, f);
+    case 0x00825470u: return em_area17_overlay_00825470(h, a0, f);
+    case 0x00825560u: return em_area17_overlay_00825560(h, a0, f);
+    case 0x00825EA0u: return em_area17_overlay_00825EA0(h, a0, f);
+    case 0x008260C0u: return em_area17_overlay_008260C0(h, a0, f);
+    default: return em_area17_overlay_00826170(h, a0, f);
+    }
+}
+
 static int dispatch_second_half(EmArea01Runtime *r, EmArea01Call *c, int *out)
 {
     const uint32_t fn = c->function;
@@ -165,6 +220,16 @@ static int dispatch_second_half(EmArea01Runtime *r, EmArea01Call *c, int *out)
         case 0x008239B0u: x = em_area20_overlay_008239B0(&h, a0, sp, &f); break;
         default: x = em_area20_overlay_00823D30(&h, a0, &f); break;
         }
+        where = f.address;
+        code = f.code;
+    } else if (r->area == 0x11 && a17_owner(fn) >= 0) {
+        const int k = a17_owner(fn);
+        const uint32_t sp = c->sp;
+        if (area_frame(r, c, a17_owners[k].na, a17_owners[k].frame, out) < 0) return 1;
+        EmArea17OverlayHooks h;
+        a17o_hooks(r, &h);
+        EmArea17OverlayFault f = {0, 0};
+        x = a17_run(&h, fn, c, sp, &f);
         where = f.address;
         code = f.code;
     } else if (r->area == 0x15 && (fn == 0x00823A10u || fn == 0x00823AB0u)) {

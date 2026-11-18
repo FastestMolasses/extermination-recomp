@@ -4043,6 +4043,24 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
             return -1;
         }
     }
+    /* AREA17's owners (lane PORT-A17A18): every placement's and group's
+     * overlay behaviour runs through the runtime's dispatch_second_half
+     * (em_area17_overlay; the effect objects 0x8235E0 / 0x823860, which
+     * nothing names statically, included). Its boot owners bind as the
+     * later areas' do. No AREA17 asset export or live run exists yet. */
+    if (s_state.d810700 == 0x11 && fn >= 0x00823500u) {
+        switch (fn) {
+        case 0x00823580u: case 0x008235E0u: case 0x008236F0u: case 0x00823800u: case 0x00823860u:
+        case 0x008239D0u: case 0x00823BA0u: case 0x008242D0u: case 0x008243E0u: case 0x008245A0u:
+        case 0x00824700u: case 0x00824CF0u: case 0x00824E40u: case 0x008250E0u: case 0x008251B0u:
+        case 0x00825470u: case 0x00825560u: case 0x00825EA0u: case 0x008260C0u: case 0x00826170u:
+            goto bind;
+        default:
+            return -1;
+        }
+    }
+    if (s_state.d810700 == 0x11 && fn < 0x00823500u && fn && fn != 0x001F5040u)
+        goto bind;
     /* AREA00 sub 2's boot owners (its placements', groups' and spawns'), as
      * the later areas' below: the runtime's owners or its fallback
      * (em_area01_runtime_later); an untranslated one faults at its address
@@ -4384,6 +4402,8 @@ static int area01_missing_worker(void *ctx, EmArea01Call *call)
         return area_spawn_deferred(call, 7u, 0x00825B80u, 0x00828080u);
     if (s_state.d810700 == 0x0E && call->function == 0x001B6660u)   /* AREA14: [5] 0x823760's group 0x8265A0 */
         return area_spawn_deferred(call, 0x0Bu, 0x00826180u, 0x00828480u);
+    if (s_state.d810700 == 0x11 && call->function == 0x001B6660u)   /* AREA17: [30], 0x824280, [34] */
+        return area_spawn_deferred(call, 0x0Eu, 0x00826280u, 0x00828E80u);
     if ((s_state.d810700 == 8 || s_state.d810700 == 7) && call->function == 0x001B0460u && call->na >= 1)
         return em_area11_script_host_001B0460((int)call->a[0]);
     /* 001D8C20(mode): the light mode of the next owner draw (001CB1F0's

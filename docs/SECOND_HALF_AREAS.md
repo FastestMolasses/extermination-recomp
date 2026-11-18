@@ -320,21 +320,21 @@ Overlay functions: 30 (AI 1, C 25, NM 4; decomp status at the census commit); no
 | 001C5C90 | boot | s0[35] | census: live (level 1); `em_area11_roger.c`, `em_roger_actor_original.c` |
 | 001E3D90 | boot | group 0x826420 [0], group 0x826420 [1], group 0x826420 [2], group 0x826420 [3] | census: live (level 2); `em_area01_sys.c` |
 | 00219550 | boot | sub0 g 0x826280 [0] | census: live (level 1) |
-| 0x8239D0 | overlay | group 0x826890 [4], group 0x826890 [5], group 0x826890 [6], group 0x826890 [7] | missing |
-| 0x823BA0 | overlay | s0[30] | missing |
-| 0x8242D0 | overlay | s0[39] | missing |
-| 0x8243E0 | overlay | s0[31] | missing |
-| 0x8245A0 | overlay | s0[33] | missing |
-| 0x824700 | overlay | s0[34] | missing |
-| 0x824CF0 | overlay | s0[42] | missing |
-| 0x824E40 | overlay | s0[40] | missing |
-| 0x8250E0 | overlay | s0[41] | missing |
-| 0x8251B0 | overlay | group 0x827f40 [4] | missing |
-| 0x825470 | overlay | s0[38] | missing |
-| 0x825560 | overlay | s0[5], s0[6], s0[7], s0[8] | missing |
-| 0x825EA0 | overlay | s0[36] | missing |
-| 0x8260C0 | overlay | sub0 g 0x826280 [4] | missing |
-| 0x826170 | overlay | s0[37] | missing |
+| 0x8239D0 | overlay | group 0x826890 [4], group 0x826890 [5], group 0x826890 [6], group 0x826890 [7] | `em_area17_overlay.c` |
+| 0x823BA0 | overlay | s0[30] | `em_area17_overlay.c` |
+| 0x8242D0 | overlay | s0[39] | `em_area17_overlay.c` |
+| 0x8243E0 | overlay | s0[31] | `em_area17_overlay.c` |
+| 0x8245A0 | overlay | s0[33] | `em_area17_overlay_npc.c` |
+| 0x824700 | overlay | s0[34] | `em_area17_overlay_npc.c` |
+| 0x824CF0 | overlay | s0[42] | `em_area17_overlay.c` |
+| 0x824E40 | overlay | s0[40] | `em_area17_overlay.c` |
+| 0x8250E0 | overlay | s0[41] | `em_area17_overlay.c` |
+| 0x8251B0 | overlay | group 0x827f40 [4] | `em_area17_overlay_npc.c` |
+| 0x825470 | overlay | s0[38] | `em_area17_overlay.c` |
+| 0x825560 | overlay | s0[5], s0[6], s0[7], s0[8] | `em_area17_overlay_npc.c` |
+| 0x825EA0 | overlay | s0[36] | `em_area17_overlay_npc.c` |
+| 0x8260C0 | overlay | sub0 g 0x826280 [4] | `em_area17_overlay.c` |
+| 0x826170 | overlay | s0[37] | `em_area17_overlay.c` |
 
 | Chain | Records | Started by | op09 callbacks | Op/sub pairs the census snapshot flags |
 |---|---:|---|---|---|
@@ -352,7 +352,7 @@ Overlay functions: 30 (AI 1, C 25, NM 4; decomp status at the census commit); no
 
 Boot functions reachable from this area's owners and not in the first-level census: 111 (44,932 bytes); the port defines or ledgers 102 of them; 6 more are named in the sources only (a comment, a table or another name: read each): 001B1CE0, 001CAE30, 001CAF70, 001CB070, 001CB130, 001F6B60; 3 appear nowhere: 001CACC0, 001D39A0, 001D3DA0.
 
-Overlay functions: 24 (AI 1, C 22, NM 1; decomp status at the census commit); none has a port translation.
+Overlay functions: 24 (AI 1, C 22, NM 1; decomp status at the census commit); 22 have a translation in the area's own module (em_area17_overlay.c, em_area17_overlay_npc.c).
 <!-- second_half:area17 end -->
 
 ### AREA18
@@ -508,10 +508,26 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
 
 - Every overlay owner of the six areas (66 behaviours, their op09 callbacks
   and helpers) but AREA14's (section 6's twins and em_area14_overlay,
-  AREA14_PORT.md), AREA20's (all: em_area20_overlay and four twins,
-  AREA20_PORT.md) and AREA21's two twins is untranslated; the area lanes
-  translate them against captures. The twins are bound only in the
-  shared composition's dispatch; none of these areas runs there yet.
+  AREA14_PORT.md), AREA17's and AREA18's (below), AREA20's (all:
+  em_area20_overlay and four twins, AREA20_PORT.md) and AREA21's two twins
+  is untranslated; the area lanes translate them against captures. The
+  twins are bound only in the shared composition's dispatch; none of these
+  areas runs there yet.
+- AREA17 and AREA18 (lane PORT-A17A18, AREA17_PORT.md, AREA18_PORT.md):
+  every AREA17 overlay function but the init and the pad (22, the
+  NEARMISS 0x825560 included) is translated in em_area17_overlay /
+  em_area17_overlay_npc and proven by `make test-area17-overlay-reference`
+  (the original over the guided run's AREA17 states g46 / g47: 1304 cases,
+  1766 with EM_TEST_FULL=1, 2129 of 2129 reachable words); they bind in
+  dispatch_second_half for area 0x11, with script 0x8270A0's callbacks and
+  001B6660's data window. AREA18's overlay holds only the init
+  (em_area01_state) and the pad: `make test-area18-overlay-reference`
+  proves there is nothing else. Neither area has a SUBS row, asset export,
+  start card or live run yet; the guided run's takes g41 .. g48 are their
+  recordings. section 4's generator now names an own-area overlay module
+  (tools/second_half_inventory.py own_overlay); only the AREA17 and AREA18
+  blocks were regenerated in this lane (AREA14's would name
+  em_area14_overlay.c on the next run).
 - Every boot behaviour of the six areas is now in a census ledger or
   defined (section 6 for the six BOOT2 added); those marked only "defined"
   by an earlier lane still need their oracle named before they count. The
@@ -529,11 +545,11 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   section 6); lane P14c translated the rest of AREA14's owners and the
   camera arm 00230230 (em_area14_overlay, test_area14_overlay_reference) and
   the beats k01_02 .. k01_05 pass from their cards (AREA14_PORT.md). The capture
-  kinds of AREA18 and AREA17 wait for their recordings (the next guided
-  run); AREA16, AREA20 and AREA21 have no recording planned yet. AREA20's
-  owners (lane PORT-A20) are proven by their oracles only: the guided
-  run's g73 .. g75 AREA20 tries are not kept recordings (the chain was
-  forked at g69), so its SUBS row still waits.
+  kinds of AREA18 and AREA17 wait for their SUBS rows: the guided run
+  recorded both (g41 .. g48); AREA16 and AREA21 have no recording planned
+  yet. AREA20's owners (lane PORT-A20) are proven by their oracles only:
+  the guided run's g73 .. g75 AREA20 tries are not kept recordings (the
+  chain was forked at g69), so its SUBS row still waits.
 - No other of these areas has loaded live: their module pack rows, state and
   script windows are checked only by the oracle and the static export.
 
