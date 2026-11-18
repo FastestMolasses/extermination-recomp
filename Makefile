@@ -425,6 +425,10 @@ test-input-block-reference:
 test-title-menu-reference:
 	python3 tools/test_title_menu_reference.py
 
+.PHONY: test-attract-demo
+test-attract-demo: all
+	python3 tools/test_attract_demo.py
+
 .PHONY: test-random-seed-reference
 test-random-seed-reference:
 	python3 tools/test_random_seed_reference.py

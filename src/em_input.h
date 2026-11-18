@@ -253,6 +253,15 @@ void em_pad_raw(const EmPadState *pad, uint8_t raw[8]);
 int em_pad_unpack(EmPadUnpack *u, const uint8_t raw[8], unsigned port,
                   int analog);
 
+/* 001B5BC0 (input_io): the attract demo's recorded pad. `rec` is the 5-byte
+ * record a0 of the demo's table (big-endian active-low buttons, left stick
+ * x, y, the gait byte); `prev` the record before it, NULL for a0 == 0.
+ * Stores, in the original's order: prev_held (0 for a0 == 0, else prev's
+ * buttons ^ 0xFFFF), held (rec's ^ 0xFFFF), prev_pressed = pressed,
+ * pressed = held & ~prev_held, lx, ly, gait. The other fields keep step C's
+ * values. tools/test_attract_pad_reference.py executes the original. */
+void em_pad_record_001B5BC0(EmPadUnpack *u, const uint8_t rec[5], const uint8_t *prev);
+
 #ifdef __cplusplus
 }
 #endif
