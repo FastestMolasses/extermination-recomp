@@ -159,6 +159,14 @@ static inline int a21p_c_00122BB8(A21P *o, int32_t *out)
     return 0;
 }
 
+static inline int a21p_c_001281C0(A21P *o, uint32_t a0, int32_t *out)
+{
+    if (a21p_failed(o)) return -1;
+    if (!o->h->w_001281C0) return a21p_latch(o, 0x001281C0u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
+    if (o->h->w_001281C0(o->h->ctx, a21p_float(a0), out) < 0) return a21p_latch(o, 0x001281C0u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
+    return 0;
+}
+
 static inline int a21p_c_001AFC10(A21P *o, uint32_t a0)
 {
     if (a21p_failed(o)) return -1;
@@ -212,6 +220,14 @@ static inline int a21p_c_001EFD20(A21P *o, uint32_t a0, uint32_t a1)
     if (a21p_failed(o)) return -1;
     if (!o->h->w_001EFD20) return a21p_latch(o, 0x001EFD20u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
     if (o->h->w_001EFD20(o->h->ctx, a0, a1) < 0) return a21p_latch(o, 0x001EFD20u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
+    return 0;
+}
+
+static inline int a21p_c_0021B9A0(A21P *o, int32_t a0, uint32_t a1, uint32_t a2)
+{
+    if (a21p_failed(o)) return -1;
+    if (!o->h->w_0021B9A0) return a21p_latch(o, 0x0021B9A0u, EM_AREA21_GROUPS_FAULT_NULL_WORKER);
+    if (o->h->w_0021B9A0(o->h->ctx, a0, a21p_float(a1), a21p_float(a2)) < 0) return a21p_latch(o, 0x0021B9A0u, EM_AREA21_GROUPS_FAULT_WORKER_FAILED);
     return 0;
 }
 /* END GENERATED WRAPPERS */

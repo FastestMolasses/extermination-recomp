@@ -28,11 +28,17 @@ reads).
 | `em_area21_overlay` (+ `_cannon.c`) | the Gatling [62] 0x8297C0 with 0x8260A0, 0x829310 (the rate-limited step on the table 0x82DB10, shared with the cannon), 0x8294C0, 0x829590, 0x829F10, 0x829F40; the cannon [61] 0x828700 with 0x828410, 0x828E80 and the projectile 0x828F30 (the code pointer 0x828E80 installs) | 0x8297C0 takes the entry sp: 0x829F40 keeps a matrix and a packet in its frame |
 | `em_area21_owners` | [42] 0x8261A0; [43] / [44] 0x8262D0 with 0x826310 and 0x8264D0; [45] 0x8266F0 with 0x826840 and 0x8268F0; script 0x82BEC0's op09 callbacks 0x8269A0 and 0x8269F0; [53] 0x827040 (the ending request) with script 0x82CBD0's op09 callback 0x827250; [58] 0x827CD0 | none |
 | `em_area21_doors` | the doors [30] 0x826BB0 and [27] / [33] 0x826E60; [54] / [55] 0x82A1D0; the rounds 0x825C70 with its code pointer 0x825C60; [47] 0x8272C0, [49] / [50] 0x8273C0, [51] 0x827640, [56] 0x827880, [57] 0x827A30, [59] / [60] 0x827E70, the deferred group's 0x828350 | none; the four jump-table dispatchers (tables 0x82DC00, 0x82DC20, 0x82DC40, 0x82DC60) are switches |
-| `em_area21_groups` | the members of groups 0x82B500 / 0x82BA70: 0x823580, 0x8237B0, 0x823860, 0x8238E0, 0x823AA0; and 0x824CF0 (no static reference in the original: tested, not bound) | 0x823580 (a position at sp - 0x10) and 0x824CF0 (a packet at sp - 0x60) take the entry sp |
+| `em_area21_groups` | the members of groups 0x82B500 / 0x82BA70: 0x823580, 0x8237B0, 0x823860, 0x8238E0, 0x823AA0; the sub 0 placement [52] 0x8243B0 (lane PORT-A21-52); and 0x824CF0 (no static reference in the original: tested, not bound) | 0x823580 (a position at sp - 0x10), 0x8243B0 and 0x824CF0 (a packet at sp - 0x60) take the entry sp |
 
-Not translated: [52] 0x8243B0 (the decomp holds no C for it, only its
-splat assembly), and the unreached 0x823B40, 0x824FE0 (no C) and 0x825B00
-(NEARMISS, no static reference).
+[52] 0x8243B0 (decomp func_overlay_AREA21_00824370, NEARMISS C at 99.48%:
+two loop-label padding nops and integer temporaries two argument registers
+lower, neither a behaviour) is in em_area21_groups. Its casts are the
+compiler's float -> unsigned helper 001281C0 (hook, run as original code in
+the oracle); the packet lives at sp - 0x60 (frame 0x120), the tables and
+groups it names are at their runtime addresses (data is not shifted by the
+0x40 of the decomp's code names: the oracle caught a first try that did).
+Not translated: the unreached 0x823B40, 0x824FE0 (no C) and 0x825B00
+(byte-identical C, no static reference).
 
 ## Evidence
 
@@ -59,9 +65,9 @@ the callee inventory and the fail-stop contract.
 | test_area21_overlay_reference | 518 / 617 cases | every reachable word of the 11 entries (1643) |
 | test_area21_owners_reference | 329 / 581 | every word of the 12 entries (635) |
 | test_area21_doors_reference | 860 / 1112 | every word but three dead delay slots named in the test (0x82744C: 0x8273C0's table bound after `& 7` never fails; 0x827B70 / 0x827F8C: an effect loop index only 0..2) |
-| test_area21_groups_reference | 622 / 748 | every word of the 6 entries (382) |
+| test_area21_groups_reference | 894 / 1041 | every word of the 7 entries (895: 0x8243B0's 513) |
 
-Each sub-lane also ran a few mutants (load order, limits off by one ulp,
+Lane PORT-A21-52 ran five mutants of 0x8243B0 (the 0.75 scale, a step list, a phase increment, the handle compare, the fourth random's source): all were caught. Each sub-lane also ran a few mutants (load order, limits off by one ulp,
 frame offsets, constants): each was caught but equivalent rewrites (a
 float add's operand order, `r & 1` for `r % 2 != 0`, a bit below the
 24-bit significand in 0x8260A0's unsigned conversion, which the translation
@@ -82,7 +88,7 @@ recording of AREA21 is still needed to show the owners in a run.
   `b21d`, `b21p`) re-enter em_area01_runtime_call by address; the boot
   callees they name are the runtime's (an unbound one faults there).
 - `src/game/em_scene_bindings.c`: AREA21's translated overlay behaviours
-  bind; any other overlay address of AREA21 (0x8243B0) does not.
+  bind (0x8243B0 included); any other overlay address of AREA21 does not.
 
 ## Next
 
@@ -91,6 +97,6 @@ recording of AREA21 is still needed to show the owners in a run.
    0019C6F0 rules (0x826840, 0x827CD0), and `--profile 21` assets.
 2. Run the live owners of that recording through these oracles (as
    test_area14_overlay_reference's `live/` cases).
-3. 0x8243B0 once the decomp has its C.
+3. (done) 0x8243B0, [52], lane PORT-A21-52.
 4. The SDK reach of 0x827040 (001FBC50 -> the sound library) and the
    ending: SECOND_HALF_AREAS.md section 6.

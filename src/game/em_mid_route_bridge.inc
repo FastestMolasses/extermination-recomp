@@ -21234,6 +21234,16 @@ static int b21p_w_00122BB8(void *ctx, int32_t *result)
     return rc;
 }
 
+static int b21p_w_001281C0(void *ctx, float a0, int32_t *result)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x001281C0u, .sp = r->sp, .na = 0, .nf = 1};
+    c.f[0] = em_ee_bits(a0);
+    int rc = em_area01_runtime_call(r, &c);
+    if (rc == 0 && result) *result = (int32_t)c.v0;
+    return rc;
+}
+
 static int b21p_w_001AFC10(void *ctx, uint32_t a0)
 {
     EmArea01Runtime *r = ctx;
@@ -21318,6 +21328,17 @@ static int b21p_w_001EFD20(void *ctx, uint32_t a0, uint32_t a1)
     return rc;
 }
 
+static int b21p_w_0021B9A0(void *ctx, int32_t a0, float a1, float a2)
+{
+    EmArea01Runtime *r = ctx;
+    EmArea01Call c = {.function = 0x0021B9A0u, .sp = r->sp, .na = 1, .nf = 2};
+    c.a[0] = (uint64_t)(int64_t)a0;
+    c.f[0] = em_ee_bits(a1);
+    c.f[1] = em_ee_bits(a2);
+    int rc = em_area01_runtime_call(r, &c);
+    return rc;
+}
+
 static int b21p_w_callback(void *ctx, uint32_t function, uint32_t self)
 {
     EmArea01Runtime *r = ctx;
@@ -21343,6 +21364,7 @@ static inline void b21p_hooks(EmArea01Runtime *r, EmArea21GroupsHooks *h)
     h->w_00102C58 = b21p_w_00102C58;
     h->w_0011DE90 = b21p_w_0011DE90;
     h->w_00122BB8 = b21p_w_00122BB8;
+    h->w_001281C0 = b21p_w_001281C0;
     h->w_001AFC10 = b21p_w_001AFC10;
     h->w_001C6190 = b21p_w_001C6190;
     h->w_001CCF70 = b21p_w_001CCF70;
@@ -21350,6 +21372,7 @@ static inline void b21p_hooks(EmArea01Runtime *r, EmArea21GroupsHooks *h)
     h->w_001CFB50 = b21p_w_001CFB50;
     h->w_001CFBE0 = b21p_w_001CFBE0;
     h->w_001EFD20 = b21p_w_001EFD20;
+    h->w_0021B9A0 = b21p_w_0021B9A0;
     h->w_callback = b21p_w_callback;
 }
 

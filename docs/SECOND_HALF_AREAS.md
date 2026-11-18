@@ -472,7 +472,7 @@ yet.
 | 0x823A10 | overlay | group 0x82b500 [2] | missing; twin of AREA01 0x8239C0, AREA19 0x825030 |
 | 0x823AA0 | overlay | group 0x82ba70 [22] | `em_area21_groups.c` |
 | 0x823AB0 | overlay | group 0x82ba70 [23] | missing; twin of AREA01 0x8239C0, AREA19 0x825030 |
-| 0x8243B0 | overlay | s0[52] | missing |
+| 0x8243B0 | overlay | s0[52] | `em_area21_groups.c` |
 | 0x8261A0 | overlay | s0[42] | `em_area21_owners.c` |
 | 0x8262D0 | overlay | s0[43], s0[44] | `em_area21_owners.c` |
 | 0x8266F0 | overlay | s0[45] | `em_area21_owners.c` |
@@ -519,7 +519,7 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   AREA14_PORT.md), AREA16's (em_area16_overlay, AREA16_PORT.md: proven over
   designed states, no capture exists), AREA17's and AREA18's (below),
   AREA20's (all: em_area20_overlay and four twins, AREA20_PORT.md) and
-  AREA21's (all but [52] 0x8243B0, which has no decomp C; AREA21_PORT.md)
+  AREA21's (all: em_area21_*, [52] 0x8243B0 included; AREA21_PORT.md)
   is untranslated; the area lanes translate them against captures. The
   twins and the translated owners are bound only in the shared
   composition's dispatch; of these areas only AREA14 runs there yet.
@@ -570,8 +570,8 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   the guided run's g73 .. g75 AREA20 tries are not kept recordings (the
   chain was forked at g69), so its SUBS row still waits.
 - AREA21 (lane PORT-A21, docs/AREA21_PORT.md): every overlay owner the
-  placements, groups, scripts and spawns name but [52] 0x8243B0 (no decomp
-  C) is translated from the decomp C into em_area21_overlay (the Gatling
+  placements, groups, scripts and spawns name, [52] 0x8243B0 included
+  (lane PORT-A21-52, NEARMISS C), is translated from the decomp C into em_area21_overlay (the Gatling
   [62] 0x8297C0, the cannon [61] 0x828700 and its projectile 0x828F30),
   em_area21_owners (counters, scripts, the ending request [53]),
   em_area21_doors (the doors, [54] / [55], the rounds 0x825C70, the
