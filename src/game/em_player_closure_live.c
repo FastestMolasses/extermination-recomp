@@ -1880,10 +1880,17 @@ static int lc_hit_point(void *c, float out[4])
     memcpy(out, w, sizeof w);
     return 0;
 }
+/* 00177030(p, arg): it reads *(0x700031D0), the record the last sweep left
+ * (001809B0's 0019A570 at 00180C94, whose kind 0x34 led here): its axis
+ * +0x34 / +0x3C and its centre (00199DB0). The ladder scratch holds a copy
+ * only from the last le_fill_last, so fill it from that sweep first, as
+ * lc_hit_point does; without it a stale record's axis moved +B0 / +B8 and
+ * 001809B0's +290 landed one 4.5 step off (guided chain g12, counter 177,811). */
 static int lc_dash(void *c, EmPlayerLiveActor *a, int arg)
 {
     (void)c;
     int ignored;
+    FAULT(le_fill_last());
     IN3A20();
     int r = em_player_ladder_00177030(&L.le, a, arg, &ignored);
     OUT3A20();
