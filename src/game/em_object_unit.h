@@ -51,8 +51,10 @@ extern "C" {
 #define EM_OBJECT_UNIT_GS_STATE    UINT32_C(0x00815360)  /* 001D1F80(0, 1, 0): set 1, class 0 */
 #define EM_OBJECT_UNIT_GS_STATE_2  UINT32_C(0x00815A20)  /* 001D1F80(3, 2, 2): set 2, class 2 */
 #define EM_OBJECT_UNIT_GS_STATE_21 UINT32_C(0x00815990)  /* 001D1F80(3, 2, 1): set 2, class 1 */
+#define EM_OBJECT_UNIT_GS_STATE_23 UINT32_C(0x00815AB0)  /* 001D1F80(3, 2, 3): set 2, class 3 */
 #define EM_OBJECT_UNIT_SKIN_3      UINT32_C(0x00816B40)  /* 001D3900's skin record (+0x80 per slot) */
 #define EM_OBJECT_UNIT_SKIN_3_FOG  UINT32_C(0x00816D40)  /* 001D3A30's (AREA02's 001CAE40) */
+#define EM_OBJECT_UNIT_SKIN_3_SUB  UINT32_C(0x00816C40)  /* 001D39A0's (001CACC0, model kind 3) */
 #define EM_OBJECT_UNIT_SKIN_3_CLIP UINT32_C(0x00816E40)  /* 001D3CF0's */
 #define EM_OBJECT_UNIT_ARENA       UINT32_C(0x00814220)  /* *D_00275674: the arena's first qword */
 /* 001C7420 writes at most 0x1B0 / 8 = 54 nodes before the rows would reach
@@ -120,10 +122,16 @@ int em_object_unit_gs_state_check_2(const uint8_t *bytes, const char **why);
  * class 2 but ALPHA_1 0x44; the bytes of the AREA02 captures
  * (tools/test_object_unit_reference.py section K1). */
 int em_object_unit_gs_state_check_21(const uint8_t *bytes, const char **why);
-/* The GS register values of class `gs_class` (0, 1 or 2) the page path draws
+/* The same for 001D1F80(3, 2, 3)'s REF (set 2, class 3, D_00815AB0; 001CACC0's
+ * units, model kind 3): as class 2 but ALPHA_1 0x8000000062 ((0 - Cs) * FIX
+ * 0x80 >> 7 + Cd: subtractive); the bytes of the AREA16 captures g60 / g61
+ * (tools/test_owner_draw_reference.py section F). */
+int em_object_unit_gs_state_check_23(const uint8_t *bytes, const char **why);
+/* The GS register values of class `gs_class` (0, 1, 2 or 3) the page path draws
  * with (EM_GFX_GS_* of em_gfx.h): alpha, test, tex1, clamp, colclamp. Class 1
  * (001D1F80(3, 2, 1), set 2 class 1 at D_00815990) differs from class 2 only
- * in ALPHA_1 0x44 ((Cs - Cd) * As >> 7 + Cd); the captured AREA02 bytes. */
+ * in ALPHA_1 0x44 ((Cs - Cd) * As >> 7 + Cd); the captured AREA02 bytes.
+ * Class 3 (001D1F80(3, 2, 3), D_00815AB0) only in ALPHA_1 0x8000000062. */
 void em_object_unit_gs_state(uint32_t gs_class, uint64_t *alpha, uint64_t *test, uint64_t *tex1,
                              uint64_t *clamp, uint64_t *colclamp);
 

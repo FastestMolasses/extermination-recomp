@@ -220,7 +220,7 @@ static struct {
 /* EM_START_AT_PAD=<file>: a recorded pad script (the level smoke's EMA1
  * format: "EMA1 1 <frames> <gap>", then "<frame> <buttons hex> <lx> <ly>"
  * rows in frame order) played from control as the whole pad. */
-enum { PAD_MAX = 4096 };
+enum { PAD_MAX = 65536 };   /* a guided chain's takes together (g16: over 4096 rows) */
 typedef struct { int f; uint16_t buttons; uint8_t lx, ly; } PadRow;
 enum { PATH_MAX_ROWS = 80000 };
 static struct {

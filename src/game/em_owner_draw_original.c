@@ -270,6 +270,36 @@ int em_owner_draw_001D3CF0(S *s, int32_t chan, u32 model, u32 w04, EmOwnerDrawGs
     return 0;
 }
 
+/* 001D39A0(chan, model) (decomp func_001D39A0.c, byte-matched): 001D1F80(chan,
+ * 2, 3), then the REF 8 to D_00816C40 + (context +0x9C << 7), then
+ * 001D37D0. 001D3900's sibling with GS class 3 and its own skin bank. */
+int em_owner_draw_001D39A0(S *s, int32_t chan, u32 model, u32 w04, EmOwnerDrawGsState gs, void *ctx)
+{
+    if (!s) return -1;
+    if (latched(s)) return -1;
+    if (!gs) return fault(s, 0x001D1F80u, EM_OWNER_DRAW_FAULT_NULL_WORKER);
+    if (gs(ctx, chan, 2, 3) < 0) return fault(s, 0x001D1F80u, EM_OWNER_DRAW_FAULT_NULL_WORKER);
+    int ref2 = s->world.ctx_0C ? (*s->world.ctx_0C & 1u) == 0 : 0;
+    if (prepare(s, chan, 0x10u + submit_bytes(ref2), 0x001D39A0u) < 0) return -1;
+    skin_ref(s, chan, EM_OWNER_DRAW_SKIN_RECORD_3_SUB);
+    submit(s, chan, EM_OWNER_DRAW_KERNEL, model, w04);        /* 001D37D0 */
+    return 0;
+}
+
+/* 001D3DA0(chan, model) (decomp func_001D3DA0.c, byte-matched):
+ * 001D39A0(chan, model), 001D1F80(chan, 2, 3), the REF 8 to D_00816E40 +
+ * (context +0x9C << 7), then 001D3AD0. */
+int em_owner_draw_001D3DA0(S *s, int32_t chan, u32 model, u32 w04, EmOwnerDrawGsState gs, void *ctx)
+{
+    if (em_owner_draw_001D39A0(s, chan, model, w04, gs, ctx) < 0) return -1;
+    if (gs(ctx, chan, 2, 3) < 0) return fault(s, 0x001D1F80u, EM_OWNER_DRAW_FAULT_NULL_WORKER);
+    int ref2 = s->world.ctx_0C ? (*s->world.ctx_0C & 1u) == 0 : 0;
+    if (prepare(s, chan, 0x10u + submit_bytes(ref2), 0x001D3DA0u) < 0) return -1;
+    skin_ref(s, chan, EM_OWNER_DRAW_SKIN_RECORD_3_CLIP);
+    submit(s, chan, EM_OWNER_DRAW_CLIP_KERNEL, model, w04);   /* 001D3AD0 */
+    return 0;
+}
+
 /* 001D1F80(chan, a, b), 001D1FF0(chan, idx) as their tags: REF 9 / 4 into the
  * GS blocks at *D_00275674. The caller has checked the room. */
 static void ref_1F80(S *s, int32_t chan, u32 a, u32 b)

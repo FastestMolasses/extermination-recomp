@@ -36,7 +36,12 @@
 #define CTX EM_RCL_CONTEXT
 #define ARENA_END 0x007635C0u    /* the packet arena ends where the chain table starts */
 #define POINT_LIGHT_WORDS (32u * 32u)
-#define EM_OWNER_DRAW_LIVE_PAGE_UNITS 128u
+/* Page units kept per frame: host bookkeeping, not an original limit (the
+ * original is bounded by the packet arena). 128 refused AREA16 g61's frame
+ * where [10]'s boot effect 001F4840 breaks into its 001F3E30 mode-2 pieces
+ * (2026-11-17); 512 is the chain page's own unit capacity
+ * (EM_CHAIN_PAGE_UNITS_MAX). */
+#define EM_OWNER_DRAW_LIVE_PAGE_UNITS 512u
 #define METHOD_UNITS 1024u     /* EM_CHAIN_PAGE_WALKED_MAX */
 #define METHOD_MODELS 32u
 
@@ -857,10 +862,57 @@ static int w_001CAAC0(void *ctx, const EmOwnerServicesOwner *owner, const uint8_
     return 0;
 }
 
+/* 001CACC0's passes (001D39A0 / 001D3DA0 on channel 3, GS class 3). */
+static int w_001D39A0(void *ctx, const EmOwnerModel *model)
+{
+    (void)ctx;
+    const EmWorldModel *m = L.bank ? em_world_models_of(L.bank, model) : NULL;
+    if (!m) return report(0x001D39A0u, "001D39A0 of a model outside the owner's bank");
+    return em_owner_draw_001D39A0(&L.draw, 3, m->address, m->w04, ch3_1F80, NULL);
+}
+
+static int w_001D3DA0(void *ctx, const EmOwnerModel *model)
+{
+    (void)ctx;
+    const EmWorldModel *m = L.bank ? em_world_models_of(L.bank, model) : NULL;
+    if (!m) return report(0x001D3DA0u, "001D3DA0 of a model outside the owner's bank");
+    return em_owner_draw_001D3DA0(&L.draw, 3, m->address, m->w04, ch3_1F80, NULL);
+}
+
+/* 001CACC0's 001CB760(D_007635C0, 0, node) (an owner with +0x02 bit 0x40):
+ * the render context's packet chain, the unit's start by its address. */
+static int w_001CB760_node(void *ctx, uint32_t table, int32_t id, const uint8_t *node)
+{
+    (void)ctx;
+    EmPacketChain *pc = em_rcl_packet_chain();
+    if (!pc || !node) return -1;
+    if (em_packet_chain_w_001CB760(pc, table, id, ch3_address(node)) < 0)
+        return report(0x001CB760u, "001CB760 faulted");
+    return 0;
+}
+
+static int page_draw(const EmWorldModels *bank, EmOwnerServicesOwner *owner, const uint32_t rgb[4],
+                     uint32_t record, uint32_t fn);
+
 int em_owner_draw_live_001CABA0(const EmWorldModels *bank, EmOwnerServicesOwner *owner,
                                 const uint32_t rgb[4], uint32_t record)
 {
-    if (!bank || !owner || !rgb) return report(0x001CABA0u, "NULL argument");
+    return page_draw(bank, owner, rgb, record, 0x001CABA0u);
+}
+
+int em_owner_draw_live_001CACC0(const EmWorldModels *bank, EmOwnerServicesOwner *owner,
+                                const uint32_t rgb[4], uint32_t record)
+{
+    return page_draw(bank, owner, rgb, record, 0x001CACC0u);
+}
+
+/* 001CABA0 (class 2) or 001CACC0 (class 3) over the same views. */
+static int page_draw(const EmWorldModels *bank, EmOwnerServicesOwner *owner, const uint32_t rgb[4],
+                     uint32_t record, uint32_t fn)
+{
+    const int kind3 = fn == 0x001CACC0u;
+    const uint32_t gs_class = kind3 ? 3u : 2u;
+    if (!bank || !owner || !rgb) return report(fn, "NULL argument");
     if (em_rcl_fault()) return report(em_rcl_fault(), "the render context has faulted");
     if (bind_views(bank) < 0) return -1;
     if (ch3_open() < 0) return report(0x00811CDCu, "the channel-3 cursor is outside the packet arena");
@@ -871,13 +923,13 @@ int em_owner_draw_live_001CABA0(const EmWorldModels *bank, EmOwnerServicesOwner 
         L.page_log_count = 0;
     }
     if (L.page_log_count >= EM_OWNER_DRAW_LIVE_PAGE_LOG)
-        return report(0x001CABA0u, "more 001CABA0 calls in one frame than EM_OWNER_DRAW_LIVE_PAGE_LOG");
+        return report(fn, "more 001CABA0 / 001CACC0 calls in one frame than EM_OWNER_DRAW_LIVE_PAGE_LOG");
     EmOwnerDrawLivePageLog *log = &L.page_log[L.page_log_count++];
     memset(log, 0, sizeof *log);
     log->record = record;
     memcpy(log->rgb, rgb, sizeof log->rgb);
     if (L.page_count >= EM_OWNER_DRAW_LIVE_PAGE_UNITS)
-        return report(0x001CABA0u, "more 001CABA0 units in one frame than EM_OWNER_DRAW_LIVE_PAGE_UNITS");
+        return report(fn, "more 001CABA0 / 001CACC0 units in one frame than EM_OWNER_DRAW_LIVE_PAGE_UNITS");
     L.bank = bank;
     EmOwnerDrawWorld *d = &L.draw.world;
     d->channel = L.channels;
@@ -903,18 +955,22 @@ int em_owner_draw_live_001CABA0(const EmWorldModels *bank, EmOwnerServicesOwner 
     s->workers.w_001D3990 = w_001D3990;
     s->workers.w_001D3D90 = w_001D3D90;
     s->workers.w_001CAAC0 = w_001CAAC0;
+    s->workers.w_001D39A0 = w_001D39A0;
+    s->workers.w_001D3DA0 = w_001D3DA0;
+    s->workers.w_001CB760 = w_001CB760_node;
     L.page_owner = owner;
     L.page_record = record;
     const uint32_t start = L.ch3_address;
     uint8_t *const unit = L.channels[3].cursor;
-    const int rc = em_owner_services_001CABA0(s, owner, owner->model);
+    const int rc = kind3 ? em_owner_services_001CACC0(s, owner, owner->model)
+                         : em_owner_services_001CABA0(s, owner, owner->model);
     L.owner_rgb = NULL;
     L.page_owner = NULL;
     d->channel = &L.channel;                       /* 001CAA00's single channel 0 */
     d->channel_count = 1;
     if (rc < 0 || s->fault.code) {
-        fprintf(stderr, "em_owner_draw_live: 001CABA0 faulted: services %08X/%d, draw %08X/%d, light %08X/%d\n",
-                (unsigned)s->fault.address, (int)s->fault.code, (unsigned)L.draw.fault.address,
+        fprintf(stderr, "em_owner_draw_live: %08X faulted: services %08X/%d, draw %08X/%d, light %08X/%d\n",
+                (unsigned)fn, (unsigned)s->fault.address, (int)s->fault.code, (unsigned)L.draw.fault.address,
                 (int)L.draw.fault.code, (unsigned)L.light.fault.address, (int)L.light.fault.code);
         return -1;
     }
@@ -924,13 +980,13 @@ int em_owner_draw_live_001CABA0(const EmWorldModels *bank, EmOwnerServicesOwner 
     if (!used) return 0;                           /* 001CA7B0 culled it */
     /* [the class-2 unit][the RET tag]: the page CALLs the unit's start. */
     if (used < 0x10u || unit[used - 0x10u + 3u] != 0x60u)
-        return report(start, "001CABA0's bytes do not end in its RET tag");
+        return report(start, "001CABA0's / 001CACC0's bytes do not end in its RET tag");
     const char *why = NULL;
     EmObjectUnitPieces *q = &L.page_units[L.page_count];
     if (em_object_unit_parse(unit, used - 0x10u, resolve, (void *)bank, q, &why) < 0 ||
-        q->unit.gs_class != 2u) {
-        fprintf(stderr, "em_owner_draw_live: the 001CABA0 unit at %08X is refused: %s\n", (unsigned)start,
-                why ? why : "not a class-2 unit");
+        q->unit.gs_class != gs_class) {
+        fprintf(stderr, "em_owner_draw_live: the %08X unit at %08X is refused: %s\n", (unsigned)fn,
+                (unsigned)start, why ? why : "not the method's GS class");
         return -1;
     }
     L.page_address[L.page_count++] = start;

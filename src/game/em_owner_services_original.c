@@ -846,6 +846,56 @@ int em_owner_services_001CABA0(EmOwnerServices *s, EmOwnerServicesOwner *o, cons
     return 0;
 }
 
+/* 001CACC0(owner, model): see the header (decomp func_001CACC0.c,
+ * byte-matched). */
+int em_owner_services_001CACC0(EmOwnerServices *s, EmOwnerServicesOwner *o, const EmOwnerModel *model)
+{
+    if (!s) return -1;
+    if (latched(s)) return -1;
+    if (!o) return fault(s, 0x001CACC0u, EM_OWNER_FAULT_NULL_WORKER);
+    u32 radius = 0x41A00000u;                       /* 20.0 without a model */
+    if (model) radius = word_at(&model->radius);    /* model +0x20, raw bits */
+    if (o->cls & 0x40u)                             /* owner +0x02 bit 0x40 */
+        radius = em_ee_mul_bits(radius, 0x3F99999Au);   /* scale * 1.2 (EE multiply) */
+    int32_t flags = 0;
+    NEED(s, s->workers.w_001CA7B0, 0x001CA7B0u);
+    CALL(s, 0x001CA7B0u, s->workers.w_001CA7B0(s->workers.ctx, o->pos, radius, &flags));
+    if (flags < -1 || flags > 0x1F) return fault(s, 0x001CA7B0u, EM_OWNER_FAULT_BAD_RESULT);
+    if (flags < 0) return 0;                        /* culled: nothing is drawn */
+    const u32 chan = 3u;
+    NEED(s, s->world.channel, 0x00275670u);
+    if (chan >= s->world.channel_count) return fault(s, 0x001CACC0u, EM_OWNER_FAULT_BAD_INDEX);
+    EmOwnerServicesChannel *c = &s->world.channel[chan];
+    const uint8_t *node = c->cursor;                /* *(D_00275670 + 0x1C) */
+    NEED(s, s->workers.w_001D8C20, 0x001D8C20u);
+    CALL(s, 0x001D8C20u, s->workers.w_001D8C20(s->workers.ctx, 1));
+    if (em_owner_services_001C7420(s, o, EM_OWNER_SERVICES_COLOR_VU_ADDRESS, (int32_t)chan, NULL) < 0) return -1;
+    if (flags != 0 && (flags & 1)) {
+        NEED(s, s->workers.w_001D3DA0, 0x001D3DA0u);
+        CALL(s, 0x001D3DA0u, s->workers.w_001D3DA0(s->workers.ctx, model));
+    } else {
+        NEED(s, s->workers.w_001D39A0, 0x001D39A0u);
+        CALL(s, 0x001D39A0u, s->workers.w_001D39A0(s->workers.ctx, model));
+    }
+    /* The RET tag, as 001CABA0's. */
+    if (!c->cursor || !c->end || c->cursor > c->end || c->end - c->cursor < 0x10)
+        return fault(s, 0x001CACC0u, EM_OWNER_FAULT_BAD_INDEX);
+    uint8_t *t = c->cursor;
+    t[3] = 0x60;
+    t[4] = t[5] = t[6] = t[7] = 0;
+    t[0] = t[1] = 0;
+    c->cursor = t + 0x10;
+    CALL(s, 0x001D8C20u, s->workers.w_001D8C20(s->workers.ctx, 0));
+    if (o->cls & 0x40u) {                           /* +0x02 re-read: the same byte */
+        NEED(s, s->workers.w_001CB760, 0x001CB760u);
+        CALL(s, 0x001CB760u, s->workers.w_001CB760(s->workers.ctx, 0x007635C0u, 0, node));
+        return 0;
+    }
+    NEED(s, s->workers.w_001CAAC0, 0x001CAAC0u);
+    CALL(s, 0x001CAAC0u, s->workers.w_001CAAC0(s->workers.ctx, o, node));
+    return 0;
+}
+
 /* ======================================================================
  * Rumble
  * ==================================================================== */

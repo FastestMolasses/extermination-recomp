@@ -35,6 +35,19 @@ E. The indicator draw 001CACB0 -> 001CABA0 (em_owner_services_001CABA0
    sphere crosses the view-z plane, so 001CA7B0's bit 0 sends 001CABA0
    through 001D3D90 / 001D3CF0's clip pass, which no captured indicator
    draw takes).
+F. Model kind 3's draw 001CAE30 -> 001CACC0 (em_owner_services_001CACC0
+   with em_owner_draw_001D39A0 / _001D3DA0): AREA16 sub 0's [10] 0x825800
+   (the only owner with +0x4C = 001CAE30 in any capture) in Claude's guided
+   run's g60 and g61 (decomp build/fork_refs/guided-20261117/s87/route_g16).
+   The ORIGINAL 001CAE30 runs as in E, its 001CAAC0 and 001CB760 answered
+   (their oracles are test_anim_runtime_rest_reference and the packet
+   chain's); the NATIVE chain runs with E's workers. Per owner: as captured,
+   at the camera's point (the clip pass, 001D3DA0), far away (culled), and
+   each again with the owner's +0x02 bit 0x40 set (radius x 1.2 and
+   001CB760(D_007635C0, 0, node) instead of 001CAAC0; no capture has it),
+   plus random points around the camera (EM_TEST_FULL=1: more) and model
+   radii (the model's +0x20). Every channel-3 byte, the cursor, context
+   +0x5C, the lighting modes and the 001CAAC0 / 001CB760 call must be equal.
 D. Captured draws. For every owner with draw method 001CAA00 and a bank model
    in the s87 route captures 00..14 (crates, drums, fan, truck, elevator,
    the security gun and its cable, panel, door, parachute, ...): the ORIGINAL 001CAA00 runs over the
@@ -118,7 +131,8 @@ class Draw(C.Structure):
 
 class VeilWorld(C.Structure):
     _fields_ = [('cursor', P32), ('cursor_count', C.c_uint32), ('ctx_9C', P32), ('d00275674', P32),
-                ('d0027568C', P32), ('d0026E880', C.c_void_p), ('d00241010', C.c_void_p),
+                ('d0027568C', P32), ('d00275678', P32), ('ctx_0C', P32), ('ctx_50', P32),
+                ('d0026E880', C.c_void_p), ('d00241010', C.c_void_p),
                 ('packet', C.c_void_p), ('packet_address', C.c_uint32), ('packet_size', C.c_uint32),
                 ('table', C.c_void_p)]
 
@@ -157,6 +171,9 @@ def build_library():
     lib.em_owner_services_001CABA0.argtypes = [C.POINTER(Services), C.POINTER(Owner), C.POINTER(Model)]
     lib.em_owner_draw_001D3900.argtypes = [PD, C.c_int32, C.c_uint32, C.c_uint32, GS_STATE, C.c_void_p]
     lib.em_owner_draw_001D3CF0.argtypes = [PD, C.c_int32, C.c_uint32, C.c_uint32, GS_STATE, C.c_void_p]
+    lib.em_owner_services_001CACC0.argtypes = [C.POINTER(Services), C.POINTER(Owner), C.POINTER(Model)]
+    lib.em_owner_draw_001D39A0.argtypes = [PD, C.c_int32, C.c_uint32, C.c_uint32, GS_STATE, C.c_void_p]
+    lib.em_owner_draw_001D3DA0.argtypes = [PD, C.c_int32, C.c_uint32, C.c_uint32, GS_STATE, C.c_void_p]
     return lib
 
 
@@ -421,13 +438,13 @@ def player_owners(name):
     return out
 
 
-def model_bank(lib, ram, owner):
+def model_bank(lib, ram, owner, table_less=False):
     """(bank, entry) for the owner's +0x44: the world bank's entry, or a
     table-less bank of the one model at +0x44 built from the capture's
     bytes (em_world_models_add; the exporters prove those bytes equal the
     player / equipment exports)."""
     handle = u32(ram, owner + 0x44)
-    for i in range(BANK.model_count):
+    for i in range(0 if table_less else BANK.model_count):
         if BANK.models[i].address == handle:
             return BANK, i
     blocks, qwc, bones, skel = struct.unpack_from('<4I', ram, handle)
@@ -680,6 +697,13 @@ def case_indicator(item):
         b = bytearray(ram)
         struct.pack_into('<3f', b, owner + 0xB0, *camera_point(ram))
         ram = bytes(b)
+    return page_draw_case(name, ram, spr, owner, INDICATOR_DRAW, dict(near=near))
+
+
+def page_draw_case(name, ram, spr, owner, draw, extra):
+    """E / F: the ORIGINAL `draw` (001CACB0 or 001CAE30) against the native
+    em_owner_services_001CABA0 / _001CACC0 over the same RAM."""
+    kind3 = draw == KIND3_DRAW
     count = ram[owner + 0x0C]
     o = EE(ELF, ram, spr)
     ctx = u32(ram, 0x275670)
@@ -690,9 +714,10 @@ def case_indicator(item):
     # 001CAAC0 (the depth key and 001CB760's page insertion; its own oracle
     # is test_anim_runtime_rest_reference) is answered here: its two
     # arguments are what 001CABA0 decides.
-    aac0 = []
+    aac0, b760 = [], []
     o.calls[0x1CAAC0] = lambda r: aac0.append((r.g(4) & M32, r.g(5) & M32))
-    o.run(INDICATOR_DRAW, (owner,))
+    o.calls[0x1CB760] = lambda r: b760.append((r.g(4) & M32, s32(r.g(5)), r.g(6) & M32))
+    o.run(draw, (owner,))
     used = o.load(ctx + 0x1C) - CAP_DL
     # 001D89D0 under the lighting mode 001CABA0 set (1), as 001C7420 reaches it.
     if used:
@@ -712,7 +737,7 @@ def case_indicator(item):
         setattr(ow, field, int.from_bytes(ram[owner + off:owner + off + size], 'little'))
     for field, off, n in OWNER_FLOATS:
         C.memmove(C.addressof(getattr(ow, field)), ram[owner + off:owner + off + 4 * n], 4 * n)
-    bank, entry = model_bank(LIB, ram, owner)
+    bank, entry = model_bank(LIB, ram, owner, table_less=kind3)   # F: an AREA16 model, not the AREA11 bank
     ow.model = C.pointer(bank.models[entry].model)
     for i in range(count):
         node = u32(ram, owner + 0x110 + 4 * i)
@@ -746,7 +771,7 @@ def case_indicator(item):
     veil.world.cursor, veil.world.cursor_count = C.cast(vcur, P32), 4
     veil.world.d00275674 = C.cast(arena, P32)
     veil.world.packet, veil.world.packet_address, veil.world.packet_size = C.addressof(buf), CAP_DL, CAP_DL_SIZE
-    state = {'modes': [], 'calls': [], 'aac0': None}
+    state = {'modes': [], 'calls': [], 'aac0': None, 'b760': None}
 
     def w_a7b0(_, pos, radius, out):
         state['calls'].append('a7b0')
@@ -778,9 +803,24 @@ def case_indicator(item):
         m = bank.models[entry]
         return LIB.em_owner_draw_001D3CF0(C.byref(d), 3, m.address, m.w04, gs_cb, None)
 
+    def w_39a0(_, model):
+        state['calls'].append('39a0')
+        m = bank.models[entry]
+        return LIB.em_owner_draw_001D39A0(C.byref(d), 3, m.address, m.w04, gs_cb, None)
+
+    def w_3da0(_, model):
+        state['calls'].append('3da0')
+        m = bank.models[entry]
+        return LIB.em_owner_draw_001D3DA0(C.byref(d), 3, m.address, m.w04, gs_cb, None)
+
     def w_aac0(_, owner_view, node):
         state['calls'].append('aac0')
         state['aac0'] = (node - C.addressof(buf), bytes(C.cast(owner_view, C.POINTER(Owner))[0].pos)[:12])
+        return 0
+
+    def w_b760(_, table, slot, node):
+        state['calls'].append('b760')
+        state['b760'] = (table, slot, node - C.addressof(buf))
         return 0
 
     def refuse(tag):
@@ -795,12 +835,18 @@ def case_indicator(item):
     keep = [gs_cb]
     for field, fn in (('w_001CA7B0', w_a7b0), ('w_001D8C20', w_8c20), ('w_001D89D0', w_89d0),
                       ('w_001D1F80', refuse('1f80!')), ('w_001CA940', refuse('a940')),
-                      ('w_001CB3C0', refuse('b3c0')), ('w_001D3990', w_3990), ('w_001D3D90', w_3d90),
+                      ('w_001CB3C0', refuse('b3c0')),
+                      ('w_001D3990', refuse('3990!') if kind3 else w_3990),
+                      ('w_001D3D90', refuse('3d90!') if kind3 else w_3d90),
+                      ('w_001D39A0', w_39a0 if kind3 else refuse('39a0!')),
+                      ('w_001D3DA0', w_3da0 if kind3 else refuse('3da0!')),
+                      ('w_001CB760', w_b760 if kind3 else refuse('b760!')),
                       ('w_001CAAC0', w_aac0)):
         cf = WORKER_TYPES[field](fn)
         keep.append(cf)
         setattr(svc.workers, field, cf)
-    rc = LIB.em_owner_services_001CABA0(C.byref(svc), C.byref(ow), ow.model)
+    native = LIB.em_owner_services_001CACC0 if kind3 else LIB.em_owner_services_001CABA0
+    rc = native(C.byref(svc), C.byref(ow), ow.model)
     assert rc == 0 and svc.fault.code == 0 and d.fault.code == 0 and veil.fault.code == 0, \
         ('native fault', name, hex(owner), hex(svc.fault.address), svc.fault.code, hex(d.fault.address),
          d.fault.code, veil.fault.code, state['calls'])
@@ -811,14 +857,72 @@ def case_indicator(item):
     if used:
         assert c50[3] == o.load(ctx + 0x5C), ('context +0x5C', hex(c50[3]), hex(o.load(ctx + 0x5C)))
         assert state['modes'] == [1, 0] and o.load(ctx + 0x246C) == 0, ('001D8C20 modes', state['modes'])
-        assert aac0 == [(owner + 0xB0, CAP_DL)], ('the original 001CAAC0 arguments', aac0)
-        assert state['aac0'] == (0, ram[owner + 0xB0:owner + 0xBC]), ('001CAAC0', state['aac0'])
+        if kind3 and ram[owner + 2] & 0x40:
+            assert not aac0 and b760 == [(0x7635C0, 0, CAP_DL)], ('the original 001CB760 arguments', aac0, b760)
+            assert state['aac0'] is None and state['b760'] == (0x7635C0, 0, 0), ('001CB760', state)
+        else:
+            assert not b760 and aac0 == [(owner + 0xB0, CAP_DL)], ('the original 001CAAC0 arguments', aac0)
+            assert state['b760'] is None and state['aac0'] == (0, ram[owner + 0xB0:owner + 0xBC]), \
+                ('001CAAC0', state['aac0'])
         unit = o.read(CAP_DL, used)
         calls = [u32(unit, k + 4) for k in sorted(tag_offsets(unit)) if unit[k + 3] == 0x50]
         kind = 'clip' if 0x2354A0 in calls else 'plain'
     else:
         assert state['calls'] == ['a7b0'], ('a culled draw calls only 001CA7B0', state['calls'])
-    return dict(capture=name, owner=hex(owner), bones=count, unit=used, kind=kind, near=near)
+        assert not aac0 and not b760, ('a culled draw inserts nothing', aac0, b760)
+    return dict(capture=name, owner=hex(owner), bones=count, unit=used, kind=kind, **extra)
+
+
+# ---------------------------------------------------------------- F. 001CACC0
+
+KIND3_DRAW = 0x1CAE30                      # 001CA5F0 kind 3: 001CAE30 -> 001CACC0(owner, +0x44)
+KIND3_SET = 'guided-20261117/s87/route_g16/'
+KIND3_BEATS = ['g60_area06_area16', 'g61_area16_water']
+CAP3 = {}
+
+
+def kind3_owners(name):
+    ram = CAP3[name][0]
+    out, a, seen = [], u32(ram, 0x275BC0), set()
+    while a and a not in seen:
+        seen.add(a)
+        if u32(ram, a + 0x4C) == KIND3_DRAW and u32(ram, a + 0x44):
+            out.append((name, a))
+        a = u32(ram, a + 0x1C)
+    return out
+
+
+def kind3_items(seed_count):
+    """(capture, owner, variant): 'as' (captured), 'near' (the camera's
+    point), 'far' (culled), 'rand<k>' (a random point around the camera, a
+    random model radius); each with +0x02 bit 0x40 clear and set."""
+    items = []
+    for beat in CAP3:
+        for name, a in kind3_owners(beat):
+            for v in ['as', 'near', 'far'] + [f'rand{k}' for k in range(seed_count)]:
+                for b40 in (0, 1):
+                    items.append((name, a, v, b40))
+    return items
+
+
+def case_kind3(item):
+    name, owner, variant, b40 = item
+    ram, spr = CAP3[name]
+    b = bytearray(ram)
+    model = u32(ram, owner + 0x44)
+    if variant == 'near':
+        struct.pack_into('<3f', b, owner + 0xB0, *camera_point(ram))
+    elif variant == 'far':
+        cam = camera_point(ram)
+        struct.pack_into('<3f', b, owner + 0xB0, cam[0] + 1.0e5, cam[1], cam[2] + 1.0e5)
+    elif variant.startswith('rand'):
+        rng = random.Random(f'{name}:{owner}:{variant}')
+        cam = camera_point(ram)
+        struct.pack_into('<3f', b, owner + 0xB0, *(c + rng.uniform(-400.0, 400.0) for c in cam))
+        struct.pack_into('<f', b, model + 0x20, rng.choice((0.0, 1.0, 19.99, 20.0, 64.0, rng.uniform(0, 300))))
+    if b40:
+        b[owner + 2] |= 0x40
+    return page_draw_case(name, bytes(b), spr, owner, KIND3_DRAW, dict(variant=variant, b40=b40))
 
 
 # ---------------------------------------------------------------- main
@@ -901,8 +1005,28 @@ def main():
     assert any(r['kind'] == 'clip' for r in e_draws), 'no indicator draw took the clip pass (001D3D90)'
     counts['indicator_draws'] = len(e_draws)
     counts['indicator_kinds'] = {k: sum(1 for r in e_draws if r['kind'] == k) for k in ('plain', 'clip', 'culled')}
+    # F. 001CAE30 -> 001CACC0 (AREA16's [10], the guided run's g60 / g61)
+    for beat in KIND3_BEATS:
+        p = refs.capture(KIND3_SET + beat)
+        if (p / 'eeMemory.bin').exists() and (p / 'scratchpad.bin').exists():
+            ram = (p / 'eeMemory.bin').read_bytes()
+            assert ram[0x810700] == 0x10, (beat, 'not AREA16')
+            for lo, hi in ((0x1CA7B0, 0x1CAAC0), (0x1CACC0, 0x1CAE40), (0x1C7420, 0x1C7900),
+                           (0x1D1F80, 0x1D1FF0), (0x1D2090, 0x1D2110), (0x1D2710, 0x1D2960),
+                           (0x1D37D0, 0x1D3E40), (0x102690, 0x102960), (0x1D89D0, 0x1D8C30)):
+                assert ram[lo:hi] == ELF[lo - 0x100000 + 0x300:hi - 0x100000 + 0x300], ('code differs', beat, hex(lo))
+            CAP3[beat] = (ram, (p / 'scratchpad.bin').read_bytes())
+    f_items = kind3_items(pick(24, 4))
+    assert f_items, 'no 001CAE30 owner in the guided captures g60 / g61'
+    f_draws = parallel_map(case_kind3, f_items)
+    for b40 in (0, 1):
+        for k in ('plain', 'clip', 'culled'):
+            assert any(r['kind'] == k and r['b40'] == b40 for r in f_draws), ('001CACC0 class uncovered', k, b40)
+    counts['kind3_draws'] = len(f_draws)
+    counts['kind3_kinds'] = {k: sum(1 for r in f_draws if r['kind'] == k) for k in ('plain', 'clip', 'culled')}
     line = banner(part(len(seeds), 20000, '001CA7B0 random cases') + f' + {len(fixed)} boundary',
                   part(len(e_draws), len(indicators), 'captured 001CABA0 draws'),
+                  f"{len(f_draws)} 001CACC0 draws ({counts['kind3_kinds']})",
                   part(len(used), len(items), '001CA940 cases'),
                   f"{counts['bank_lookups']} 001C6120 lookups",
                   part(len(draws), len(owners), 'captured owner draws'))
