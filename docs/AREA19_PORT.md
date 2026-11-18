@@ -315,7 +315,7 @@ falls on the original's first (take tick 2416 in the table's numbering, 2415 in 
 0x8260B0"):
 
 Chain now: segments 0 .. 914 exact but for segment 454's last tick (364,513 ticks compared, 363,640
-on the recording); segment 914 (g33's boss cutscene, 827 ticks) is exact. **Next divergence**:
+on the recording); segment 914 (g33's boss cutscene, 827 ticks) is exact. Next divergence then (closed below):
 segment 915 (g33 `area00_boss` gameplay, AREA00 sub 2, original counter 378,961) leaves at offset 5
 (0.00 away, heading 0.036 off) because the camera faults at 00194DB0: 0018B9C0's area arm calls it
 for AREA00 when D_00810701 == 2 and D_00810803 == 3 (the boss fight), and em_camera_live leaves
@@ -324,6 +324,34 @@ for AREA00 when D_00810701 == 2 and D_00810803 == 3 (the boss fight), and em_cam
 -1577), then 0018C0C0, 0018D7B0(5), 0018C6A0, 0018C4B0); it needs a translation with an
 original-instruction oracle (em_area06_port's 001944B0 is the pattern: its hooks already cover
 every callee but 0018C0C0).
+
+**Segment 915 closed: the boss fight and on into AREA14 (lane PORT-A00-ARENA, 2026-11-18).** Three
+gaps, each closed by binding a translation proven against the original instructions:
+1. 00194DB0, the boss arena camera (AREA00_OVERLAY_PORT.md "The arena camera"): translated as
+   em_area00_arena_camera (with 0018C0C0), `make test-area00-arena-camera-reference`, bound as
+   em_camera_live's `w_00194DB0`. Segment 915 then ran to offset 268 (counter 379,224).
+2. There 001A8660's close-out met the boss shot's +0x34 contact word 0x8247C0 (an empty routine,
+   em_area00_ovl_008247C0, test_area00_overlay_reference) with no binding (fault at 001A8734);
+   em_scene_bindings' `area01_contact` now admits it in area 0.
+3. Segment 920's script (0x825D70's, record 0x82B400) reached op09 callback 0x8260B0, translated
+   and bound in the runtime but refused by em_area01_script_live's `record` (fault at 001BA1F0);
+   it is now admitted in area 0.
+
+Chain now (`watch_takes --check --root ../Extermination/build/guided_play g01_title_newgame`):
+segments 0 .. 978 exact but segment 454's last tick and segment 940's tail: 403,653 ticks compared
+(402,719 on the recording), through g33 / g34 (the AREA00 boss fight, segments 915 .. 920 exact),
+g35, g36 into AREA14, g37 .. g40. **Segment 940** (g36's AREA14 arrival cutscene, area 14 sub 0):
+from offset 1198 (original counter 389,928) the player's settle (y 390.76 -> 390.01) lands one tick
+early in the port; position equal otherwise, the segment's end and segments 941 .. 978 exact (a
+one-tick timing difference inside a cutscene, not traced). **Next divergence**: segment 979
+(g41 `area14_area18`, beat `_g41_plane`, take tick ~1231, original counter 418,444) leaves at
+offset 436: running east at (677.3, 687.6, 978.9) the port's player is pushed +0.78 in z and slowed
+in x on one tick (the original keeps a straight line); worst 229.6 later, and the run overruns the
+recording at step 430,291. It is the round of the eggs north to the plane: a collision push the
+original does not make (an actor's collider, most likely; not traced). The card chain does not
+isolate it: `guided_chain.py g18 --steer g41 --until g41` (card g41) already differs in rand() at
+row 2 and leaves at row 15. Next step: tabulate the original's pool records near the player over
+g41 ticks 1200 .. 1240 (`tools/guided_take_probe.py g41_area14_area18 ...`) against the port's.
 
 **Segment 454's two ticks, traced.** Per line of the 13-line message (the byte at 0x8106F5 goes
 2 -> 1 -> 0 in both; D_002821B4 2 at the end) the original's start latencies are 11, 24, 71, 16,

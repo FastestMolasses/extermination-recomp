@@ -61,6 +61,7 @@ SOURCES = ['tests/camera_interaction_fixture.c', 'src/game/em_camera.c', 'src/ga
            # 001999C0's sight drawers (em_sight) and their live host
            'src/game/em_sight.c', 'src/game/em_sight_live.c', 'src/game/em_aim_fire_target.c',
            'src/game/em_area06_port.c', 'src/game/em_area06_port_node.c', 'src/game/em_area06_port_overlay.c',
+           'src/game/em_area00_arena_camera.c',
            'src/game/em_area06_port_strip.c', 'src/game/em_level9_port_area13.c',
            # Camera actions 9 / 11 (00198CE0 / 00198F10) and 10 (00198D90), their
            # one owners (section 6).

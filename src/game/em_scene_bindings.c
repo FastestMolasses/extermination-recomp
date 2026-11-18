@@ -4732,8 +4732,12 @@ static int area01_contact(void *ctx, uint32_t function, uint32_t entry, uint32_t
     /* 0x823B10: AREA06's contact word (0x823B50's record +0x34; another
      * overlay's code at the address never reaches here: only AREA06
      * records hold it). */
+    /* 0x8247C0: AREA00's boss shot's contact word (0x8247D0 stores it at
+     * the shot's +0x34), an empty routine (em_area00_ovl_008247C0,
+     * test_area00_overlay_reference). */
     const int contact = function == 0x001E3D20u || (s_state.d810700 == 6 && function == 0x00823B10u) ||
-                        (s_state.d810700 == 0x0D && function == 0x008284E0u); /* [45]'s thrown piece */
+                        (s_state.d810700 == 0x0D && function == 0x008284E0u) || /* [45]'s thrown piece */
+                        (s_state.d810700 == 0 && function == 0x008247C0u);
     if (!contact || player != EM_AREA01_PLAYER_BASE || player_b0 != player + 0xB0u) {
         fprintf(stderr, "em_area01: 001A8660: a +0x34 contact %08X (entry %08X, player %08X) with no binding\n",
                 (unsigned)function, (unsigned)entry, (unsigned)player);

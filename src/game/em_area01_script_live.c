@@ -280,6 +280,7 @@ static int record(void *ctx,uint32_t fn,uint32_t actor,uint32_t block,
     case 0x00824E40u: /* AREA00 arrival script 00828D60 */
     case 0x008253E0u: /* AREA00 terminal script 008299E0 */
     case 0x00826CB0u: /* AREA00 sub 2's script 0082D070 ([28]) */
+    case 0x008260B0u: /* AREA00 sub 2's: 0x825D70's script, record 0x82B400 (em_area00_overlay) */
         if (s->area!=0) return -1;
         break;
     default: return -1;

@@ -55,7 +55,7 @@ COMMON  := src/main.c src/em_model.c src/em_input.c src/em_settings.c \
            src/game/em_examine.c src/game/em_panel.c src/game/em_panel_program.c src/game/em_panel_runtime.c src/game/em_battery_ui.c src/game/em_battery_page_live.c src/game/em_status_page_record.c src/game/em_camera_retarget.c \
            src/game/em_camera_rotation.c src/game/em_camera_live.c src/game/em_camera_commit_original.c \
            src/game/em_camera_follow_original.c src/game/em_camera_area11_specials.c src/game/em_camera_aim.c src/game/em_sight.c src/game/em_sight_live.c src/game/em_area22_port.c src/game/em_area00_low.c \
-           src/game/em_area06_port.c src/game/em_area06_port_node.c \
+           src/game/em_area06_port.c src/game/em_area06_port_node.c src/game/em_area00_arena_camera.c \
            src/game/em_area06_port_overlay.c src/game/em_level8_port_gap.c src/game/em_level8_port_creature.c \
            src/game/em_level8_port_lift.c src/game/em_level8_port_overlay.c src/game/em_level8_port_probe.c \
            src/game/em_camera_leftovers.c src/game/em_camera_leftovers_solver.c src/game/em_census_standins.c \
@@ -2489,6 +2489,12 @@ test-area16-overlay-reference:
 .PHONY: test-area00-overlay-reference
 test-area00-overlay-reference:
 	python3 tools/test_area00_overlay_reference.py
+
+.PHONY: test-area00-arena-camera-reference
+# 00194DB0 (the AREA00 boss arena camera) and 0018C0C0 against the original
+# instructions (docs/AREA00_OVERLAY_PORT.md "The arena camera").
+test-area00-arena-camera-reference:
+	python3 tools/test_area00_arena_camera_reference.py
 
 .PHONY: test-area21-overlay-reference
 test-area21-overlay-reference:

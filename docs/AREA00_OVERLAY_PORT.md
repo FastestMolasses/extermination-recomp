@@ -338,6 +338,63 @@ AREA00 caller through the runtime) goes to `em_area01_effects_services`:
 pos, +0xC0 = dir, +0xBC = 1.0 and +0x38 = the owner (the decomp C, which
 em_area00_fx_001F00A0 translates and test_area00_fx_reference checks).
 
+## The arena camera 00194DB0 (lane PORT-A00-ARENA, 2026-11-18)
+
+In the AREA00 boss fight (sub 2, D_00810701 == 2, story byte D_00810803 ==
+3) the walking camera's per-area arm (00195130's area-0 case, from 0018B9C0)
+sets cam +0x94 = 0 and hands the frame to 00194DB0(cam, player). Before this
+lane `em_camera_live` left that worker NULL, so the camera fail-stopped on
+the fight's first gameplay tick (chain segment 915).
+
+**What it does** (decomp `src/func_00194DB0.c`, byte-matched): the player's
+z (+0xA8) picks the eye radius (94 below -1610, else 100) and, clamped to
+[-1657, -1497], a goal yaw: delta = pi (z + 1497) / -160; below z = -1577
+the goal is pi/2 + (pi - delta) within [1.9198622, 2.792527], else
+(pi - delta) - pi/2 within [0.34906587, 1.2217306]. The camera yaw +0xAC
+eases toward the goal through 001B12B0 at pi/900 a tick; in player state 3
+(+0x230) only while |001B1470(goal - yaw)| > pi/4. The eye goes on the
+circle of that radius round (-142, -1577): +0x10 = -142 + r sin(yaw), +0x18
+= -1577 + r cos(yaw); +0x14 = -3 when +0x5A bit 0 is set, else -13. The
+desired target's y +0x20 is held at most -90 and its z +0x28 within [-1617,
+-1537]. Then 0018C0C0 (D_008105E0 = cam +0x20, through 00102948),
+0018D7B0(cam, 5), 0018C6A0(cam +0x10, D_008105D0, 1.0) and
+0018C4B0(D_008105D0, +0x14, 1.0). The caller's third argument (8) is not
+read.
+
+**Translation**: `src/game/em_area00_arena_camera.c` (00194DB0 and
+0018C0C0) over an address map and hooks, EE float arithmetic on bit
+patterns, fail-stop on any unmapped address or refusing hook. Bound in
+`em_camera_live.c` (`sp_00194DB0`) over the aim camera's map (the camera
+block, the pool D_008105D0.., the player view) with the callees 001944B0's
+binding uses (the SDK float leaves, 001B12B0, 00102948, 0018D7B0, 0018C6A0,
+0018C4B0).
+
+**Oracle**: `make test-area00-arena-camera-reference`
+(`tools/test_area00_arena_camera_reference.py`, ~1 s; `EM_TEST_FULL=1` x10).
+The original 00194DB0 runs unmodified on the EE model with 0018C0C0 and its
+00102948 executed and every other callee hooked (scripted, recorded with
+its arguments and a digest of the 0x810000..0x810FFF window at the call;
+the hooked + executed set is asserted equal to the routines' jal / tail-jump
+targets). 400 random cases around every threshold (z at -1610 / -1497 /
+-1657 / -1577 +-1 ulp, the clamps, the pi/4 test, both +0x5A values, player
+state 3 and others) plus 50 runs of 0018C0C0 alone: the call sequence and
+the final window equal the original's; all 14 conditional branches go both
+ways; each hook refusing in turn stops the native with that callee's
+address and the window as it was at the call; an unmapped player record
+faults at +0xA8 with nothing written. Mutants: five of eight killed; the
+three survivors are equivalent (a clamp test at its own bound, which stores
+the same value, and the commuted product).
+
+**Two more bindings on the fight's route** (same lane): 001A8660's close-out
+calls the boss shot's +0x34 word 0x8247C0 (em_area00_ovl_008247C0, empty)
+when the player touches a shot; em_scene_bindings' `area01_contact` admits
+it in area 0 (before, fault at 001A8734, segment 915 offset 268). After the
+fight 0x825D70's script reaches op09 callback 0x8260B0 at record 0x82B400;
+em_area01_script_live's `record` admits it in area 0 (before, fault at
+001BA1F0, segment 920). With the three, the guided chain plays the fight
+(segments 915 .. 920) exact and runs on into AREA14 (AREA19_PORT.md, the
+chain paragraph).
+
 ## Known gaps
 
 - **Stubbed callees' inputs.** Where the hook does not take a register the

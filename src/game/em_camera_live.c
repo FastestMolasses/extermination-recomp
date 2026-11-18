@@ -15,6 +15,7 @@
 #include "game/em_area00_low.h"
 #include "game/em_area01_room.h"
 #include "game/em_area22_port.h"
+#include "game/em_area00_arena_camera.h"
 #include "game/em_area06_port.h"
 #include "game/em_area14_overlay.h"
 #include "game/em_effects_live.h"
@@ -1266,6 +1267,37 @@ static int sp_001944B0(void *ctx, uint8_t *cam, EmPlayerLiveActor *player, int32
 }
 
 /* ======================================================================
+ * 00194DB0 (00195130's area-0 arm in AREA00 sub 2 with D_00810803 == 3:
+ * the boss arena camera): em_area00_arena_camera's translation
+ * (byte-matched C, test_area00_arena_camera_reference) over the same map
+ * and callees as 001944B0's hooks; 0018C0C0's 00102948 is the SDK leaf
+ * over that map (D_008105E0 is the pool). The original's third argument
+ * (8, left in a2 by the caller) is not read.
+ * ====================================================================== */
+static uint8_t *a00c_bytes(void *ctx, uint32_t a, uint32_t n) { return aim_map(ctx, a, n, 1); }
+static int sp_00194DB0(void *ctx, uint8_t *cam, EmPlayerLiveActor *player, int32_t a2)
+{
+    (void)ctx;
+    (void)a2;
+    if (cam != C.cam.rec.bytes || player != &C.player) return -1;
+    const EmA00ArenaCamHooks h = {
+        .ctx = NULL, .bytes = a00c_bytes,
+        .w_0011DE90 = a06c_0011DE90, .w_0011DF78 = a06c_0011DF78, .w_0011E2A8 = a06c_0011E2A8,
+        .w_001B1470 = a06c_001B1470, .w_001B12B0 = a06c_001B12B0, .w_00102948 = a06c_00102948,
+        .w_0018D7B0 = a06c_0018D7B0, .w_0018C6A0 = a06c_0018C6A0, .w_0018C4B0 = a06c_0018C4B0,
+    };
+    uint32_t fault = 0;
+    SP_ENTER();
+    const int rc = em_a00_arena_camera_00194DB0(&h, CAM_BASE, 0x008102B0u, &fault);
+    SP_LEAVE();
+    if (rc < 0) {
+        fprintf(stderr, "em_camera_live: 00194DB0 fault at %08X\n", (unsigned)fault);
+        return -1;
+    }
+    return 0;
+}
+
+/* ======================================================================
  * Camera actions 12 (001963A0, em_area22_port), 13 (00196CE0, AREA19's
  * ladder camera, em_level9_port) and 15 (00197390, the sub-change set-up,
  * em_level13_port): each module's translation (test_area22_port_reference,
@@ -1912,11 +1944,12 @@ static void bind_worlds(void)
     k->w_001912B0 = sp_001912B0;
     k->w_001B0300 = sp_001B0300;
     /* 001944B0: AREA06's states 29..37 (em_area06_port, sp_001944B0);
+     * 00194DB0: AREA00's boss arena (em_area00_arena_camera, sp_00194DB0);
      * 0x823FE0: AREA13's area test; 00230230: AREA14's arm
-     * (em_area14_overlay). The other areas' arms (00194DB0, 001AEDE0) stay
-     * NULL: the readiness check requires them only where they are
-     * reachable, so reaching one faults. */
+     * (em_area14_overlay). 001AEDE0 stays NULL: the readiness check
+     * requires it only where it is reachable, so reaching it faults. */
     k->w_001944B0 = sp_001944B0;
+    k->w_00194DB0 = sp_00194DB0;
     k->w_00230230 = sp_00230230;
     k->w_00823FE0 = sp_00823FE0;
     k->w_001B0C60 = sp_001B0C60;

@@ -311,8 +311,10 @@ region since this step; nothing writes them in AREA11.
   - camera actions 12, 13 and 15 (section 6: AREA11 cannot reach
     them), and mode 1's 001B0300 (also as 00197490's worker, a fail-stop: section 7);
   - 001B0C60 in areas 0x12 / 0xE;
-  - the specials' other-area arms (001944B0, 00194DB0, 00230230,
-    0x823FE0, 001AEDE0).
+  - the specials' other-area arm 001AEDE0 (001944B0, 00230230 and
+    0x823FE0 are bound to their areas' translations; 00194DB0, AREA00's
+    boss arena camera, to em_area00_arena_camera since lane
+    PORT-A00-ARENA, docs/AREA00_OVERLAY_PORT.md "The arena camera").
   - After the AREA01 arrival (level 2) the camera host carries AREA01's
     worker (em_scene_bindings `camera_area_worker`): mode 1's 001B0300 and
     action 10's 00198D90 with its 001D2830 are forwarded to the AREA01 live
