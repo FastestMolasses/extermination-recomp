@@ -2116,7 +2116,8 @@ static int tick_weather(EmActor *actor, Node *node, const EmArea11World *world)
         ? em_snow_runtime_tick_outdoor(&node->weather, em_scene_bindings_pool_address(actor),
                                        em_scene_req_u32(s_scene, EM_SCENE_REQ_C8), s_scene->d810700, s_scene->d810701,
                                        world->cutscene ? 1u : 0u, s_scene->req[EM_SCENE_REQ_B8],
-                                       (unsigned)(int)em_frame_transition()->substate, &s_scene->req[0x0F])
+                                       (unsigned)(int)em_frame_transition()->substate, &s_scene->req[0x0F],
+                                       g.cam.top_mode, g.cam.cine_scene)
         : em_snow_runtime_tick_actor(
         &node->weather, world->cutscene ? s_walk_eye : g.cam.eye, world->cutscene ? 1u : 0u,
         s_scene->req[EM_SCENE_REQ_B8], (unsigned)(int)em_frame_transition()->substate);

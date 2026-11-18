@@ -35,7 +35,10 @@ int em_snow_runtime_load(const char *scene_dir, const char *config, unsigned fla
  * The AREA11 snow branch 001E67C0 outside AREA11 faults (no config). `self`
  * is the node's address. Returns as tick_actor. */
 int em_snow_runtime_tick_outdoor(EmWeather *weather, uint32_t self, uint32_t flags, unsigned area, unsigned sub,
-                                 unsigned selector, unsigned transition, unsigned fade_state, uint8_t *d8106BF);
+                                 unsigned selector, unsigned transition, unsigned fade_state, uint8_t *d8106BF,
+                                 unsigned cam_top_mode, int cam_scene);
+/* cam_top_mode / cam_scene: D_008101E4 and D_0081024E (the camera block's
+ * +0x04 and +0x6E), which 001E67C0 reads for AREA21's camera cases. */
 int em_snow_runtime_tick_actor(EmWeather *weather, const float eye[3], unsigned selector,
                                unsigned transition, unsigned fade_state);
 

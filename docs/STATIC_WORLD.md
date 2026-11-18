@@ -46,7 +46,7 @@ The Form column says what the translation was read from:
 | 001D5370 | NM | live | the grid pass | em_render_context_001D5370 |
 | 001D52E0 | BM | live (the area load's 001C1E70) | the grid header | em_render_context_001D52E0 |
 | 001E1E60 | NM | live | the channel-3 list, byte for byte | em_static_world_001E1E60 |
-| 001E1AD0 | NM (53%) | unit-verified; not reached (flag 0x22 is never set on the first level) | | em_static_world |
+| 001E1AD0 | NM (53%) | unit-verified; live in AREA21 (flag 0x22; host workers 001E1760 / 001E17E0: em_grid_water, AREA21_PORT.md "Grid") | | em_static_world |
 | 001E0E80 | und | unit-verified (inside 001E1AD0) | | em_static_world |
 | 001D4FB0 | BM | live | the channel-0 REF run | em_static_world_001D4FB0 |
 | 001D4F30 | NM | live | as 001D4FB0 | em_static_world |
@@ -192,6 +192,9 @@ routine:
 The list is 0x250 bytes on the first level.
 
 ### 2.4 001E1AD0 (flag 0x22; not reached on the first level)
+
+(AREA21 sets flag 0x22: the phase view, the eye view and the host workers
+001E1760 / 001E17E0 are bound there, AREA21_PORT.md "Grid".)
 
 1. The list start is the channel cursor.
 2. It reads the phase:

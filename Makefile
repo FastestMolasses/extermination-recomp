@@ -129,7 +129,7 @@ COMMON  := src/main.c src/em_model.c src/em_input.c src/em_settings.c \
            src/game/em_level9_port_fx.c src/game/em_area13_route.c \
            src/game/em_replay.c \
            src/game/em_static_world.c src/game/em_static_world_compose.c src/game/em_static_world_draw.c \
-           src/game/em_static_world_live.c src/game/em_far_light.c \
+           src/game/em_static_world_live.c src/game/em_far_light.c src/game/em_grid_water.c \
            src/game/em_load_veil_particles.c src/game/em_actor_light_001D89D0.c src/game/em_player_equipment.c \
            src/game/em_effect_manager.c src/game/em_head_sprite_original.c src/game/em_player_equipment_sprite.c src/game/em_player_equipment_variants.c \
            src/game/em_effects_live.c src/game/em_equipment_live.c src/game/em_player_draw_live.c \
@@ -1070,6 +1070,10 @@ test-static-world-reference:
 .PHONY: test-far-light-reference
 test-far-light-reference:
 	python3 tools/test_far_light_reference.py
+
+.PHONY: test-grid-water-reference
+test-grid-water-reference:
+	python3 tools/test_grid_water_reference.py
 
 .PHONY: test-static-world-draw-reference
 test-static-world-draw-reference:

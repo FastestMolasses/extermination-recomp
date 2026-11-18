@@ -20,7 +20,8 @@
  * (EmSwcHostWorkers): 001D5BD0 (key list without 0x0B00; the verified
  * translation is em_area01_render_001D5BD0), the flag-0x23 sound branch of
  * 001E1E60 and 001E1AD0's 001E1760 / 001E17E0 (flag 0x22). The first level
- * reaches none of them; bind them to a fault.
+ * reaches none of them; bind them to a fault (em_render_context_live binds
+ * em_far_light and em_grid_water for AREA21).
  *
  * Views: every original byte the tree reads or writes must be covered. For
  * AREA11 that is the render context (0x811CC0..+0x2540), the channel packet

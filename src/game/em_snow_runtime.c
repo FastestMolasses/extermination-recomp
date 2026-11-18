@@ -100,7 +100,8 @@ static int refuse(const char *what, uint32_t address)
     return -1;
 }
 
-static int draw_tiles(EmWeather *weather, const EmSnowConfig *config, const EmWeatherFrame *frame, const float eye[3]);
+static int draw_tiles(EmWeather *weather, const EmSnowConfig *config, const EmWeatherFrame *frame, const float eye[3],
+                      int emit);
 
 int em_snow_runtime_tick_actor(EmWeather *weather, const float eye[3], unsigned selector,
                                unsigned transition, unsigned fade_state)
@@ -111,10 +112,13 @@ int em_snow_runtime_tick_actor(EmWeather *weather, const float eye[3], unsigned 
     if (frame.released)
         return 1;
     if (frame.draw != 1) return 0;
-    return draw_tiles(weather, &snow.config, &frame, eye);
+    return draw_tiles(weather, &snow.config, &frame, eye, 1);
 }
 
-static int draw_tiles(EmWeather *weather, const EmSnowConfig *config, const EmWeatherFrame *frame, const float eye[3])
+/* emit 0: 001E67C0 returned at its area switch (AREA21's camera case 0x1F)
+ * before any fog call or tile; 001E55F0 still closes the list. */
+static int draw_tiles(EmWeather *weather, const EmSnowConfig *config, const EmWeatherFrame *frame, const float eye[3],
+                      int emit)
 {
     /* 001E55F0 state 1, intensity above 0: the channel-3 cursor it reads
      * before 001E67C0 (the list's start). */
@@ -128,12 +132,13 @@ static int draw_tiles(EmWeather *weather, const EmSnowConfig *config, const EmWe
      * 0021B9A0(2, 0.0, 0.0), then 0021B9A0(3, 0.0, 300.0); every tile's
      * 001CFFE0 copies the context's +0xA0 quadword into its packet;
      * 0021B9A0(1, 0.0, 0.0) restores the mode-1 pair at the end. */
+    uint32_t fault = 0, first = 0;
+    uint32_t p3 = 0, uniform = 1;
+    if (!emit) goto close;
     if (em_rcl_0021B9A0(2, 0, 0) < 0 || em_rcl_0021B9A0(3, 0, UINT32_C(0x43960000)) < 0)
         return refuse("001E67C0's 0021B9A0 faulted (the render context)", 0x0021B9A0u);
     if (em_snow_tiles(weather, config, frame->strength, eye, sdk_sine, NULL, snow.tiles) < 0)
         return refuse("001E67C0's SDK 00102900 or 0011E2A8 faulted", 0x001E67C0u);
-    uint32_t fault = 0, first = 0;
-    uint32_t p3 = 0, uniform = 1;
     uint8_t p3_first[0x100];
     for (unsigned i = 0; i < EM_SNOW_TILE_COUNT; ++i) {
         const EmSnowTile *tile = &snow.tiles[i];
@@ -161,6 +166,7 @@ static int draw_tiles(EmWeather *weather, const EmSnowConfig *config, const EmWe
     }
     if (em_rcl_0021B9A0(1, 0, 0) < 0)
         return refuse("001E67C0's 0021B9A0(1) faulted (the render context)", 0x0021B9A0u);
+close:;
     /* 001E55F0: the RET tag, then 001D2DE0(0, start) when start != 0. */
     uint32_t pending = 0;
     if (em_weather_packets_close(&mem, start, &pending, &fault) < 0)
@@ -170,7 +176,7 @@ static int draw_tiles(EmWeather *weather, const EmSnowConfig *config, const EmWe
     snow.log.frame = em_frame_counter();
     snow.log.lists++;
     snow.log.start = first;
-    snow.log.tiles = EM_SNOW_TILE_COUNT;
+    snow.log.tiles = emit ? EM_SNOW_TILE_COUNT : 0;
     snow.log.p3_digest = p3;
     snow.log.p3_uniform = uniform;
     return 0;
@@ -304,7 +310,8 @@ static int wx_001E6F60(void *c, int32_t n0, int32_t n1, int32_t n2, int32_t n3, 
 }
 
 int em_snow_runtime_tick_outdoor(EmWeather *weather, uint32_t self, uint32_t flags, unsigned area, unsigned sub,
-                                 unsigned selector, unsigned transition, unsigned fade_state, uint8_t *d8106BF)
+                                 unsigned selector, unsigned transition, unsigned fade_state, uint8_t *d8106BF,
+                                 unsigned cam_top_mode, int cam_scene)
 {
     EmWeatherFrame frame = em_weather_tick(weather, flags, (area << 8) + sub, selector, transition, fade_state,
                                            weather_random, NULL);
@@ -317,11 +324,24 @@ int em_snow_runtime_tick_outdoor(EmWeather *weather, uint32_t self, uint32_t fla
         /* 001E67C0's branch: AREA11's emission (flags & 2 clear) with the
          * count D_002551F0 its area switch sets: 0xA for key 0xF01 (AREA15
          * sub 1), 0x14 for every key the switch does not list (AREA17's
-         * 0x1100 among them); the camera is D_008105D0. Key 0x1500 (AREA21,
-         * its camera cases) and the reversed row (flags & 2) are not this
+         * 0x1100 among them), 6 for key 0x1500 (AREA21), where camera top
+         * mode 3 (D_008101E4) reads the scene id D_0081024E: 0x1F returns
+         * at once (no fog call, no tile), 0x1E sets 3, 0x20 sets 9; the
+         * camera is D_008105D0. The reversed row (flags & 2) is not this
          * translation's. AREA13 never takes it. */
-        if (((area << 8) + sub) == 0x1500u || (flags & 2u))
-            return refuse("001E67C0 in AREA21 or with the reversed row", 0x001E67C0u);
+        if (flags & 2u)
+            return refuse("001E67C0 with the reversed row", 0x001E67C0u);
+        const unsigned key = (area << 8) + sub;
+        uint32_t count = key == 0xF01u ? 0xAu : 0x14u;                        /* D_002551F0 */
+        int emit = 1;
+        if (key == 0x1500u) {
+            count = 6;
+            if (cam_top_mode == 3) {
+                if (cam_scene == 0x1F) emit = 0;
+                else if (cam_scene == 0x1E) count = 3;
+                else if (cam_scene == 0x20) count = 9;
+            }
+        }
         static EmSnowConfig config15;
         static int config15_loaded;
         if (!config15_loaded) {
@@ -329,13 +349,12 @@ int em_snow_runtime_tick_outdoor(EmWeather *weather, uint32_t self, uint32_t fla
                 return refuse("no assets/scene_snow/snow.emsn", 0x001E67C0u);
             config15_loaded = 1;
         }
-        const uint32_t count = ((area << 8) + sub) == 0xF01u ? 0xAu : 0x14u;      /* D_002551F0 */
         memcpy(&config15.descriptor[8][0], &count, 4);
         const uint8_t *eye_bytes = em_camera_live_bytes(0x008105D0u, 12);
         if (!eye_bytes) return refuse("D_008105D0 is not mapped", 0x008105D0u);
         float eye[3];
         memcpy(eye, eye_bytes, sizeof eye);
-        return draw_tiles(weather, &config15, &frame, eye);
+        return draw_tiles(weather, &config15, &frame, eye, emit);
     }
     if (!s_wx_data_ready) {
         const uint8_t *elf = em_effects_live_window(WX_DATA, WX_DATA_SIZE);

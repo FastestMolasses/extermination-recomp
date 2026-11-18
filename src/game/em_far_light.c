@@ -99,23 +99,51 @@ static int camera_rows(F *f, u32 fn)
  * already loaded: vf2 = vf28 x + vf29 y + vf30 z + vf31; Q = 1 / vf2.w;
  * clip = vf2 (stored before the scale); vf2.xyz *= Q; vf2.w = vf23.z +
  * vf23.w * vf2.w, then min vf23.x and max 0; vf2 = ftoi4(vf2). */
-static int project(F *f, u32 clip[4], u32 screen[4], u32 fn)
+#define VUOK(x) do { if ((x) != EM_EE_FLOAT_OK) return -1; } while (0)
+int em_far_light_vu_project(EmFarLightVu *v, u32 clip[4], u32 screen[4])
 {
-    EmFarLightVu *v = f->vu;
-    VU(f, em_vu_vec_bits(EM_VU_MULABC, 15, 0, v->vf[28], v->vf[1], 0, NULL, v->acc), fn);
-    VU(f, em_vu_vec_bits(EM_VU_MADDABC, 15, 1, v->vf[29], v->vf[1], 0, v->acc, v->acc), fn);
-    VU(f, em_vu_vec_bits(EM_VU_MADDABC, 15, 2, v->vf[30], v->vf[1], 0, v->acc, v->acc), fn);
-    VU(f, em_vu_vec_bits(EM_VU_MADDBC, 15, 3, v->vf[31], VF0, 0, v->acc, v->vf[2]), fn);
-    VU(f, em_vu_div_bits(VF0[3], v->vf[2][3], 3, 3, &v->q), fn);
+    VUOK(em_vu_vec_bits(EM_VU_MULABC, 15, 0, v->vf[28], v->vf[1], 0, NULL, v->acc));
+    VUOK(em_vu_vec_bits(EM_VU_MADDABC, 15, 1, v->vf[29], v->vf[1], 0, v->acc, v->acc));
+    VUOK(em_vu_vec_bits(EM_VU_MADDABC, 15, 2, v->vf[30], v->vf[1], 0, v->acc, v->acc));
+    VUOK(em_vu_vec_bits(EM_VU_MADDBC, 15, 3, v->vf[31], VF0, 0, v->acc, v->vf[2]));
+    VUOK(em_vu_div_bits(VF0[3], v->vf[2][3], 3, 3, &v->q));
     memcpy(clip, v->vf[2], 16);
-    VU(f, em_vu_vec_bits(EM_VU_MULQ, 14, -1, v->vf[2], NULL, v->q, NULL, v->vf[2]), fn);
-    VU(f, em_vu_vec_bits(EM_VU_MULABC, 1, 2, VF0, v->vf[23], 0, NULL, v->acc), fn);
-    VU(f, em_vu_vec_bits(EM_VU_MADDBC, 1, 3, v->vf[23], v->vf[2], 0, v->acc, v->vf[2]), fn);
+    VUOK(em_vu_vec_bits(EM_VU_MULQ, 14, -1, v->vf[2], NULL, v->q, NULL, v->vf[2]));
+    VUOK(em_vu_vec_bits(EM_VU_MULABC, 1, 2, VF0, v->vf[23], 0, NULL, v->acc));
+    VUOK(em_vu_vec_bits(EM_VU_MADDBC, 1, 3, v->vf[23], v->vf[2], 0, v->acc, v->vf[2]));
     v->vf[2][3] = em_vu_min_bits(v->vf[2][3], v->vf[23][0]);
     v->vf[2][3] = em_vu_max_bits(v->vf[2][3], VF0[0]);
     for (unsigned k = 0; k < 4; ++k)
         v->vf[2][k] = em_vu_ftoi4_bits(v->vf[2][k]);
     memcpy(screen, v->vf[2], 16);
+    return 0;
+}
+
+static int project(F *f, u32 clip[4], u32 screen[4], u32 fn)
+{
+    if (em_far_light_vu_project(f->vu, clip, screen) < 0)
+        return fault(f, EM_FAR_LIGHT_FAULT_UNMEASURED, fn, 0);
+    return 0;
+}
+
+/* vf2 = vf24 x + vf25 y + vf26 z + vf27 (vf1, implicit w 1); CLIP takes
+ * the x, y, z judgments against |w| on DAZ'd magnitudes. */
+int em_far_light_vu_clip(EmFarLightVu *v)
+{
+    VUOK(em_vu_vec_bits(EM_VU_MULABC, 15, 0, v->vf[24], v->vf[1], 0, NULL, v->acc));
+    VUOK(em_vu_vec_bits(EM_VU_MADDABC, 15, 1, v->vf[25], v->vf[1], 0, v->acc, v->acc));
+    VUOK(em_vu_vec_bits(EM_VU_MADDABC, 15, 2, v->vf[26], v->vf[1], 0, v->acc, v->acc));
+    VUOK(em_vu_vec_bits(EM_VU_MADDBC, 15, 3, v->vf[27], VF0, 0, v->acc, v->vf[2]));
+    for (unsigned k = 0; k < 4; ++k)
+        if (em_eei_exp(v->vf[2][k]) == 0xFFu)
+            return -1;
+    u32 flags = 0, wmag = em_eei_daz(v->vf[2][3]) & 0x7FFFFFFFu;
+    for (unsigned k = 0; k < 3; ++k) {
+        const u32 x = em_eei_daz(v->vf[2][k]);
+        if ((x & 0x7FFFFFFFu) > wmag)
+            flags |= ((x >> 31) ? 2u : 1u) << (2 * k);
+    }
+    v->clip = ((v->clip << 6) | flags) & 0xFFFFFFu;
     return 0;
 }
 
@@ -368,21 +396,9 @@ int em_far_light_001CEFD0(F *f, const u32 pos[4], const u32 rgba[4])
     for (unsigned k = 0; k < 4; ++k)
         TRY(ld128(f, m + 16 * k, v->vf[24 + k], fn));
     memcpy(v->vf[1], pos, 16);
-    VU(f, em_vu_vec_bits(EM_VU_MULABC, 15, 0, v->vf[24], v->vf[1], 0, NULL, v->acc), fn);
-    VU(f, em_vu_vec_bits(EM_VU_MADDABC, 15, 1, v->vf[25], v->vf[1], 0, v->acc, v->acc), fn);
-    VU(f, em_vu_vec_bits(EM_VU_MADDABC, 15, 2, v->vf[26], v->vf[1], 0, v->acc, v->acc), fn);
-    VU(f, em_vu_vec_bits(EM_VU_MADDBC, 15, 3, v->vf[27], VF0, 0, v->acc, v->vf[2]), fn);
     /* the clip test of x, y, z against |w| on DAZ'd magnitudes */
-    for (unsigned k = 0; k < 4; ++k)
-        if (em_eei_exp(v->vf[2][k]) == 0xFFu)
-            return fault(f, EM_FAR_LIGHT_FAULT_UNMEASURED, fn, 0);
-    u32 flags = 0, wmag = em_eei_daz(v->vf[2][3]) & 0x7FFFFFFFu;
-    for (unsigned k = 0; k < 3; ++k) {
-        const u32 x = em_eei_daz(v->vf[2][k]);
-        if ((x & 0x7FFFFFFFu) > wmag)
-            flags |= ((x >> 31) ? 2u : 1u) << (2 * k);
-    }
-    v->clip = ((v->clip << 6) | flags) & 0xFFFFFFu;
+    if (em_far_light_vu_clip(v) < 0)
+        return fault(f, EM_FAR_LIGHT_FAULT_UNMEASURED, fn, 0);
     if ((v->clip & 0x3Fu) != 0)
         return 0;
 

@@ -162,7 +162,7 @@ static uint32_t rd32(const uint8_t *p)
 }
 
 /* VIF words [p, p + size): skips UNPACK data, reads DIRECT packets' A+D
- * writes of TEX0_1 (0x06) and RGBAQ (0x01). */
+ * writes of TEX0_1 (0x06) and RGBAQ (0x01); other DIRECT packets are skipped. */
 static int list_vif(const uint8_t *p, uint32_t size, uint64_t *tex0, uint32_t *rgbaq, int *have)
 {
     uint32_t i = 0;
@@ -184,7 +184,15 @@ static int list_vif(const uint8_t *p, uint32_t size, uint64_t *tex0, uint32_t *r
         const uint64_t lo = (uint64_t)rd32(q) | (uint64_t)rd32(q + 4) << 32;
         const uint32_t nloop = (uint32_t)(lo & 0x7FFFu), flg = (uint32_t)(lo >> 58) & 3u;
         const uint32_t nreg = (uint32_t)(lo >> 60) & 15u, regs = rd32(q + 8);
-        if (flg != 0u || nreg != 1u || (regs & 15u) != 0xEu || 1u + nloop > n) return -1;
+        if (flg != 0u || nreg != 1u || (regs & 15u) != 0xEu) {
+            /* Not an A+D packet: AREA21's far-light sprite (001D75E0 appends
+             * a PACKED SPRITE packet to the channel it is given, the
+             * background's included). It writes no TEX0_1 / RGBAQ through
+             * A+D; the DIRECT's whole payload is skipped. */
+            i = data + 16u * n;
+            continue;
+        }
+        if (1u + nloop > n) return -1;
         for (uint32_t k = 0; k < nloop; ++k) {
             const uint8_t *w = q + 16u * (1u + k);
             const uint32_t reg = w[8];

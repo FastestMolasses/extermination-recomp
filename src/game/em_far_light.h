@@ -109,6 +109,16 @@ int em_far_light_001D75E0(EmFarLight *f, int32_t idx, const uint32_t pos[4], uin
 int em_far_light_001CEFD0(EmFarLight *f, const uint32_t pos[4], const uint32_t rgba[4]);
 int em_far_light_001CF320(EmFarLight *f, uint32_t xy, uint32_t rgba, uint64_t tex0, uint32_t size);
 
+/* The two VU0 sequences these functions share with 001E17E0 (em_grid_water),
+ * vf1 loaded by the caller. 0, or -1 for an unmeasured float form.
+ *   clip:    vf2 = vf24 x + vf25 y + vf26 z + vf27 (implicit w 1), then
+ *            CLIP = (CLIP << 6 | the x, y, z flags against |w|) & 0xFFFFFF.
+ *   project: the projection described at 001D72D0 (vf28..vf31, Q, the fog
+ *            lane from vf23, ftoi4); clip = vf2 before the scale, screen =
+ *            the final vf2. */
+int em_far_light_vu_clip(EmFarLightVu *v);
+int em_far_light_vu_project(EmFarLightVu *v, uint32_t clip[4], uint32_t screen[4]);
+
 #ifdef __cplusplus
 }
 #endif

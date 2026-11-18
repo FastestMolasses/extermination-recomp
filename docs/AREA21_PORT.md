@@ -114,10 +114,8 @@ change from AREA20 (chain g20, AREA20_PORT.md "Live"); it does not play yet.
   sfx scope (0x15, 0), stream cues (D_00264DD0[0x16]).
 - **Runtime**: area 0x15 as a mid / later area (boot owners bound), data
   window 0x82A380 .. 0x82DC80, receivers, textures, arrival scene list.
-- **Blocker (lane PORT-A21-RENDER, below)**: the far light runs; AREA21's
-  first frame now stops in 001E1AD0, the flag-0x22 grid background (AREA21
-  sets flags 0x22 and 0x23): D_00275C0C (its phase float, .bss) has no view
-  and its callees 001E1760 / 001E17E0 are unbound.
+- **Blocker**: the far light (Far light) and the grid (Grid) run; chain
+  g20 now stops in g76 at 001AAC00 (Grid, last paragraph).
 
 ## Far light (lane PORT-A21-RENDER, 2026-11-18, branch `a21render`)
 
@@ -164,14 +162,78 @@ packet chain over R.pc).
   reads them); exact behaviour needs the GS world's Z buffer at step K
   (renderer work, decision for the orchestrator).
 
+## Grid (lane PORT-A21-GRID, 2026-11-18, branch `a21grid`)
+
+AREA21 also sets render flag 0x22, so 001E0CF0 runs 001E1AD0 (the 32 x 32
+grid, em_static_world) after 001E1E60. Its missing pieces are bound:
+
+- **D_00275C0C** (001E1AD0's phase, .bss): a writable view in
+  em_render_context_live, zero at boot. In the original it is 0.0 at the
+  end of every guided take before AREA21 (g71..g74 end states) and only
+  001E1AD0 writes it, so a run that enters AREA21 through the area change
+  (chain g20, card g73) starts it exactly. A start from a card inside
+  AREA21 would need its session value (g75 end 0.5001251, g76 end
+  0.9912671, ...): not modelled.
+- **D_008105D0** (the camera eye; 001E0E80 reads its y, D_008105D4): an
+  optional external view of em_rcl_bind (em_scene_bindings hands the
+  camera pool's bytes).
+- **001E1760** (C) and **001E17E0** (NEARMISS, VU0; register choices only,
+  the original instructions were followed) in `em_grid_water` (header:
+  every function's behaviour), with 001E1760's callees 001E10A0 (C) and
+  001E13E0 (NEARMISS, one register move; behaviour as the C). 001D6E60,
+  001D1F80, 001D1FF0 and 001D1F20 are em_load_veil_particles' (R.veil),
+  001D6F60 em_static_world's, rand the shared em_random. The two VU0
+  sequences 001E17E0 shares with the far light (clip test, projection) are
+  em_far_light_vu_clip / em_far_light_vu_project (test_far_light_reference
+  re-passed).
+- **vf23**: 001E17E0 reads it as its caller left it (the fog lane). No
+  function between 001E0CF0's entry and 001E17E0 writes vf23 (their
+  original instructions read it only as a source), so it is the value
+  measured at 001D72D0 in the same frame (Far light): ctx +0xA0.
+- **Evidence**: `make test-grid-water-reference`
+  (tools/test_grid_water_reference.py): the original instructions of
+  001E1760 (with 001E10A0 / 001E13E0 running as original code), 001E10A0,
+  001E13E0 and 001E17E0 over designed states (surface tables from small to
+  clamping magnitudes and signed zeros; camera and clip matrices that put
+  the grid inside, across and outside the clip volume and behind the
+  camera; fog ramps); rand and 001E1760's translated callees scripted on
+  both sides. Compared: v0, every byte of the windows (no original store
+  outside them), the scripted calls with their arguments, and the VU0
+  registers vf1 to vf2 and vf23 to vf31, ACC, Q, CLIP (unchanged by the
+  scalar ones). Quick 40 cases,
+  EM_TEST_FULL=1 240. Mutants caught: the 0.961 damping (one ulp), the
+  laplacian's height operand, the rand shift, the clip flag bit, the wrap
+  column's x 0x8800, the last row's y bias, the grid height 10 (one ulp);
+  equivalent: the laplacian's starting zero's sign.
+- **001E67C0 in AREA21** (em_snow_runtime): the area switch's key 0x1500
+  sets the count D_002551F0 to 6; with camera top mode 3 (D_008101E4) the
+  scene id D_0081024E 0x1F returns before any fog call or tile, 0x1E sets
+  3, 0x20 sets 9 (decomp C, byte-identical). The reversed row (flags & 2)
+  still faults; AREA21's weather flags in g75..g79 (0x22070001,
+  0x30070010) do not set it.
+- **Background reader** (em_static_world_live, renderer side): a DIRECT
+  packet in 001E1E60's list that is not an A+D one (the far light's sprite,
+  001D75E0) is skipped instead of refused.
+
+Chain g20 (card g73): g73 4191 / 4192 compared rows on the row (heading
+0.0012 off from row 1130, as before), g74 3736 / 3736, **g75 3864 / 3864
+to its last row 4246**, g76 1346 / 1346 to row 1372, where the Use press
+reaches 001AAC00 (area 0x15's classifier, `use_classify` in
+em_player_closure_live: unbound, fail-stop). Next: 001AAC00 (C) over the
+class-4 list D_00275B7C / D_00275B84 (gate D_0028A9A0) with its callees
+001AA8D0 (C: the 0x4A placement test, returns 2 or 3 with a point and an
+angle) and 001AAA90 (C: the 0x4B mount test through the object's matrix
++0xD0, returns 1), their 0011E748 / 0011DF78 / 001B1470 / 001026A0 (the
+distance argument is MULA then MADD in both), then the state the press
+starts. In the take the press was a placement: at row 1374 x goes from
+134.00 to 133.50 (an object at x 146.1 or 120.9, 12.6 off: 001AA8D0's
+point), then from about row 1450 y rises (35.01 to 39.80): a climb.
+
 ## Next
 
-1. (done) 001E1E60's flag-0x23 workers (Far light). Next: 001E1AD0's
-   flag-0x22 path: a view for D_00275C0C (its value at AREA21's entry in the
-   original is session history: read it from the g75 states), 001E1760 (C;
-   its callees 001D6E60 (em_load_veil_particles), 001D1F80 / 001D1FF0 /
-   001D6F60 (translated), 001E10A0 (C), 001E13E0 (NEARMISS), 001D1F20 (C))
-   and 001E17E0 (NEARMISS, VU0); then chain g20 through g75 .. g79.
+1. (done) 001E1E60's flag-0x23 workers (Far light); (done) 001E1AD0's
+   flag-0x22 path (Grid). Next: 001AAC00 and its callees (Grid, last
+   paragraph), then chain g20 on through g76 .. g80.
 1b. 001D7410's Z read-back (Far light, "Not modelled").
 2. Run the live owners of that recording through these oracles (as
    test_area14_overlay_reference's `live/` cases).
