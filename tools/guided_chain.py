@@ -1,0 +1,328 @@
+#!/usr/bin/env python3
+"""Claude's guided takes played as one continuous run from one start card.
+
+tools/mid_route_beats.py runs a guided take from its own card: a LOAD GAME of
+the take's source state. A LOAD GAME is not the continuous play the take
+recorded, and the differences are the original's own (docs/SECOND_HALF_AREAS.md
+section 5): g47's card reruns [30]'s arrival script, AREA16's curtains
+(001C1030) respawn because their kill bits are never saved, g46's arrival
+script waits ~17 frames less from a card. So here a chain of kept takes is
+played the way the user's takes are (tools/watch_takes.py): one card at a
+quiet point, before an area change, then every take's recorded pad in order
+with no reload, so the area change into the checked area is a real one.
+
+What runs (EM_START_AT, docs/STARTUP.md; comparison aids as the g4x beats'):
+  - the card (tools/build_start_saves.py: the first take's source state);
+  - EM_START_AT_PAD: the takes' recorded pads, stitched on the takes' counters
+    (a pad change read at tick k is an input at f = k - 2, route_capture's
+    rule), with no path steering: the pad alone;
+  - EM_START_AT_RANDS: each row's rand() word (take.rec's 'rand'; script
+    frame r takes row r's word) and EM_START_AT_CLOCKS each row's world clock
+    0x70003B68 where the take has the column (route_g17's; route_g16's traces
+    predate it): a difference then comes from the logic, not from the stream;
+  - EM_START_AT_PHASES: when a load segment ends (phase L: em_replay.c's and
+    take.rec's rule) the script's frame becomes the recording's first row after
+    its load (the port's disc answers at host speed, so its load is shorter);
+  - EM_START_AT_TRACE: the port's position, heading, area bytes, vitals and
+    rand() word per script frame.
+
+Every frame is then compared with the takes' rows (route set trace.json, read
+only): position (within 0.01), heading, the area bytes, the rand() word (the
+port's word before the frame's reseed: equal when the frame before drew as many
+times as the original's), and the vitals where the take has them (its hits, from
+threats.json: the frame and the health after each). Load rows (phase L) are not
+compared. Per take: the first frame of each kind of difference and where the
+run stopped (a fault line, the script's end).
+
+Usage (native arm64 macOS; build/extermination and the cards g45 / g60 first):
+
+  python3 tools/guided_chain.py --list
+  python3 tools/guided_chain.py g17            # g45 -> g46 -> g47 -> g48 from card g45 (AREA14)
+  python3 tools/guided_chain.py g16            # g61 -> g62 -> ... from card g61 (AREA16 sub 0)
+  python3 tools/guided_chain.py g16 --until g62   # stop the chain after g62
+  python3 tools/guided_chain.py g17 --steer    # steer where the player falls behind the path
+
+Output: build/guided_chain/<chain>/ (run.log, trace.jsonl, the pad and anchor
+files, report.txt; disc-derived: never committed).
+"""
+import argparse
+import json
+import math
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import reference_root as refs  # noqa: E402
+import mid_route_beats as mrb  # noqa: E402
+
+ROOT = Path(__file__).resolve().parents[1]
+OUT = ROOT / 'build/guided_chain'
+SAME = 0.01
+TURNED = 0.001
+
+# chain: (start card, route set, takes in order). The card is the first take's source state.
+CHAINS = {
+    # AREA14 entry 1 (g44's end, in play) -> [6]'s Use -> AREA17 entry 0 (a real area change) -> ...
+    'g17': ('g45', mrb.G17_ROUTE, ('g45_area14_area17', 'g46_area17_ramp', 'g47_area17_roger',
+                                   'g48_area17_cable')),
+    # AREA16 sub 0 at control after the real load from AREA06 sub 1 (g60's end) -> the barrier ->
+    # the curtains -> sub 1 -> ... The card g60 (g59's end, AREA06 sub 1, before the area change) is
+    # built but does not load yet: AREA06 sub 1 is not exported (assets/area06 holds sub 0 only and
+    # the module pack has no (0x06, 1) room: em_module_loader faults at its first read).
+    'g16': ('g61', mrb.G16_ROUTE, ('g61_area16_water', 'g62_area16_sub1', 'g63_area16_recharge',
+                                   'g64_area16_booth', 'g65_area16_vaccine', 'g66_area16_bed', 'g67_area16_out')),
+}
+
+
+# The behaviours the trace lists per frame (EM_START_AT_TRACE_KINDS): the creatures that roam.
+KINDS = {'g17': '141d20,133e30', 'g16': '12a5d0,1c1030'}
+
+
+def load(route, takes):
+    """The takes' traces stitched on their counters: (rows, inputs, starts).
+    rows[f] is the chain's frame f (each row tagged with its take and local
+    frame); starts[k] the chain frame of take k's row 0."""
+    rows, inputs, starts = [], [], []
+    base = None
+    for k, take in enumerate(takes):
+        t = json.loads((refs.capture(route) / take / 'trace.json').read_text())
+        assert not t.get('teleports') and len(t['rows']) == t['frames'] + 1, take
+        if base is None:
+            base = t['first_counter']
+        off = t['first_counter'] - base
+        assert off == len(rows), (take, 'the takes are not consecutive', off, len(rows))
+        starts.append(off)
+        for r in t['rows']:
+            rows.append(dict(r, take=k, local=r['f'], f=r['f'] + off))
+        for i in t['inputs']:
+            inputs.append(dict(i, f=i['f'] + off))
+        hits = (t.get('vitals') or {}).get('hits', [])
+        for h in hits:
+            rows[off + h['f']]['hit'] = h['hp']
+    return rows, inputs, starts
+
+
+def write_inputs(out, rows, inputs, starts):
+    pad = out / 'chain.pad'
+    lines, sent = [], None
+    for r in inputs:
+        value = (r['buttons'], r['lx'], r['ly'])
+        if value != sent:
+            lines.append(f'{r["f"]} {value[0]:x} {value[1]} {value[2]}')
+            sent = value
+    last = len(rows) - 1
+    assert len(lines) <= 4096, 'more pad rows than EM_START_AT_PAD holds'
+    pad.write_text('\n'.join([f'EMA1 1 {last} 1'] + lines) + '\n')
+    rands = out / 'chain.rands'
+    rands.write_text(''.join(f'{r["f"]} {r["rand"]}\n' for r in rows))
+    clocks = None
+    if all('clock' in r for r in rows):
+        clocks = out / 'chain.clocks'
+        clocks.write_text(''.join(f'{r["f"]} {r["clock"]:x}\n' for r in rows))
+    # Load anchors: the first row after each load segment (phase L), em_replay.c's segment rule
+    # (the port's loads are shorter: its disc answers at host speed).
+    # The original places the player inside the first tick after its load (001B07C0); the port's
+    # unstepped load frames place it before its first step: that step is the placement row (the
+    # first row within three whose position leaves the one before).
+    anchors = []
+    for i in range(1, len(rows)):
+        if rows[i - 1]['ph'] == 'L' and rows[i]['ph'] != 'L':
+            moved = [k for k in range(i, min(i + 4, len(rows))) if rows[k]['pos'] != rows[k - 1]['pos']]
+            anchors.append(moved[0] if moved else i)
+    loads = None
+    if anchors:
+        loads = out / 'chain.phases'
+        loads.write_text(''.join(f'{f}\n' for f in anchors))
+    marks = ','.join(str(s - 1) for s in starts[1:])
+    return pad, rands, clocks, loads, marks, anchors
+
+
+def row0_fade(row):
+    fade = bytes.fromhex(row['fade'])
+    return fade[4] if fade[0] else 0
+
+
+def run(name, card, rows, files, timeout, kinds, extra=(), steer=False):
+    pad, rands, clocks, loads, marks, _ = files
+    out = OUT / name
+    trace = out / 'trace.jsonl'
+    log_path = out / 'run.log'
+    env = {k: v for k, v in os.environ.items() if not k.startswith('EM_')}
+    env.update(mrb.HOST)
+    # The recorded disc-drive timing (as tools/watch_takes.py): the takes were played on the PS2's
+    # drive, and AREA17's arrival script waits 17 frames on it (its op07 sub 0xC fade).
+    env['EM_PS2_DISC_DRIVE_TIMING'] = '1'
+    env.update(EM_START_AT=card, EM_START_AT_PAD=str(pad), EM_START_AT_RAND=rows[0]['rand'],
+               EM_START_AT_RANDS=str(rands), EM_START_AT_FADE=str(row0_fade(rows[0])),
+               EM_START_AT_TRACE=str(trace))
+    if kinds:
+        env['EM_START_AT_TRACE_KINDS'] = kinds
+    env.update(v.split('=', 1) for v in extra)
+    if steer:
+        path = out / 'chain.path'
+        upto = len(rows) if steer is True else steer
+        path.write_text(''.join(f'{r["f"]} {r["pos"][0]!r} {r["pos"][2]!r} {r["yaw"]!r}\n' for r in rows[:upto]))
+        env['EM_START_AT_PATH'] = str(path)
+    if clocks:
+        env['EM_START_AT_CLOCKS'] = str(clocks)
+    elif 'clock' in rows[0]:
+        env['EM_START_AT_CLOCK'] = f"0:{rows[0]['clock']:x}"
+    if loads:
+        env['EM_START_AT_PHASES'] = str(loads)
+    if marks:
+        env['EM_START_AT_MARKS'] = marks
+    start = time.time()
+    with open(log_path, 'w') as log:
+        proc = subprocess.Popen([str(mrb.BIN)], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+        try:
+            while proc.poll() is None:
+                time.sleep(0.5)
+                text = log_path.read_text(errors='replace')
+                if 'pad end at' in text and 'block at the pad end' in text:
+                    break
+                if mrb.FAULT.search(text) or time.time() - start > timeout:
+                    break
+                if '001AC070 again' in text:     # back at the title (the player died): nothing more to compare
+                    break
+        finally:
+            if proc.poll() is None:
+                proc.terminate()
+                try:
+                    proc.wait(10)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait()
+    text = log_path.read_text(errors='replace')
+    faults = [ln for ln in text.splitlines() if (mrb.FAULT.search(ln) and 'block ' not in ln) or
+              '001AC070 again' in ln]
+    return time.time() - start, faults, trace, log_path
+
+
+def compare(rows, takes, trace):
+    """Per take: frames compared, the first frame of each kind of difference."""
+    port = {}
+    if trace.exists():
+        for line in trace.read_text(errors='replace').splitlines():
+            try:
+                d = json.loads(line)
+            except ValueError:
+                continue
+            port[d['t']] = d        # the last line of a frame (an anchor may revisit one)
+    report = []
+    reached = max(port) if port else -1
+    for k, take in enumerate(takes):
+        mine = [r for r in rows if r['take'] == k]
+        first = dict(pos=None, yaw=None, area=None, rand=None)
+        compared = exact = 0
+        hits_o = [(r['local'], r['hit']) for r in mine if 'hit' in r]
+        hits_p = []
+        prev_hp = None
+        for r in mine:
+            p = port.get(r['f'])
+            if p is None:
+                continue
+            if prev_hp is not None and p['hp'] < prev_hp - 1e-3:
+                hits_p.append((r['local'], p['hp']))
+            prev_hp = p['hp']
+            if r['ph'] == 'L':
+                continue
+            compared += 1
+            away = math.dist(p['pos'], r['pos'])
+            same = away <= SAME
+            if not same and first['pos'] is None:
+                first['pos'] = (r['local'], away, p['pos'], r['pos'])
+            if 'yaw' in p:
+                turned = abs(math.remainder(p['yaw'] - r['yaw'], math.tau))
+                if turned > TURNED and first['yaw'] is None:
+                    first['yaw'] = (r['local'], turned)
+                same = same and turned <= TURNED
+            if p.get('area') and p['area'] != r['area4'][:6] and first['area'] is None:
+                first['area'] = (r['local'], p['area'], r['area4'][:6])
+            if p['rand'] != int(r['rand'], 16) and first['rand'] is None:
+                first['rand'] = (r['local'], f'{p["rand"]:08x}', r['rand'])
+            exact += same
+        last = max((r['local'] for r in mine if r['f'] in port), default=None)
+        lines = [f'{take}: {len(mine)} rows, {compared} compared, {exact} on the row'
+                 + (f', the port reached row {last}' if last is not None else ', not reached')]
+        if first['pos']:
+            f, d, pp, rp = first['pos']
+            lines.append(f'  position leaves at row {f}: {d:.3f} away (port {[round(v, 3) for v in pp]}, '
+                         f'row {[round(v, 3) for v in rp]})')
+        if first['yaw']:
+            lines.append(f'  heading leaves at row {first["yaw"][0]}: {first["yaw"][1]:.4f} off')
+        if first['area']:
+            lines.append(f'  area bytes differ at row {first["area"][0]}: port {first["area"][1]}, '
+                         f'row {first["area"][2]}')
+        if first['rand']:
+            lines.append(f'  rand() word differs at row {first["rand"][0]}: port {first["rand"][1]}, '
+                         f'row {first["rand"][2]} (the frame before drew differently)')
+        if hits_o or hits_p:
+            lines.append(f'  hits (row, health after): original {hits_o}, port {hits_p}')
+        report += lines
+    return report, reached
+
+
+def main(argv):
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('chain', nargs='?')
+    parser.add_argument('--list', action='store_true')
+    parser.add_argument('--until', help='the chain\'s last take (a prefix of its name)')
+    parser.add_argument('--kinds', help='behaviours whose records the trace lists (hex, comma separated; '
+                        'default the chain\'s KINDS)')
+    parser.add_argument('--set', action='append', default=[], metavar='EM_X=V',
+                        help='an extra variable for the run (instrumentation such as EM_RAND_TRACE)')
+    parser.add_argument('--steer', nargs='?', const='*', metavar='TAKE',
+                        help='steer along the recorded path (EM_START_AT_PATH, mid_route_beats\' rule) where the '
+                        'player falls behind, through TAKE (a prefix; default the whole chain); without it the '
+                        'pad alone plays')
+    parser.add_argument('--compare-only', action='store_true', help='compare the last run\'s trace again')
+    args = parser.parse_args(argv)
+    if args.list or not args.chain:
+        for n, (card, route, takes) in CHAINS.items():
+            print(f'{n}: EM_START_AT={card} {route}: {" -> ".join(takes)}')
+        return 0
+    card, route, takes = CHAINS[args.chain]
+    if args.until:
+        cut = [i for i, t in enumerate(takes) if t.startswith(args.until)]
+        if not cut:
+            sys.exit(f'guided_chain: no take {args.until!r} in {args.chain}')
+        takes = takes[:cut[0] + 1]
+    if not mrb.BIN.exists():
+        sys.exit(f'{mrb.BIN} is missing (make all)')
+    out = OUT / args.chain
+    out.mkdir(parents=True, exist_ok=True)
+    rows, inputs, starts = load(route, takes)
+    steer = None
+    if args.steer == '*':
+        steer = True
+    elif args.steer:
+        k = [i for i, t in enumerate(takes) if t.startswith(args.steer)]
+        if not k:
+            sys.exit(f'guided_chain: no take {args.steer!r} in the chain')
+        steer = starts[k[0] + 1] if k[0] + 1 < len(starts) else True
+    files = write_inputs(out, rows, inputs, starts)
+    print(f'{args.chain}: card {card}, {" -> ".join(takes)}: {len(rows)} frames; load anchors '
+          f'{files[5]}', flush=True)
+    if not args.compare_only:
+        timeout = float(os.environ.get('EM_GUIDED_CHAIN_TIMEOUT', '1800'))
+        seconds, faults, trace, log_path = run(args.chain, card, rows, files, timeout, args.kinds or KINDS.get(args.chain), args.set, steer)
+        print(f'run: {seconds:.0f} s, {log_path.relative_to(ROOT)}')
+        for f in faults[:3]:
+            print(f'  stopped: {f[:240]}')
+    trace = out / 'trace.jsonl'
+    report, reached = compare(rows, takes, trace)
+    if reached >= 0:
+        r = rows[min(reached, len(rows) - 1)]
+        report.insert(0, f'the port\'s script reached chain frame {reached} of {len(rows) - 1} '
+                         f'({takes[r["take"]]} row {r["local"]})')
+    (out / 'report.txt').write_text('\n'.join(report) + '\n')
+    print('\n'.join(report))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

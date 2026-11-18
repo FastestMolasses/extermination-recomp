@@ -5,15 +5,17 @@ typedef struct { unsigned at, n; } Range;
 /* Fields held in a different layout or by a different canonical owner. */
 static const Range projected[]={{0xA0,0x20},{0xC4,4},{0x20E,2},{0x214,4},{0x220,16},{0x234,2},{0x308,4}};
 /* Unbound callback/model/bone/link mutations must go through their native
- * owners between segments. The homogeneous components +0xAC / +0xBC may be
- * stored only with their value (00183010's quadword adds over +0xA0 /
- * +0xB0, a pushing owner's: the w lane adds -0.0); the hip +0xB0..BB may
- * move (the same push), and the commit publishes it to the pose host's
- * hip (player_pose_set_hip, through `publish`), which the next 0015BCF0
- * tail recomputes from the palette, as the original's does. */
+ * owners between segments. The homogeneous components +0xAC / +0xBC take
+ * 00183010's quadword adds over +0xA0 / +0xB0 (a pushing owner's w lane
+ * adds -0.0; AREA14's ride callback 0x825C40 adds 1.0 every frame): the
+ * value is not carried, as the original's own frame top holds 1.0 there
+ * again (the guided run's g45 end state, mid-ride with 0x825C40 at work:
+ * +0xAC = +0xBC = 1.0), which the next view begin projects. The hip
+ * +0xB0..BB may move (the same push), and the commit publishes it to the
+ * pose host's hip (player_pose_set_hip, through `publish`), which the next
+ * 0015BCF0 tail recomputes from the palette, as the original's does. */
 static const Range protected[]={{9,1},{0xC,1},{0x10,0x1C},{0x40,0x10},
                                {0xD0,0x120},{0x214,4},{0x308,4}};
-static const Range same_value[]={{0xAC,4},{0xBC,4}};
 static int fail(EmArea01PlayerView *v,int code,uint32_t at)
 {
     if(v && !v->fault){v->fault=code;v->fault_address=at;}
@@ -89,9 +91,6 @@ int em_area01_player_view_commit(EmArea01PlayerView *v)
     for(unsigned i=0;i<sizeof protected/sizeof *protected;i++)
         if(memcmp(v->actor->bytes+protected[i].at,v->before+protected[i].at,protected[i].n))
             return fail(v,3,EM_AREA01_PLAYER_BASE+protected[i].at);
-    for(unsigned i=0;i<sizeof same_value/sizeof *same_value;i++)
-        if(memcmp(v->actor->bytes+same_value[i].at,v->before+same_value[i].at,same_value[i].n))
-            return fail(v,3,EM_AREA01_PLAYER_BASE+same_value[i].at);
     uint8_t flags=v->actor->bytes[0x235]&~1u;
     v->publish(v->ctx,v->actor);
     /* Restore only the in-stage representation; all ordinary record stores

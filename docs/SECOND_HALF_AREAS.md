@@ -578,7 +578,20 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   now trace.json `vitals` via capture_from_take), the port's first comes
   12 frames early and a second follows, after the rand() draws diverge
   from script frame 128 (the card's shorter op07 sub 0xC wait). No beat
-  passes yet. AREA16's owners now bind in the live composition too (area 0x10:
+  passes yet.
+- Continuous chains (lane PORT-CHAIN, `tools/guided_chain.py`; AREA17_PORT.md
+  and AREA16_PORT.md "Lane PORT-CHAIN"): the guided takes play as one run
+  from one card with no reload, every frame compared with the takes' rows.
+  g17 (card g45, AREA14, then a real area change into AREA17): g46 is
+  row-exact (1967 of 1967 frames, its three hits at the original's frames,
+  the heal) once the recorded drive timing is on: the 17-frame op07 sub
+  0xC wait is disc timing, not a card difference. [6]'s ride 0x825C40 no
+  longer fails the player view (00183010's w-lane adds). g45 leaves the
+  rows at 248 from the card's effect timers (the beasts' draws); g47 stops
+  at row ~1617 (a hit the original did not take); g48 not reached. g16
+  (card g61) stops on its first frame at 001CAE30, as the card beat did;
+  a start before AREA16 (card g60, AREA06 sub 1) needs AREA06 sub 1
+  exported (assets and the module pack's room (0x06, 1)). AREA16's owners now bind in the live composition too (area 0x10:
   dispatch_second_half, scene bindings, 001B6660's window, op09 callbacks).
 - AREA16 live (lane PORT-LIVE-A16, AREA16_PORT.md "Live"): SUBS rows for
   subs 0 and 1 from the guided run's g60 .. g66 (route_g16), CREATURES

@@ -5,6 +5,7 @@
 #include "game/em_random.h"
 #include "em_input.h"
 #include "game/em_scene_bindings.h"
+#include "game/em_task.h"
 
 
 #include <dirent.h>
@@ -191,12 +192,16 @@ static const struct {
     {"k01_04", 0x0E},
     {"k01_05", 0x0E},
     /* AREA17 from the guided run's takes (lane PORT-LIVE2, tools/capture_from_take.py): the
-     * source state of g46 (g45's end: entry 0), g47 and g48 */
+     * source state of g46 (g45's end: entry 0), g47 and g48; g45 (g44's end, AREA14 entry 1:
+     * lane PORT-CHAIN's chained start, the area change into AREA17 then a real one) */
+    {"g45", 0x0E},
     {"g46", 0x11},
     {"g47", 0x11},
     {"g48", 0x11},
     /* AREA16 from the guided run's takes (lane PORT-LIVE-A16): the source state of g61 (g60's end:
-     * sub 0 entry 0), g62 (sub 0) and g63 .. g67 (sub 1) */
+     * sub 0 entry 0), g62 (sub 0) and g63 .. g67 (sub 1); g60 (g59's end, AREA06 sub 1: lane
+     * PORT-CHAIN's chained start into AREA16) */
+    {"g60", 0x06},
     {"g61", 0x10},
     {"g62", 0x10},
     {"g63", 0x10},
@@ -217,7 +222,7 @@ static struct {
  * rows in frame order) played from control as the whole pad. */
 enum { PAD_MAX = 4096 };
 typedef struct { int f; uint16_t buttons; uint8_t lx, ly; } PadRow;
-enum { PATH_MAX_ROWS = 40000 };
+enum { PATH_MAX_ROWS = 80000 };
 static struct {
     int loaded, active, done;
     unsigned count, last, start;
@@ -259,6 +264,12 @@ static struct {
      * card's load counts other frames than the recording's; comparison only). */
     int clock_f, clock_set;
     unsigned clock_value;
+    /* EM_START_AT_CLOCKS=<file> ("f hex" lines, f increasing): the
+     * recording's world clock 0x70003B68 at those script frames; the clock
+     * and its twin D_00810750 move by the same difference, as em_replay.c's
+     * per-tick clock column (comparison only: tools/guided_chain.py). */
+    unsigned clocks, clock_next;
+    struct { int f; uint32_t value; } clock_at[PATH_MAX_ROWS];
     /* EM_START_AT_SYNC=<byte address>:<value>:<f>: when that progress byte
      * first holds the value the script's clock is set to f (a scripted
      * stretch started off the recording's frame keeps the recording's rows
@@ -272,6 +283,17 @@ static struct {
      * only: the rows after a load keep the world's frames). */
     unsigned loads, load_next;
     struct { unsigned key; int f; } load_at[64];
+    /* EM_START_AT_PHASES=<file> (one f per line, increasing): the recording's
+     * first row after each of its load segments (phase L: D_00275BD8 != 0 or
+     * the slot-0 task's +9 == 5, em_replay.c's rule and take.rec's): when the
+     * port's own load segment ends the script's clock is the next f within 400
+     * frames (a recorded f more than 400 behind is skipped, one more than 400
+     * ahead waits: a load one side has and the other not; both reported).
+     * As em_replay.c's segment sync, for a chain of takes that crosses loads
+     * (comparison only: tools/guided_chain.py). */
+    unsigned phases, phase_next, phase_counter_prev;
+    int phase_was_load;
+    int phase_at[512];
     /* EM_START_AT_RAW=<a>-<b>[,...]: script frames with no steering, the
      * recorded stick as it is (a hang's hand-over-hand turns on the stick). */
     unsigned raw_count;
@@ -614,7 +636,7 @@ int em_start_at_check(void)
                              "a22_02, a01u, a01u_01, a01u_02, a01u_s0, area06, a06_01 .. a06_05, a06b, "
                              "a06b_01, a01v, a01v_01, a01v_02, a22b, a22b_01, a04_00 .. a04_05, a04b_00 .. "
                              "a04b_04, boss, area13, a13_01 .. a13_05, a13b_01 .. a13b_05, "
-                             "a13c_00 .. a13c_06, a13d_00 .. a13d_07, k01_01 .. k01_05, area14k, g46 .. g48, g61 .. g67)", NULL);
+                             "a13c_00 .. a13c_06, a13d_00 .. a13d_07, k01_01 .. k01_05, area14k, g45 .. g48, g60 .. g67)", NULL);
     }
     const char *ng = getenv("EM_NEW_GAME");
     if (ng && ng[0] && strcmp(ng, "0") != 0)
@@ -689,6 +711,27 @@ int em_start_at_check(void)
                 pad.rand_at[pad.rands].f = fr;
                 pad.rand_at[pad.rands++].state = st;
             }
+            fclose(g);
+        }
+        const char *clock_table = getenv("EM_START_AT_CLOCKS");
+        if (clock_table && clock_table[0]) {
+            FILE *g = fopen(clock_table, "r");
+            if (!g) return refuse("EM_START_AT_CLOCKS: no such file", clock_table);
+            int fr;
+            unsigned v;
+            while (pad.clocks < sizeof pad.clock_at / sizeof pad.clock_at[0] && fscanf(g, "%d %x", &fr, &v) == 2) {
+                pad.clock_at[pad.clocks].f = fr;
+                pad.clock_at[pad.clocks++].value = v;
+            }
+            fclose(g);
+        }
+        const char *phases = getenv("EM_START_AT_PHASES");
+        if (phases && phases[0]) {
+            FILE *g = fopen(phases, "r");
+            if (!g) return refuse("EM_START_AT_PHASES: no such file", phases);
+            int fr;
+            while (pad.phases < sizeof pad.phase_at / sizeof pad.phase_at[0] && fscanf(g, "%d", &fr) == 1)
+                pad.phase_at[pad.phases++] = fr;
             fclose(g);
         }
         const char *loads = getenv("EM_START_AT_LOADS");
@@ -804,6 +847,17 @@ void em_start_at_pad_control(unsigned counter)
     }
 }
 
+static float trace_pos[3], trace_heading;
+static int trace_pos_set;
+
+void em_start_at_trace_position(const float pos[3], float heading)
+{
+    if (!pos) return;
+    memcpy(trace_pos, pos, sizeof trace_pos);
+    trace_heading = heading;
+    trace_pos_set = 1;
+}
+
 int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[3], const float *heading)
 {
     if (!pad.active) return 0;
@@ -849,6 +903,47 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
             pad.t = pad.load_at[pad.load_next++].f;
         }
     }
+    if (pad.phases) {
+        const EmSceneState *st = em_scene_state();
+        const EmTask *t0 = em_task_slot(0);
+        /* The frontend steps the script only in the game's own frames: an
+         * area load whose frames pass without a step shows as a gap of many
+         * engine frames (the load segment then ends at the first step after
+         * it). A gap of a few frames is not one (a status page's open and
+         * close step no hook either: EM_START_AT_SYNC's note). */
+        const int skipped = pad.phase_counter_prev && counter - pad.phase_counter_prev > 8u;
+        if (skipped && !pad.phase_was_load) {
+            printf("startup: EM_START_AT_PHASES: %u engine frames passed without a step before script frame %d\n",
+                   counter - pad.phase_counter_prev - 1u, pad.t);
+            pad.phase_was_load = 1;
+        }
+        pad.phase_counter_prev = counter;
+        const int load = st->d275BD8 || (t0 && t0->user[1] == 5);
+        while (pad.phase_was_load && !load && pad.phase_next < pad.phases &&
+               pad.phase_at[pad.phase_next] < pad.t - 400) {
+            printf("startup: EM_START_AT_PHASES: the recording's load ending at %d has none near it here "
+                   "(script frame %d): skipped\n", pad.phase_at[pad.phase_next], pad.t);
+            pad.phase_next++;
+        }
+        if (pad.phase_was_load && !load && pad.phase_next < pad.phases) {
+            const int f = pad.phase_at[pad.phase_next];
+            if (f <= pad.t + 400) {
+                pad.phase_next++;
+                printf("startup: EM_START_AT_PHASES: script frame %d is the recording's %d after a load "
+                       "(comparison only)\n", pad.t, f);
+                pad.t = f;
+                pad.rand_next = 0;
+                pad.clock_next = 0;
+            } else {
+                printf("startup: EM_START_AT_PHASES: a load ends at script frame %d, the recording's next at %d: "
+                       "not anchored\n", pad.t, f);
+            }
+        }
+        if (load != pad.phase_was_load)
+            printf("startup: EM_START_AT_PHASES: a load segment %s at script frame %d\n", load ? "starts" : "ends",
+                   pad.t);
+        pad.phase_was_load = load;
+    }
     const int t = pad.t;
     {
         static FILE *trace;
@@ -858,7 +953,11 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
             opened = 1;
             trace = path ? fopen(path, "w") : NULL;
         }
-        if (trace) { em_scene_creature_trace(trace, t, pos); fflush(trace); }
+        if (trace) {
+            em_scene_creature_trace(trace, t, pos ? pos : trace_pos_set ? trace_pos : NULL,
+                                    trace_pos_set ? &trace_heading : heading);
+            fflush(trace);
+        }
     }
     while (pad.rand_next + 1u < pad.rands && t >= pad.rand_at[pad.rand_next + 1u].f) pad.rand_next++;
     if (pad.rand_next < pad.rands && t >= pad.rand_at[pad.rand_next].f) {
@@ -866,6 +965,14 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
         printf("startup: EM_START_AT_RANDS: rand() state %08x at script frame %d (comparison only)\n",
                pad.rand_at[pad.rand_next].state, t);
         pad.rand_next++;
+    }
+    while (pad.clock_next + 1u < pad.clocks && t >= pad.clock_at[pad.clock_next + 1u].f) pad.clock_next++;
+    if (pad.clock_next < pad.clocks && t >= pad.clock_at[pad.clock_next].f) {
+        EmSceneState *st = em_scene_state();
+        const uint32_t behind = pad.clock_at[pad.clock_next].value - (uint32_t)st->spad3B68;
+        st->spad3B68 = (int32_t)((uint32_t)st->spad3B68 + behind);
+        st->d810750 = (int32_t)((uint32_t)st->d810750 + behind);
+        pad.clock_next++;
     }
     if (pad.clock_set && t >= pad.clock_f) {
         em_scene_state()->spad3B68 = (int32_t)pad.clock_value;
