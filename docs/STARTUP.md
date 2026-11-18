@@ -590,6 +590,14 @@ recording-derived and stay in the ignored `build/`.
   script's clock, while watch_takes' EM_INPUT_PLAY plays tick k's read, which
   for a guided take is input.log's record of vsync(k) - 1, not take.rec row k
   (watch_takes.read_pads; lane PORT-WATCH-DRIFT, FIDELITY_FEATURES.md).
+  `EM_START_AT_CARD_RW=<folder>` (comparison only) serves a copy of the
+  start-point card the caller made, read-write, instead of the read-only card;
+  `EM_START_AT_CARD_SWAP=<script frame>:<folder>` (comparison only) makes the
+  folder the host card, read-write, from that script frame on, as the fork's
+  card re-seat put the take's own card in the slot (chain g21's clear save:
+  `tools/guided_chain.py g21 --set EM_START_AT_CARD_SWAP=27800:<empty folder
+  with slot1/ and slot2/>`, docs/AREA21_PORT.md "Ending 2"). The host card
+  needs no re-seat of its own: em_memcard answers a formatted card every time.
   `EM_START_AT_FRAMES=1` (comparison only, tools/guided_chain.py) keeps the
   script's clock on the engine's frames: the frontend steps the script at a
   world frame's head in play but at the frame's end on a status page (states

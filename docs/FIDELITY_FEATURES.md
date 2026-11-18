@@ -2919,6 +2919,25 @@ shooting and knifing anywhere also run without a fault.
   weather strips, the sky, the fade) and sound beyond the lockstep; door [20],
   hole [6] / hatch [63], [44]'s event and AREA19 are not reached.
 
+### The ending: credits, pictures and the clear save (from card g80)
+
+**The end credits scroll, the two closing pictures and the clear save run the original's code**
+
+After the final boss the ending task (001AD740) shows the credits, the New
+Game+ bonuses, two closing pictures and the card screen's clear save.
+
+- How: the credits' scroll (0022D360 / 0022D380) is checked frame by frame
+  against the original's instructions (`make test-credits-reference`: the
+  state bytes, the return and every text and underline draw in order); the
+  ending task is checked by `make test-scene-task-reference`; chain g21 plays
+  Claude's guided take of the ending from card g80 to the title, and its save
+  on an empty card equals the take's card in 7 of 8 files and in all of
+  EX_DATA.00 but the world frame counter, which a comparison aid offsets
+  (docs/AREA21_PORT.md "Ending 2").
+- Status: VERIFIED for the credits' logic and draw calls and the saved
+  bytes; NOT VERIFIED for the picture on screen (no capture compared) and
+  the credits' music.
+
 ### AREA19 from its start cards
 
 - What: AREA19 subs 0 and 1: the rooms, ledges, bars, ceiling and ladders, the

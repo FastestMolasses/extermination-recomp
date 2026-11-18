@@ -960,6 +960,25 @@ int em_render_001C1D00(void)
  * with no world flush under it (s_request_status_frame, frame_close_out). */
 int em_render_001D1EA0(int a0)
 {
+    /* The ending's 001D1EA0(0) (001AD740 states 1 and 5: the credits, the
+     * clear save's card screen): with a0 == 0 the original kicks the chain
+     * and flushes no world (its 001E0D70 / 001DDA00 run only for a0 != 0).
+     * The page (the credits' 00207F80 underlines) is drawn here, the glyph
+     * runs at step F's render, the card screen by its worker; then the
+     * frame's tail as the game over's 001ABF90 ends it. */
+    const EmTask *t0 = em_task_slot(0);
+    const uint8_t *b9 = t0 ? &t0->user[EM_SCENE_TASK_09 - EM_SCENE_TASK_FIRST] : NULL;
+    if (a0 == 0 && b9 && *b9 == 3 && !em_area11_interaction_host_status_route()) {
+        if (em_chain_page_live_draw(em_frame_gfx()) < 0) {   /* reported; fail-stop */
+            em_scene_fault(em_scene_state(), em_chain_page_live_fault(), EM_SCENE_FAULT_WORKER_FAILED);
+            return -1;
+        }
+        em_opening_control_test_after_frame();
+        em_level_smoke_test_after_frame();
+        em_frontend_start_at_after_frame();
+        g.frame_no++;
+        return 0;
+    }
     s_request_status_frame = a0 == 0 && em_area11_interaction_host_status_route();
     frame_close_out();
     s_request_status_frame = 0;
@@ -1048,16 +1067,31 @@ int em_render_kick_background(EmGfx *gfx)
  * hooks, the frame counter). */
 #define GAME_OVER_SCREEN_PATH "assets/startup/game_over.emui"
 enum { GAME_OVER_W = 512, GAME_OVER_H = 448 };
-static uint8_t *s_game_over_pixels;
-static int s_game_over_load; /* 0 not tried, 1 loaded, -1 failed */
+/* The screens 001ABF90 draws: game over's module 0x27 (001AD4E0) and the
+ * ending's two pictures of module 0x37 (001AD740 state 3), each one 512 x
+ * 448 EMUI composed by tools/export_game_over.py from its four TEX0 words. */
+static const struct {
+    uint64_t tex0[4];
+    const char *path;
+    uint32_t module;
+} k_screens[3] = {
+    {{0x2005C00621322A00ull, 0x2005C08621322A40ull, 0x2005C20621322C00ull, 0x2005C28621322C40ull},
+     GAME_OVER_SCREEN_PATH, EM_STATUS_RUNTIME_GAME_OVER_MODULE},
+    {{0x2006440621322E00ull, 0x2006448621322E40ull, 0x2006460621323000ull, 0x2006468621323040ull},
+     "assets/startup/ending_0.emui", EM_STATUS_RUNTIME_ENDING_MODULE},
+    {{0x2006400621322A00ull, 0x2006408621322A40ull, 0x2006420621322C00ull, 0x2006428621322C40ull},
+     "assets/startup/ending_1.emui", EM_STATUS_RUNTIME_ENDING_MODULE},
+};
+static uint8_t *s_screen_pixels[3];
+static int s_screen_load[3]; /* 0 not tried, 1 loaded, -1 failed */
 
-static int game_over_load(void)
+static int screen_load(unsigned k)
 {
-    if (s_game_over_load) return s_game_over_load;
-    s_game_over_load = -1;
-    FILE *in = fopen(GAME_OVER_SCREEN_PATH, "rb");
+    if (s_screen_load[k]) return s_screen_load[k];
+    s_screen_load[k] = -1;
+    FILE *in = fopen(k_screens[k].path, "rb");
     if (!in) {
-        fprintf(stderr, "render: %s is missing (tools/export_game_over.py)\n", GAME_OVER_SCREEN_PATH);
+        fprintf(stderr, "render: %s is missing (tools/export_game_over.py)\n", k_screens[k].path);
         return -1;
     }
     unsigned char header[36];
@@ -1071,32 +1105,34 @@ static int game_over_load(void)
     fclose(in);
     if (!ok) {
         free(pixels);
-        fprintf(stderr, "render: %s is not a 512 x 448 EMUI screen\n", GAME_OVER_SCREEN_PATH);
+        fprintf(stderr, "render: %s is not a 512 x 448 EMUI screen\n", k_screens[k].path);
         return -1;
     }
-    s_game_over_pixels = pixels;
-    s_game_over_load = 1;
+    s_screen_pixels[k] = pixels;
+    s_screen_load[k] = 1;
     return 1;
 }
 
 int em_render_001ABF90(const uint64_t packet[4])
 {
-    static const uint64_t k_tex0[4] = {0x2005C00621322A00ull, 0x2005C08621322A40ull, 0x2005C20621322C00ull,
-                                       0x2005C28621322C40ull};
     EmGfx *gfx = em_frame_gfx();
-    if (!packet || memcmp(packet, k_tex0, sizeof k_tex0) != 0) {
-        fprintf(stderr, "render: 001ABF90 with a packet other than 001AD4E0's (no screen for it)\n");
+    unsigned k = 0;
+    while (packet && k < 3 && memcmp(packet, k_screens[k].tex0, sizeof k_screens[k].tex0) != 0) ++k;
+    if (!packet || k == 3) {
+        fprintf(stderr, "render: 001ABF90 with a packet other than 001AD4E0's or 001AD740's (no screen for it)\n");
         return -1;
     }
-    if (em_status_runtime_game_over_chunks() == 0) {
-        fprintf(stderr, "render: 001ABF90 before screen module 0x27 was loaded\n");
+    const uint32_t chunks = k_screens[k].module == EM_STATUS_RUNTIME_GAME_OVER_MODULE
+                                ? em_status_runtime_game_over_chunks() : em_status_runtime_ending_chunks();
+    if (chunks == 0) {
+        fprintf(stderr, "render: 001ABF90 before screen module 0x%X was loaded\n", (unsigned)k_screens[k].module);
         return -1;
     }
-    if (game_over_load() != 1 || !gfx) return -1;
+    if (screen_load(k) != 1 || !gfx) return -1;
     const float black[4] = {0, 0, 0, 1}, white[4] = {1, 1, 1, 1};
     em_gfx_overlay_rect(gfx, 0, 0, EM_GFX_OVERLAY_W, EM_GFX_OVERLAY_H, black);
-    if (!em_gfx_overlay_texture_set(gfx, EM_GFX_OVERLAY_TEX_UI, s_game_over_pixels, GAME_OVER_W, GAME_OVER_H)) {
-        fprintf(stderr, "render: could not upload the game-over screen\n");
+    if (!em_gfx_overlay_texture_set(gfx, EM_GFX_OVERLAY_TEX_UI, s_screen_pixels[k], GAME_OVER_W, GAME_OVER_H)) {
+        fprintf(stderr, "render: could not upload the screen %s\n", k_screens[k].path);
         return -1;
     }
     em_hud_decor_invalidate();   /* the UI slot now holds this screen */

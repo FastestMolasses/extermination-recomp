@@ -68,6 +68,7 @@ FULL = os.environ.get('EM_TEST_FULL') == '1'
 COMPATIBLE = {
     'EM_START_AT', 'EM_START_AT_TEST', 'EM_START_AT_DIR', 'EM_START_AT_PAD', 'EM_START_AT_PATH', 'EM_START_AT_RAW', 'EM_START_AT_RAND', 'EM_START_AT_RANDS', 'EM_START_AT_LOADS', 'EM_START_AT_TRACE', 'EM_START_AT_RESTORE', 'EM_START_AT_SYNC', 'EM_START_AT_FRAMES', 'EM_START_AT_STATUS_BG', 'EM_START_AT_FADE', 'EM_START_AT_SCENE_WAIT', 'EM_START_AT_CLOCK',
     'EM_START_AT_MARKS', 'EM_START_AT_FINE', 'EM_START_AT_PHASES', 'EM_START_AT_CLOCKS', 'EM_START_AT_TRACE_KINDS',
+    'EM_START_AT_CARD_RW', 'EM_START_AT_CARD_SWAP',  # comparison only: a scratch card (chain g21's save)
     'EM_NEW_GAME',  # its own; EM_NEW_GAME=1 refused apart
     'EM_HEADLESS', 'EM_HEADLESS_RASTER', 'EM_UNCAPPED', 'EM_MUTE', 'EM_INPUT_TEST',  # the host; the pad's changes printed
     'EM_NO_RENDER', 'EM_STATE_TRACE',                                     # no draws (state only); the state digests

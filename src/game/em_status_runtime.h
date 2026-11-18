@@ -165,6 +165,10 @@ int em_status_runtime_bind_loader(EmStatusRuntime *, struct EmModuleLoader *load
  * process start (the game-over frame draws only after one arrived). */
 #define EM_STATUS_RUNTIME_GAME_OVER_MODULE 0x27u
 uint32_t em_status_runtime_game_over_chunks(void);
+/* The ending's screen module 0x37 (001AD740 state 3), counted the same way
+ * (its two pictures are drawn from tools/export_game_over.py --module 0x37). */
+#define EM_STATUS_RUNTIME_ENDING_MODULE 0x37u
+uint32_t em_status_runtime_ending_chunks(void);
 /* The shared UI+0x20 clock (00208AD0 advances it; the 0020E060 memset
  * clears it), for tests. */
 uint32_t em_status_runtime_ui_clock(const EmStatusRuntime *);
