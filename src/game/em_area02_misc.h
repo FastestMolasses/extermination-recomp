@@ -162,6 +162,9 @@ int em_area02_misc_0011E520(EmArea02Misc *s, uint32_t f12, uint32_t *out);
 typedef uint8_t *(*EmArea02MiscView)(void *ctx,uint32_t address,uint32_t size,int write);
 int em_area02_misc_view_0011E520(EmArea02Misc *s,EmArea02MiscView view,uint32_t f12,uint32_t *out);
 int em_area02_misc_0015C750(EmArea02Misc *s, uint32_t a0);
+/* 0015C750 over a call-local view (the live player's +0x1C link names a
+ * pool record whose +4 it stores: em_player_closure_live_0015C750). */
+int em_area02_misc_view_0015C750(EmArea02Misc *s, EmArea02MiscView view, uint32_t a0);
 int em_area02_misc_0015C7C0(EmArea02Misc *s, uint32_t a0);
 int em_area02_misc_001A8970(EmArea02Misc *s, uint32_t a0, uint32_t a1);
 int em_area02_misc_001A8E80(EmArea02Misc *s, uint32_t a0, uint32_t a1);

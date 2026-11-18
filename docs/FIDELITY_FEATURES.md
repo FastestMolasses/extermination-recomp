@@ -2919,6 +2919,32 @@ shooting and knifing anywhere also run without a fault.
   weather strips, the sky, the fade) and sound beyond the lockstep; door [20],
   hole [6] / hatch [63], [44]'s event and AREA19 are not reached.
 
+### The ending: credits, pictures and the clear save (continuous from card g73)
+
+**The end credits scroll, the two closing pictures and the clear save run the original's code**
+
+After the final boss the ending task (001AD740) shows the credits, the New
+Game+ bonuses, two closing pictures and the card screen's clear save.
+
+- How: the credits' scroll (0022D360 / 0022D380) is checked frame by frame
+  against the original's instructions (`make test-credits-reference`: the
+  state bytes, the return and every text and underline draw in order); the
+  ending task is checked by `make test-scene-task-reference`. Chain g20
+  plays Claude's guided run continuously from card g73 (AREA04, before the
+  radio) through AREA20, AREA21, the Origin's three phases, the ending
+  script, the credits, both pictures and the clear save to the title, with
+  no reload: every compared row of g74 .. g80 on the original's (g80: 28,041
+  of 28,041; g73 4,191 of 4,192, a heading 0.0012 off), every step of the
+  ending task on the original's tick except the two hardware-time waits (the
+  disc load of the pictures' module, 10 ticks against 28, and the card save,
+  304 against 442), and the save on an empty card byte-identical to the
+  take's card in all eight files (docs/AREA21_PORT.md "Ending 3").
+- Status: VERIFIED for the credits' logic and draw calls, the ending's
+  timeline and the saved bytes; NOT VERIFIED for the picture on screen (no
+  capture compared) and the credits' music. How far Claude's run plays
+  continuously: from the title through segment 913 (watch_takes, "Watching
+  Claude's run") and, as one chain from card g73, from AREA04 to the end.
+
 ### AREA19 from its start cards
 
 - What: AREA19 subs 0 and 1: the rooms, ledges, bars, ceiling and ladders, the
@@ -3015,6 +3041,34 @@ PORT-A19-OWNER, after PORT-WATCH-DRIFT's 144,038 of 144,038 to g11's fail-stop).
 Before PORT-WATCH-DRIFT every gameplay segment left the
 recording one pi/8 turn step ahead: the tool fed a guided take's pad one tick early
 (its recorder's replay timeline is one vsync off the user's; `read_pads` in the tool).
+
+### Watching Claude's run
+
+Start the guided run (Claude's whole game, `../Extermination/build/guided_play`) at a
+chapter instead of the title (native macOS, `build/extermination` built):
+
+    python3 tools/watch_takes.py --root ../Extermination/build/guided_play g01_title_newgame --chapters
+    python3 tools/watch_takes.py --root ../Extermination/build/guided_play g01_title_newgame --from g16_area08
+    python3 tools/watch_takes.py --root ../Extermination/build/guided_play g01_title_newgame --at 2:41:37
+
+`--chapters` lists the decomp's chapters (`record_guided_run.py chapters`) with their
+times and marks those past the port's exact frontier; `--from <take>` starts at that
+kept take, `--at H:MM:SS` at a chapter's time. A load-game state is not used (it differs
+from continuous play and the pad desyncs): the port plays the same stitched recording from
+the title with no window, no sound and no pacing (`EM_FAST_UNTIL`, STARTUP.md), printing
+its progress every few seconds, and at the chosen tick the window opens, the sound starts
+and the run plays on at 59.94 Hz to the end of the recording or the port's current
+frontier. The fast part is the game's own logic at full speed on one core, so a start
+deep in the run waits for it: measured 2026-11-18 on a machine at load average 30 to 45,
+114,000 ticks (to g10) took 697 s (164 ticks a second; 99% of the main thread is the area's
+actor walk, nothing of the frame loop is left to skip), so the exact frontier (stitched row
+377,800, chain time 1:50:39, segment 913) is about 38 minutes away on such a machine, less on an
+idle one. Starts in the first hour or so are quick (g01 to g02: about 9 s).
+The tool warns when the chosen point lies past the first tick of the last full
+`--check` run that left the recording (`build/guided_takes/<first take>/frontier.json`,
+written by `--check` with no `--ticks`); after that point the recorded pad no longer fits the
+port's game. `--hidden` (no window or sound even after the switch) and `--then N` (stop
+N ticks after it) are for tests.
 
 ## What we deliberately do not emulate
 

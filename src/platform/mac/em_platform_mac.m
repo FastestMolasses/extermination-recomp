@@ -83,10 +83,14 @@ EmWindow *em_window_create(const char *title, int width, int height)
 {
     @autoreleasepool {
         [NSApplication sharedApplication];
+        /* EM_FAST_UNTIL (game/em_fast.h): the window waits, hidden, for the
+         * switch (em_window_show) like a headless one. */
+        const char *fast = getenv("EM_FAST_UNTIL");
         const bool headless = em_headless();
+        const bool hidden = headless || (fast && fast[0]);
         /* Headless test/capture runs: no Dock icon, no activation, no window
          * on screen (the gfx backend renders offscreen). */
-        [NSApp setActivationPolicy:headless ? NSApplicationActivationPolicyProhibited
+        [NSApp setActivationPolicy:hidden ? NSApplicationActivationPolicyProhibited
                                             : NSApplicationActivationPolicyRegular];
 
         NSRect frame = NSMakeRect(0, 0, width, height);
@@ -109,7 +113,7 @@ EmWindow *em_window_create(const char *title, int width, int height)
         [window setDelegate:del];
         [window center];
         [window setAcceptsMouseMovedEvents:YES];
-        if (!headless) {
+        if (!hidden) {
             [window makeKeyAndOrderFront:nil];
             [NSApp activateIgnoringOtherApps:YES];
         }
@@ -120,6 +124,16 @@ EmWindow *em_window_create(const char *title, int width, int height)
         w->view     = [view retain];
         w->delegate = [del retain];
         return w;
+    }
+}
+
+void em_window_show(EmWindow *w)
+{
+    if (!w || em_headless()) return;
+    @autoreleasepool {
+        [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+        [w->window makeKeyAndOrderFront:nil];
+        [NSApp activateIgnoringOtherApps:YES];
     }
 }
 

@@ -67,5 +67,7 @@ const void *em_startup_audio_host_state(size_t *size);
 /* Audio callback only. Adds to interleaved stereo float PCM. No allocation,
  * file I/O or locks. Safe no-op before initialization. */
 void em_startup_audio_mix(float *out, int frames, int device_rate);
+/* The device thread, once: drop the queued and sounding notes (em_bgm_fast_end). */
+void em_startup_audio_flush(void);
 
 #endif

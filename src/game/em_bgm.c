@@ -3,9 +3,11 @@
  * does no allocation, locking or I/O. */
 #include "game/em_bgm.h"
 
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "em_audio.h"
 #include "game/em_movie_sound.h"
@@ -20,9 +22,19 @@ static struct {
 } s;
 
 /* The render callback (audio thread): silence, then every producer adds. */
+static _Atomic int s_flush;
+
 static void bgm_render(void *user, float *out, int frames)
 {
     (void)user;
+    /* The fast-forward start's switch (em_bgm_fast_end): drop the sound the
+     * skipped part queued, on this thread, the rings' only reader. */
+    if (atomic_load_explicit(&s_flush, memory_order_acquire) == 1) {
+        em_sfx_flush_output();
+        em_startup_audio_flush();
+        em_movie_sound_flush();
+        atomic_store_explicit(&s_flush, 2, memory_order_release);
+    }
     memset(out, 0, sizeof(float) * 2u * (size_t)frames);
     em_sfx_mix(out, frames, s.device_rate);
     em_startup_audio_mix(out, frames, s.device_rate);
@@ -129,6 +141,21 @@ void em_bgm_render_offline(float *out, int frames)
         bgm_render(NULL, out, frames);
     else
         memset(out, 0, sizeof(float) * 2u * (size_t)frames);
+}
+
+void em_bgm_fast_end(void)
+{
+    if (!s.audio) return;
+    /* The device thread flushes the rings (it is their only reader), still
+     * silent; then the output is audible. A device that never calls back
+     * (paused) is not waited for past half a second. */
+    atomic_store_explicit(&s_flush, 1, memory_order_release);
+    for (int i = 0; i < 500 && atomic_load_explicit(&s_flush, memory_order_acquire) != 2; ++i) {
+        const struct timespec ms = {0, 1000000L};
+        nanosleep(&ms, NULL);
+    }
+    atomic_store_explicit(&s_flush, 0, memory_order_release);
+    em_audio_refresh_muted(s.audio);
 }
 
 void em_bgm_shutdown(void)

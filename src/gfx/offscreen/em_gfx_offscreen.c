@@ -136,6 +136,8 @@ int em_gfx_gs_world_enable(EmGfx *g, int on, EmGfxGsRead read, void *read_ctx)
 
 int em_gfx_gs_world_enabled(EmGfx *g) { return g && g->gswOn; }
 
+void em_gfx_present_hold(EmGfx *g, int hold) { (void)g; (void)hold; }
+
 int em_gfx_gs_world_raster(EmGfx *g, int raster)
 {
     if (!g) return -1;

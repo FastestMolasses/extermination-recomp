@@ -581,7 +581,11 @@ recording-derived and stay in the ignored `build/`.
   recording's next row f after its own load (within 400 frames; others are
   reported and skipped). `EM_START_AT_CLOCKS=<file>` (lines `f hex`) puts the
   recording's world clock 0x70003B68 (and D_00810750 by the same difference)
-  in place at those script frames. Both comparison only, for
+  in place at those script frames; at the first one (row 0) D_00810750 instead
+  keeps the card's value: it gives back the gameplay frames the port ran after
+  the card's load (the clock's count since the port's boot; g20's card replays
+  the lift's arrival scene), since the recording's source state is the frame
+  before row 0 (docs/AREA21_PORT.md "Ending 3"). Both comparison only, for
   `tools/guided_chain.py`: Claude's guided takes played as one continuous run
   from one card (no reload between takes), every frame compared with the takes'
   rows, with the recorded disc-drive timing (as tools/watch_takes.py); see
@@ -590,6 +594,14 @@ recording-derived and stay in the ignored `build/`.
   script's clock, while watch_takes' EM_INPUT_PLAY plays tick k's read, which
   for a guided take is input.log's record of vsync(k) - 1, not take.rec row k
   (watch_takes.read_pads; lane PORT-WATCH-DRIFT, FIDELITY_FEATURES.md).
+  `EM_START_AT_CARD_RW=<folder>` (comparison only) serves a copy of the
+  start-point card the caller made, read-write, instead of the read-only card;
+  `EM_START_AT_CARD_SWAP=<script frame>:<folder>` (comparison only) makes the
+  folder the host card, read-write, from that script frame on, as the fork's
+  card re-seat put the take's own card in the slot (chain g21's clear save:
+  `tools/guided_chain.py g21 --set EM_START_AT_CARD_SWAP=27800:<empty folder
+  with slot1/ and slot2/>`, docs/AREA21_PORT.md "Ending 2"). The host card
+  needs no re-seat of its own: em_memcard answers a formatted card every time.
   `EM_START_AT_FRAMES=1` (comparison only, tools/guided_chain.py) keeps the
   script's clock on the engine's frames: the frontend steps the script at a
   world frame's head in play but at the frame's end on a status page (states
@@ -782,6 +794,41 @@ its timing changes. The backend zeroes the mixed samples before they reach
 the speakers (macOS and iOS), and the movie player is muted (it keeps its
 audio clock, which paces the video). Headless runs have always been muted
 this way.
+
+### EM_FAST_UNTIL=<segment>:<offset>: a playback that fast-forwards to a point, then plays normally
+
+Added 2026-11-18 (port lane PORT-WATCH-FROM; `src/game/em_fast.h`; user request:
+watch Claude's guided run from a chosen chapter without rewatching the
+beginning). With `EM_INPUT_PLAY` (em_replay.c) the recording plays from its
+first tick with no picture, no sound and no pacing, and at the first tick whose
+recorded segment is `<segment>` and whose offset in it is at least `<offset>`
+(the playback log's `seg` and `off` columns) the normal presentation starts, in
+the same process with the same state:
+
+- **Fast phase.** `em_norender()` is on whatever the window (the same skipped
+  work as `EM_NO_RENDER=1`; refused only by an `EM_` name holding PRESENT, _PX,
+  DUMP, DIGEST, _FB, GS_ or PIXEL, or `EM_HEADLESS_RASTER=1`; a CAPTURE variable
+  does not refuse it, because `EM_REPLAY_CAPTURE` takes no capture until the
+  switch); the loop is unpaced (`em_frame_set_unpaced`); the output is silent
+  (`em_audio_muted`); the window is created hidden (no Dock activation,
+  `em_window_show` brings it up) and no frame is presented
+  (`em_gfx_present_hold`). The GS world keeps its raster (it is windowed), so
+  the picture after the switch draws from the tick on.
+- **The switch** (`em_fast_end`, at the pad read of the chosen tick): norender
+  off, pacing from "now" (no catch-up burst), the window shown, presentation on,
+  and the audio device's rings drop what the skipped part left (the SFX mixer
+  ring, the startup notes, the movie ring; done on the device thread by
+  `em_bgm_fast_end`, then the output is unmuted). The streamed voice lane is not
+  dropped: it follows the game's own tick clock.
+- **Exactness.** Nothing the game computes changes: `tools/test_fast_from.py`
+  (`make test-fast-from`) plays one recording plain (`EM_NO_RENDER=1`, uncapped)
+  and fast (paced after the switch) and compares every `EM_STATE_TRACE` digest
+  and every playback-log tick: identical; `EM_TEST_FULL=1` also compares the
+  frames captured after the switch with the plain run's (identical). In a
+  hidden run (`EM_HEADLESS=1`, the tests) the window never appears.
+- `tools/watch_takes.py --from <take>` / `--at H:MM:SS` / `--chapters` map a take
+  or a chapter time to the pair (see FIDELITY_FEATURES.md "Watching Claude's run").
+  Not with `EM_START_AT` (both drive the pacing).
 
 ### EM_HEADLESS_RASTER=0/1 and headless pacing (EM_UNCAPPED=0/1): faster headless runs
 

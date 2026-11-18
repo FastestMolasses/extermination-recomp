@@ -247,6 +247,13 @@ void em_sfx_mix(float *out, int frames, int device_rate)
         atomic_fetch_add_explicit(&s.underruns, (uint64_t)frames - n, memory_order_relaxed);
 }
 
+void em_sfx_flush_output(void)
+{
+    /* The audio thread: the ring's samples queued so far are dropped. */
+    atomic_store_explicit(&s.pcm_read, atomic_load_explicit(&s.pcm_write, memory_order_acquire),
+                          memory_order_release);
+}
+
 int em_sfx_voice_record(int voice, uint16_t *state, uint16_t *bank)
 {
     if (voice < 0 || voice >= EM_SFX_VOICES || !state || !bank) return -1;

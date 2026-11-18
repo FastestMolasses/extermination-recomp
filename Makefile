@@ -75,7 +75,7 @@ COMMON  := src/main.c src/em_model.c src/em_input.c src/em_settings.c \
            src/game/em_sdk_math_original.c src/game/em_status_scene_original.c src/game/em_module_loader.c src/game/em_status_models.c \
            src/game/em_owner_services_original.c src/game/em_owner_draw_original.c src/game/em_object_unit.c src/game/em_owner_draw_live.c src/game/em_face_attach.c \
            src/game/em_indicator_child.c src/game/em_indicator_bind_live.c src/game/em_effect_kinds.c \
-           src/game/em_packet_chain_original.c src/game/em_status_ui_leftovers.c src/game/em_area_title.c src/game/em_background_live.c \
+           src/game/em_packet_chain_original.c src/game/em_status_ui_leftovers.c src/game/em_area_title.c src/game/em_credits_original.c src/game/em_credits_live.c src/game/em_background_live.c \
            src/game/em_crate_original.c src/game/em_drum_original.c src/game/em_area11_boxes.c src/game/em_area11_roger.c \
            src/game/em_roger_actor_original.c \
            src/game/em_message_service.c src/game/em_message_draw_original.c src/game/em_message_glyph_original.c \
@@ -127,7 +127,7 @@ COMMON  := src/main.c src/em_model.c src/em_input.c src/em_settings.c \
            src/game/em_truck_original.c src/game/em_pad_actuator.c \
            src/game/em_frame_render_heads.c src/game/em_render_context.c src/game/em_render_context_live.c src/game/em_area01_render_vif.c \
            src/game/em_level9_port_fx.c src/game/em_area13_route.c \
-           src/game/em_replay.c \
+           src/game/em_replay.c src/game/em_fast.c \
            src/game/em_static_world.c src/game/em_static_world_compose.c src/game/em_static_world_draw.c \
            src/game/em_static_world_live.c src/game/em_far_light.c src/game/em_grid_water.c src/game/em_haze_ring.c src/game/em_haze_ring_live.c \
            src/game/em_load_veil_particles.c src/game/em_actor_light_001D89D0.c src/game/em_player_equipment.c \
@@ -1676,6 +1676,13 @@ ifdef EM_TEST_FULL
 	python3 tools/test_norender_equal.py take test1
 endif
 
+# The fast-forward start of a playback (EM_FAST_UNTIL, src/game/em_fast.h): a plain run and a
+# fast-to-the-switch run of the guided chain's opening agree on every state digest and every
+# logged tick, and the run paces again after the switch (tools/test_fast_from.py).
+.PHONY: test-fast-from
+test-fast-from: $(BIN)
+	python3 tools/test_fast_from.py
+
 .PHONY: test-start-at
 test-start-at: $(BIN)
 	python3 tools/test_start_at.py
@@ -1833,7 +1840,8 @@ test-status-runtime:
 	    src/game/em_gs_texture.c src/game/em_page_draw.c src/game/em_message_glyph_original.c src/game/em_status_pages_live.c src/game/em_status_pages_helpers.c \
 	    src/game/em_status_pages_item.c src/game/em_status_pages_spr4.c src/game/em_status_pages_parts.c \
 	    src/game/em_area01_ui_pages.c src/game/em_pickup_items_original.c \
-	    src/game/em_status_scene_original.c src/game/em_module_loader.c src/game/em_task.c -lm -o build/status_page_reference/status_runtime_test
+	    src/game/em_status_scene_original.c src/game/em_module_loader.c src/game/em_task.c \
+	    src/game/em_area06_port.c src/game/em_sfx.c -lm -o build/status_page_reference/status_runtime_test
 	build/status_page_reference/status_runtime_test assets/scene_snow/panel/battery.emba assets/scene_snow/panel/item_root.emir \
 	    assets/scene_snow/panel/status_hub.emhs assets/scene_snow/panel/status_hub_atlas.emha \
 	    assets/module_loader/modules.emml
@@ -2553,3 +2561,7 @@ test-spu2-a2-tools:
 	python3 tools/test_spu2_alignment.py
 	python3 tools/test_spu2_observer.py
 	python3 tools/test_spu2_stage_compare.py
+
+.PHONY: test-credits-reference
+test-credits-reference:
+	python3 tools/test_credits_reference.py

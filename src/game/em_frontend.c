@@ -1343,8 +1343,12 @@ void em_frontend_install(void)
     if (em_start_at_name()) {
         f.start_at = 1;
         em_frame_set_frame_tail(em_frontend_start_at_after_tasks);
-        em_memcard_set_root(em_start_at_card_root());
-        em_memcard_set_read_only(1);
+        /* EM_START_AT_CARD_RW=<folder> (comparison only): a copy of the
+         * start-point card the caller made, served read-write, so a save
+         * the run makes (the ending's clear save, chain g21) lands there. */
+        const char *rw = getenv("EM_START_AT_CARD_RW");
+        em_memcard_set_root(rw && rw[0] ? rw : em_start_at_card_root());
+        em_memcard_set_read_only(!(rw && rw[0]));
         em_frame_set_unpaced(1);
     }
     const char *wait = f.test ? getenv("EM_STARTUP_MENU_WAIT") : NULL;

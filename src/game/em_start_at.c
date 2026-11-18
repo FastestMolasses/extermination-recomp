@@ -1,5 +1,6 @@
 /* EM_START_AT=<name> (em_start_at.h; docs/STARTUP.md "Developer switches"). */
 #define _POSIX_C_SOURCE 200809L
+#include "game/em_memcard.h"
 #include "game/em_start_at.h"
 #include "game/em_status_background.h"
 #include "game/em_frame.h"
@@ -309,8 +310,18 @@ static struct {
     /* EM_START_AT_CLOCKS=<file> ("f hex" lines, f increasing): the
      * recording's world clock 0x70003B68 at those script frames; the clock
      * and its twin D_00810750 move by the same difference, as em_replay.c's
-     * per-tick clock column (comparison only: tools/guided_chain.py). */
-    unsigned clocks, clock_next;
+     * per-tick clock column (comparison only: tools/guided_chain.py). The
+     * first one (the card's row 0) differs: the card's LOAD GAME restores
+     * D_00810750 from the save (the recording's source state, the frame
+     * before row 0), while the scratchpad clock, which no save holds, counts
+     * from the port's boot (0; a LOAD GAME from the title runs no gameplay
+     * frame before the card's load). The clock then holds exactly the
+     * gameplay frames the port ran after the load (g20's card replays the
+     * lift's arrival scene: 261), which the recording never ran, so
+     * D_00810750 gives those back and the clock takes the recording's value.
+     * Later ones move both, as the original's gameplay frame (001AE5E0 /
+     * 001AE6B0) counts both. */
+    unsigned clocks, clock_next, clock_started;
     struct { int f; uint32_t value; } clock_at[PATH_MAX_ROWS];
     /* EM_START_AT_SYNC=<byte address>:<value>:<f>: when that progress byte
      * first holds the value the script's clock is set to f (a scripted
@@ -655,7 +666,7 @@ extern char **environ;
 static int fixture_set(char *name, size_t size)
 {
     static const char *const named[] = {
-        "EM_SKIP_STARTUP", "EM_TEST_MEMCARD_ROOT", "EM_TEST_CARD_FRESH", "EM_INPUT_RECORD", "EM_INPUT_PLAY", "EM_SCENE",
+        "EM_SKIP_STARTUP", "EM_TEST_MEMCARD_ROOT", "EM_TEST_CARD_FRESH", "EM_INPUT_RECORD", "EM_INPUT_PLAY", "EM_FAST_UNTIL", "EM_SCENE",
         "EM_STARTUP_MENU_WAIT", "EM_LEVEL_SMOKE_UNTIL", "EM_AIM_PAD_SCRIPT", "EM_A01_ARRIVAL_TICKS",
         "EM_AREA01_EXPLORE_SCRIPT", "EM_AREA01_EXPLORE_PHASE", "EM_CLIP_DEMO", "EM_CONTROL_LOW_GAIT",
         "EM_MOVE_LEGS", "EM_MOVE_EXPECT", "EM_RAND_REPLAY"};
@@ -1006,6 +1017,24 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
             printf("startup: EM_START_AT_RAND: rand() state %08x (comparison only)\n", pad.rand_state);
         }
     }
+    /* EM_START_AT_CARD_SWAP=<script frame>:<folder> (comparison only): from
+     * that frame on the host card is the folder (read-write), as the fork's
+     * card re-seat put the take's own card in the slot (chain g21: the
+     * guided run's clear save went to an empty formatted card, the take's
+     * card_start.ps2, not the start-point card the LOAD GAME read). */
+    {
+        static int swapped;
+        const char *swap = getenv("EM_START_AT_CARD_SWAP");
+        char *rest = NULL;
+        const long at = swap && !swapped ? strtol(swap, &rest, 10) : -1;
+        if (at >= 0 && rest && *rest == ':' && rest[1] && pad.t >= at) {
+            swapped = 1;
+            em_memcard_set_root(rest + 1);
+            em_memcard_set_read_only(0);
+            printf("startup: EM_START_AT_CARD_SWAP: the host card is %s from script frame %d (comparison only)\n",
+                   rest + 1, pad.t);
+        }
+    }
     /* With EM_START_AT_SYNC the script's clock is the recording's: the two
      * or three frames the frame machine's state changes step no hook (a
      * status page's open and close) pass on it too. */
@@ -1127,8 +1156,17 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
     if (pad.clock_next < pad.clocks && t >= pad.clock_at[pad.clock_next].f) {
         EmSceneState *st = em_scene_state();
         const uint32_t behind = pad.clock_at[pad.clock_next].value - (uint32_t)st->spad3B68;
+        if (pad.clock_started) {
+            st->d810750 = (int32_t)((uint32_t)st->d810750 + behind);
+        } else {
+            const uint32_t since_load = (uint32_t)st->spad3B68;
+            st->d810750 = (int32_t)((uint32_t)st->d810750 - since_load);
+            printf("startup: EM_START_AT_CLOCKS: 0x70003B68 = %u at script frame %d; D_00810750 = %d, the card's "
+                   "(%u gameplay frames since the load given back; comparison only)\n",
+                   pad.clock_at[pad.clock_next].value, t, (int)st->d810750, since_load);
+        }
         st->spad3B68 = (int32_t)((uint32_t)st->spad3B68 + behind);
-        st->d810750 = (int32_t)((uint32_t)st->d810750 + behind);
+        pad.clock_started = 1;
         pad.clock_next++;
     }
     if (pad.clock_set && t >= pad.clock_f) {

@@ -739,14 +739,190 @@ em_equipment_live) faults at address 0x7A6DE4. g80 not reached.
   00225AC0(1) binding, the card comparison with
   build/guided_play/g80_area21_ending/card_end.ps2, the credits' music cue.
 
+## Ending 2 (lane PORT-A21-ENDING2, 2026-11-18, branch `a21ending2`)
+
+- **Row 407 fixed.** The player view's commit faulted twice. First, the
+  stale-owner check (fault 2): 0x827250 stores D_00810858 = D_008104D0 =
+  100 and D_0081085C = D_008104D8 = 0 while the view is open; the snapshot's
+  vitals words 0 and 2 changed (20 -> 100, 100 -> 0) and nothing else. In
+  the original the owner words and the record's +0x220 / +0x228 are
+  separate words that 0015CF90 / 0015C700 / 001B07C0 copy between; the
+  view projects one into the other. The commit now accepts an owner store
+  when the record field holds the same new value (the publish then
+  reproduces both words exactly) and still faults on any other owner store
+  (em_area01_player_view.c). Second, the protected range +0x40..+0x4F
+  (fault 3): 0015C700's 0015C7C0 asks the pose host for a clip (001749A0,
+  em_player_record_pose_request), a native owner writing the record. The
+  three natives 0015C700 / 0015C750 / 001B81D0 from an area script now run
+  with the composition's views committed and reacquired around them
+  (em_scene_bindings.c area01_missing_worker), the rule every native worker
+  inside the composition follows (em_area01_player_view.h); this also keeps
+  0015C700's clear of +0x235 bit 0 in the record, which a write inside the
+  view would have lost at the commit.
+- **The credits** 0022D360 / 0022D380 (byte-matched C): em_credits_original
+  (the state D_00822CD0, the 0.5-line scroll, the half-line offset 0 / 12,
+  the window -0x90 < y < 0x91, the end row's hold of 200 frames; float_to_int
+  001281C0, fabsf 0011DF78), live in em_credits_live over
+  tools/export_credits.py's rows (assets/credits/credits.emcr: the table
+  D_00268B40, 278 rows, and its texts), 001CC170 / 001CC1E0 through the
+  message service and 00207F80 through the render context. The colour
+  records' byte +6 is never written by the original; 001CC3B0 does not read
+  it (the port passes 0). Oracle: `make test-credits-reference` (the original
+  0022D360 and 0022D380 with float_to_int and fabsf as original instructions,
+  the draw callees hooked on both sides): 60 of 146 cases quick, every frame
+  the state bytes, the return and the draw calls in order; the window edges
+  on drawn rows, the end row reaching 0x70, the hold's end;
+  EM_TEST_FULL=1 runs the whole credits from state 0 to the return. Mutants
+  caught: the half-line 12 -> 11, the window 0x91 -> 0x92, -0x90 inclusive,
+  the hold test < 0x70 -> <= 0x70.
+- **Live workers of 001AD740:** w_0022D360, w_0022D380, w_001B0C00 (the one
+  translation em_script_host_001B0C00 with the area-change request's fade
+  and lane workers), w_001AF2C0 (em_game_new_game_reset_001AF2C0) and
+  w_001C40B0 (em_pickup_inventory_001C40B0; both run with +A already 3),
+  module 0x37 through w_001FF080 and its two pictures through w_001ABF90 /
+  em_render_001ABF90 (a table of the three screens), w_00225A00
+  (em_area01_terminal_reset) and w_00225AC0(1) (the options binding, drawn
+  after the call, released when it reports). 001D1C50 / 001D1EA0(0) run in
+  the ending's frames; em_render_001D1EA0(0) there flushes no world (the
+  original's world flush needs a0 != 0): the page, the frame's tail. Module
+  0x37 is in the module pack (tools/export_module_loader.py
+  SCREEN_MODULES) and its pictures in assets/startup/ending_0.emui /
+  ending_1.emui (tools/export_game_over.py --module 0x37: the module has a
+  second transfer, the palettes at block 0x3180, which the decomp's
+  upload_module does not replay; the game over's export is unchanged).
+- **Chain g21** (card g80) now plays the whole take: the script, the
+  ending's seven states and the save, to the title (001AC070 again). The
+  ending's own steps follow the original's: the 0x30 wait, the credits for
+  11,613 frames (rows 8294 .. 19907 in the original), the rebuild, the
+  module load, the first picture 0x1C60 + 1 frames, the fades of 64, the
+  second picture 0x1AC + 1, the save. Divergences, each with its first row:
+  - row 0: the card's LOAD GAME pose (y 36.694 -> 36.454), as before; the
+    rand() word from row 1.
+  - row 8243: the ending script 0x82CBD0 ends (3B8D 2 -> 0) 27 engine frames
+    later in the port than in the original (+9 = 3 at row 8244 there); not
+    diagnosed (a card start, not the continuous play; the script's waits
+    are the lead). The ending's frames before its first draw step no pad
+    hook, so EM_START_AT_PHASES reads them as a load (49 frames, "not
+    anchored"); labels then run 26 behind until module 0x37's load anchors
+    them at row 20000.
+  - row 20000: picture 1 starts in the frame the port's load ends (the
+    original's sub 1 sees D_00275BD8 clear a frame later): the labels of
+    subs 4 .. 6 and state 4 are 2 early (27264 / 27328 / 27757 / 27821
+    against 27266 / 27330 / 27759 / 27823).
+  - the save: the original's card took 442 frames (rows 27824 .. 28265,
+    hardware time and the fork's card re-seat); the port's reports at row
+    28137 (host speed, docs/SAVE_GAME.md 6.2).
+- **The card.** The take saved to an empty formatted card (card_start.ps2
+  holds no directory; the fork needed a re-seat for its IOP, FULL_RUN_PLAN
+  70.3). The port's host card needs no re-seat; for the comparison the run
+  swaps to an empty folder before the card screen
+  (`--set EM_START_AT_CARD_SWAP=27800:<folder>`, docs/STARTUP.md) and the
+  save writes a new directory there. Against card_end.ps2 (read with the
+  decomp's tools/ps2_card.py read_file, read only): the header file,
+  EX.ico, icon.sys and EX_DATA.01 .. 04 are byte-identical; EX_DATA.00
+  differs in 4 bytes only, D_00810750 (the world frame counter): the
+  original's 596,325 = the start save's 588,081 + 8,244 (it stops counting
+  at +9 = 3), the port's 1,184,406 = 588,081 + 596,325 (the aid
+  EM_START_AT_CLOCKS adds row 0's clock jump to D_00810750 as well;
+  comparison only). Equal: the clear counter D_0081070A 1, the knife bonus
+  (items 0x1E .. 0x22: 20, 5, 5, 5, 3), the all-tags bonus (item 3: 1,
+  D_00810CAA 0x63, D_00810CA6 3), the quartet CA8 / CAC / CB0, area 0x0B 0 0.
+- **Not verified:** the credits' and the pictures' picture against a fork
+  capture (no capture made); the credits' music (001AD740 calls no music
+  routine besides 001FABB0 in state 2; whatever plays comes from the script
+  before it and was not compared).
+
+## Ending 3: the continuous run (lane PORT-A21-ENDING3, 2026-11-18, branch `a21ending3`)
+
+- **Row 331 fixed** (chain g20, g80). In continuous play the player record's
+  +0x1C link names a pool record (0x7BD130, pool index 0x81; what the record
+  is was not traced), and the ending script's op09 callback
+  0x827250 calls 0015C750(D_008102B0). The decomp C (src/func_0015C750.c,
+  byte-matched) clears +0x234 and D_00810707, runs 0015C1F0, then, when the
+  link (read after 0015C1F0) is nonzero, stores the link record's +4 = 3 and
+  clears +0x1C, then runs 0015C7C0. The closure's em_area02_misc run had only
+  the record, D_00810707 and the clip halfwords as regions, so the +4 store
+  faulted (fault 3, address 0x7BD134); a card start (chain g21) has +0x1C = 0
+  and never reached it. Now em_player_closure_live_0015C750 runs the same
+  translation through a new view entry, em_area02_misc_view_0015C750: the
+  regions as before, plus a one-byte store at a pool record's +4 (base
+  D_007A5640, stride 0x2F0, 0x100 records), staged and handed to the actor
+  pool (em_scene_bindings_pool_set_u4, the store em_player_stage_live's
+  +0x1C writes already use) before the next call that leaves the routine and
+  at its end, in the original's order. Any other address still faults.
+  Proof: the routine's logic by the original-instruction oracle
+  (tools/test_area02_misc_reference.py now runs every 0015C750 case,
+  `t 15C750 link1e02000 ...` with a nonzero link among them, through the view
+  entry over the same memory; 15C750's branch both ways); the pool plumbing
+  by the recording (row 331 and all of g80 on the row below).
+- **Chain g20 through the ending** (card g73, `python3 tools/guided_chain.py
+  g20`): g73 4191 / 4192 (heading at row 1130, 0.0012 off, as before), g74
+  3736 / 3736, g75 3864 / 3864, g76 6383 / 6383, g77 12864 / 12864, g78
+  15530 / 15530, g79 6603 / 6603, **g80 28041 / 28041** compared rows on the
+  row; the port's script reaches g80 row 28137 and the run stops at the
+  title (001AC070 again, D_00275BDC = 1). Claude's guided run now plays
+  continuously in the port from card g73 (AREA04, before the radio) through
+  AREA20, AREA21, the Origin's three phases, the ending script, the credits,
+  both pictures and the clear save to the title.
+- **The ending's timeline, tick by tick** (EM_AREA_CHANGE_LOG's slot-0 tick
+  states, aligned on the first +9 = 3 tick = original row 8244). Every step
+  of 001AD740 lands on the original's row: +A 0 -> 1 at 8245, the credits
+  (+B 1) 8293 .. 19907, +A 2 at 19971, 3 at 19972, module 0x37's load from
+  19973; picture 1 lasts 7265 ticks, the fades 64, picture 2 429, the fade
+  64, +A 5 one tick later, +9 = 4 one tick after +A 6, all as the original.
+  Two lengths differ, both hardware time: module 0x37's load takes 10 ticks
+  in the port and 28 in the original (the disc at host speed), and the card
+  screen's save 304 ticks against 442 (host card, docs/SAVE_GAME.md 6.2:
+  the original's card answers with hardware time and the fork's re-seat).
+  The port's script therefore stops at g80 row 28137 against the
+  original's 28267 (with the labelling offsets below).
+- **Card g80's 27-frame-late script end is not in continuous play.** In g20
+  the ending script 0x82CBD0 ends (3B8D 2 -> 0) at g80 row 8243 and +9 = 3
+  at row 8244, as the original. Chain g21's 27 frames come from its card
+  start (the LOAD GAME pose and rand() differ from row 0; not diagnosed
+  further), not from the ending's own logic.
+- **The labels' offsets are the comparison aid's.** The ending's frames
+  before its first draw step no pad hook, so EM_START_AT_PHASES sees 49
+  engine frames without a step after row 8243 and reads them as a load
+  ("not anchored"); the labels stay 49 behind through the credits. Module
+  0x37's load anchors them at row 20000: the port's first step after its
+  shorter load is already in picture 1 (+B = 2), the original's row 20000
+  is the last tick of sub 1 (+B = 2 from 20001), and the trace samples at a
+  frame's end, a tick ahead of the head sample the recording takes. Hence
+  subs 4 .. 6 and state 4 labelled 2 early (27264 / 27328 / 27757 / 27821
+  against 27266 / 27330 / 27759 / 27823) while the ticks above are exact.
+  Not changed: rows in these stretches are not compared (no position or
+  rand() moves), and a per-tick anchor there would need a hook the ending
+  does not have.
+- **The card.** The run swaps to an empty card folder at g80 row 27800
+  (`--set EM_START_AT_CARD_SWAP=82112:<folder>`: chain frame = g80's start
+  54312 + 27800). Against the take's card_end.ps2 (the decomp's
+  tools/ps2_card.py `listing` / `read_file`, read only): **all eight files
+  byte-identical**, EX_DATA.00 included (D_00810750 = 596,325, check byte
+  +0x63F equal). This needed a comparison-aid fix: EM_START_AT_CLOCKS moved
+  D_00810750 with every clock jump, including the card's row 0, where the
+  scratchpad clock (no save holds it) counts from the port's boot while
+  D_00810750 came from the card. In the original's guided run the two are
+  equal at every take boundary (g72 .. g80 end states: 537,874 .. 596,325),
+  and the card holds the source state's value. Now the first clock row sets
+  the clock and gives back the gameplay frames the port ran after the load
+  (D_00810750 -= the clock before it: g20's card replays the lift's arrival
+  scene, 261 frames; g21's its fade-in, 66); later rows move both as
+  before. Before: g20's EX_DATA.00 held 1,134,199 (+ the clock jump
+  537,874), then 596,586 (+ the 261 replayed frames) with only the row-0
+  jump removed. Chain g21 (card g80) with the same swap at 27800 now saves
+  all eight files byte-identical too (its rows: 19772 of 28092 on the row,
+  the card's LOAD GAME pose as before).
+
 ## Next
 
-0. Next: g80 (chain g20 reaches it, row 331; chain g21 row 407): the
-   0x827250 callback's 0015C750 / the player-view commit after it (Ending), the credits 0022D380, module 0x37's pictures, the
-   clear save (Final phase); 001AD740 is done (Ending). (done: g79's rand()
+0. Next: a fork capture of the credits and the pictures (their picture is
+   not verified); the credits' music. (done: chain g20 through all of g80,
+   the ending and the clear save, card byte-identical, Ending 3; g79's rand()
    word at row 418 and g76's at row 6386, Final phase; row 667's 0018AF50,
    the blast 001EE190 and 001A8970's f20, Sub-weapon projectile; row 848's
-   glyph 0x35 and the rest of g79, Status glyph nodes.)
+   glyph 0x35 and the rest of g79, Status glyph nodes; g80 from its card
+   through row 407, the credits, the pictures and the clear save, Ending 2.)
 1. (done) 0x825B00, the AREA21 op09 callbacks, D_00275C48 (Phases);
    001E76A0 (Haze ring); 0x823B40 and 001B7670's gate (lane
    PORT-A21-3B40); 001741D0 and the seated frame's workers (The Gatling

@@ -148,6 +148,20 @@ EmGfx *em_frame_gfx(void)
 {
     return NULL;
 }
+/* The screen-fade entry points are not on this fixture's path (no frame
+ * pipeline is linked): reaching one is a failure, so fail loudly. */
+void em_frame_fade_clear(uint8_t colour)
+{
+    (void)colour;
+    fprintf(stderr, "FAIL: em_frame_fade_clear reached in status_runtime_test\n");
+    abort();
+}
+void em_frame_fade_full(uint8_t colour)
+{
+    (void)colour;
+    fprintf(stderr, "FAIL: em_frame_fade_full reached in status_runtime_test\n");
+    abort();
+}
 int em_gfx_gs_world_enabled(EmGfx *g)
 {
     (void)g;
@@ -429,6 +443,18 @@ static uint8_t s_bd8;
 /* pickup: 0 the panel request 0x82, 1 the pickup request 1/0x1B, 2 the
  * normal hub route. page: bind the original BATTERY page (battery_page,
  * message_words and the hub's records for 00209280's gauge text). */
+/* 001FB370's sound-bank upload (the fitted attachment's module 0x32..0x35
+ * reload): this fixture does not model the SPU, so the bank is accepted and
+ * finished at once. */
+static int bank_done(void *ctx, uint32_t address, const uint8_t *bytes, uint32_t size,
+                     uint32_t *result)
+{
+    (void)ctx;
+    (void)bytes;
+    *result = (address + size + 0x3Fu) & ~0x3Fu;
+    return 0;
+}
+
 static EmStatusRuntime *create(World *world, EmPanel *owner, int pickup, int page)
 {
     *world = (World){
@@ -464,6 +490,7 @@ static EmStatusRuntime *create(World *world, EmPanel *owner, int pickup, int pag
         const EmModuleLoaderViews views = {.d275BD8 = &s_bd8};
         em_module_loader_set_views(s_loader, &views);
         em_module_loader_bind_live(s_loader);
+        em_module_loader_set_bank_hook(s_loader, bank_done, NULL);
     }
     em_task_init();
     s_bd8 = 0;
@@ -588,19 +615,21 @@ int main(int argc, char **argv)
     em_status_runtime_free(runtime);
 
     /* The outer exit with inventory +0xCA6 set reloads module 0x32 first:
-     * the page waits on it (50 pending frames), then releases. */
+     * the page waits on the loader (8 frames), then releases. */
     runtime = create(&world, &owner, 0, 1);
     confirmation(runtime);
     assert(tick(runtime, 0x40, 128, 128) == 1);
     world.inventory.secondary = 1; /* Original exit now requires module32. */
     assert(tick(runtime, 0x10, 128, 128) == 1);
     assert(tick(runtime, 0, 128, 128) == 1);
-    assert(world.begins == 1 && world.module == 0x32);
-    for (unsigned i = 0; i < 50; ++i) {
+    /* Module 0x32 is a page module: the module loader runs it (no hook
+     * begin); the page waits on the loader's busy byte for its 8 steps at
+     * host speed, then releases. */
+    assert(!world.begins);
+    for (unsigned i = 0; i < 8; ++i) {
         assert(tick(runtime, 0, 128, 128) == 1);
         assert(em_status_runtime_page(runtime)->step == 1);
     }
-    world.ready = 1;
     assert(tick(runtime, 0, 128, 128) == 1);
     assert(tick(runtime, 0, 128, 128) == 1);
     assert(tick(runtime, 0, 128, 128) == 1);

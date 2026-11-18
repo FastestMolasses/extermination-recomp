@@ -21,6 +21,7 @@
 #include <string.h>
 
 #include "em_platform.h"
+#include "game/em_fast.h"
 
 static inline int em_norender_refused_by_environment(void)
 {
@@ -44,9 +45,12 @@ static inline int em_norender_refused_by_environment(void)
     return 0;
 }
 
-/* 1 when the switch is on and honoured. Read once per translation unit. */
+/* 1 when the switch is on and honoured. Read once per translation unit. The
+ * fast-forward start of a playback (em_fast.h) skips the picture's work in a
+ * windowed run too, until its switch. */
 static inline int em_norender(void)
 {
+    if (em_fast_flag) return em_fast_norender_ok;
     static int on = -1;
     if (on < 0) {
         const char *v = getenv("EM_NO_RENDER");
