@@ -206,14 +206,14 @@ Notes the tables do not carry (decomp WORLD_GRAPH.md section 6):
 | 001C5C90 | boot | s0[1], s0[3] | census: live (level 1); `em_area11_roger.c`, `em_roger_actor_original.c` |
 | 001E3D90 | boot | group 0x8265a0 [0], group 0x8265a0 [1], group 0x8265a0 [2], group 0x8265a0 [3], group 0x8265a0 [4], group 0x8265a0 [5] | census: live (level 2); `em_area01_sys.c` |
 | 00219550 | boot | sub0 g 0x826180 [0], sub0 g 0x826180 [1], sub0 g 0x826180 [2], sub0 g 0x826180 [3], sub0 g 0x826180 [4], sub0 g 0x826180 [5] (+4) | census: live (level 1) |
-| 0x823580 | overlay | s0[35], s0[36] | missing |
-| 0x823760 | overlay | s0[5] | missing |
-| 0x8238E0 | overlay | s0[0] | missing |
-| 0x823B30 | overlay | s0[2] | missing |
-| 0x823E30 | overlay | s0[4] | missing |
+| 0x823580 | overlay | s0[35], s0[36] | `em_area14_overlay.c` |
+| 0x823760 | overlay | s0[5] | `em_area14_overlay.c` |
+| 0x8238E0 | overlay | s0[0] | `em_area14_overlay.c` |
+| 0x823B30 | overlay | s0[2] | `em_area14_overlay.c` |
+| 0x823E30 | overlay | s0[4] | `em_area14_overlay.c` |
 | 0x823FC0 | overlay | sub0 g 0x826180 [13], sub0 g 0x826180 [15], sub0 g 0x826180 [17], sub0 g 0x826180 [19] | missing |
 | 0x825AA0 | overlay | sub0 g 0x826180 [14], sub0 g 0x826180 [16], sub0 g 0x826180 [18], sub0 g 0x826180 [20] | missing; twin of AREA03 0x825290, AREA11 0x827490, AREA19 0x8298D0 |
-| 0x825FD0 | overlay | s0[6] | missing |
+| 0x825FD0 | overlay | s0[6] | `em_area14_overlay.c` |
 
 | Chain | Records | Started by | op09 callbacks | Op/sub pairs the census snapshot flags |
 |---|---:|---|---|---|
@@ -229,9 +229,9 @@ Notes the tables do not carry (decomp WORLD_GRAPH.md section 6):
 |---|---|---|---:|---|
 | — | — | — | — | no door placement |
 
-Boot functions reachable from this area's owners and not in the first-level census: 144 (66,280 bytes); the port defines or ledgers 134 of them; 6 more are named in the sources only (a comment, a table or another name: read each): 00183160, 001B1CE0, 001CAE30, 001CAF70, 001CB070, 001CB130; 4 appear nowhere: 001CACC0, 001D39A0, 001D3DA0, 001F6B00.
+Boot functions reachable from this area's owners and not in the first-level census: 144 (66,280 bytes); the port defines or ledgers 134 of them; 7 more are named in the sources only (a comment, a table or another name: read each): 00183160, 001B1CE0, 001CAE30, 001CAF70, 001CB070, 001CB130, 001F6B00; 3 appear nowhere: 001CACC0, 001D39A0, 001D3DA0.
 
-Overlay functions: 14 (AI 1, C 12, NM 1; decomp status at the census commit); none has a port translation.
+Overlay functions: 14 (AI 1, C 12, NM 1; decomp status at the census commit); 8 have a translation in the area's own module (em_area14_overlay.c).
 <!-- second_half:area14 end -->
 
 ### AREA16
@@ -263,20 +263,20 @@ Overlay functions: 14 (AI 1, C 12, NM 1; decomp status at the census commit); no
 | 001C4AF0 | boot | s1[8] | `em_area02_math.c` |
 | 00219550 | boot | sub0 g 0x828480 [0], sub0 g 0x828480 [1], sub1 g 0x8287d0 [0], sub1 g 0x8287d0 [1], sub1 g 0x8287d0 [2], sub1 g 0x8287d0 [3] (+6) | census: live (level 1) |
 | 0022DCD0 | boot | s1[9] | census: verified-unbound (level 2), verified-unbound (level 3); `em_area01_exita.c` |
-| 0x823580 | overlay | group 0x829750 [4], group 0x829750 [5], group 0x829750 [6], group 0x829750 [7], group 0x829750 [8] | missing |
-| 0x824440 | overlay | s1[39] | missing |
-| 0x824690 | overlay | s1[11] | missing |
-| 0x824E10 | overlay | group 0x829660 [1], group 0x829750 [3] | missing |
-| 0x825310 | overlay | s1[10] | missing |
-| 0x825800 | overlay | s0[10] | missing |
-| 0x8261A0 | overlay | s0[11] | missing |
-| 0x8263D0 | overlay | s0[13] | missing |
-| 0x826C50 | overlay | s1[44], s1[45], s1[46] | missing |
-| 0x827030 | overlay | s1[42], s1[43] | missing |
-| 0x8273F0 | overlay | s0[9], s1[13], s1[14], s1[15], s1[16], s1[17] (+10) | missing |
-| 0x827B70 | overlay | s1[41] | missing |
-| 0x827CE0 | overlay | s1[28], s1[29] | missing |
-| 0x827FA0 | overlay | s1[30], s1[31], s1[32], s1[33], s1[34] | missing |
+| 0x823580 | overlay | group 0x829750 [4], group 0x829750 [5], group 0x829750 [6], group 0x829750 [7], group 0x829750 [8] | `em_area16_overlay.c` |
+| 0x824440 | overlay | s1[39] | `em_area16_overlay_b.c` |
+| 0x824690 | overlay | s1[11] | `em_area16_overlay_b.c` |
+| 0x824E10 | overlay | group 0x829660 [1], group 0x829750 [3] | `em_area16_overlay_b.c` |
+| 0x825310 | overlay | s1[10] | `em_area16_overlay_e.c` |
+| 0x825800 | overlay | s0[10] | `em_area16_overlay_c.c` |
+| 0x8261A0 | overlay | s0[11] | `em_area16_overlay.c` |
+| 0x8263D0 | overlay | s0[13] | `em_area16_overlay_e.c` |
+| 0x826C50 | overlay | s1[44], s1[45], s1[46] | `em_area16_overlay.c` |
+| 0x827030 | overlay | s1[42], s1[43] | `em_area16_overlay.c` |
+| 0x8273F0 | overlay | s0[9], s1[13], s1[14], s1[15], s1[16], s1[17] (+10) | `em_area16_overlay_d.c` |
+| 0x827B70 | overlay | s1[41] | `em_area16_overlay_d.c` |
+| 0x827CE0 | overlay | s1[28], s1[29] | `em_area16_overlay_d.c` |
+| 0x827FA0 | overlay | s1[30], s1[31], s1[32], s1[33], s1[34] | `em_area16_overlay_d.c` |
 
 | Chain | Records | Started by | op09 callbacks | Op/sub pairs the census snapshot flags |
 |---|---:|---|---|---|
@@ -301,10 +301,18 @@ Overlay functions: 14 (AI 1, C 12, NM 1; decomp status at the census commit); no
 | 1 | [2] | 0x1bb860 | 5 | room move: entries 4 / 3 |
 | 1 | [3] | 0x1bc350 | 6 | room move: entries 6 / 5 |
 
-Boot functions reachable from this area's owners and not in the first-level census: 273 (145,244 bytes); the port defines or ledgers 256 of them; 7 more are named in the sources only (a comment, a table or another name: read each): 001B1CE0, 001C1500, 001C1570, 001CAE30, 001CAF70, 001CB070, 001CB130; 10 appear nowhere: 001CACC0, 001D39A0, 001D3DA0, 001DAC90, 001DAE10, 001DAFA0, 001DB040, 001DB240, 001DB250, 001DB480.
+Boot functions reachable from this area's owners and not in the first-level census: 273 (145,244 bytes); the port defines or ledgers 256 of them; 11 more are named in the sources only (a comment, a table or another name: read each): 001B1CE0, 001C1500, 001C1570, 001CAE30, 001CAF70, 001CB070, 001CB130, 001DAFA0, 001DB240, 001DB250, 001DB480; 6 appear nowhere: 001CACC0, 001D39A0, 001D3DA0, 001DAC90, 001DAE10, 001DB040.
 
-Overlay functions: 30 (AI 1, C 25, NM 4; decomp status at the census commit); none has a port translation.
+Overlay functions: 30 (AI 1, C 25, NM 4; decomp status at the census commit); 23 have a translation in the area's own module (em_area16_overlay.c, em_area16_overlay_b.c, em_area16_overlay_c.c, em_area16_overlay_d.c, em_area16_overlay_e.c).
 <!-- second_half:area16 end -->
+
+AREA16's overlay behaviours above (all 14, with the children 0x825260 /
+0x828200, the op09 callbacks 0x825630 / 0x826C20 and the helpers) are
+translated by lane PORT-A16 (`em_area16_overlay*.c`,
+`make test-area16-overlay-reference`: the original AREA16.BIN over a
+capture's arena with designed states, every reachable word) and bound in
+`dispatch_second_half` for area byte 0x10. The effect functions 0x8237A0 ..
+0x824110 are reached by nothing in the area. AREA16_PORT.md.
 
 ### AREA17
 
@@ -405,8 +413,8 @@ Overlay functions: 1 (AI 1; decomp status at the census commit); none has a port
 | 001E3D90 | boot | s0[34], s0[35], s0[36], s0[37], s0[38], s0[39] | census: live (level 2); `em_area01_sys.c` |
 | 00219550 | boot | sub0 g 0x826100 [0], sub0 g 0x826100 [1], sub0 g 0x826100 [2], sub0 g 0x826100 [3], sub0 g 0x826100 [4] | census: live (level 1) |
 | 00219870 | boot | sub0 g 0x826100 [11] | `em_area06_port_node.c` |
-| 0x8239B0 | overlay | s0[32] | missing |
-| 0x823D30 | overlay | s0[19], s0[20], s0[21], s0[22], s0[23], s0[24] (+7) | missing |
+| 0x8239B0 | overlay | s0[32] | `em_area20_overlay.c` |
+| 0x823D30 | overlay | s0[19], s0[20], s0[21], s0[22], s0[23], s0[24] (+7) | `em_area20_overlay.c` |
 | 0x824440 | overlay | sub0 g 0x826100 [12], sub0 g 0x826100 [14] | missing |
 | 0x825F20 | overlay | sub0 g 0x826100 [13], sub0 g 0x826100 [15] | missing |
 
@@ -421,7 +429,7 @@ Overlay functions: 1 (AI 1; decomp status at the census commit); none has a port
 
 Boot functions reachable from this area's owners and not in the first-level census: 262 (139,032 bytes); the port defines or ledgers 250 of them; 9 more are named in the sources only (a comment, a table or another name: read each): 001399F0, 0013B350, 001B1CE0, 001C1500, 001C1570, 001CAE30, 001CAF70, 001CB070, 001CB130; 3 appear nowhere: 001CACC0, 001D39A0, 001D3DA0.
 
-Overlay functions: 15 (AI 1, C 14; decomp status at the census commit); none has a port translation.
+Overlay functions: 15 (AI 1, C 14; decomp status at the census commit); 9 have a translation in the area's own module (em_area20_overlay.c).
 <!-- second_half:area20 end -->
 
 AREA20's overlay owners are all translated (lane PORT-A20,
@@ -508,11 +516,12 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
 
 - Every overlay owner of the six areas (66 behaviours, their op09 callbacks
   and helpers) but AREA14's (section 6's twins and em_area14_overlay,
-  AREA14_PORT.md), AREA17's and AREA18's (below), AREA20's (all:
-  em_area20_overlay and four twins, AREA20_PORT.md) and AREA21's two twins
-  is untranslated; the area lanes translate them against captures. The
-  twins are bound only in the shared composition's dispatch; none of these
-  areas runs there yet.
+  AREA14_PORT.md), AREA16's (em_area16_overlay, AREA16_PORT.md: proven over
+  designed states, no capture exists), AREA17's and AREA18's (below),
+  AREA20's (all: em_area20_overlay and four twins, AREA20_PORT.md) and
+  AREA21's two twins is untranslated; the area lanes translate them against
+  captures. The twins and AREA16's owners are bound only in the shared
+  composition's dispatch; of these areas only AREA14 runs there yet.
 - AREA17 and AREA18 (lane PORT-A17A18, AREA17_PORT.md, AREA18_PORT.md):
   every AREA17 overlay function but the init and the pad (22, the
   NEARMISS 0x825560 included) is translated in em_area17_overlay /
@@ -524,10 +533,8 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   (em_area01_state) and the pad: `make test-area18-overlay-reference`
   proves there is nothing else. Neither area has a SUBS row, asset export,
   start card or live run yet; the guided run's takes g41 .. g48 are their
-  recordings. section 4's generator now names an own-area overlay module
-  (tools/second_half_inventory.py own_overlay); only the AREA17 and AREA18
-  blocks were regenerated in this lane (AREA14's would name
-  em_area14_overlay.c on the next run).
+  recordings. section 4's generator names an own-area overlay module
+  (tools/second_half_inventory.py own_overlay); all blocks are regenerated.
 - Every boot behaviour of the six areas is now in a census ledger or
   defined (section 6 for the six BOOT2 added); those marked only "defined"
   by an earlier lane still need their oracle named before they count. The
