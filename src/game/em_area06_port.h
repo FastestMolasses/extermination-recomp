@@ -9,7 +9,7 @@
  *   boot     00123020 (the EE string compare), 00169250 (player +5 state:
  *            the overhead bar's approach), 00176180, 001885B0, 001944B0
  *            (camera states 29..37), 0019F680, 001A8F40, 001EA210,
- *            001EBE10, 001ECA20, 002072A0, 002072C0, 00207350 (the keypad
+ *            001EBE10, 001EBE90, 001ECA20, 002072A0, 002072C0, 00207350 (the keypad
  *            page) with 002079F0 / 00207BB0 / 00207CA0 / 00207CD0,
  *            00219870 (the node behaviour of AREA06's deferred g[11]) with
  *            00219F50 / 0021A180 / 0021A440, 0021AE90, 001CE860 (the
@@ -198,6 +198,7 @@ int em_area06_port_0019F680(const EmArea06PortHooks *h, uint32_t out, uint32_t r
 int em_area06_port_001A8F40(const EmArea06PortHooks *h, uint32_t a, uint32_t b, EmArea06PortFault *fault);
 int em_area06_port_001EA210(const EmArea06PortHooks *h, float value, EmArea06PortFault *fault);
 int em_area06_port_001EBE10(const EmArea06PortHooks *h, uint32_t a0, uint32_t a1, EmArea06PortFault *fault);
+int em_area06_port_001EBE90(const EmArea06PortHooks *h, uint32_t a0, uint32_t a1, EmArea06PortFault *fault);
 int em_area06_port_001ECA20(const EmArea06PortHooks *h, uint32_t a0, uint32_t a1, EmArea06PortFault *fault);
 int em_area06_port_002072A0(const EmArea06PortHooks *h, EmArea06PortFault *fault);
 int em_area06_port_002072C0(const EmArea06PortHooks *h, uint32_t self, EmArea06PortFault *fault);

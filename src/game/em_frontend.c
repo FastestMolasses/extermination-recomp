@@ -988,6 +988,7 @@ static void start_at_pad_mark(void)
 
 void em_frontend_start_at_after_frame(void)
 {
+    if (f.start_at && lt.phase == 6) em_start_at_frame_end(em_frame_counter(), g.pos, g.yaw);
     if (f.start_at && lt.phase == 6 && !start_at_pad_stepped) {
         em_start_at_trace_position(g.pos, g.yaw);
         if (em_start_at_pad_frame(em_frame_counter(), NULL, g.cam.fwd, NULL, 1) == 1)

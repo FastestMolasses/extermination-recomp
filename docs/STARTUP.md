@@ -701,6 +701,11 @@ stick: capture_from_take keeps both with their row 'k') are placed at f =
 k - 2, the first take's too: EM_START_AT_PAD accepts f = -2 and -1, rows
 set before the script's first frame (the card's rows 0 and 1 read them;
 lane PORT-A01S1: g59's first stick was read one frame late before).
+A row is sampled at a frame's start (lane PORT-A16-G62): the frontend's
+frame-end hook (em_start_at_frame_end) keeps the rand() word, position and
+heading, the next hook traces them and re-seeds the row's word with the
+draws made since the frame's start replayed (0x1AE040 state 4's re-place
+and 001FAE70 draw on a room move run before the hook).
 
 ### EM_SKIP_STARTUP=1: the older debug fixture
 

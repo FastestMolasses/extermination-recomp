@@ -94,8 +94,8 @@ int em_area06_port_001EA210(const EmArea06PortHooks *h, float value, EmArea06Por
 }
 
 /* ------------------------------------------------------------------------
- * 001EBE10 (NEARMISS; the instructions agree with its C) and 001ECA20 (C
- * byte-identical): one or two 001CFB50 / 001CFBE0 pairs on the packet
+ * 001EBE10 (NEARMISS; the instructions agree with its C), 001EBE90 and
+ * 001ECA20 (C byte-identical): one or two 001CFB50 / 001CFBE0 pairs on the packet
  * D_0081F8F0, the view floats *D_00275C34 +0x54 / +0x5C read for each.
  * ---------------------------------------------------------------------- */
 static void a6_packet(A6 *o, uint32_t a0, uint32_t a1, uint32_t last, int32_t mode, uint32_t table)
@@ -112,6 +112,17 @@ int em_area06_port_001EBE10(const EmArea06PortHooks *h, uint32_t a0, uint32_t a1
     A6 o;
     if (a6_begin(&o, h, fault)) return -1;
     a6_packet(&o, a0, a1, F_3, 1, 0x002564C0u);
+    return a6_end(&o);
+}
+
+/* 001EBE90 (C byte-identical; 001EBE10's sibling, the next function):
+ * one pair, 0.0 for the last float and kind 1 of D_00256550 (AREA16's
+ * effect, g64). */
+int em_area06_port_001EBE90(const EmArea06PortHooks *h, uint32_t a0, uint32_t a1, EmArea06PortFault *fault)
+{
+    A6 o;
+    if (a6_begin(&o, h, fault)) return -1;
+    a6_packet(&o, a0, a1, F_ZERO, 1, 0x00256550u);
     return a6_end(&o);
 }
 

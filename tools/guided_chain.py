@@ -33,8 +33,9 @@ What runs (EM_START_AT, docs/STARTUP.md; comparison aids as the g4x beats'):
 
 Every frame is then compared with the takes' rows (route set trace.json, read
 only): position (within 0.01), heading, the area bytes, the rand() word (the
-port's word before the frame's reseed: equal when the frame before drew as many
-times as the original's), and the vitals where the take has them (its hits, from
+port's word at the frame's start, before its reseed: equal when the frame before
+drew as many times as the original's; the trace samples each row at the frame's
+start, as the recording does: em_start_at_frame_end), and the vitals where the take has them (its hits, from
 threats.json: the frame and the health after each). Load rows (phase L) are not
 compared. Per take: the first frame of each kind of difference and where the
 run stopped (a fault line, the script's end).

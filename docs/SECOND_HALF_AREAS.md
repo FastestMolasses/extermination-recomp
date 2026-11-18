@@ -728,8 +728,16 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   route_g59): g59, g60 and g61 are on the row for every compared row (1453,
   1474, 2788) with the real loads into AREA06 sub 1 and AREA16 and the
   original's hits (g60 274, g61 2345 / 2457); the restarted gunners and aura
-  of the g60 card are gone. g62 leaves the row at 1660 (4.0 away, sub 0) and
-  stays in sub 0 (row 4336); the player dies in g63. rand() differs at g59
+  of the g60 card are gone. Since lane PORT-A16-G62 (AREA16_PORT.md "Lane
+  PORT-A16-G62") g62, g63 and g64 are on the row too (4128, 3136, 13535
+  compared rows; g62's load into sub 1 through slider [1]); the chain stops
+  at g65 row 96 on the untranslated effect handler 001EF780. The old g62
+  row-1660 divergence was the comparison's sampling point at a room move
+  (0x1AE040 state 4 runs before the hook): EM_START_AT_TRACE and the
+  re-seed now use the frame's start (em_start_at_frame_end). Also new:
+  the indicator child's +0x110 slot words in the record view and its slot
+  nodes' +0x90 as the typed view (0x824E10's 00102958), 001EBE90
+  (em_area06_port), 001B7670 serving area 0x10. rand() differs at g59
   row 1 (the card) and g60 row 488 without a position change. Chain inputs:
   a take's first two reads (take.rec row 0's neutral pad, row 1's stick)
   are kept at f = k - 2 for every take, the first included

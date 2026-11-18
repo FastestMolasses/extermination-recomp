@@ -1119,7 +1119,7 @@ static void log_area02(FILE *f)
  * tools/guided_chain.py): one line per script frame: the player's position,
  * heading (the record's +0xC4, when known), the area bytes D_00810700..02,
  * the vitals, the rand() word, and the creatures' first bytes and positions. */
-void em_scene_creature_trace(FILE *f, int t, const float pos[3], const float *heading)
+void em_scene_creature_trace(FILE *f, int t, const float pos[3], const float *heading, uint32_t rand_word)
 {
     /* AREA11 runs without the AREA01 live composition (its own bindings):
      * its rows carry the player and the vitals, with no record list (the
@@ -1130,7 +1130,7 @@ void em_scene_creature_trace(FILE *f, int t, const float pos[3], const float *he
     memcpy(&vit[0], &s_state.d810858, 4);
     memcpy(&vit[1], &s_state.d81085C, 4);
     fprintf(f, "{\"t\": %d, \"pos\": [%.5f, %.5f, %.5f], \"hp\": %.2f, \"inf\": %.2f, \"a\": 0, \"rand\": %u, ",
-            t, pos[0], pos[1], pos[2], vit[0], vit[1], em_random_peek());
+            t, pos[0], pos[1], pos[2], vit[0], vit[1], (unsigned)rand_word);
     if (heading) fprintf(f, "\"yaw\": %.6f, ", *heading);
     /* The frame machine's state (task 0's +0xB, 0x1AE040) and D_00275BD8:
      * take.rec's tb and bd8 columns, read at the same point of the frame. */
@@ -1160,13 +1160,15 @@ void em_scene_creature_trace(FILE *f, int t, const float pos[3], const float *he
         while (k < nkinds && a->callback != kinds[k]) ++k;
         if (!a->allocated || k == nkinds) continue;
         const uint32_t at = EM_ACTOR_POOL_BASE + i * EM_ACTOR_RECORD_SIZE;
-        uint8_t h[0x10] = {0};
+        uint8_t h[0x38] = {0};
         float p[3] = {0, 0, 0};
         if (em_area01_actor_view_snapshot(&s_area01_live.actors, at, sizeof h, h) < 0 ||
             em_area01_actor_view_snapshot(&s_area01_live.actors, at + 0xB0, sizeof p, p) < 0)
             continue;
-        fprintf(f, "%s[%u, \"%08x\", %u, %u, %u, %.4f, %.4f, %.4f]", n++ ? ", " : "", (unsigned)i, (unsigned)a->callback,
-                h[4], h[5], h[6], p[0], p[1], p[2]);
+        /* Then +0x34 (a creature's HP halfword) and +0x36 (its hit mailbox). */
+        fprintf(f, "%s[%u, \"%08x\", %u, %u, %u, %.4f, %.4f, %.4f, %d, %u]", n++ ? ", " : "", (unsigned)i,
+                (unsigned)a->callback, h[4], h[5], h[6], p[0], p[1], p[2], (int)(int16_t)(h[0x34] | h[0x35] << 8),
+                (unsigned)(h[0x36] | h[0x37] << 8));
     }
     fputs("]}\n", f);
 }

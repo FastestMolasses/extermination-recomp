@@ -64,6 +64,17 @@ int em_indicator_bind_live_set_node(EmActor *child, unsigned k, const float matr
 /* Slot k's +0x90 of a bound child (the stand-in draws of the children's
  * +0x4C read their own node matrices). 0, or -1. */
 int em_indicator_bind_live_node(const EmActor *child, unsigned k, float matrix[16]);
+/* The record view's projection of a bound child's +0x110 slot words (the
+ * original slot addresses it popped, +0x09 of them): the count written to
+ * words (at most max), or 0 when `child` is not a bound child. Overlay
+ * owners read them (AREA16's 0x824E10 follows its attachment's +0x12C
+ * slot, g64). */
+unsigned em_indicator_bind_live_slot_words(const EmActor *child, uint32_t *words, unsigned max);
+/* The bytes of a held slot's +0x90 node matrix (the typed view
+ * em_indicator_bind_live_set_node / _node use: one storage) when
+ * [address, address + size) lies inside one, else NULL: an original store
+ * into a child's slot node (00102958 of a matrix into +0x90) lands there. */
+uint8_t *em_indicator_bind_live_slot_bytes(uint32_t address, uint32_t size);
 /* The child's +0x4C, 001CACB0 (001F54E0's indirect call, the child's +0x80
  * colour words just stored): 001CABA0(child, +0x44). 0, or -1 (latched). */
 int em_indicator_bind_live_draw(EmActor *child);

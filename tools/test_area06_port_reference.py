@@ -146,6 +146,7 @@ FUNCS = {
     0x1A8F40: ('em_area06_port_001A8F40', 0xBC, [U, U], None),
     0x1EA210: ('em_area06_port_001EA210', 0x28, [F], None),
     0x1EBE10: ('em_area06_port_001EBE10', 0x7C, [U, U], None),
+    0x1EBE90: ('em_area06_port_001EBE90', 0x78, [U, U], None),
     0x1ECA20: ('em_area06_port_001ECA20', 0xDC, [U, U], None),
     0x2072A0: ('em_area06_port_002072A0', 0x14, [], None),
     0x2072C0: ('em_area06_port_002072C0', 0x88, [U], None),
@@ -1585,6 +1586,7 @@ def case_list(elf):
         add('capture %s 1885B0' % beat, beat, 0x1885B0, [PLAYER])
         add('capture %s 176180' % beat, beat, 0x176180, [PLAYER, 0, PLAYER + 0xA0])
         add('capture %s 1EBE10' % beat, beat, 0x1EBE10, [3, 7])
+        add('capture %s 1EBE90' % beat, beat, 0x1EBE90, [3, 7])
         add('capture %s 1ECA20' % beat, beat, 0x1ECA20, [3, 7])
         add('capture %s 2072A0' % beat, beat, 0x2072A0, [])
         add('capture %s 1EA210' % beat, beat, 0x1EA210, [fb(2.0)])
