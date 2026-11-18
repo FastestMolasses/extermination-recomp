@@ -102,6 +102,15 @@ CHAINS = {
     'g16': ('g59', mrb.G16_ROUTE, ('g59_area01_area06', 'g60_area06_area16', 'g61_area16_water', 'g62_area16_sub1',
                                    'g63_area16_recharge', 'g64_area16_booth', 'g65_area16_vaccine', 'g66_area16_bed',
                                    'g67_area16_out', 'g68_area06_area01')),
+    # The endgame (lane PORT-LIVE-A2021, route_g20): AREA04 sub 1 entry 7 (g72's end, in play after
+    # the lift [10]'s arrival scene, which the card's LOAD GAME runs again: SCENE_WAIT_AT_START) ->
+    # the radio, doors [46] / [48]: AREA20 entry 0 (a real area change) -> dog tag 8 -> [32]'s quad:
+    # script 0x8270B0, the hovercraft movie, AREA21 entry 3 (a real one) -> the prep -> the Origin
+    # fight's three phases -> the ending. (From card g72, AREA13 entry 7, the chain leaves the rows
+    # at g72 row 4773 by AREA13's beasts: rand() differs from row 1.)
+    'g20': ('g73', mrb.G20_ROUTE, ('g73_area04_area20', 'g74_area20_tag8', 'g75_area20_area21', 'g76_area21_prep',
+                                   'g77_area21_phase1', 'g78_area21_phase2', 'g79_area21_phase3',
+                                   'g80_area21_ending')),
 }
 
 
@@ -111,6 +120,11 @@ KINDS = {'g17': '141d20,133e30', 'g16': '12a5d0,1c1030'}
 # state's bytes (EM_START_AT_RESTORE, comparison only). g11: AREA11's security gun (its patrol
 # timers ran through the cable ride's scene) and the fan pair's spin (em_area11_bindings_restore_owners).
 RESTORE_AT_START = {'g11'}
+# Chains whose card's LOAD GAME runs a scene the card's source state had already played: the
+# script's row 0 waits for 0x70003B8D to return to 0 (EM_START_AT_SCENE_WAIT, comparison only).
+# g20's card g73 is g72's end, AREA04 sub 1 entry 7 at control after the lift [10]'s arrival
+# scene; a LOAD GAME there runs that scene again.
+SCENE_WAIT_AT_START = {'g20'}
 
 
 def load(route, takes):
@@ -184,7 +198,8 @@ def row0_fade(row):
     return fade[4] if fade[0] else 0
 
 
-def run(name, card, rows, files, timeout, kinds, extra=(), steer=False, source_ram=None, restore=False):
+def run(name, card, rows, files, timeout, kinds, extra=(), steer=False, source_ram=None, restore=False,
+        scene_wait=False):
     pad, rands, clocks, loads, marks, _ = files
     out = OUT / name
     trace = out / 'trace.jsonl'
@@ -199,6 +214,8 @@ def run(name, card, rows, files, timeout, kinds, extra=(), steer=False, source_r
                EM_START_AT_TRACE=str(trace), EM_START_AT_FRAMES='1')
     if kinds:
         env['EM_START_AT_TRACE_KINDS'] = kinds
+    if scene_wait:
+        env['EM_START_AT_SCENE_WAIT'] = '1'
     if restore and source_ram and source_ram.exists():
         env['EM_START_AT_RESTORE'] = f"{source_ram}:0:{rows[0].get('clock', 0):x}"
     if source_ram and source_ram.exists():
@@ -366,7 +383,7 @@ def main(argv):
         source_ram = Path(source).parent / 'eeMemory.bin' if source else None
         seconds, faults, trace, log_path = run(args.chain, card, rows, files, timeout,
                                                args.kinds or KINDS.get(args.chain), args.set, steer, source_ram,
-                                               args.chain in RESTORE_AT_START)
+                                               args.chain in RESTORE_AT_START, args.chain in SCENE_WAIT_AT_START)
         print(f'run: {seconds:.0f} s, {log_path.relative_to(ROOT)}')
         for f in faults[:3]:
             print(f'  stopped: {f[:240]}')

@@ -64,7 +64,8 @@ first run faulted at 00112610, code 8) add the same three kinds: their
 D_0026EC60 rows, their spawn records' music and their message-record
 tables (AREA14's D_00264DD0[0x0F]); lane PORT-LIVE2 2026-11-17 adds AREA17 (D_00264DD0[0x12]; the
 first run from the guided card g46 faulted at 00112610, code 8) and lane PORT-LIVE-A16 AREA16
-(D_00264DD0[0x11], both subs' spawn music)).
+(D_00264DD0[0x11], both subs' spawn music)), lane PORT-LIVE-A2021 AREA20 and AREA21
+(D_00264DD0[0x15] / [0x16], their spawn music).
 
 EMST layout (little endian):
   0x00  'EMST', u32 version 1
@@ -91,16 +92,18 @@ MUSIC_ROWS, VOICE_ROWS = 68, 179
 MUSIC_TABLE, VOICE_TABLE = 0x25DD30, 0x25E170
 SEARCH_NAMES = (0x26EBB0, 0x26EBD0)
 STREAM_TABLE = 0x26EC60
-AREAS = (11, 1, 0, 2, 4, 0x16, 6, 0x0D, 0x0F, 3, 0x13, 8, 7, 0x0E, 0x11, 0x10)
+AREAS = (11, 1, 0, 2, 4, 0x16, 6, 0x0D, 0x0F, 3, 0x13, 8, 7, 0x0E, 0x11, 0x10, 0x14, 0x15)
 # D_00264DD0 indices of the exported areas' message-record tables.
 # AREA22 has none: D_00264DD0[0x17] is 0 (export_area22_tables.py).
 MESSAGE_TABLES = {2: 'AREA01', 1: 'AREA00', 3: 'AREA02', 5: 'AREA04', 7: 'AREA06', 14: 'AREA13', 0x10: 'AREA15', 4: 'AREA03',
-                  0x14: 'AREA19', 9: 'AREA08', 8: 'AREA07', 0x0F: 'AREA14', 0x12: 'AREA17', 0x11: 'AREA16'}
+                  0x14: 'AREA19', 9: 'AREA08', 8: 'AREA07', 0x0F: 'AREA14', 0x12: 'AREA17', 0x11: 'AREA16',
+                  0x15: 'AREA20', 0x16: 'AREA21'}
 # The spawn records 001B0250 copies into D_008106C8 (D_0024D650[area][room]
 # + entry * 0x30, word +0x1C): 001FAE70's music cue is its bits 8..14. The
 # middle of the route to the first boss (AREA01's upper-floor entries, AREA04,
 # AREA06, AREA22) plays these at the area loads.
-SPAWN_TABLE, SPAWN_RECORD, SPAWN_AREAS = 0x24D650, 0x30, (1, 4, 6, 0x0D, 0x0F, 3, 0x13, 0x16, 8, 7, 0x0E, 0x11, 0x10)
+SPAWN_TABLE, SPAWN_RECORD, SPAWN_AREAS = 0x24D650, 0x30, (1, 4, 6, 0x0D, 0x0F, 3, 0x13, 0x16, 8, 7, 0x0E, 0x11, 0x10,
+                                                  0x14, 0x15)
 # Cues named by original code paths (see the module docstring).
 MUSIC_EXTRA = {25: '001FAE70 AREA11 selection (captured D_00282178[0] = 25)',
                0x18: '001FAE70 override cue (D_008104E4 == 1)',

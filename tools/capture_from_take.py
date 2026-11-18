@@ -48,8 +48,13 @@ chosen inside the take. A take ending inside a load (g45: the area bytes
 already 0x11, the load still running) gives a mid-load capture; the
 exporters' own checks say whether a capture serves them.
 
-A take with a movie row (take.rec's M rows) is refused: its ticks are not
-one row per game frame there.
+A take's movie rows (take.rec's M rows, mv 1: one row stands for the whole
+movie, with no counter, area or pad of the game's; rows.tbl has no row for
+it) are left out of the rows and the inputs: the game's counter does not
+advance across a movie (g75: counter 605540, the movie, 605541), so the
+rows stay one per game tick. trace.json's `movies` lists each one (the row
+it came after: its rows index, its counter, and the take's vsyncs it
+lasted from movie.tbl, when present).
 
 Usage (native arm64 macOS; reads the decomp's build/guided_play/, writes the
 decomp's ignored build/fork_refs/<set>/; the zstd entries need the decomp's
@@ -169,6 +174,28 @@ def take_vitals(src: Path, rows: list, end: dict) -> dict | None:
             'end': {'hp': check.get('hp'), 'inf': check.get('inf')}}
 
 
+def movie_vsyncs(src: Path) -> dict:
+    """{counter of the game row before a movie: the vsyncs the take spent in
+    it} from movie.tbl (one row per vsync with the game tick reached; a run of
+    vsyncs whose tick does not advance past the row before them, beyond the
+    one vsync a game tick takes, is the movie)."""
+    path = src / 'movie.tbl'
+    if not path.exists():
+        return {}
+    rows = table(path)
+    ticks = [r['tick'] for r in rows]
+    rec_counters = [int(r['counter']) for r in rec_rows(src / 'take.rec') if r['mv'] == '0']
+    out, k = {}, 0
+    while k < len(ticks):
+        j = k
+        while j + 1 < len(ticks) and ticks[j + 1] == ticks[k]:
+            j += 1
+        if j - k >= 2 and 1 <= ticks[k] <= len(rec_counters):
+            out[rec_counters[ticks[k] - 1]] = j - k
+        k = j + 1
+    return out
+
+
 def beat(take: str, folder: Path, source_state: str, source_ram: bytes) -> dict:
     src = GUIDED / take
     end = json.loads((src / 'end.json').read_text())
@@ -182,9 +209,20 @@ def beat(take: str, folder: Path, source_state: str, source_ram: bytes) -> dict:
         if link.exists():
             raise SystemExit(f'{link} exists and is not {p2s}')
         os.link(p2s, link)
-    rec = rec_rows(src / 'take.rec')
-    if any(r['mv'] != '0' for r in rec):
-        raise SystemExit(f'{take}: a movie row in take.rec (not one row per game frame): refused')
+    rec_all = rec_rows(src / 'take.rec')
+    rec, movies = [], []
+    for r in rec_all:
+        if r['mv'] != '0':
+            if not rec:
+                raise SystemExit(f'{take}: a movie row before the first game row: not modelled')
+            movies.append({'after_f': len(rec) - 1, 'after_counter': int(rec[-1]['counter'])})
+            continue
+        rec.append(r)
+    if movies:
+        lasted = movie_vsyncs(src)
+        for m in movies:
+            if m['after_counter'] in lasted:
+                m['vsyncs'] = lasted[m['after_counter']]
     tbl = table(src / 'rows.tbl')
     if len(tbl) != len(rec) or any(int(r['counter']) != struct.unpack('<I', t['counter'])[0]
                                    for r, t in zip(rec, tbl)):
@@ -217,6 +255,8 @@ def beat(take: str, folder: Path, source_state: str, source_ram: bytes) -> dict:
              'emulator': 'fork', 'source_state': source_state, 'first_counter': rows[0]['counter'],
              'last_counter': rows[-1]['counter'], 'frames': len(rows) - 1, 'inputs': inputs, 'teleports': [],
              'snapshot': snap, 'rows': rows}
+    if movies:
+        trace['movies'] = movies
     vitals = take_vitals(src, rows, end)
     if vitals:
         trace['vitals'] = vitals

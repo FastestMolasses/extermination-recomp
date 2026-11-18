@@ -238,7 +238,8 @@ static int mid_area(unsigned area, unsigned sub)
      * sub 1 (chunk05.n1; tools/export_area01s1_assets.py, docs/
      * AREA01_ASSETS.md, its section on sub 1) assets/area01/sub1. */
     return (area == 0u && sub == 2u) || (area == 6u && sub == 1u) || (area == 1u && sub == 1u) ||
-           ((area == 0x16u || area == 6u || area == 0x0Du || area == 0x0Eu || area == 0x11u) && sub == 0) ||
+           ((area == 0x16u || area == 6u || area == 0x0Du || area == 0x0Eu || area == 0x11u || area == 0x14u ||
+             area == 0x15u) && sub == 0) ||
            ((area == 0x0Fu || area == 0x13u || area == 0x10u) && sub <= 1) || (area == 3u && sub <= 2) || (area == 4u && sub == 1) ||
            ((area == 8u || area == 7u) && (sub == 0 || sub == 2 || sub == 3));
 }
@@ -2943,7 +2944,9 @@ static int arrival_scene(void)
            strcmp(g.scene_dir, "assets/area14/sub0") == 0 ||
            strcmp(g.scene_dir, "assets/area17/sub0") == 0 ||
            strcmp(g.scene_dir, "assets/area16/sub0") == 0 ||
-           strcmp(g.scene_dir, "assets/area16/sub1") == 0;
+           strcmp(g.scene_dir, "assets/area16/sub1") == 0 ||
+           strcmp(g.scene_dir, "assets/area20/sub0") == 0 ||
+           strcmp(g.scene_dir, "assets/area21/sub0") == 0;
 }
 
 /* A scene with the original's world: its collision world, live camera,
@@ -4085,7 +4088,8 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
      * tools/area_overview.py --area 20) and the effect objects its arrival
      * script places run through the runtime's dispatch_second_half
      * (0x824440 and 0x825F20 as twins, the rest em_area20_overlay's). Its
-     * boot owners wait for the area's load (no capture yet). */
+     * boot owners bind as the later areas' do (lane PORT-LIVE-A2021: the
+     * area loads live from the guided run's g73). */
     if (s_state.d810700 == 0x14 && fn >= 0x00823500u) {
         switch (fn) {
         case 0x00823580u: case 0x00823600u: case 0x00823660u: case 0x00823780u: case 0x00823840u:
@@ -4100,7 +4104,8 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
      * translation runs through the runtime's dispatch_second_half
      * (em_area21_overlay / _owners / _doors / _groups; 0x823A10 / 0x823AB0
      * as em_level17_boot's twins; [52] 0x8243B0 in _groups, lane
-     * PORT-A21-52). AREA21 does not load live yet (no recording). */
+     * PORT-A21-52). Its boot owners bind as the later areas' do (lane
+     * PORT-LIVE-A2021: the area loads from the guided run's g75). */
     if (s_state.d810700 == 0x15 && fn >= 0x00823500u) {
         switch (fn) {
         case 0x008297C0u: case 0x00828700u: case 0x00828F30u: case 0x008261A0u: case 0x008262D0u:
@@ -4131,6 +4136,8 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
         }
     }
     if (s_state.d810700 == 0x11 && fn < 0x00823500u && fn && fn != 0x001F5040u)
+        goto bind;
+    if ((s_state.d810700 == 0x14 || s_state.d810700 == 0x15) && fn < 0x00823500u && fn && fn != 0x001F5040u)
         goto bind;
     /* AREA16's owners (lane PORT-A16, docs/AREA16_PORT.md): every
      * placement's and group's overlay behaviour (decomp
@@ -4336,7 +4343,10 @@ static int area01_rebind(void *ctx, EmActor *a, uint32_t fn)
          /* AREA06 sub 1: the creature 00147390's beam 001B3C30 (group 0x8265E0) */
          (s_state.d810700 == 6 && s_state.d810701 == 1) ||
          /* AREA02 sub 2: the same creature's beam (group 0x826080 [7] .. [9]) */
-         (s_state.d810700 == 2 && s_state.d810701 == 2)) &&
+         (s_state.d810700 == 2 && s_state.d810701 == 2) ||
+         /* AREA20: group 0x826100's 0x824440 (AREA14 0x823FC0's twin) through 0019B6C0, as
+          * AREA14's (the guided g74, row 2047) */
+         s_state.d810700 == 0x14) &&
         fn == 0x001F5040u) {
         if (!em_aim_fire_flash_owns(a) && em_area01_live_adopt_flash(&s_area01_live, a) < 0)
             return -1;

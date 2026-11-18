@@ -73,7 +73,12 @@ EFFECT_BLOCKS = ((0x00253490, 0xA0), (0x0026E810, 0x40))
 # Words the game writes at run time (address, bytes): not compared.
 # 0x241016: 00100158 (the boot GS reset) stores the GS revision read from
 # CSR there; 001D6E60 masks it out (D_00241010 & 0x0000FFFF0000FFFF).
-RUNTIME = ((0x00241016, 2), (0x002513E0, 0x40), (0x00275688, 4), (0x00275690, 8))
+# 0x27569C: 001E1E60's handle (flag 0x23 areas: AREA21's guided captures), the 001D72D0 result it
+# stores at 001E21A4 over the ELF's -1 (em_static_world.c). D_002512E0's +0x08, +0x20 .. +0x47,
+# +0x50 / +0x54 and +0x80: 001CEEE0's stores (decomp func_001CEEE0.c, byte-matched), which AREA21's
+# rounds 0x825C70 call (the guided g77 / g78, after the Gatling fired).
+RUNTIME = ((0x00241016, 2), (0x002513E0, 0x40), (0x00275688, 4), (0x00275690, 8), (0x0027569C, 4),
+           (0x002512E8, 4), (0x00251300, 0x28), (0x00251330, 8), (0x00251360, 4))
 
 
 def elf_block(elf: bytes, address: int, size: int) -> bytes:

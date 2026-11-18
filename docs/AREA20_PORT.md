@@ -115,20 +115,58 @@ The twins' cases (lane PORT-A20 additions to the existing tests):
 - Hooks: `tools/gen_area20_overlay.py` writes the header's hook block and
   the wrappers.
 
+## Live (lane PORT-LIVE-A2021, 2026-11-18, branch `live2021`)
+
+AREA20 loads and plays live, through a real area change from AREA04 sub 1,
+on the guided run's rows (the takes g73 / g74 were re-recorded and kept on
+2026-11-17, the grenade branch: decomp `build/guided_play/`).
+
+- **Route set** `guided-20261117/s87/route_g20` (tools/capture_from_take.py
+  g71 .. g80; decomp build/fork_refs, ignored). capture_from_take now leaves
+  out a take's movie rows (take.rec `mv` 1: g75's one row for the hovercraft
+  movie; the counter does not advance across it) and lists them in
+  trace.json `movies`.
+- **Exports** (`export_second_half_common`): SUBS[('area20', 0)] = g73, g74,
+  previous g72 (AREA04 sub 1). CREATURES 0x824440 (REC_B + 0x90 =
+  *(node + 0x11C) + 0x90, export_area13_level's rule) and OWNER_MATRIX
+  0x823D30 (self + 0xD0, the breakables' state-2 call), both from the
+  byte-identical C; AREA20 has no 0019C6F0 caller. Two shared-exporter
+  fixes: export_area01_level.check_kicks skips a display list that does not
+  walk only when it is not the one the frame built (g73's end: the stale
+  0x28F700 list; the cursor 001D2110 set lies in 0x293700), and
+  export_area01_tables.export_doors ends the highest door row (AREA20's
+  0x27560C) after the last record a door placement indexes. `--kind all` and
+  `place` pass: 1003 objects, collision 1102 polys, cells 55 uids, roster 66,
+  two chains, messages, 25 world models, sound. Profile 20 (world textures,
+  shadow receivers, player variants), sfx scope (0x14, 0), stream cues
+  (D_00264DD0[0x15], spawn music).
+- **Runtime**: area 0x14 as a mid area (assets/area20/sub0) and a later area
+  for the boot dispatch; its boot owners bind as the later areas' do; a
+  record an owner points at 001F5040 is adopted (0x824440 through 0019B6C0,
+  as AREA14's); 001BAC00's data window 0x826100 .. 0x827F00; shadow
+  receivers, world textures, the arrival scene list. Movie selector 8,
+  E64S5.PSS (the hovercraft, script 0x8270B0): `tools/export_movie.py --iso
+  <iso> --disc-path MOVIE/E64S5.PSS --out assets/movies/e64s5.mov`; feed_end
+  1531 from g75's movie.tbl (one main-loop step of 1553 vblanks less E46S4's
+  22), derived, not probed.
+- **Cards** g72 .. g80 (`build_start_saves.py`), beats g72 .. g79.
+- **Chain g20** (tools/guided_chain.py, card g73: g72's end, AREA04 sub 1
+  entry 7). A LOAD GAME there runs the lift [10]'s arrival scene again (the
+  original played it in g72 rows 9404 .. 9662), so the chain's row 0 waits
+  for 0x70003B8D to return to 0 (EM_START_AT_SCENE_WAIT, comparison only;
+  STARTUP.md). From card g72 (AREA13) the chain leaves the rows at g72 row
+  4773 (a 3.4 push near AREA13's beast [22]; rand() differs from row 1).
+  Result: **g73 4191 of 4192 compared rows on the row** (the radio, doors
+  [46] / [48], the real area change into AREA20 and its arrival scene; one
+  heading off by 0.0012 at row 1130, the script selector one frame late at
+  1077); **g74 3736 of 3736** with the original's three hits (2252, 2349,
+  2923); **g75 1858 of 1858 to row 2240**: [32]'s quad, script 0x8270B0,
+  the movie and the real load of AREA21, which then faults (AREA21_PORT.md
+  "Live").
+
 ## What is left
 
-- **Loading AREA20**: its `SUBS[('area20', 0)]` row, capture kinds, level,
-  collision, cells, sound and textures need captures of the area
-  (SECOND_HALF_AREAS.md section 2); the guided run's g73 .. g75 states
-  were recorded, but the kept chain was forked at g69 (decomp FULL_RUN_PLAN
-  62), so their tries sit in `_tries/` and are not recordings to build on.
-  The CREATURES / FLAG_RULES rules for 0x823D30 (001A2370) and 0x824440
-  (0019C6F0 through the turret) wait for that lane.
-- **Boot owners** of AREA20 (section 4: 17, all defined or in a ledger) are
-  not bound for area 0x14 in em_scene_bindings.
-- **The scripts** 0x826830 and 0x8270B0 (25 and 12 records; the flagged
-  pairs 12/0 and 0B/5) are not run; their op14 node lists place 0x823580,
-  0x823600 and 0x823780.
+- The two one-frame differences of g73 (rows 1077 and 1130) are not traced.
 - Who spawns 0x823660 and 0x823840 is not traced: no overlay word names
   them, but boot data does (0x823660 at 0x259A0C; 0x823840 at 0x259A3C and
   0x275A3C; 0x823580 / 0x823600 / 0x823780 appear in the same tables), so

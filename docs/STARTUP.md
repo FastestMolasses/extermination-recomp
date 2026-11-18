@@ -559,6 +559,11 @@ recording-derived and stay in the ignored `build/`.
   recording's row 0 (D_0028A9A0 +4): a loaded game fades in with the
   player's input refused, about 50 frames past control, so the script's row
   0 (and the rand word) wait until the fade reaches that level.
+  `EM_START_AT_SCENE_WAIT=1` (with EM_START_AT_PAD; comparison only) makes row 0
+  also wait, after the fade, while 0x70003B8D is not 0: a scene the card's LOAD
+  GAME runs that the card's source state had already played (the guided g72's
+  end, AREA04 sub 1 entry 7: the lift [10]'s arrival scene of g72 rows 9404 ..
+  9662 runs again from card g73; tools/guided_chain.py SCENE_WAIT_AT_START).
   `EM_START_AT_SYNC=<address>:<value>:<f>` (comparison only) sets the script's
   clock to f when that progress byte first holds the value, and from then on
   counts the frames no hook steps (a status page's open and close), so a chain
@@ -682,7 +687,18 @@ python3 tools/guided_chain.py g17 --steer g45      # card g45: g45 .. g58 (AREA1
 python3 tools/guided_chain.py g11                  # card g49 (g48's end, AREA11 entry 3): g49 .. g58
 python3 tools/guided_chain.py g16                  # card g59: g59 .. g68 (AREA01 sub 1 -> AREA06 sub 1 -> AREA16 -> AREA06 -> AREA01)
 python3 tools/guided_chain.py g11 --until g50      # stop after a take
+python3 tools/capture_from_take.py --set guided-20261117/s87/route_g20 \
+    g71_area19_tag11_gl g72_area13_area04 ... g80_area21_ending # the endgame's route set
+python3 tools/build_start_saves.py g72 g73 g74 g75 g76 g77 g78 g79 g80
+python3 tools/guided_chain.py g20                  # card g73: g73 .. g80 (AREA04 sub 1 -> AREA20 -> AREA21)
 ```
+
+Chain g20 (lane PORT-LIVE-A2021) starts from card g73 (g72's end, AREA04
+sub 1 entry 7); the card's LOAD GAME reruns the lift [10]'s arrival scene the
+source state had already played, so the chain passes EM_START_AT_SCENE_WAIT=1
+(guided_chain.SCENE_WAIT_AT_START). g73 is on the row for 4191 of 4192
+compared rows, g74 for all 3736, g75 for all 1858 to row 2240, where AREA21's
+first frame faults (AREA21_PORT.md "Live").
 
 Output: build/guided_chain/<chain>/report.txt (per take: compared frames,
 frames on the row, the first frame of each kind of difference, where the run

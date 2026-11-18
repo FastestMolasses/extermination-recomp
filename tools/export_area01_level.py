@@ -133,8 +133,22 @@ def check_kicks(captures, objects, dyn):
     report, states, touched = [], {}, set()
     for cap in captures:
         n_level = n_dyn = 0
+        skipped = []
         for head in LIST_HEADS:
-            for k in Frame(cap.ram, head).kicks:
+            try:
+                frame = Frame(cap.ram, head)
+            except SystemExit as e:
+                # The list the frame did not build last (the cursor 001D2110 sets, context
+                # D_00275670 + 0x08, lies in the other buffer) is the frame before's: its REFs
+                # point into the per-frame packet arena, which this frame may have rewritten
+                # (the guided g73 end). Only that list may fail to walk; it is reported.
+                ctx = struct.unpack_from('<I', cap.ram, 0x275670)[0]
+                cursor = struct.unpack_from('<I', cap.ram, ctx + 8)[0] if 0 < ctx < len(cap.ram) - 0xA0 else 0
+                if head <= cursor < head + 0x4000:
+                    raise
+                skipped.append(dict(head=hex(head), cursor=hex(cursor), reason=str(e)))
+                continue
+            for k in frame.kicks:
                 kern, (addr, qwc) = k['kernel'], k['ref']
                 if kern in (LEVEL_KERNEL, CLIP_KERNEL):
                     prim = template_prim(k['tpl'], 0x3FC if kern == LEVEL_KERNEL else 0x3F9)
@@ -153,7 +167,10 @@ def check_kicks(captures, objects, dyn):
                     if not any(lo <= addr and addr + 16 * qwc <= hi for lo, hi in dyn_ranges):
                         raise SystemExit(f'{cap.name}: kernel 0x237450 REF {addr:#x} outside the dynamic list')
                     n_dyn += 1
-        report.append(dict(capture=cap.name, level_kicks=n_level, dynamic_kicks=n_dyn))
+        row = dict(capture=cap.name, level_kicks=n_level, dynamic_kicks=n_dyn)
+        if skipped:
+            row['stale_list_unwalkable'] = skipped
+        report.append(row)
     return report, states, len(touched)
 
 

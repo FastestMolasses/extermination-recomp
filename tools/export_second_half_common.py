@@ -71,6 +71,7 @@ K01 = DECOMP / 'build/fork_refs/levels-recordings-20261102-1/s87/route_k01'
 # take's end.p2s entries; the take's end is the next take's start)
 G17 = DECOMP / 'build/fork_refs/guided-20261117/s87/route_g17'
 G16 = DECOMP / 'build/fork_refs/guided-20261117/s87/route_g16'
+G20 = DECOMP / 'build/fork_refs/guided-20261117/s87/route_g20'
 
 # SHA-256 of the user's extract/OVERLAY files (hashes, not disc data)
 AREA14_SHA256 = '43f7e9bbb9fb18bf398f197689231ec1b91ff5ece7e6eb05abbbba98d86690f7'
@@ -119,8 +120,20 @@ SUBS = {
     ('area17', 0): dict(paths=tuple(G17 / b for b in ('g46_area17_ramp', 'g47_area17_roger')),
                         previous=G17 / 'g45_area14_area17', dynamic=True),
     ('area18', 0): dict(paths=None, previous=None, dynamic=False),
-    ('area20', 0): dict(paths=None, previous=None, dynamic=False),
-    ('area21', 0): dict(paths=None, previous=None, dynamic=True),
+    # AREA20 sub 0 (lane PORT-LIVE-A2021): the guided takes' end states, one load: g73 (door
+    # [48] from AREA04 sub 1, the arrival script played out, at control on the deck) and g74 (dog
+    # tag 8, the alcove); the capture before the load is g72's end (AREA04 sub 1 entry 7)
+    ('area20', 0): dict(paths=tuple(G20 / b for b in ('g73_area04_area20', 'g74_area20_tag8')),
+                        previous=G20 / 'g72_area13_area04', dynamic=False),
+    # AREA21 sub 0 (lane PORT-LIVE-A2021): the guided takes' end states, one load (the room moves
+    # through doors [27] / [30] / [33] keep it: the load map cursor 0x1351F80 is the same in all
+    # five): g75 (entry 3 after the hovercraft movie and arrival script 0x82B240), g76 (the prep),
+    # g77 / g78 (the Origin fight's phases 1 and 2); the capture before the load is g74's end. g79's
+    # end (phase 3 over, the ending script 0x82CBD0 started) is left out: its background asset
+    # differs from the other four (export_area13_level's background check), not modelled.
+    ('area21', 0): dict(paths=tuple(G20 / b for b in ('g75_area20_area21', 'g76_area21_prep', 'g77_area21_phase1',
+                                                     'g78_area21_phase2')),
+                        previous=G20 / 'g74_area20_tag8', dynamic=True),
 }
 # every chain entry the original starts: the data addresses the script-starting
 # overlay functions pass to 001BA1A0 (decomp tools/area_overview.py over the
@@ -170,9 +183,22 @@ CREATURES['area17'] = 0x825560
 # both its state-0 calls, with D_00275B40 a char ** = node + 0x110 while its behaviour runs: the
 # word at node + 0x118 (AREA14's REC_A, not export_area13_level's *(node + 0x11C)) plus 0x90.
 CREATURES['area16'] = 0x8273F0
+# AREA20's two 001A2370 callers: 0x824440 (func_overlay_AREA20_00824400.c, byte-identical; the
+# AREA14 0x823FC0 C) passes REC_B + 0x90 = *(node + 0x11C) + 0x90 (export_area13_level's rule), and
+# the breakables [19] .. [31] 0x823D30 (func_overlay_AREA20_00823CF0.c, byte-identical) pass
+# self + 0xD0 in state 2 (OWNER_MATRIX).
+CREATURES['area20'] = 0x824440
+# AREA21's two 001A2370 callers, both byte-identical C, pass self + 0xD0: the Gatling [62] 0x8297C0
+# (func_overlay_AREA21_00829780.c, two calls) and [54] / [55] 0x82A1D0 (func_overlay_AREA21_0082A190.c)
+# (MATRIX_RULES, OWNER_MATRIX).
+CREATURES['area21'] = 0x8297C0
 # the creature's matrix where it is not export_area13_level's rule: (ram, node) -> address
 MATRIX_RULES = {'area17': lambda ram, node: node + 0xD0,
+                'area21': lambda ram, node: node + 0xD0,
                 'area16': lambda ram, node: C.u32(ram, node + 0x118) + 0x90}
+# further 001A2370 callers of a target with their own rule: {target: {behaviour: (ram, node) -> address}}
+OWNER_MATRIX = {'area20': {0x823D30: lambda ram, node: node + 0xD0},
+                'area21': {0x82A1D0: lambda ram, node: node + 0xD0}}
 _LV_OWNER_MATRIX = {}
 FLAG_RULES = {}           # target -> flag_calls(ram) for its 0019C6F0 callers, filled by an area lane
 
@@ -242,6 +268,49 @@ def area16_flag_calls(ram):
 
 FLAG_RULES['area16'] = area16_flag_calls
 
+
+A21_PLACED_IDS = (0x10, 0x13, 0x14, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B)
+
+
+def area21_flag_calls(ram):
+    """AREA21's 0019C6F0 calls in this load, from the byte-identical C of its two callers:
+      * [58] 0x827CD0 (func_overlay_AREA21_00827C90.c): state 0 (the node's first frame) sets +5 = 0;
+        in state 1, +5 = 2 once D_0081078E is 0xFF, +5 0 waits for D_0081080E == 3, +5 1 counts
+        +0x28 to 830, and +5 2 calls (n, 1) for n = 0x10, 0x13, 0x14, 0x16 .. 0x1B every frame. +5
+        only grows in a load, so one live node in state 1 with +5 2 made those nine calls; with
+        +5 0 or 1, none;
+      * [45] 0x8266F0's first step 0x826840 (func_overlay_AREA21_00826800.c) calls (0x1C, 0) when
+        D_0081080E is 1 and starts script 0x82BEC0; its op09 callback 0x8269A0 stores 0x10, the
+        script's end 0x11; the second step 0x8268F0 (func_overlay_AREA21_008268B0.c) runs script
+        0x82C5C0 once D_0081080E is 2 and stores 0xFF at its end. So with D_0081080E 0 in the
+        capture before the load, 0 in the capture means no call, and 0x10, 0x11 or 0xFF means
+        (0x1C, 0) was made in this load (the only way past 1 is 0x826840's call).
+    Anything else (another node count or state, D_0081080E 1 .. 4, a previous capture other than
+    0): ValueError (not modelled)."""
+    t = A13.current()
+    if ram[0x810700] != t.area or ram[0x810701] != t.sub:
+        return ()
+    before = LV.previous_word(t.name, 0x81080C)
+    if before is None:
+        raise ValueError('area21: the capture before the load is missing (D_0081080E there)')
+    if (before >> 16) & 0xFF:
+        raise ValueError(f'area21: D_0081080E {(before >> 16) & 0xFF:#x} before the load: not modelled')
+    calls = ()
+    nodes = [a for _s, a in LV.E02.pool(ram) if C.u32(ram, a + 0x10) == 0x827CD0]
+    if len(nodes) != 1 or ram[nodes[0] + 4] != 1 or ram[nodes[0] + 5] > 2:
+        raise ValueError(f'area21: [58] 0x827CD0 nodes {[(hex(a), ram[a + 4], ram[a + 5]) for a in nodes]}: not modelled')
+    if ram[nodes[0] + 5] == 2:
+        calls += tuple((n, 1) for n in A21_PLACED_IDS)
+    b80e = ram[0x81080E]
+    if b80e in (0x10, 0x11, 0xFF):
+        calls += ((0x1C, 0),)
+    elif b80e != 0:
+        raise ValueError(f'area21: D_0081080E {b80e:#x}: not modelled')
+    return calls
+
+
+FLAG_RULES['area21'] = area21_flag_calls
+
 # Orphaned hulls no capture can prove (a known gap, recorded in level.json's cells report as
 # 'orphan-unproven'): AREA17's drums [20], [21] and [23] (placements of 0x156620 with uids 19,
 # 20, 22) are freed before the first capture after the load (g46: no shot was fired, so the
@@ -273,10 +342,51 @@ def area16_part_model(ram, node):
     return C.u32(ram, table + 4 * (count - 1))
 
 
+def area21_827e70_model(ram, node):
+    """AREA21's [59] / [60] 0x827E70 (func_overlay_AREA21_00827E30.c, byte-identical) in state 1:
+    its +5 3 step sets func_001CA6E0(self, func_001C6120(D_0028A59C, 9)) and goes to +5 4, where it
+    stays; before it the model is the placement's (+0x0D, the generic rule)."""
+    return 9 if ram[node + 5] >= 4 else ram[node + 0x0D]
+
+
 EXPLICIT_MODELS = {'area17': {0x8243E0: (2, 0xD)},
-                   'area16': {0x8261A0: (2, 0x10), 0x828200: (1, area16_part_model)}}
-ORPHANS_UNPROVEN = {('area17', 0): {19: 0x156620, 20: 0x156620, 22: 0x156620}}
+                   'area16': {0x8261A0: (2, 0x10), 0x828200: (1, area16_part_model)},
+                   'area21': {0x827E70: (1, area21_827e70_model)}}
+# AREA21's drum [34] (0x156620, uid 19): live in g75 / g76, freed in the fight before g77's end (it
+# burst; g77 and g78 hold its moved hull with no owner).
+ORPHANS_UNPROVEN = {('area17', 0): {19: 0x156620, 20: 0x156620, 22: 0x156620},
+                    ('area21', 0): {19: 0x156620}}
 UNPROVEN_REPORT = {}
+
+# Overlay-data words a named owner rewrites (export_area13_tables.WRITERS: (lo, hi, behaviour)).
+# AREA21's [52] 0x8243B0 (func_overlay_AREA21_00824370.c, NEARMISS: the C is its words' reading,
+# test_area21_overlay_reference runs the original) stores (unsigned)(48 * c) to 0x82A890 / 0x82A920,
+# (unsigned)(8 * a) to 0x82A9B0 / 0x82AA40, (unsigned)(20 * b) to 0x82AAD0 / 0x82AB60 and
+# (unsigned)(10 * b) to 0x82ABF0 / 0x82AC80, each pair together, with (a, b, c) one of (1, 1, 1)
+# (D_008101E4 not 3 with no case), (0.5, 0.5, 0.5) (D_008101E4 not 3), (1, 0.5, 0.5) (D_0081024E 30)
+# or (1, 0.75, 0.75) (32): so each pair holds the module's 0 or one of its own products.
+A21_52_PAIRS = {0x82A890: (0x82A920, (48, 24, 36)), 0x82A9B0: (0x82AA40, (8, 4)),
+                0x82AAD0: (0x82AB60, (20, 10, 15)), 0x82ABF0: (0x82AC80, (10, 5, 7))}
+WRITERS = {'area21': tuple((a, a + 4, 0x8243B0) for lo, (hi, _v) in A21_52_PAIRS.items() for a in (lo, hi))}
+
+
+def _writer_problems_aware(original):
+    def problems(ram, lo, hi, disc, behaviour):
+        if behaviour != 0x8243B0:
+            return original(ram, lo, hi, disc, behaviour)
+        pair = next(((a, b, v) for a, (b, v) in A21_52_PAIRS.items() if lo in (a, b)), None)
+        got = bytes(ram[lo:hi])
+        if pair is None or hi != lo + 4:
+            return [f'{lo:#x}: not a [52] 0x8243B0 word']
+        if got == bytes(disc):
+            return []
+        a, b, values = pair
+        nodes = [n for _s, n in LV.E02.pool(ram) if C.u32(ram, n + 0x10) == 0x8243B0]
+        if C.u32(ram, a) != C.u32(ram, b) or C.u32(ram, lo) not in values or not nodes:
+            return [f'{lo:#x}: {got.hex()} is not a [52] 0x8243B0 product {values} written with its pair']
+        return []
+    problems.aware = True
+    return problems
 
 
 def _verify_directory_with_gap(original, key):
@@ -425,7 +535,9 @@ def install(target, sub, tree=None, need_captures=True):
     import export_area08_common as A08
     LV.E22.check_ctx_block = A08.check_ctx_block
     TB.SCRIPT_ENTRIES[target] = SCRIPT_ENTRIES[target]
-    TB.WRITERS[target] = ()
+    TB.WRITERS[target] = WRITERS.get(target, ())
+    if not getattr(TB.writer_problems, 'aware', False):
+        TB.writer_problems = _writer_problems_aware(TB.writer_problems)
     TB.DOOR_ROW[target] = DOOR_ROW[target]
     TB.DOOR_BEHAVIOURS = DOORS[target]
     TB.EXPLICIT_MODELS = dict(EXPLICIT_MODELS.get(target, {}))
@@ -447,5 +559,10 @@ def install(target, sub, tree=None, need_captures=True):
         LV.owner_matrix = lambda ram, node: at(ram, node) if C.u32(ram, node + 0x10) == owner else rule(ram, node)
     else:
         LV.owner_matrix = rule
+    extra = OWNER_MATRIX.get(target)
+    if extra:
+        base = LV.owner_matrix
+        LV.owner_matrix = lambda ram, node: (extra[C.u32(ram, node + 0x10)](ram, node)
+                                             if C.u32(ram, node + 0x10) in extra else base(ram, node))
     LV.L.owner_matrix = LV.owner_matrix
     return C

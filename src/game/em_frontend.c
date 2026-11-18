@@ -214,6 +214,11 @@ static const struct {
      * feed_end from the recording's one main-loop step of 747 vblanks, less
      * the 22 the fork's probes measured around E006S1's and E007's feed loop. */
     {"assets/movies/e46s4.mov", "E46S4.PSS", {300, 2, 725}},
+    /* 8: \MOVIE\E64S5.PSS (AREA20's hovercraft, script 0x8270B0 started by [32]'s 0x823BE0;
+     * the guided g75 row 1880): 689 pictures (tools/export_movie.py); feed_end from the take's
+     * movie.tbl, one main-loop step of 1553 vblanks (vsync 1880 -> 3433), less the same 22 as
+     * E46S4's; not a probe of its own. */
+    {"assets/movies/e64s5.mov", "E64S5.PSS", {689, 2, 1531}},
 };
 
 static void begin_movie(uint32_t serial, int new_game, unsigned selector)
