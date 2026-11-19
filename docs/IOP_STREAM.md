@@ -596,13 +596,22 @@ now recorded and replayed, not modelled.
   served at their counters (3 before), and the load passes 348 frames, the
   original's (154 without; 194 in the 400-counter window experiment).
 - **Recorded** (2026-11-19): g41 .. g80 (`--bank`, 40 takes, every replay exact;
-  no load runs across a take's end there: no `O` / `C` lines) and g01 .. g09
-  (`--loader --bank`, both halves in one replay each, every replay exact). **Left
-  (open):** g10 .. g40 (`record_drive_replay_guided.py --loader --bank g10_area13
-  .. g40_area14_booster`, about 2 minutes a take on a loaded machine), then the
-  chain from the title once (`watch_takes.py --check --root
-  ../Extermination/build/guided_play g01_title_newgame`: it must stay exact on
-  every segment; count the load segments that pass the original's frames). The card chains g16, g20, g11, `g17 --steer g45` and `g18 --steer g41`
+  no load runs across a take's end there: no `O` / `C` lines) and g01 .. g40, which
+  have no g27 (`--loader --bank`, both halves in one replay each; g10 .. g40 in one
+  batch of 30 takes, 3405 s, every replay exact, none `.diverged`). **Chain from the
+  title** (`watch_takes.py --check --root ../Extermination/build/guided_play
+  g01_title_newgame`, port loadrec, 2026-11-19): exact on all 1464 segments, 674,917
+  of 674,917 ticks compared (654,989 with the loader reads of g41 .. g80 alone; the
+  tick counts grow because the loads now pass the original's frames); all 271 load
+  segments exact; `bank replay: 201 recorded sound-bank loads; 0 takes without
+  them`; `stream drive: replay: 14992 of 15021 recorded reads served` (132 other
+  than the model, 1581 at a counter other than the recording's, 47 reads with no
+  recorded entry: counters 29437 and 40701 .. 44729).
+  watch_takes.py writes no trace, so it does not give each load's frame count; its
+  exact load segments are compared tick by tick with the takes' rows. Left open:
+  the 29 recorded reads not served and the 47 with no entry, and a per-load frame
+  count of the whole chain (`guided_chain.py` writes the trace the scratch
+  `loadlen.py` reads). The card chains g16, g20, g11, `g17 --steer g45` and `g18 --steer g41`
   then serve every recorded bank load (12, 5, 36, 40, 48) at its own counter with
   the recording's calls, keep their rows, and pass every load of 10 or more
   recorded frames in the original's frames but one (g80's row-19921 load, 13

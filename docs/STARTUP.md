@@ -853,6 +853,11 @@ row 656, off the row from row 6), and g17's start in its first take g45 at row 2
 (off the row from row 163, no load there) and stay in the other bank to g58: the
 card stretch, not a load.
 
+Chain from the title with all 79 takes' loader and bank recordings (g01 .. g40 recorded
+2026-11-19, lane PORT-LOAD-REC; g27 has no take): `watch_takes.py --check` is exact on
+all 1464 segments, 674,917 of 674,917 ticks compared (654,989 before), 201 sound-bank
+loads served, 14992 of 15021 recorded reads served (IOP_STREAM.md "Guided takes").
+
 ### EM_SKIP_STARTUP=1: the older debug fixture
 
 `em_game_install` (em_game.c): no frontend and no New Game. It reads the
