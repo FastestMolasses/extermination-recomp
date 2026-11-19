@@ -12,11 +12,15 @@
 #include "game/em_render_context_live.h"
 
 #define PRIMS_MAX 2048u          /* 31 strips of 62 triangles: 1922 */
+#define GRID_PRIMS_MAX 4096u     /* +0x1E8 (AREA21): 2786 or 2787 measured over g75 .. g77 */
 
 static struct {
     EmChainPage page;
     EmGfxGsPrim prims[PRIMS_MAX];
     EmGfxGsEnv env[PRIMS_MAX];
+    EmChainPage grid;
+    EmGfxGsPrim grid_prims[GRID_PRIMS_MAX];
+    EmGfxGsEnv grid_env[GRID_PRIMS_MAX];
     uint32_t fault;
     EmBackgroundLiveLog log;
 } S;
@@ -67,6 +71,39 @@ int em_background_live_draw(EmGfx *gfx)
             return fail(start, "a grid triangle drawn with Z writes on (ZBUF_1 ZMSK 0)");
     if (em_gfx_background_prims_env(gfx, S.prims, S.env, p->prim_count) < 0)
         return fail(start, "the renderer refused the grid triangles");
+    /* 001E0DF0's second CALL: +0x1E8, 001E1AD0's list (render flag 0x22:
+     * AREA21's sea; AREA21_PORT.md "Grid"), right after +0x1D8's. It is GIF
+     * DIRECT data only: 001E1760's strips into the 256 x 256 texture at FBP
+     * 0x12C (Z masked), the 32 x 32 screen grid sampling it (TBP 0x2580,
+     * blended, no Z: AFAIL RGB_ONLY) and 001E17E0's strips that write Z
+     * alone (TEST AFAIL ZB_ONLY, ZBUF ZMSK 0): the sea's depth, which step
+     * K's read-back meets (AREA21_PORT.md "Step K's Z read-back"). The walk
+     * records every primitive with the environment the list wrote before
+     * it, and the GS frame model draws them. Without the GS frame (the GPU
+     * renderer) the list is not drawn: the GPU background path draws only
+     * the asset grid of +0x1D8. */
+    const uint8_t *grid_head = em_rcl_bytes(EM_RCL_CONTEXT + 0x1E8u, 4);
+    if (!grid_head) return fail(0x001E0DF0u, "the render context has no +0x1E8 word");
+    const uint32_t grid_start = (uint32_t)grid_head[0] | (uint32_t)grid_head[1] << 8 |
+                                (uint32_t)grid_head[2] << 16 | (uint32_t)grid_head[3] << 24;
+    S.log.grid_start = S.log.grid_prims = 0;
+    if (grid_start && em_gfx_gs_world_enabled(gfx)) {
+        EmChainPage *q = &S.grid;
+        memset(q, 0, sizeof *q);
+        q->read = reader;
+        q->prims = S.grid_prims;
+        q->prim_env = S.grid_env;
+        q->prim_capacity = GRID_PRIMS_MAX;
+        if (em_chain_page_run_call(q, grid_start) < 0) {
+            S.page.fault = q->fault;   /* the fault's name and detail in the report */
+            S.page.fault_detail = q->fault_detail;
+            return fail(q->fault_address, "the +0x1E8 list walk (001E1AD0's) faulted");
+        }
+        if (em_gfx_background_prims_env(gfx, S.grid_prims, S.grid_env, q->prim_count) < 0)
+            return fail(grid_start, "the renderer refused the +0x1E8 list's primitives");
+        S.log.grid_start = grid_start;
+        S.log.grid_prims = q->prim_count;
+    }
     EmBackgroundLiveLog *l = &S.log;
     l->frame = em_frame_counter();
     l->serial = em_frame_serial();
