@@ -2954,6 +2954,35 @@ Game+ bonuses, two closing pictures and the card screen's clear save.
   continuously: from the title through segment 913 (watch_takes, "Watching
   Claude's run") and, as one chain from card g73, from AREA04 to the end.
 
+### AREA21's far light: the flare follows the drawn depth
+
+**Whether the sun's flare is drawn is decided by reading back the depth the GS drew, as the original does**
+
+In the final area a far light is projected each frame; at the main loop's
+step K (001D7410) the original reads an 8 x 8 block of the Z buffer at its
+point back from the GS, and the next frame builds the flare (001CEFD0) only
+if nothing was drawn there.
+
+- How: the read-back is translated from the decomp C and served from the
+  Original profile's GS frame model (the frame kicked last, drawn, its
+  local memory read as the GS transfers it). Under the headless raster
+  skip (no drawn frame) the port writes a covered point: no flare.
+- Evidence: `make test-far-light-readback-reference` compares every
+  transfer of chain g20 (AREA20 into AREA21 and the prep, g75 and g76)
+  with the original's, replayed on the PCSX2 fork's software renderer:
+  g75's 1,251 transfers equal (1,250 byte-exact, one Z off by one LSB; all
+  484 flares on the original's frames); g76: every point, and in the
+  original's field phase all 1,120 decisions and coverages equal (1,011
+  byte-exact; Z one LSB off in 102, up to 6 in 7: the GS model's open Z
+  items). The fork's Metal renderer reads back a different depth (335
+  flares over g76 where the exact GS has none): the reference is the
+  software renderer.
+- Status: VERIFIED for the decision on g75 and the in-phase part of g76;
+  PARTIAL beyond: after some of the chain's loads the port's frames run in
+  the other field (the port's loads are shorter), so a transfer reads the
+  other field's depth (g77: 143 of 3,523 decisions differ). Not a launcher
+  option; the picture of the flare itself is not compared with a capture.
+
 ### AREA19 from its start cards
 
 - What: AREA19 subs 0 and 1: the rooms, ledges, bars, ceiling and ladders, the

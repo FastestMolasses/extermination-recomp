@@ -641,6 +641,15 @@ int em_gfx_gs_display_store(EmGfx *g, uint32_t address, uint64_t value) {
     return g ? em_gs_display_store(&g->display, address, value) : -1;
 }
 void em_gfx_gs_display_release(EmGfx *g) { if (g) memset(&g->display, 0, sizeof g->display); }
+int em_gfx_gs_store_image(EmGfx *g, uint32_t sbp, uint32_t sbw, unsigned spsm, uint32_t ssax, uint32_t ssay,
+                          uint32_t rrw, uint32_t rrh, uint8_t *out, size_t cap)
+{
+    if (!g || !out) return -1;
+    if (!g->gswOn || !g->gsw || !g->gswRaster) return 1;
+    const int rc = em_gs_world_store_image(g->gsw, sbp, sbw, spsm, ssax, ssay, rrw, rrh, out, cap);
+    if (rc < 0) (void)gsw_check(g);
+    return rc;
+}
 int em_gfx_gs_surface_read(EmGfx *g, uint32_t fbp, uint32_t fbw, uint32_t height, uint8_t *rgba) {
     if (g && g->gswOn && !g->gswRaster) return gsw_fail(g, "a picture read under the headless raster skip");
     return g && g->gsw ? em_gs_world_read(g->gsw, fbp, fbw, 64u * fbw, height, rgba) : -1;

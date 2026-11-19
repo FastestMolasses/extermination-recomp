@@ -181,15 +181,6 @@ packet chain over R.pc).
   001CAAC0 / 001CCF70 / 001CD520 / 001F4A10; 001D0540, which loads a matrix
   row into vf23, also runs in those frames but never last). The binding
   starts each call from ctx +0xA0.
-- **Not modelled: 001D7410** (main-loop step K, NEARMISS
-  gs_readback_queue_drain): the original reads back an 8 x 8 PSMZ24 block of
-  the Z buffer at each queued point into the entry's +8. The port does not,
-  so the list keeps 001D7200's floats and zeros, 001D73A0 returns 0 and the
-  flare (001CEFD0) is built whenever its clip and fog tests pass. In the
-  original over g76 end and g77 end (1800 frames) 001CEFD0 never ran: the
-  read-back word was non-zero. This only changes packets (no game byte
-  reads them); exact behaviour needs the GS world's Z buffer at step K
-  (renderer work, decision for the orchestrator).
 - **Step K's count clear** (lane PORT-A11-RETURN, 2026-11-18): 001D7410
   ends with D_00275C08 = 0 every frame (decomp gs_readback_queue_drain);
   the port had no step K, so the count only grew: after 16 frames
@@ -202,10 +193,91 @@ packet chain over R.pc).
   and from then on the full queue returns -1, so 001D73A0 is never called
   again (no flare, unlike the documented model above). g20 is unchanged
   with the clear (g73 .. g80 as before).
-  em_frame now runs step K (em_rcl_001D7410: the read-back is not
-  modelled, the clear is). Evidence: the original's g75 .. g78 end RAM
-  holds D_00275C08 = 0 and a handle D_0027569C of 0 or -1 (never above
-  0), the read-back words of entry 0 non-zero from g76 on.
+  em_frame now runs step K (em_rcl_001D7410). Evidence: the original's
+  g75 .. g78 end RAM holds D_00275C08 = 0 and a handle D_0027569C of 0 or
+  -1 (never above 0).
+- **Step K's Z read-back** (lane PORT-FLARE-Z, 2026-11-19): translated in
+  em_rcl_001D7410 from the decomp C (gs_readback_queue_drain, NEARMISS:
+  register choice only; its callees float_to_int 001281C0, the SDK
+  StoreImage packet 00100D78 and gs_vram_readback 00100EB8, byte-matched).
+  - **What the original does.** The main loop calls 001D7410 at step K,
+    after the frame's logic and before the vsync wait (decomp
+    gs_readback_queue_run). For each of the D_00275C08 entries of the
+    current bank (ctx +0x9C) of D_008172C0: the entry's floats +0 / +4
+    through float_to_int give SSAX / SSAY; the packet asks for an 8 x 8
+    PSMZ24 local -> host transfer of the Z buffer (SBP = (D_00810F10 &
+    0x1FF) << 5, D_00810F00's ZBUF_1 ZBP: 0xE00; SBW = D_00810F02 & 0x3F,
+    its FRAME_1 FBW: 8); 00100EB8 reads 192 bytes (eight rows of eight
+    packed 24-bit Z) to entry + 8: eight quadwords by the VIF1 DMA, whose
+    address ignores its low four bits, and four by quadword stores, so all
+    192 land at (entry + 8) & ~0xF (entry 0: from +0, over its floats; the
+    capture shows it). D_00275C08 = 0 after. Next frame 001E1E60 calls
+    001D73A0, which returns the word at +8 of entry D_00275C08 of the other
+    bank (bytes 8..11 of the block: pixel 2's top byte and pixel 3's Z);
+    the flare 001CEFD0 is called when it is 0 (nothing drawn there).
+  - **Which frame's Z.** The list of iteration N is kicked at its step V,
+    after the vsync wait; step K of iteration N + 1 reads the Z the GS
+    drew for it. D_00810F00 is buffer 0's draw environment from 001AB370's
+    00101898(&D_00810EA0, 0, 0x200, 0xE0, 2, 0x31, 1) (the port builds the
+    same descriptor with em_gs_blocks_00101898 at the render context's
+    init; recorded bytes equal over g75 .. g78). In the original the bank,
+    D_00810E80 and the field D_00810E88 are one bit at step K, and each
+    bank's draw environment carries its own half-line XYOFFSET (slot 0 OFY
+    + 0, slot 1 + 8: 0x00814280 / 0x00814410), over g76's first 4100 ticks
+    (decomp tools/guided_take_probe.py, GUIDED_REPLAY_RENDERER=13, a table
+    at 001D7410 over those words, 0x00811D5C and D_00810E80..8F): the field
+    whose Z a transfer reads follows the bank.
+  - **The port.** em_gfx_gs_store_image (both backends; em_gs_world_store_image:
+    after waiting for the workers, the transfer from the GS model's local
+    memory, coordinates wrapping at 2048 as the GS addresses them, so a
+    point at x 511 reads the pages after the buffer's width) runs where the
+    original runs it (main.c rcl_step_k). The port's world list of frame N
+    is kicked at its step V and drawn by the workers; step K of N + 1 waits
+    for them (only when the queue is not empty: AREA21).
+  - **Fail-safe (the gap).** Under the headless raster skip
+    (EM_HEADLESS_RASTER unset in a headless run: the chains and tests) or
+    with no GS frame model drawing the world, local memory does not hold the
+    drawn Z: the 192 bytes are written as 0xFF (a covered point), so the
+    flare is not built. Only packets differ (no game byte reads the list
+    but 001D73A0), and a run that checks no picture draws none anyway.
+  - **The renderer of the reference.** The guided takes were played and
+    replay exactly under the fork's Metal renderer; a local -> host
+    transfer there reads the GPU's depth: past x 511 it reads 0 where the
+    GS reads the next pages, its Z values differ in the low bits and in the
+    half-line phase, and over g76 its words are 0 on 335 of 1548 transfers
+    (335 flares) where the software renderer (the exact GS) has none. The
+    reference is the software renderer's replay (record_far_light_readback.py
+    --renderer 13; the decomp's record_guided_run notes that a software
+    replay from g75 on differs from the take in EE RAM, "a buffer list's
+    order": this list, nothing shown). Software renderer: g75 1251
+    transfers, 484 flares; g76 1548, 0; g77 3523, 1458; g78 2347, 477
+    (Metal: g76 335, g77 2554, g78 988 flares). The earlier note that the
+    flare never ran over g76 end / g77 end was a statement about 1800
+    frames from those states, not the takes.
+  - **Evidence**: `make test-far-light-readback-reference`
+    (tools/test_far_light_readback_reference.py; the original's side
+    tools/record_far_light_readback.py, decomp
+    build/fork_refs/far_light_readback/): chain g20 with the raster through
+    g76 (EM_TEST_FULL=1 through g77), every transfer at the original's
+    tick. g75: 1251 of 1251 equal (point, source, status, the decision, the
+    coverage, 1250 blocks byte-exact and one a single Z LSB off, all 484
+    flare calls at their frames). g76: every point, source and status; in
+    the original's phase 1120 transfers, 1011 byte-exact, 102 with Z one
+    LSB off, 7 up to 6 off at a moving edge near x 512 (GS_EXACT.md "Not
+    exact": Z), every decision and coverage equal (no flare).
+  - **Open: the chain's field phase after a load.** The port's loads pass
+    a different number of frames (the script clock then realigns to the
+    recording, EM_START_AT_PHASES; --drive-replay did not change it), and
+    after a load with an odd difference the port's frames are in the other
+    bank, so a transfer reads the other field's Z (half a row's gradient
+    apart: the measured ±18 at g76 tick 3332's surface; ±13 at 6461). g76:
+    428 transfers (ticks 3267 .. 3644 and from 6450, after the loads at
+    ticks 2008 and 6373); g77: all 3523 (143 decisions differ, port 1597
+    flares to 1458). The test compares only their point and status and
+    pins the counts. Exact everywhere needs the chain's frames in the
+    original's bank after each load (a comparison-alignment item, not step
+    K; the GS field comparisons pair by tick and field for the same reason,
+    PCSX2_FORK_GS_DIFF.md).
 
 ## Grid (lane PORT-A21-GRID, 2026-11-18, branch `a21grid`)
 
@@ -949,7 +1021,8 @@ em_equipment_live) faults at address 0x7A6DE4. g80 not reached.
    seat); 001E1E60's flag-0x23 workers (Far light); 001E1AD0's flag-0x22
    path (Grid); 001AAC00, 001EB440 / 001EB250 (Use and the boss effects);
    0x824FE0, 0x824CF0, 001EB600 and cue 0xC (The boss fight).
-1b. 001D7410's Z read-back (Far light, "Not modelled").
+1b. (done) 001D7410's Z read-back (Far light, "Step K's Z read-back");
+    open there: the chain's field phase after a load.
 1c. The haze ring's vf23 (Haze ring, open item): the logic walk's last
     vf23 writer before each ring.
 2. Run the live owners of that recording through these oracles (as

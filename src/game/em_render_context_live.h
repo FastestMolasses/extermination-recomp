@@ -72,6 +72,7 @@
 #ifndef EM_RENDER_CONTEXT_LIVE_H
 #define EM_RENDER_CONTEXT_LIVE_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "game/em_chain_page.h"
@@ -287,12 +288,21 @@ int em_rcl_001D2300(void);
 /* Main-loop step W: 001D2580(field), context +0x98 = the field bit. */
 int em_rcl_001D2580(int32_t a0);
 /* Main-loop step K: 001D7410, the GS read-back queue's drain. For each of
- * the D_00275C08 entries of bank ctx+0x9C of D_008172C0 the original reads
- * an 8 x 8 PSMZ24 block of the Z buffer at the entry's point back into the
- * entry's +8; then D_00275C08 = 0. The read-back is not modelled (the GS Z
- * buffer is not readable at step K: docs/AREA21_PORT.md "Far light"); the
- * entries keep their bytes. The count's clear is. 0, or -1. */
-int em_rcl_001D7410(void);
+ * the D_00275C08 entries of bank ctx+0x9C of D_008172C0: the entry's point
+ * (its floats +0 / +4 through float_to_int), an 8 x 8 PSMZ24 local -> host
+ * transfer of the Z buffer (D_00810F00's ZBUF_1 ZBP and FRAME_1 FBW) at
+ * that point through `store` (the GS frame model after the frames kicked so
+ * far are drawn: em_gfx_gs_store_image), its 192 bytes written at
+ * (entry + 8) & ~0xF; then D_00275C08 = 0. 001D73A0 reads the word at +8
+ * next frame (0: the flare is built). `store` returning 1 (no drawn frame:
+ * the headless raster skip) or NULL: the fail-safe bytes 0xFF (a covered
+ * point; docs/AREA21_PORT.md "Far light"). 0, or -1. */
+typedef int (*EmRclStoreImage)(void *ctx, uint32_t sbp, uint32_t sbw, unsigned spsm, uint32_t ssax, uint32_t ssay,
+                               uint32_t rrw, uint32_t rrh, uint8_t *out, size_t cap);
+int em_rcl_001D7410(EmRclStoreImage store, void *store_ctx);
+/* The number of 001CEFD0 calls (the far light's flare) so far: comparison
+ * only (EM_READBACK_TRACE). */
+uint32_t em_rcl_far_flare_calls(void);
 /* The condition under which 001D2300 calls 001E0DF0 (D_008106C4 == 0,
  * render flag 4 clear, flag 0x20 set), by the translation's own code: the
  * renderer's channel-3 gate reads it. *calls = 1 / 0. 0, or -1. */

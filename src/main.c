@@ -311,10 +311,37 @@ static int rcl_step_b(void *context, int32_t index)
  * Its kick is the renderer boundary: in a frame the load veil drew
  * (0021B1B0), the kicked list is the whole frame and the GS frame stage
  * draws it (em_load_veil_live, docs/LOAD_VEIL_PARTICLES.md section 3). */
+/* Main-loop step K: 001D7410's Z read-back is a local -> host transfer of
+ * the Original profile's GS frame (em_gfx_gs_store_image). EM_READBACK_TRACE=
+ * <file> (comparison only, tools/test_far_light_readback_reference.py): one
+ * line per transfer: the pad script's frame (EM_START_AT, else -1), the
+ * 001CEFD0 calls so far, the bank ctx +0x9C (the frame's buffer), SBP, SBW, SSAX, SSAY, the status (0 read, 1 no
+ * drawn frame) and the bytes in hex (0xFF each when not read). */
+static int rcl_store_image(void *context, uint32_t sbp, uint32_t sbw, unsigned spsm, uint32_t ssax, uint32_t ssay,
+                           uint32_t rrw, uint32_t rrh, uint8_t *out, size_t cap)
+{
+    const int rc = em_gfx_gs_store_image((EmGfx *)context, sbp, sbw, spsm, ssax, ssay, rrw, rrh, out, cap);
+    static FILE *trace;
+    static int opened;
+    if (!opened) {
+        const char *path = getenv("EM_READBACK_TRACE");
+        opened = 1;
+        trace = path && path[0] ? fopen(path, "w") : NULL;
+    }
+    if (trace && rc >= 0) {
+        const uint8_t *bank = em_rcl_bytes(EM_RCL_CONTEXT + 0x9Cu, 4);
+        fprintf(trace, "%d %u %u %u %u %u %u %d ", em_start_at_pad_clock(), em_rcl_far_flare_calls(),
+                bank ? (unsigned)bank[0] : 9u, sbp, sbw, ssax, ssay, rc);
+        const size_t n = (size_t)rrw * rrh * (spsm == 0x31u || spsm == 0x01u ? 3u : 4u);
+        for (size_t i = 0; i < n && i < cap; ++i) fprintf(trace, "%02x", rc == 0 ? out[i] : 0xFFu);
+        fputc('\n', trace);
+        fflush(trace);
+    }
+    return rc;
+}
 static int rcl_step_k(void *context)
 {
-    (void)context;
-    return em_rcl_001D7410();
+    return em_rcl_001D7410(rcl_store_image, context);
 }
 static int rcl_step_v(void *context)
 {
@@ -535,7 +562,7 @@ int main(void)
     em_frame_set_step_i(em_pad_actuator_step_i, NULL);
     /* Main-loop step K: 001D7410, the GS read-back queue's drain (its count
      * D_00275C08 cleared every frame; AREA21's far light queues into it). */
-    em_frame_set_step_k(rcl_step_k, NULL);
+    em_frame_set_step_k(rcl_step_k, gfx);
     /* No seed here: the original main never seeds the SDK RNG; its state
      * starts at the ELF's initialized value 1 (em_random.c). */
     const char *skip_startup = getenv("EM_SKIP_STARTUP");

@@ -85,6 +85,12 @@ int em_gfx_gs_gif_frame(EmGfx *gfx, const void *gif, size_t bytes, uint64_t disp
     (void)gfx; (void)gif; (void)bytes; (void)display_frame; (void)display_scissor;
     return -1;
 }
+int em_gfx_gs_store_image(EmGfx *gfx, uint32_t sbp, uint32_t sbw, unsigned spsm, uint32_t ssax, uint32_t ssay,
+                          uint32_t rrw, uint32_t rrh, uint8_t *out, size_t cap)
+{
+    (void)gfx; (void)sbp; (void)sbw; (void)spsm; (void)ssax; (void)ssay; (void)rrw; (void)rrh; (void)out; (void)cap;
+    return 1;   /* no GS frame model here */
+}
 int em_gfx_gs_surface_read(EmGfx *gfx, uint32_t fbp, uint32_t fbw, uint32_t height, uint8_t *rgba)
 { (void)gfx; (void)fbp; (void)fbw; (void)height; (void)rgba; return -1; }
 

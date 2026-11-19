@@ -2757,6 +2757,31 @@ int em_gs_world_read(EmGsWorld *w, uint32_t fbp, uint32_t fbw, uint32_t width, u
     return 0;
 }
 
+int em_gs_world_store_image(EmGsWorld *w, uint32_t sbp, uint32_t sbw, unsigned spsm, uint32_t ssax, uint32_t ssay,
+                            uint32_t rrw, uint32_t rrh, uint8_t *out, size_t cap)
+{
+    unsigned bytes;
+    switch (spsm) {
+    case EM_GS_PSMCT32: case EM_GS_PSMZ32: bytes = 4; break;
+    case EM_GS_PSMCT24: case EM_GS_PSMZ24: bytes = 3; break;
+    default: return -1;
+    }
+    if (!w || !out || (size_t)rrw * rrh * bytes > cap) return -1;
+    if (em_gs_world_wait(w) < 0) return -1;
+    if (w->no_raster) return 1;
+    const EmGs *gs = &w->worker[0].gs;
+    size_t at = 0;
+    for (uint32_t y = 0; y < rrh; ++y)
+        for (uint32_t x = 0; x < rrw; ++x) {
+            /* The transfer's coordinates wrap at 2048 as the GS's do; a
+             * point past the buffer's width addresses the pages after it
+             * (em_gs_addr32). */
+            const uint32_t v = em_gs_read_pixel(gs, sbp, sbw, spsm, (ssax + x) & 2047u, (ssay + y) & 2047u);
+            for (unsigned b = 0; b < bytes; ++b) out[at++] = (uint8_t)(v >> (8u * b));
+        }
+    return 0;
+}
+
 const uint8_t *em_gs_world_memory(EmGsWorld *w)
 {
     if (!w || em_gs_world_wait(w) < 0) return NULL;

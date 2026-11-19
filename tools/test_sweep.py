@@ -49,7 +49,7 @@ SKIP = {
 }
 # Oracles whose quick run legitimately exceeds the default cap (name -> seconds).
 # Measured under load 25+ (quick mode, solo CPU time is about a third of these).
-TIMEOUTS = {'area11_sfx': 900, 'area21_groups': 300, 'area01_revisit_runtime': 240, 'area00_delivery': 240}
+TIMEOUTS = {'area11_sfx': 900, 'area21_groups': 300, 'far_light_readback': 900, 'area01_revisit_runtime': 240, 'area00_delivery': 240}
 SEVERITY = {'PASS': 0, 'SKIP': 0, 'FAIL': 1, 'TIMEOUT': 2, 'BUILD': 3}
 
 BUILD_RE = re.compile(r"Undefined symbols|ld: |linker command failed|error: |"

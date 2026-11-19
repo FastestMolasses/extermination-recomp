@@ -4223,6 +4223,16 @@ int em_gfx_gs_frame(EmGfx *g, const EmGfxGsPrim *prims, const EmGfxGsEnv *envs, 
     return 0;
 }
 
+static int gsw_check(EmGfx *g);
+int em_gfx_gs_store_image(EmGfx *g, uint32_t sbp, uint32_t sbw, unsigned spsm, uint32_t ssax, uint32_t ssay,
+                          uint32_t rrw, uint32_t rrh, uint8_t *out, size_t cap)
+{
+    if (!g || !out) return -1;
+    if (!g->gswOn || !g->gsw || !g->gswRaster) return 1;
+    const int rc = em_gs_world_store_image(g->gsw, sbp, sbw, spsm, ssax, ssay, rrw, rrh, out, cap);
+    if (rc < 0) (void)gsw_check(g);
+    return rc;
+}
 int em_gfx_gs_surface_read(EmGfx *g, uint32_t fbp, uint32_t fbw, uint32_t height, uint8_t *rgba)
 {
     if (!g || !rgba) return -1;

@@ -1090,6 +1090,10 @@ test-static-world-reference:
 test-far-light-reference:
 	python3 tools/test_far_light_reference.py
 
+.PHONY: test-far-light-readback-reference
+test-far-light-readback-reference: all
+	python3 tools/test_far_light_readback_reference.py
+
 .PHONY: test-grid-water-reference
 test-grid-water-reference:
 	python3 tools/test_grid_water_reference.py

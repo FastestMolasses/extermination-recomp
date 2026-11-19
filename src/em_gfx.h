@@ -926,6 +926,14 @@ typedef struct {
 int em_gfx_gs_frame(EmGfx *gfx, const EmGfxGsPrim *prims, const EmGfxGsEnv *envs, uint32_t count,
                     uint64_t display_frame, uint64_t display_scissor);
 
+/* The main loop's GS local -> host transfer (step K, 001D7410's Z read-back,
+ * em_gs_world_store_image): rrw x rrh pixels of (sbp, sbw, spsm) at (ssax,
+ * ssay) as the GS sends them, from the Original profile's GS frame after the
+ * frames kicked so far are drawn. 0; 1 when no GS frame model draws the
+ * world (it is off, or the headless raster skip: nothing written); -1. */
+int em_gfx_gs_store_image(EmGfx *gfx, uint32_t sbp, uint32_t sbw, unsigned spsm, uint32_t ssax, uint32_t ssay,
+                          uint32_t rrw, uint32_t rrh, uint8_t *out, size_t cap);
+
 /* Test hook: after em_gfx_end_frame, copy `height` rows of the surface
  * (fbp, fbw) as RGBA8 (the GS bytes R, G, B, A), width fbw * 64. 0, or -1
  * (no such surface, or it is shorter). */
