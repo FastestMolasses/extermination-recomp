@@ -15,6 +15,7 @@
 #include "game/em_effect_original.h"
 #include "game/em_effects_live.h"
 #include "game/em_frame.h"
+#include "game/em_owner_draw_live.h"
 #include "game/em_packet_chain_original.h"
 #include "game/em_player.h"
 #include "game/em_pose_host_workers.h"
@@ -41,10 +42,13 @@ typedef uint32_t u32;
 enum { CMD_ALPHA, CMD_BOX, CMD_SIL, CMD_BEGIN, CMD_RECV, CMD_END };
 
 /* One 001DA6A0 call's recorded draw workers: the walk's (an actor's
- * 001BA580, drawn after the walk's owner units) or the post-step's (the
- * player's 0015C160, drawn before its +0x4C). */
+ * 001BA580, drawn at its place among the walk's owner units: after the
+ * `unit_at` units built before the call) or the post-step's (the player's
+ * 0015C160, drawn before its +0x4C). */
 typedef struct {
     int walk;
+    int drawn;                             /* flushed this frame */
+    uint32_t unit_at;                      /* em_owner_draw_live_count() at the call */
     uint32_t record;
     struct { int op, index; } cmd[CMD_MAX];
     uint32_t cmd_count;
@@ -296,6 +300,8 @@ static int begin_pass(int walk, uint32_t record)
     if (S.pass_count >= PASSES) return fail(0x001DA6A0u, "more 001DA6A0 calls in one frame than PASSES");
     Pass *p = &S.pass[S.pass_count++];
     p->walk = walk;
+    p->drawn = 0;
+    p->unit_at = em_owner_draw_live_count();
     p->record = record;
     p->cmd_count = p->box_count = p->recv_count = 0;
     p->sil_kind = 0;
@@ -850,13 +856,15 @@ static int flush_pass(EmGfx *gfx, const float viewproj[16], Pass *p)
 
 /* This frame's recorded calls of one kind (walk: the actors' 001BA580
  * calls; else the post-step's), in call order. */
-static int flush_calls(EmGfx *gfx, const float viewproj[16], int walk)
+static int flush_calls(EmGfx *gfx, const float viewproj[16], int walk, uint32_t units)
 {
     if (S.fault) return -1;
     if (!S.bound || S.pass_frame != em_frame_counter()) return 0;
     for (u32 k = 0; k < S.pass_count; ++k) {
         Pass *p = &S.pass[k];
-        if (p->walk != walk || !p->cmd_count) continue;
+        if (p->walk != walk || !p->cmd_count || p->drawn) continue;
+        if (walk && p->unit_at > units) break;     /* a later call: after more of the walk's units */
+        p->drawn = 1;
         if (!gfx || !viewproj) return fail(0x001DA6A0u, "no frame to draw the shadow in");
         if (flush_pass(gfx, viewproj, p) < 0) return -1;
         if (walk) {
@@ -872,14 +880,31 @@ static int flush_calls(EmGfx *gfx, const float viewproj[16], int walk)
 
 int em_shadow_live_flush_walk(EmGfx *gfx, const float viewproj[16])
 {
-    return flush_calls(gfx, viewproj, 1);
+    return flush_calls(gfx, viewproj, 1, UINT32_MAX);
+}
+
+int em_shadow_live_flush_walk_until(EmGfx *gfx, const float viewproj[16], uint32_t units)
+{
+    return flush_calls(gfx, viewproj, 1, units);
+}
+
+int em_shadow_live_walk_next(uint32_t *unit_at)
+{
+    if (S.fault || !S.bound || S.pass_frame != em_frame_counter()) return 0;
+    for (u32 k = 0; k < S.pass_count; ++k) {
+        const Pass *p = &S.pass[k];
+        if (!p->walk || !p->cmd_count || p->drawn) continue;
+        if (unit_at) *unit_at = p->unit_at;
+        return 1;
+    }
+    return 0;
 }
 
 int em_shadow_live_flush(EmGfx *gfx, const float viewproj[16])
 {
     if (S.fault) return -1;
     if (!S.bound || S.frame != em_frame_counter() || S.route != EM_SHADOW_ROUTE_001DA6A0) return 0;
-    return flush_calls(gfx, viewproj, 0);
+    return flush_calls(gfx, viewproj, 0, UINT32_MAX);
 }
 
 static int page_drew(uint32_t decal_triangles, int check)

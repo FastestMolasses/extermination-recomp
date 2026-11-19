@@ -714,8 +714,13 @@ triangles, 21 nodes).
   views and the one D_00817FF0, which the calls share in call order as the
   original's BSS). em_shadow_live keeps every 001DA6A0 call of the frame
   (the walk's and the post-step's) with its recorded passes;
-  `em_shadow_live_flush_walk` draws the walk's after the walk's owner units,
-  `em_shadow_live_flush` the player's before its +0x4C. The reported
+  the walk's are drawn at their call's place among the walk's owner units
+  (each call keeps the unit count at the call; em_render_frame interleaves
+  `em_owner_draw_live_flush_walk_to` and `em_shadow_live_flush_walk_until`,
+  lane PORT-GS-PICS2: the original's channel 0 holds an actor's passes
+  between the units built before and after it, and the first pass's alpha
+  strip must not clear the later units' alpha, DRAW_LIST_AUDIT.md section 4
+  (g)), `em_shadow_live_flush` the player's before its +0x4C. The reported
   no-effect binding UM_001DA6A0 is gone.
 - **Assets.** `../Extermination/tools/export_shadow_proxy.py --kind 0x29
   --player-emdl ../extermination-port/assets/player.emdl --out

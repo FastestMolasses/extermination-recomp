@@ -77,6 +77,17 @@ says what stopped the exploration (six 0013D2D0 creatures, two rounds held).
   own.
 - `em_area01_runtime`: em_area06_port's boot routines for any area.
 
+## Picture
+
+Lane PORT-GS-PICS2 (2026-11-19; DRAW_LIST_AUDIT.md section 4): the Original
+profile's exact GS field of sub 0 against the original's software-renderer
+captures, from the title in one chain (`watch_takes.py --check --root
+../Extermination/build/guided_play g01_title_newgame --gs-dump
+g12_area19_area15:17500,...`): g12 rows 17500 / 20000 and g13 rows 300 /
+2600 / 3600 are 114,688 / 114,682 / 114,681 / 114,675 / 114,677 of 114,688
+RGB (and RGBA) exact, the largest difference 4. Nothing differs beyond the
+GS model's one-LSB residue.
+
 ## Open items
 
 - **The class-6 draw of AREA15 sub 1's [3]** (0x826850's +0xD 0xD method,

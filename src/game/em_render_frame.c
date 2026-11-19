@@ -825,11 +825,26 @@ void frame_close_out(void)
          * clip pass (em_gfx_object_unit). The frame's fog is set above; the
          * units carry their own lighting (001D89D0). */
         em_gfx_char_rig(gfx, NULL);
+        /* The walk's 001DA6A0 calls (Roger's 001BA580, an NPC's, recorded
+         * by em_shadow_live during the actor's call) are drawn where the
+         * original's channel 0 holds them: after the units built before
+         * the call, before the later ones. The shadow's first pass clears
+         * the field's alpha (its strip writes A only), so a unit drawn after
+         * it keeps its own alpha (g73 row 3500, DRAW_LIST_AUDIT.md
+         * section 4; docs/SHADOW_ORIGINAL.md "Roger"). */
+        uint32_t shadow_at;
+        while (em_shadow_live_walk_next(&shadow_at) > 0) {
+            if (em_owner_draw_live_flush_walk_to(gfx, shadow_at) < 0) {   /* reported; fail-stop */
+                em_scene_fault(em_scene_state(), 0x001CAA00u, EM_SCENE_FAULT_WORKER_FAILED);
+                break;
+            }
+            if (em_shadow_live_flush_walk_until(gfx, viewproj, shadow_at) < 0) {   /* reported; fail-stop */
+                em_scene_fault(em_scene_state(), em_shadow_live_fault(), EM_SCENE_FAULT_WORKER_FAILED);
+                break;
+            }
+        }
         if (em_owner_draw_live_flush_walk(gfx) < 0)   /* reported; fail-stop */
             em_scene_fault(em_scene_state(), 0x001CAA00u, EM_SCENE_FAULT_WORKER_FAILED);
-        /* The walk's 001DA6A0 calls (Roger's 001BA580, recorded by
-         * em_shadow_live during his owner call): their passes, after the
-         * walk's units (docs/SHADOW_ORIGINAL.md "Roger"). */
         if (em_shadow_live_flush_walk(gfx, viewproj) < 0)   /* reported; fail-stop */
             em_scene_fault(em_scene_state(), em_shadow_live_fault(), EM_SCENE_FAULT_WORKER_FAILED);
         /* 0015C160, the player post-step (001AE5E0 at 0x1AE654, 001AE6B0 at

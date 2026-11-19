@@ -109,10 +109,17 @@ int em_shadow_live_actor_001DA6A0(uint32_t record, const uint8_t *bytes, uint32_
 /* The frame's 001DA6A0 passes (alpha clear, the two boxes, the
  * silhouette, the receivers), recorded this frame, on `gfx` with the
  * frame's native P*V `viewproj` (the level's): em_shadow_live_flush_walk
- * the owner walk's calls (after the walk's owner units), em_shadow_live_flush
+ * the owner walk's calls not drawn yet, em_shadow_live_flush
  * the post-step's (before the player's +0x4C). Nothing recorded this frame:
  * 0. 0, or -1 (latched). */
 int em_shadow_live_flush_walk(EmGfx *gfx, const float viewproj[16]);
+/* The walk's calls interleaved with its units, in the original's channel-0
+ * order: em_shadow_live_walk_next gives the owner-unit count at the next
+ * undrawn walk call (1, or 0 when none is left), and
+ * em_shadow_live_flush_walk_until draws the undrawn walk calls made after
+ * at most `units` units, in call order. */
+int em_shadow_live_walk_next(uint32_t *unit_at);
+int em_shadow_live_flush_walk_until(EmGfx *gfx, const float viewproj[16], uint32_t units);
 int em_shadow_live_flush(EmGfx *gfx, const float viewproj[16]);
 /* 001F9100(owner, point, normal, f12) from another owner (AREA01's class-2
  * owners through 001B5360, em_area00_low): em_shadow_actor_route's

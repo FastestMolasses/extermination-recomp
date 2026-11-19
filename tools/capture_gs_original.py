@@ -89,6 +89,9 @@ def main(argv):
     ap.add_argument('--out', type=Path, default=None)
     ap.add_argument('--renderer', type=int, default=13, help='13 = software (the only reference)')
     ap.add_argument('--ram', action='store_true', help='also keep the EE RAM at loop top R + 1 (s1.ee, 32 MiB)')
+    ap.add_argument('--gs-dump', action='store_true', help='also record the GS stream from loop top R + 1 on for '
+                    'three fields (the fork\'s gs_dump, upstream GS dump format: every GIF transfer of the field '
+                    'drawn in R + 1 -> R + 2; r<R>/s1.gs.zst, tools/gs_dump_prims.py reads it)')
     a = ap.parse_args(argv)
     import pcsx2_session as session
     import record_guided_run as rgr
@@ -149,6 +152,8 @@ def main(argv):
                 field = c.call('gs_field', path=f'gsp_{R}_{k}.png', timeout=120)
                 os.replace(s._inst.root / rel, d / f's{k}.vram')
                 os.replace(s._inst.root / f'gsp_{R}_{k}.png', d / f's{k}.png')
+                if a.gs_dump and k == 1:
+                    c.call('gs_dump', path=f'gsp_{R}', frames=3, timeout=120)
                 if a.ram and k == 1:
                     c.call('mem_read', space='ee', addr=0, len=0x2000000, timeout=120, **{'as': 'file', 'path': f'gsp_{R}.ee'})
                     os.replace(s._inst.root / f'gsp_{R}.ee', d / 's1.ee')
@@ -158,6 +163,8 @@ def main(argv):
                             pos=pos, rec_pos=rec_pos, on_take=ok, area=list(area), e80=e80, e88=e88,
                             regs=field.get('regs'), renderer=field.get('renderer'), psm=field.get('psm'))
                 (d / f's{k}.json').write_text(json.dumps(info, indent=1) + '\n')
+                if a.gs_dump and k == max(STOPS) and (s._inst.root / f'gsp_{R}.gs.zst').exists():
+                    os.replace(s._inst.root / f'gsp_{R}.gs.zst', d / 's1.gs.zst')
                 run['stops'].append(dict(row=R + k, on_take=ok, counter=counter))
                 print(f'{take} row {R} + {k}: counter {counter} ({"on the take" if ok else "OFF the take"}), '
                       f'pos {pos[0]:.3f} {pos[1]:.3f} {pos[2]:.3f}, area {area.hex()}, e80 {e80}', flush=True)

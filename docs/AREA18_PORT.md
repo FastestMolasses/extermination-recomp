@@ -92,6 +92,9 @@ the exact GS field of g42 rows 300 .. 5600 against the original's
 (`guided_chain.py g18 --steer g41 --until g42 --gs-dump ...`, which sets
 EM_START_AT_FIELD: from card g41 the port's field bit is on the other half
 line until it flips). Rows 2600, 3000 and 5600 are exact within 2 (99.90 to
-99.99 %). Open: rows 300, 1500 and 2400 draw the player's hair with other
-texels (teal), exact from 2600 on, after the bomb pickup's scene; a state
-the card start leaves is the first candidate.
+99.99 %). Rows 300, 1500 and 2400 drew the player's hair with the
+costume-2 texels (teal) until the bomb pickup's rebind: the area load's
+001B07C0 (frame state 0) sets the costume D_00810C60 to 0 for AREA18 and its
+0015C1F0 sends the player's texture packet again, which the port skipped
+(not a card-start artefact). Fixed by lane PORT-GS-PICS2: 114,643 / 114,653
+/ 114,550 RGB exact (DRAW_LIST_AUDIT.md section 4 (f)).
