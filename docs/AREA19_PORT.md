@@ -343,12 +343,12 @@ segments 0 .. 978 exact but segment 454's last tick and segment 940's tail: 403,
 g35, g36 into AREA14, g37 .. g40. **Segment 940** (g36's AREA14 arrival cutscene, area 14 sub 0):
 from offset 1198 (original counter 389,928) the player's settle (y 390.76 -> 390.01) lands one tick
 early in the port; position equal otherwise, the segment's end and segments 941 .. 978 exact (a
-one-tick timing difference inside a cutscene, not traced). **Next divergence**: segment 979
+one-tick timing difference inside a cutscene; traced below to the arrival stream's start latency). **Next divergence**: segment 979
 (g41 `area14_area18`, beat `_g41_plane`, take tick ~1231, original counter 418,444) leaves at
 offset 436: running east at (677.3, 687.6, 978.9) the port's player is pushed +0.78 in z and slowed
 in x on one tick (the original keeps a straight line); worst 229.6 later, and the run overruns the
-recording at step 430,291. It is the round of the eggs north to the plane: a collision push the
-original does not make (an actor's collider, most likely; not traced). The card chain does not
+recording at step 430,291. It is the round of the eggs north to the plane: the player is deflected
+away from a beast that the original does not have there. Traced below. The card chain does not
 isolate it: `guided_chain.py g18 --steer g41 --until g41` (card g41) already differs in rand() at
 row 2 and leaves at row 15. Next step: tabulate the original's pool records near the player over
 g41 ticks 1200 .. 1240 (`tools/guided_take_probe.py g41_area14_area18 ...`) against the port's.
@@ -362,3 +362,37 @@ already run with EM_PS2_DISC_DRIVE_TIMING=1, and the drive model serves one seek
 distance class, while the original's per-read busy polls vary (IOP_STREAM.md "Drive replay").
 Exact timing needs a drive replay of the guided takes (tools/record_drive_replay.py's sampling of
 001FA0D0 on each take's fork replay, then EM_PS2_DRIVE_REPLAY in watch_takes); not done.
+
+**Segment 940 and the g41 push, traced: both are the AREA14 arrival stream's start (lane
+PORT-A14-PLANE, 2026-11-18).** No port logic differs; nothing was changed.
+- **Segment 940.** Hidden fork replays of g36 (tables of the player record, the arrival owner
+  0x7AAB70's script block, the scratchpad bytes 3B84..3B92 and D_008106F4; memwatch on the player's
+  +0xA0; log probes on 00182F90, 001B9A00, 001FAE70) against a port trace of the same words. The
+  arrival script 0x826800 starts with op07 sub 0xC (001B82D0): phase 0 starts the message stream
+  (001FD4C0, D_008106F4 = 2), phase 3 waits for D_008106F4 == 1, then sets 0x70003B92 = 1, which
+  starts 001AE6B0's count 0x70003B84. The original's stream answers 26 ticks after the request
+  (D_008106F4 1 at segment offset 26, 3B84 = 1 at offset 28). The port's answers one tick sooner:
+  3B84 = 1 at offset 27. Every later step keys on 3B84 and matches it in both runs: the player clip's
+  end (+0x200 bit 0x1000 at 3B84 = 1170), op0A sub 3 at record 0x826980, op0A sub 5 at 0x8269C0
+  (00182F90, the settle, at 3B84 = 1172) and op09 0x8238C0's music start 001FAE70 one tick later.
+  So the settle lands one row early because the cutscene started one tick early. This is the stream
+  drive's start latency, the same class as segment 454: disc timing, not the port's logic.
+- **The g41 push.** The port's cutscene is one tick shorter, so when AREA14's play starts (segment
+  941) every owner with its own timer is one tick behind the recording. From counter 390,117 the
+  frames' rand() draw counts differ: the player-following effect 001E7050 (node 0x7A5640, RA 0x1E72A8) draws 0..3
+  times a frame, and the port's count on each row is the original's count one row earlier. With
+  rand() reseeded per row this changes only the draws within a frame, but the beast 0x7A99D0
+  (00141D20, chasing: +5 = 2, 001429D0) takes its turn timer and turn rate from rand(). It leaves the
+  original's path at counter 390,155 (g36, 0.08 off, growing). In g41 it lies dormant (+0 = 3,
+  +5 = 5) at (685.81, 689.95, 968.04), where the original's lies at (650.16, 688.6, 955.03). That is
+  13.8 from the player's line at take tick 1231 (counter 418,444). The port's player is deflected
+  directly away from it for three ticks (distance 13.8 to 15.0), then again at the next frame. The
+  original's beast is 36 units away and the player runs straight. Every other record near the line
+  (the crates 0x1551B0, the pickup 0x219550, the effects) is the same in both runs. Which routine
+  deflects the player from the beast was not traced, because the original never reaches that state.
+- **Next step.** Fix the stream's start latency, not the logic: a drive replay of the guided takes
+  (tools/record_drive_replay.py on g36's fork replay; EM_PS2_DRIVE_REPLAY in watch_takes; IOP_STREAM.md
+  "Drive replay"). That fixes segment 454 and segment 940, and with them g41. Until then the chain
+  from the title stays as above: segments 0 .. 978 exact but segment 454's last tick and segment
+  940's settle tick, 403,653 ticks compared, 402,719 on the recording, and the run overruns at step
+  430,291.

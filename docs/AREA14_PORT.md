@@ -257,3 +257,20 @@ entry-3 load from AREA17 (g48 row 19587), which chain g17 passes: "render
 context: static world fault in module 2 at 450A20DC (code 4)" (an address
 that is a float's bits) on the first AREA11 frame after AREA18 and
 AREA14 were each loaded twice. Not investigated: the next blocker.
+
+## The title chain in AREA14 (lane PORT-A14-PLANE, 2026-11-18)
+
+Two gaps in the guided chain from the title (`watch_takes.py --check --root
+../Extermination/build/guided_play g01_title_newgame`) were traced, and neither is the
+port's logic (AREA19_PORT.md, "Segment 940 and the g41 push"):
+- In g36's arrival cutscene the script 0x826800 waits in op07 sub 0xC (001B82D0) phase 3
+  for the message stream to start (D_008106F4 == 1). The original waits 26 ticks, the
+  port 25. Everything keyed on 0x70003B84 afterwards matches, so the settle (op0A sub 5)
+  lands one row early (segment 940).
+- That one-tick-shorter cutscene leaves AREA14's owners one tick behind the recording
+  when play starts. From counter 390,117 the frames' rand() draw counts differ
+  (001E7050). The beast 0x7A99D0 (00141D20) draws its chase turns and leaves the
+  original's path at 390,155. In g41 it lies dormant 14 units from the run north to the
+  plane, and the player is deflected away from it (segment 979, offset 436).
+- What is left: the stream drive's start latency. A drive replay of the guided takes
+  would close it (IOP_STREAM.md "Drive replay").
