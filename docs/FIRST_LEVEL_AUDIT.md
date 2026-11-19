@@ -2049,8 +2049,13 @@ pool's free list (item 5): those are port work that needs no new recording
      since 2026-11-18 (lane PORT-SLOT1-2D) the rest of a world frame's
      slot-1 segment is drawn into the field after the world and the page
      (GS_EXACT.md section 9 "Slot 1"; the sights, the Gatling's gauge
-     bars); the glyph runs are left out of it while the bars and the fade
-     stay GPU overlays, which is the next step;
+     bars); since lane PORT-SLOT1-B (2026-11-18) the glyph runs, the area
+     title, the letterbox bars and the fade too (their REFs from
+     em_fade_packets.c, oracle `make test-fade-packets-reference`), and the
+     overlay pass no longer draws them over such a field (PORT-SLOT1-C: the
+     fb2 points 10 / 14 / 15 keep their pixel counts and their stored alpha
+     equals the original's GS memory at every pixel; the load veil's list
+     frames draw the bars' context-2 sprites through the GS model);
    - the status screen's frames (the hub and its pages, the MAP page's
      models on the renderer's skinned path) draw with the GPU renderer;
      since 2026-10-20 (side lane "status", STATUS_FIELD.md) the CPU GS model

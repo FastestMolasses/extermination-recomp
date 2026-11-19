@@ -79,7 +79,13 @@ from **one codebase**:
    the field-presentation hook: since 2026-10-09 the user's choice (a), each
    field line-doubled at its interlaced height and the picture placed by the
    display registers (the options' screen position moves it; GS_EXACT.md
-   section 11). The status frames and the 2D overlay pass still draw with the GPU.
+   section 11). The status hub and pages not yet bound draw with the GPU.
+   The 2D overlay pass (the letterbox bars, the message glyph strips, the
+   transition fade) is retired for every frame whose GS field holds them
+   (since 2026-11-18, GS_EXACT.md section 9 "Slot 1": the original's
+   slot-1 REFs and glyph runs drawn in its order); it remains for the
+   frames the GPU still draws and is the Enhanced profile's path for these
+   effects (the GPU renderer has no field).
    Only the Metal backend (macOS) presents the field today: on the d3d12
    and Vulkan backends the Original profile refuses to start, and
    EM_GPU_RENDERER=1 (the GPU renderer) is needed there (GS_EXACT.md

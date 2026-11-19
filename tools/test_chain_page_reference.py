@@ -265,7 +265,9 @@ class PrimQ(C.Structure):
 class GsEnv(C.Structure):
     _fields_ = [('frame', C.c_uint64), ('zbuf', C.c_uint64), ('xyoffset', C.c_uint64), ('scissor', C.c_uint64),
                 ('prmodecont', C.c_uint64), ('dthe', C.c_uint64), ('fba', C.c_uint64), ('pabe', C.c_uint64),
-                ('texa', C.c_uint64), ('scanmsk', C.c_uint64), ('set', C.c_uint32)]
+                ('texa', C.c_uint64), ('scanmsk', C.c_uint64),
+                ('frame2', C.c_uint64), ('zbuf2', C.c_uint64), ('xyoffset2', C.c_uint64), ('scissor2', C.c_uint64),
+                ('test2', C.c_uint64), ('alpha2', C.c_uint64), ('set', C.c_uint32)]
 
 
 AGAIN_MAX = 16

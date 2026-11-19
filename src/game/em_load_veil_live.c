@@ -9,6 +9,7 @@
 #include "game/em_diag.h"
 #include "game/em_load_veil_particles.h"
 #include "game/em_render_context_live.h"
+#include "game/em_status_gs_page.h"
 
 #define GS_BLOCKS 0x00814220u   /* the value of D_00275674 */
 
@@ -137,6 +138,22 @@ int em_load_veil_live_draw(EmGfx *gfx)
     if (!S.page.prim_count || S.env[0].frame != frame)
         return fail(0x001D2300u, "the list did not draw into the slot's frame buffer");
 
+    /* The context-2 sprites (PRIM CTXT 1) are slot 1's letterbox and fade
+     * blocks (001AEBE0 / 001AEE70's REFs, em_fade_packets.h): with the GS
+     * model they draw through the _2 registers the list wrote, as on the
+     * GS, and the frame's 2D layer is then in the field; the GPU list path
+     * (no GS frame: the Enhanced profile) has no context 2, so it drops them
+     * and the overlay pass draws the bars and the fade as before. */
+    const int model = em_gfx_gs_world_enabled(gfx) > 0;
+    if (!model) {
+        uint32_t n = 0;
+        for (uint32_t i = 0; i < S.page.prim_count; ++i)
+            if (!(S.prims[i].prim & 0x200u)) {
+                S.prims[n] = S.prims[i];
+                S.env[n++] = S.env[i];
+            }
+        S.page.prim_count = n;
+    }
     const uint8_t *run = em_rcl_bytes(start, end - start);
     if (!run) return fail(0x0021B1B0u, "the veil's run is not in the arena");
     memcpy(S.run, run, end - start);
@@ -162,5 +179,6 @@ int em_load_veil_live_draw(EmGfx *gfx)
     S.log.max_line_rgb = max_rgb;
     if (em_gfx_gs_frame(gfx, S.prims, S.env, S.page.prim_count, frame, scissor) < 0)
         return fail(0x001D2300u, "the GS frame stage refused the veil's list");
+    if (model) em_sgp_2d_layer_drawn();
     return 0;
 }

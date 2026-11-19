@@ -17,7 +17,7 @@
 typedef uint32_t u32;
 typedef uint64_t u64;
 
-#define MAX_VIEWS 40u
+#define MAX_VIEWS 48u   /* at least em_rcl's EM_RCL_VIEWS_MAX */
 
 typedef struct {
     EmSwc *c;

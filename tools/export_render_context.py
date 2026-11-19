@@ -44,8 +44,13 @@ reader of it):
   0x0026E810   0x40    D_0026E810 (001DDB70's 001D6B60 colour) and
                        D_0026E820 / 30 / 40 (its three line colours)
 
+Fade block (a third file, read by src/game/em_status_gs_page.c):
+  0x0024A8C0   16      D_0024A8C0, the letterbox bars' corners 001AE900
+                       reads (eight halfwords, times 16 in its blocks)
+
 Output (disc-derived: git-ignored assets/ only):
-  assets/render_context.emrc and assets/render_context_effects.emrc,
+  assets/render_context.emrc, assets/render_context_effects.emrc and
+  assets/render_context_fade.emrc,
   little-endian:
     0x00 'EMRC', u32 version 1, u32 block count, u32 0
     0x10 count x (u32 address, u32 size, u32 file offset, u32 0)
@@ -70,6 +75,7 @@ ELF_SHA256 = 'ee052236783e7d3e865754d3ff9fee71290addeb7d146c86caa7ff2724d1e17a'
 BLOCKS = ((0x00241010, 0x8), (0x00250F30, 0x2250), (0x0026E510, 0x10), (0x0026E850, 0x10),
           (0x0026E880, 0x10), (0x00275670, 0x30))
 EFFECT_BLOCKS = ((0x00253490, 0xA0), (0x0026E810, 0x40))
+FADE_BLOCKS = ((0x0024A8C0, 0x10),)
 # Words the game writes at run time (address, bytes): not compared.
 # 0x241016: 00100158 (the boot GS reset) stores the GS revision read from
 # CSR there; 001D6E60 masks it out (D_00241010 & 0x0000FFFF0000FFFF).
@@ -124,6 +130,7 @@ def main(argv=None) -> int:
     ap.add_argument('--elf', type=Path, default=DECOMP / 'config/SCUS_971.12')
     ap.add_argument('--out', type=Path, default=ROOT / 'assets/render_context.emrc')
     ap.add_argument('--effects-out', type=Path, default=ROOT / 'assets/render_context_effects.emrc')
+    ap.add_argument('--fade-out', type=Path, default=ROOT / 'assets/render_context_fade.emrc')
     ap.add_argument('--verify-ram', type=Path, action='append', default=None)
     ap.add_argument('--no-verify', action='store_true')
     args = ap.parse_args(argv)
@@ -141,6 +148,11 @@ def main(argv=None) -> int:
     compared = sum(verify(effects, p.read_bytes()) for p in captures)
     args.effects_out.write_bytes(serialize(effects))
     print(f'wrote {args.effects_out}: {len(effects)} blocks, {sum(len(d) for _, d in effects)} bytes; '
+          f'{compared} bytes equal in {len(captures)} captures')
+    fade = [(a, elf_block(elf, a, n)) for a, n in FADE_BLOCKS]
+    compared = sum(verify(fade, p.read_bytes()) for p in captures)
+    args.fade_out.write_bytes(serialize(fade))
+    print(f'wrote {args.fade_out}: {len(fade)} block, {sum(len(d) for _, d in fade)} bytes; '
           f'{compared} bytes equal in {len(captures)} captures')
     return 0
 

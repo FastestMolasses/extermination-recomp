@@ -49,6 +49,13 @@ uint32_t em_gs_replay_prims(EmGs *gs, EmGsReplay *r, const EmGfxGsPrim *prims, c
             if (e->set & EM_GFX_GS_ENV_PABE) put(gs, r, W_PABE, &r->pabe, EM_GS_PABE, e->pabe);
             if (e->set & EM_GFX_GS_ENV_TEXA) put(gs, r, W_TEXA, &r->texa, EM_GS_TEXA, e->texa);
             if (e->set & EM_GFX_GS_ENV_SCANMSK) put(gs, r, W_SCANMSK, &r->scanmsk, EM_GS_SCANMSK, e->scanmsk);
+            /* context 2 (not cached: only the slot-1 effect sprites use it) */
+            if (e->set & EM_GFX_GS_ENV_FRAME2) em_gs_write(gs, EM_GS_FRAME_2, e->frame2);
+            if (e->set & EM_GFX_GS_ENV_ZBUF2) em_gs_write(gs, EM_GS_ZBUF_2, e->zbuf2);
+            if (e->set & EM_GFX_GS_ENV_XYOFFSET2) em_gs_write(gs, EM_GS_XYOFFSET_2, e->xyoffset2);
+            if (e->set & EM_GFX_GS_ENV_SCISSOR2) em_gs_write(gs, EM_GS_SCISSOR_2, e->scissor2);
+            if (e->set & EM_GFX_GS_ENV_TEST2) em_gs_write(gs, EM_GS_TEST_2, e->test2);
+            if (e->set & EM_GFX_GS_ENV_ALPHA2) em_gs_write(gs, EM_GS_ALPHA_2, e->alpha2);
         }
         if (p->set & EM_GFX_GS_TEX0) put(gs, r, W_TEX0, &r->tex0, EM_GS_TEX0_1, p->tex0);
         if (p->set & EM_GFX_GS_CLAMP) put(gs, r, W_CLAMP, &r->clamp, EM_GS_CLAMP_1, p->clamp);

@@ -136,7 +136,9 @@ asserted.
 
 Assertions: a compared point's captured tick is the aligned tick; the
 camera-exact points (10 and 14, test_level_smoke.VIEW_EXACT) must still be
-camera exact; and each
+camera exact; with the GS field, a camera-exact point's stored alpha (not
+shown) must equal the original's GS memory at every pixel (10, 14 and 15:
+the letterbox / fade sprites' alpha, GS_EXACT.md section 9 "Slot 1"); and each
 compared point's exact-match fraction must not fall below the floor
 recorded in FLOORS (the GS field, against the like-for-like original) or
 FLOORS_GPU (EM_GPU_RENDERER=1; the Metal floors of 2026-09-28, against the
@@ -314,7 +316,8 @@ def fb2_point(name, base=None):
     # The capture session's own rows (counter -> row), recorded with the field.
     cap = d / 'capture.json'
     rows = {r['counter']: r for r in json.loads(cap.read_text()).get('rows', [])} if cap.exists() else {}
-    return {'name': name, 'rgb': raw.reshape(GS_H, GS_W, 4)[:, :, :3].copy(), 'ofy': ofy.pop(), 'fbp': shown,
+    return {'name': name, 'rgb': raw.reshape(GS_H, GS_W, 4)[:, :, :3].copy(),
+            'alpha': raw.reshape(GS_H, GS_W, 4)[:, :, 3].copy(), 'ofy': ofy.pop(), 'fbp': shown,
             's1': int(s1['counter']), 'rec': rec.get('counter'), 'field_at_s1': s1.get('csr_field'),
             'rows': rows, 'dir': d}
 
@@ -365,7 +368,7 @@ def phase_set_point(point, base):
         (alt['rec'] is None or alt['s1'] - alt['rec'] == point['s1'] - point['rec']), \
         (name, base.name, 'the same-phase original is not as many iterations after its snapshot', alt['rec'],
          point['rec'])
-    picked = dict(point, rgb=alt['rgb'], fbp=alt['fbp'], ofy=alt['ofy'], dir=alt['dir'])
+    picked = dict(point, rgb=alt['rgb'], alpha=alt['alpha'], fbp=alt['fbp'], ofy=alt['ofy'], dir=alt['dir'])
     return picked, alt, f'{base.name}/{name} (s1 counter {alt["s1"]}, {entry.get("variant")} boot)'
 
 
@@ -596,8 +599,8 @@ def target_tick(point, base):
 
 def gs_field(capture, run):
     """The GS field a capture wrote (<capture>.gsfield) as (224, 512, 3) RGB,
-    with the FRAME_1 and XYOFFSET_1 the run log reports for it; None when
-    the run drew no field (the GPU renderer)."""
+    with the FRAME_1 and XYOFFSET_1 the run log reports for it and its
+    (224, 512) alpha; None when the run drew no field (the GPU renderer)."""
     path = Path(str(capture) + '.gsfield')
     if not path.exists():
         return None
@@ -606,7 +609,8 @@ def gs_field(capture, run):
     m = re.search(rf'^capture: wrote {re.escape(str(path))} \(512x224 GS field, FRAME_1 ([0-9a-f]{{16}}), '
                   rf'XYOFFSET_1 ([0-9a-f]{{16}})\)', run, re.M)
     assert m, (path, 'the run log names no FRAME_1 / XYOFFSET_1 for the field')
-    return raw.reshape(GS_H, GS_W, 4)[:, :, :3].copy(), int(m.group(1), 16), int(m.group(2), 16)
+    f = raw.reshape(GS_H, GS_W, 4)
+    return f[:, :, :3].copy(), int(m.group(1), 16), int(m.group(2), 16), f[:, :, 3].copy()
 
 
 def compare(point, tick_index, ticks, capture, run):
@@ -623,8 +627,9 @@ def compare(point, tick_index, ticks, capture, run):
     orig = point
     reference = {'set': 'primary', 'why': 'the GPU renderer draws no field (no field phase); sampled at the '
                                           'primary\'s OFY'}
+    alpha = None
     if gs is not None:
-        field, frame, xyoffset = gs
+        field, frame, xyoffset, port_alpha = gs
         port_ofy = ((xyoffset >> 32) & 0xFFFF) / 16.0
         # the field's buffer and half line against the primary original's at
         # s1 (the frame loop's phase, RENDER_CONTEXT.md 9.3): the timing item,
@@ -640,6 +645,12 @@ def compare(point, tick_index, ticks, capture, run):
         presented, geometry = shown_field(read_bmp(capture), capture)
         bare = field
         field = presented
+        # the field's stored alpha (not shown: PMODE EN1 0) against the
+        # original's GS memory: what the letterbox / fade sprites and every
+        # other draw left in it (GS_EXACT.md section 9 "Slot 1")
+        same = port_alpha == orig['alpha']
+        alpha = {'exact': int(same.sum()), 'pixels': int(same.size),
+                 'port_0x80': int((port_alpha == 0x80).sum()), 'original_0x80': int((orig['alpha'] == 0x80).sum())}
     else:
         port_rgb = read_bmp(capture)
         field, geometry = sample_field(port_rgb, point['ofy'])
@@ -659,7 +670,7 @@ def compare(point, tick_index, ticks, capture, run):
     result = dict(m, point=name, port_tick=t['tick'], s1=point['s1'], ofy=orig['ofy'],
                   port_frame='GS field' if gs is not None else 'Metal (GPU renderer)', field_phase=phase,
                   reference=reference,
-                  gs_field_alone=bare_metrics,
+                  gs_field_alone=bare_metrics, alpha=alpha,
                   row=(f'{row[0]} f{row[1]["f"]}' if 'f' in row[1] else f'{row[0]} counter {point["s1"]}')
                   if row else None, camera_exact=exact,
                   differs=diff if not exact else None, target=list(geometry[:2]),
@@ -680,6 +691,10 @@ def line(r):
     if g:
         cam += (f'; the GS field alone (no overlay pass): exact {g["exact"]:,} '
                 f'({100 * g["exact_fraction"]:.2f}%), mean channel error {g["mean_abs_channel_error"]:.2f}')
+    a = r.get('alpha')
+    if a:
+        cam += (f'; the field\'s alpha exact {a["exact"]:,} of {a["pixels"]:,} (0x80: port {a["port_0x80"]:,}, '
+                f'original {a["original_0x80"]:,})')
     return (f'{r["point"]}: port tick {r["port_tick"]} = row {r["row"]} (s1 {r["s1"]}, OFY {r["ofy"]}), {cam}: '
             f'exact {r["exact"]:,} of {r["pixels"]:,} ({100 * r["exact_fraction"]:.2f}%), mean channel error '
             f'{r["mean_abs_channel_error"]:.2f}, max {r["max_channel_error"]}, per-pixel max error p50/p90/p99 '
@@ -762,6 +777,9 @@ def main():
         floor = (FLOORS_GPU if GPU else FLOORS)[r['point']]
         assert r['exact_fraction'] >= floor, (r['point'], 'exact-match fraction below its floor',
                                               r['exact_fraction'], floor)
+        a = r.get('alpha')
+        if a and r['camera_exact']:
+            assert a['exact'] == a['pixels'], (r['point'], 'the field\'s alpha differs from the original\'s', a)
         print(f'fb2 pixels: PASS (one port run to the AREA01 arrival ({secs:.0f} s); images in '
               f'{OUT.relative_to(ROOT)}/15_level_exit/)')
         return
@@ -820,6 +838,12 @@ def main():
         if floor is not None:
             assert r['exact_fraction'] >= floor, (r['point'], 'exact-match fraction below its floor',
                                                   r['exact_fraction'], floor)
+        # the field's stored alpha at a camera-exact point equals the
+        # original's GS memory, pixel for pixel (14 and 15 hold the fade
+        # sprite's 0x80 everywhere, 10 has no fade)
+        a = r.get('alpha')
+        if a and r['camera_exact']:
+            assert a['exact'] == a['pixels'], (r['point'], 'the field\'s alpha differs from the original\'s', a)
     RM.banner(f'{len(results)} of {len(POINTS)} fb2 points compared')
     frame = ('the presented GS field (under the overlay pass) at the field pixel centres, and the field alone'
              if not GPU else
