@@ -265,19 +265,27 @@ packet chain over R.pc).
     the original's phase 1120 transfers, 1011 byte-exact, 102 with Z one
     LSB off, 7 up to 6 off at a moving edge near x 512 (GS_EXACT.md "Not
     exact": Z), every decision and coverage equal (no flare).
-  - **Open: the chain's field phase after a load.** The port's loads pass
-    a different number of frames (the script clock then realigns to the
-    recording, EM_START_AT_PHASES; --drive-replay did not change it), and
-    after a load with an odd difference the port's frames are in the other
-    bank, so a transfer reads the other field's Z (half a row's gradient
-    apart: the measured ±18 at g76 tick 3332's surface; ±13 at 6461). g76:
-    428 transfers (ticks 3267 .. 3644 and from 6450, after the loads at
-    ticks 2008 and 6373); g77: all 3523 (143 decisions differ, port 1597
-    flares to 1458). The test compares only their point and status and
-    pins the counts. Exact everywhere needs the chain's frames in the
-    original's bank after each load (a comparison-alignment item, not step
-    K; the GS field comparisons pair by tick and field for the same reason,
-    PCSX2_FORK_GS_DIFF.md).
+  - **The chain's field phase (closed for g75 .. g77, lane PORT-CARD-CHAINS,
+    2026-11-19).** The port's loads passed a different number of frames (its
+    area and bank reads answered at host speed under the timing switch; the
+    script clock realigns to the recording, EM_START_AT_PHASES), so after a load
+    with an odd difference its frames sat in the other bank, and the card's boot
+    put row 0 in the other bank too. tools/guided_chain.py now starts a chain in
+    the recording's bank (EM_START_AT_DWELL, STARTUP.md "Guided chains") and
+    serves the takes' recorded screen-module loader reads
+    (record_drive_replay_guided.py --loader, IOP_STREAM.md "Guided takes"): every
+    transfer of g75, g76 and g77 is in the original's phase. g76: 1548 in phase,
+    1243 byte-exact, 297 one Z LSB off, 8 more, every decision and coverage
+    equal. g77 (EM_TEST_FULL=1): 3523 in phase, 2822 exact, 213 one LSB, 349
+    more; 139 decisions differ (ticks 1687..1747, 1763..1765, 4474..4489,
+    6618..6639, 7273..7294, 7597..7609, 8558..8561, 12025: the port's Z at the
+    point is 0, nothing drawn, where the original's is not; 143 when they were
+    in the other bank, so not the phase) and 25 transfers at those stretches'
+    edges have other pixels at Z 0. Open: what the original draws at the point
+    in those frames (a GS frame model or draw difference; the test pins the
+    counts). An area load's sound-bank transfer is still the port's (shorter),
+    so a later chain can leave the bank after an area load with an odd
+    difference; the chain report counts such rows.
 
 ## Grid (lane PORT-A21-GRID, 2026-11-18, branch `a21grid`)
 
@@ -1022,7 +1030,8 @@ em_equipment_live) faults at address 0x7A6DE4. g80 not reached.
    path (Grid); 001AAC00, 001EB440 / 001EB250 (Use and the boss effects);
    0x824FE0, 0x824CF0, 001EB600 and cue 0xC (The boss fight).
 1b. (done) 001D7410's Z read-back (Far light, "Step K's Z read-back");
-    open there: the chain's field phase after a load.
+    the chain's field phase closed for g75 .. g77 (lane PORT-CARD-CHAINS);
+    open there: g77's 139 decisions where the port draws nothing at the point.
 1c. The haze ring's vf23 (Haze ring, open item): the logic walk's last
     vf23 writer before each ring.
 2. Run the live owners of that recording through these oracles (as

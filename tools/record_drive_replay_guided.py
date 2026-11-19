@@ -40,9 +40,31 @@ differs is kept beside it as <take>.reads.superseded-<time>.
 The port reads them through tools/drive_replay.py guided_table (watch_takes.py
 and guided_chain.py --drive-replay; the developer switch EM_PS2_DRIVE_REPLAY).
 
+LOADER (--loader, lane PORT-CARD-CHAINS 2026-11-19): the screen-module loader's
+disc reads (00200780 -> sceCdRead 00112440: the area streamer 001FFCD0 / 001FF590
+and the bank loads 001FF830 / 001FF3F0 / 00200360) and their polls (00200730's
+00112D18(1) result, at its return 0x00200740) are logged by two log probes on a
+second replay of the take (the probes are inline: no observer effect; the replay
+is checked against end.json as above). A read issued in tick i whose first poll
+answering "done" (v0 == 0) runs in tick j took j - i - 1 busy polls: the port's
+module-loader drive answers busy for that many fields after the read's own
+(docs/MODULE_LOADER.md 1.7; the New Game's measured rows count the same way).
+The key is tick i's counter (the replay's rows.tbl maps the probe's tick onto
+0x70003B64); the file and the sector inside it come from the user's disc
+(INDEX.IDX = 0, DATA.DAT = 1, OVERLAY/AREAnn.BIN = 0x10 + nn: the port's
+measured-table ids). Output beside the take's stream table: loader_calls.bin,
+loader_rows.tbl(.json) (the raw recording, never deleted), <take>.loader
+("L counter file sector sectors busy") and loader_receipt.json. Without it the
+port's area loads answer at host speed (MODULE_LOADER.md 1.7 "Any other read"),
+so its loads pass fewer frames than the original's and the chains' frames sit in
+the other bank after a load with an odd difference (AREA21_PORT.md "Step K's Z
+read-back").
+
 Usage (native arm64 macOS; run with the decomp's .venv python, which has numpy):
   ../Extermination/.venv/bin/python tools/record_drive_replay_guided.py g36_area00_area14 [more takes]
   ../Extermination/.venv/bin/python tools/record_drive_replay_guided.py --all       # every kept take not yet recorded
+  ../Extermination/.venv/bin/python tools/record_drive_replay_guided.py --loader g73_area04_area20 [more]
+  ../Extermination/.venv/bin/python tools/record_drive_replay_guided.py --loader --all
 """
 import argparse
 import json
@@ -184,6 +206,125 @@ def record(name):
                        round(time.monotonic() - t0, 1))
 
 
+# LOADER: the two log probes (sceCdRead's entry; 00200730 right after its
+# 00112D18(1) call returns, v0 = busy) and the call records' layout
+# (pcsx2-fork docs FORMATS.md section 4: 64 bytes).
+LOADER_READ_PC, LOADER_POLL_PC = 0x00112440, 0x00200740
+CALL = struct.Struct('<IIIIQIIIIIIIIII')     # seq vsync tick cpu cycle pc ra sp a0 a1 a2 a3 v0 id reserved
+
+
+def loader_files():
+    """{file id: (first lsn, sectors)} of the user's disc: 0 INDEX.IDX, 1 DATA.DAT,
+    0x10 + n the area file D_0028A3C0[n] (the boot's table from the pinned ELF's
+    names: the port's em_module_loader file ids)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import export_module_loader as eml
+    disc = eml.Disc(DECOMP / 'Extermination-rebuilt.iso')
+    files = {0: (disc.index[0], (disc.index[1] + 2047) // 2048), 1: (disc.data[0], (disc.data[1] + 2047) // 2048)}
+    areas, _names, _arena, _bases = eml.boot_tables(disc, DECOMP / 'config/SCUS_971.12')
+    for n, (lsn, size) in enumerate(areas):
+        files[0x10 + n] = (lsn, (size + 2047) // 2048)
+    return files
+
+
+def loader_extract(calls, tick_counter, last_counter, files):
+    """(reads, omitted): reads (counter, file, sector, sectors, busy) issued at or
+    before the take's last counter, in counter order."""
+    reads, omitted, open_read = [], [], None
+    for rec in calls:
+        tick, pc, a0, a1, v0 = rec[2], rec[5], rec[8], rec[9], rec[12]
+        if pc == LOADER_READ_PC:
+            if open_read is not None:
+                omitted.append(dict(open_read, why='a new read before this one\'s done poll'))
+            open_read = dict(tick=tick, lsn=a0, sectors=a1)
+        elif pc == LOADER_POLL_PC and open_read is not None and v0 == 0:
+            i, j = tick_counter.get(open_read['tick']), tick_counter.get(tick)
+            read, open_read = open_read, None
+            if i is None or j is None:
+                omitted.append(dict(read, why='tick not in the replay\'s rows'))
+                continue
+            if i > last_counter:
+                continue                    # the next take's
+            fid = next((f for f, (lsn, n) in files.items() if lsn <= read['lsn'] < lsn + n), None)
+            if fid is None:
+                omitted.append(dict(read, counter=i, why='lsn in no loader file'))
+                continue
+            reads.append((i, fid, read['lsn'] - files[fid][0], read['sectors'], j - i - 1))
+    if open_read is not None:
+        omitted.append(dict(open_read, why='in flight at the end'))
+    return sorted(reads), omitted
+
+
+def write_loader(name, out, exact=None, replay=None, seconds=None):
+    """<take>.loader (or .loader.diverged) and loader_receipt.json from the kept raw
+    recording (loader_calls.bin, loader_rows.tbl)."""
+    take = GUIDED / name
+    receipt = out / 'loader_receipt.json'
+    if exact is None:
+        old = json.loads(receipt.read_text())
+        exact, replay, seconds = old['exact'], old['replay'], old['seconds']
+    take_rows = table_rows(take / 'rows.tbl')
+    last_counter = u32(take_rows[-1]['counter'])
+    rows = table_rows(out / 'loader_rows.tbl')
+    tick_counter = {int(r['tick']): u32(r['counter']) for r in rows}
+    blob = (out / 'loader_calls.bin').read_bytes()
+    calls = sorted((CALL.unpack_from(blob, k) for k in range(0, len(blob) - CALL.size + 1, CALL.size)),
+                   key=lambda r: r[0])
+    reads, omitted = loader_extract(calls, tick_counter, last_counter, loader_files())
+    fname = f'{name}.loader' if exact else f'{name}.loader.diverged'
+    text = f'# {name}: L counter file sector sectors busy (fork replay of the kept take; comparison only)\n' + \
+        ''.join('L %d %d %d %d %d\n' % x for x in reads)
+    path = out / fname
+    if path.exists() and path.read_text() != text:
+        path.rename(out / f'{fname}.superseded-{time.strftime("%Y%m%d-%H%M%S")}')
+    path.write_text(text)
+    info = dict(take=name, tool='tools/record_drive_replay_guided.py --loader',
+                recorded=time.strftime('%Y-%m-%d %H:%M:%S'), exact=exact, calls=len(calls), reads=len(reads),
+                omitted=omitted, busy=sorted({x[4] for x in reads}), seconds=seconds, replay=replay)
+    receipt.write_text(json.dumps(info, indent=1) + '\n')
+    print(f'{name}: {"EXACT" if exact else "DIFFERS"} replay, {len(reads)} loader reads (busy {info["busy"]}), '
+          f'{len(omitted)} omitted, {seconds} s', flush=True)
+    return info
+
+
+def record_loader(name):
+    import record_guided_run as rgr
+    rop = rgr.rop
+    take = rgr.take_dir(name)
+    out = OUT / name
+    if (out / 'loader_calls.bin').exists():
+        print(f'{name}: loader already recorded ({out}); kept as it is', flush=True)
+        return None
+    start, end = (json.loads((take / f).read_text()) for f in ('start.json', 'end.json'))
+    rows = rop.records(take)
+    card = take / 'card_start.ps2'
+    scratch = SCRATCH / f'{name}-loader-{time.strftime("%Y%m%d-%H%M%S")}'
+    scratch.mkdir(parents=True)
+    t0 = time.monotonic()
+    with rgr.GuidedSession(Path(start['state_abs']), scratch, card if card.exists() else None, 'replay',
+                           blocks=rgr.blocks_of(start)) as s:
+        c = s._client
+        got0 = s.start_machine
+        assert {k: got0[k] for k in ('vsync', 'hashes')} == {k: start[k] for k in ('vsync', 'hashes')}, \
+            f'{name}: the replay does not start from the take\'s machine'
+        c.call('input_timeline', entries=rgr.timeline(rows, start['vsync'], rgr.SHIFT), index='vsync',
+               mode='replace')
+        rop.schedule_card_events(c, take, s.server_version)
+        c.call('probe_add', pcs=[LOADER_READ_PC, LOADER_POLL_PC], action='log', path='loader_calls.bin')
+        c.call('run', timeout=86400 + 60, until={'vsyncs': end['vsync'] - start['vsync']}, timeout_s=86400)
+        got = rop.machine(c)
+        c.call('run', timeout=3600, until={'vsyncs': EXTEND}, timeout_s=3600)
+        c.call('probe_remove', all=True)
+        rop.disarm(c, s.root, scratch, 'replay_')
+        out.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(s.root / 'loader_calls.bin', out / 'loader_calls.bin')
+        for f in ('rows.tbl', 'rows.tbl.json'):
+            shutil.copyfile(scratch / f'replay_{f}', out / f'loader_{f}')
+    exact = got['hashes'] == end['hashes'] and got['ee_cycle'] == end['ee_cycle']
+    return write_loader(name, out, exact, dict(hashes=got['hashes'], ee_cycle=got['ee_cycle'], vsync=got['vsync']),
+                        round(time.monotonic() - t0, 1))
+
+
 def reextract(name, human=False):
     """The table again from the kept raw recording (no emulator)."""
     out = (HUMAN_OUT if human else OUT) / name
@@ -244,6 +385,9 @@ def main():
                     'read only), tables in build/drive_replay_takes/')
     ap.add_argument('--reextract', action='store_true', help='derive the named takes\' tables again from their kept '
                     'raw recordings (drv.tbl), no emulator')
+    ap.add_argument('--loader', action='store_true', help='record (or, with --reextract, derive again) the named '
+                    'takes\' screen-module loader reads instead (<take>.loader: the area loads\' and the bank '
+                    'loads\' per-read busy polls; LOADER below)')
     a = ap.parse_args()
     takes = chain_takes() if a.all else a.takes
     if not takes:
@@ -251,7 +395,11 @@ def main():
     bad = 0
     t0 = time.monotonic()
     for name in takes:
-        info = reextract(name, a.human) if a.reextract else record_human(name) if a.human else record(name)
+        if a.loader:
+            assert not a.human, '--loader records Claude\'s guided takes only'
+            info = write_loader(name, OUT / name) if a.reextract else record_loader(name)
+        else:
+            info = reextract(name, a.human) if a.reextract else record_human(name) if a.human else record(name)
         bad += info is not None and not info['exact']
     print(f'{len(takes)} take(s) in {time.monotonic() - t0:.0f} s; {bad} replay(s) differ', flush=True)
     return 1 if bad else 0

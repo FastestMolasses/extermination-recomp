@@ -29,7 +29,14 @@ What runs (EM_START_AT, docs/STARTUP.md; comparison aids as the g4x beats'):
   - EM_START_AT_STATUS_BG: the pages' background D_002655A0 from the card's
     source state (never reset by the original, so a card from boot differs);
   - EM_START_AT_TRACE: the port's position, heading, area bytes, vitals,
-    rand() word, frame-machine state and D_00275BD8 per script frame.
+    rand() word, frame-machine state, D_00275BD8 and the frame index
+    D_00810E80 per script frame;
+  - the original's recorded per-read drive timing (EM_PS2_DRIVE_REPLAY with
+    EM_START_AT_COUNTER0) and the takes' recorded screen-module loader reads
+    (the table's "L" lines), by default as in tools/watch_takes.py
+    (--no-drive-replay, --no-loader-replay);
+  - row 0 in the recording's bank: a run whose row 0 has the other frame
+    index starts again with EM_START_AT_DWELL=1 (--any-bank keeps it).
 
 Every frame is then compared with the takes' rows (route set trace.json, read
 only): position (within 0.01), heading, the area bytes, the rand() word (the
@@ -229,7 +236,7 @@ def row0_fade(row):
 
 
 def run(name, card, rows, files, timeout, kinds, extra=(), steer=False, source_ram=None, restore=False,
-        scene_wait=False, restore_more=()):
+        scene_wait=False, restore_more=(), bank=True):
     pad, rands, clocks, loads, marks, _ = files
     out = OUT / name
     trace = out / 'trace.jsonl'
@@ -268,11 +275,55 @@ def run(name, card, rows, files, timeout, kinds, extra=(), steer=False, source_r
     if marks:
         env['EM_START_AT_MARKS'] = marks
     start = time.time()
+    # The bank at row 0 (comparison only): the recording's frame index D_00810E80 at row 0 is
+    # its counter & 1 (compare()); the port's follows the frames it spent from the boot. When
+    # the trace's first row is in the other bank, the run starts again with the title holding
+    # one more idle tick before LOAD GAME (EM_START_AT_DWELL=1, as a player's later press):
+    # everything after it comes a frame later, in the recording's bank.
+    want_bank = rows[0]['counter'] & 1 if bank and 'EM_START_AT_DWELL' not in env else None
+    for attempt in (0, 1):
+        log_path.write_text('')
+        if attempt:
+            env['EM_START_AT_DWELL'] = '1'
+            print('row 0 was in the other bank: again with the title\'s dwell one tick longer '
+                  '(EM_START_AT_DWELL=1)', flush=True)
+        retry = run_once(env, log_path, trace, timeout, start, want_bank if attempt == 0 else None)
+        if not retry:
+            break
+    text = log_path.read_text(errors='replace')
+    faults = [ln for ln in text.splitlines() if (mrb.FAULT.search(ln) and 'block ' not in ln) or
+              '001AC070 again' in ln]
+    return time.time() - start, faults, trace, log_path
+
+
+def first_bank(trace):
+    """The port's D_00810E80 on the trace's row 0, or None while it is not written."""
+    try:
+        with open(trace) as f:
+            for line in f:
+                d = json.loads(line)
+                if d.get('t') == 0:
+                    return d.get('e80')
+    except (OSError, ValueError):
+        return None
+    return None
+
+
+def run_once(env, log_path, trace, timeout, start, want_bank):
+    """One run of the chain; True when it was stopped at row 0 in the other bank."""
+    if trace.exists():
+        trace.unlink()      # the port writes it from its first hook on: no earlier run's row 0
     with open(log_path, 'w') as log:
         proc = subprocess.Popen([str(mrb.BIN)], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
         try:
             while proc.poll() is None:
                 time.sleep(0.5)
+                if want_bank is not None:
+                    got = first_bank(trace)
+                    if got is not None:
+                        if got != want_bank:
+                            return True
+                        want_bank = None
                 text = log_path.read_text(errors='replace')
                 if 'pad end at' in text and 'block at the pad end' in text:
                     break
@@ -288,10 +339,7 @@ def run(name, card, rows, files, timeout, kinds, extra=(), steer=False, source_r
                 except subprocess.TimeoutExpired:
                     proc.kill()
                     proc.wait()
-    text = log_path.read_text(errors='replace')
-    faults = [ln for ln in text.splitlines() if (mrb.FAULT.search(ln) and 'block ' not in ln) or
-              '001AC070 again' in ln]
-    return time.time() - start, faults, trace, log_path
+    return False
 
 
 def compare(rows, takes, trace, anchors=()):
@@ -312,6 +360,14 @@ def compare(rows, takes, trace, anchors=()):
         mine = [r for r in rows if r['take'] == k]
         first = dict(pos=None, yaw=None, area=None, rand=None, held=None)
         compared = exact = 0
+        # The frame index D_00810E80 (the trace's e80; traces before it have none): the
+        # recording's is counter & 1 at a row (a take's source state is the previous take's
+        # end, stopped in its last row's vsync wait, before that iteration's flip and count:
+        # it holds D_00810E80 = 1 - (row 0's counter & 1), the bank of counter row0 - 1; the
+        # far light's recorded bank ctx +0x9C agrees on g75). A frame in the other bank draws with the
+        # other half-line XYOFFSET, and step K's Z read-back reads the other field's Z
+        # (AREA21_PORT.md "Step K's Z read-back"): a comparison alignment, not a row.
+        bank = [0, 0, None]
         hits_o = [(r['local'], r['hit']) for r in mine if 'hit' in r]
         hits_p = []
         prev_hp = None
@@ -343,6 +399,12 @@ def compare(rows, takes, trace, anchors=()):
             if r['f'] not in anchors and p['rand'] != int(r['rand'], 16) and first['rand'] is None:
                 first['rand'] = (r['local'], f'{p["rand"]:08x}', r['rand'])
             exact += same
+            if 'e80' in p:
+                bank[0] += 1
+                if p['e80'] != r['counter'] & 1:
+                    bank[1] += 1
+                    if bank[2] is None:
+                        bank[2] = r['local']
         last = max((r['local'] for r in mine if r['f'] in port), default=None)
         lines = [f'{take}: {len(mine)} rows, {compared} compared, {exact} on the row'
                  + (f', the port reached row {last}' if last is not None else ', not reached')]
@@ -361,6 +423,9 @@ def compare(rows, takes, trace, anchors=()):
         if first['rand']:
             lines.append(f'  rand() word differs at row {first["rand"][0]}: port {first["rand"][1]}, '
                          f'row {first["rand"][2]} (the frame before drew differently)')
+        if bank[1]:
+            lines.append(f'  frame index D_00810E80: {bank[1]} of {bank[0]} compared rows in the other bank '
+                         f'(from row {bank[2]})')
         if hits_o or hits_p:
             lines.append(f'  hits (row, health after): original {hits_o}, port {hits_p}')
         report += lines
@@ -383,9 +448,24 @@ def main(argv):
     parser.add_argument('--name', help='the output folder under build/guided_chain (default: the chain\'s name; '
                         'a test\'s own run, e.g. tools/test_far_light_readback_reference.py)')
     parser.add_argument('--compare-only', action='store_true', help='compare the last run\'s trace again')
-    parser.add_argument('--drive-replay', action='store_true', help='serve the original\'s recorded per-read drive '
-                        'timing (tools/record_drive_replay_guided.py tables, EM_PS2_DRIVE_REPLAY with '
-                        'EM_START_AT_COUNTER0; docs/IOP_STREAM.md "Guided takes"): a comparison aid, off by default')
+    parser.add_argument('--no-drive-replay', dest='drive_replay', action='store_false',
+                        help='play with the drive model instead of the original\'s recorded per-read drive timing '
+                        '(tools/record_drive_replay_guided.py tables, EM_PS2_DRIVE_REPLAY with EM_START_AT_COUNTER0; '
+                        'docs/IOP_STREAM.md "Guided takes"; a comparison aid, on by default as in '
+                        'tools/watch_takes.py: without it g16\'s g67 / g68 and g17\'s g56 leave the rows on the '
+                        'stream timing)')
+    parser.add_argument('--drive-replay', dest='drive_replay', action='store_true', default=True,
+                        help='(the default) the recorded drive timing')
+    parser.add_argument('--any-bank', action='store_true',
+                        help='keep the bank the boot gives row 0 (by default a run whose row 0 is in the other '
+                        'frame index D_00810E80 than the recording\'s starts again with EM_START_AT_DWELL=1)')
+    parser.add_argument('--no-loader-replay', dest='loader_replay', action='store_false',
+                        help='without the takes\' recorded screen-module loader reads (record_drive_replay_guided.py '
+                        '--loader: the area and bank loads\' busy polls, served as the drive replay\'s "L" lines); '
+                        'by default a take that has them takes them, so its loads pass the original\'s read time '
+                        '(the area load\'s sound-bank transfer stays the port\'s: STARTUP.md "Guided chains")')
+    parser.add_argument('--loader-replay', dest='loader_replay', action='store_true', default=True,
+                        help='(the default) the recorded loader reads')
     args = parser.parse_args(argv)
     if args.list or not args.chain:
         for n, (card, route, takes) in CHAINS.items():
@@ -427,16 +507,20 @@ def main(argv):
         extra = list(args.set)
         if args.drive_replay:
             import drive_replay
-            info = drive_replay.guided_table(takes, out / 'drive_replay.txt')
+            info = drive_replay.guided_table(takes, out / 'drive_replay.txt', loader=args.loader_replay)
             gaps = f'; {len(info["missing"])} with no table take the drive model ({", ".join(info["missing"][:4])}' \
         f'{", ..." if len(info["missing"]) > 4 else ""})' if info['missing'] else ''
             print(f'drive replay: {info["entries"]} recorded reads from {len(info["takes"])} of {len(takes)} '
                   f'takes{gaps}', flush=True)
+            if args.loader_replay:
+                print(f'loader replay: {info["loader_entries"]} recorded loader reads; '
+                      f'{len(info["loader_missing"])} takes without them', flush=True)
             if info['entries']:
                 extra += [f'EM_PS2_DRIVE_REPLAY={info["table"]}', f'EM_START_AT_COUNTER0={rows[0]["counter"]}']
         seconds, faults, trace, log_path = run(name, card, rows, files, timeout,
                                                args.kinds or KINDS.get(args.chain), extra, steer, source_ram,
-                                               args.chain in RESTORE_AT_START, args.chain in SCENE_WAIT_AT_START, more)
+                                               args.chain in RESTORE_AT_START, args.chain in SCENE_WAIT_AT_START, more,
+                                               bank=not args.any_bank)
         print(f'run: {seconds:.0f} s, {log_path.relative_to(ROOT)}')
         for f in faults[:3]:
             print(f'  stopped: {f[:240]}')

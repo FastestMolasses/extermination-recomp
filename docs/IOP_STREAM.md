@@ -482,7 +482,7 @@ are unchanged (the disc answers at host speed; the user's decision of 2026-09-27
   that tick's recorded counter (`em_stream_live_drive_replay_align`); past a
   segment's end the last mapping holds. So a read issued on the same tick of a
   segment as the original's keys on the original's counter even though the port's
-  loads are shorter. `tools/guided_chain.py --drive-replay` does the same through
+  loads are shorter. `tools/guided_chain.py` (by default) does the same through
   `EM_START_AT_COUNTER0` (the recording's counter at script frame 0; every script
   frame t maps onto it + t, a hook at a frame's end standing for the next frame).
   The serving rule is unchanged (same sector and count, nearest unserved entry
@@ -491,12 +491,39 @@ are unchanged (the disc answers at host speed; the user's decision of 2026-09-27
   chain order (a take without a table takes the model and is listed);
   `watch_takes.py` serves them by default wherever a take of the chain has a
   table (`--no-drive-replay` without; the user's takes have none unless recorded
-  with `--human`); `guided_chain.py` only with `--drive-replay`. A playback that
-  ends prints the run's `stream drive:` lines (watch_takes shows the replay's).
-- **Not covered**: the screen-module loader's bank reads (`L` lines) are not
-  recorded for the guided takes (the area loads keep their rules either way);
-  reads the port issues during its shorter loads seldom find their entry and take
-  the model.
+  with `--human`); `guided_chain.py` too since lane PORT-CARD-CHAINS (2026-11-19;
+  `--no-drive-replay` without). A playback that ends prints the run's `stream
+  drive:` lines (watch_takes shows the replay's; a guided chain's run.log has them
+  and the module loader's line at the pad's end).
+- **The screen-module loader's reads** (lane PORT-CARD-CHAINS, 2026-11-19):
+  `record_drive_replay_guided.py --loader <take>` replays the take on the fork
+  with two inline log probes (sceCdRead 00112440's entry: lsn, sectors; 00200730
+  right after its 00112D18(1) returns, 0x00200740: v0 = busy) and writes
+  `<take>.loader` ("L counter file sector sectors busy": a read issued in tick i
+  whose first "done" poll runs in tick j took j - i - 1 busy polls, MODULE_LOADER.md
+  1.7's rule; file ids 0 INDEX.IDX, 1 DATA.DAT, 0x10 + n the area file
+  D_0028A3C0[n]) beside the stream table, with `loader_calls.bin` and
+  `loader_rows.tbl` (the raw recording, never deleted) and `loader_receipt.json`
+  (the replay checked against end.json). `drive_replay.guided_table(...,
+  loader=True)` appends them as `L` lines; `guided_chain.py` serves them by
+  default (`--no-loader-replay` without); watch_takes.py takes them through the
+  same guided_table (174 recorded loader reads of g41 .. g80 on 2026-11-19: the
+  chain from the title stays exact, 654,989 of 654,989 ticks compared, more than
+  the 654,303 before because those loads now pass the original's frames). Measured on g73's AREA04 -> AREA20 load (346
+  rows in the take): without them the port's load passes 153 frames (its area
+  reads answer at host speed: MODULE_LOADER.md 1.7 "Any other read"); with them
+  the overlay (6 busy polls), header (1) and the bank's read (20) are served, and
+  the reads after the sound-bank step miss their 2-counter window: the port's
+  001FB370 transfer of AREA20's bank passes 29 frames between the bank read's
+  done poll and the next read, the fork's 46 (its SIF DMA and the IOP's
+  acknowledgement are emulator timing the port models only for the New Game's
+  0x492D0 bytes: "The sound-bank transfer"). With every read served (an
+  experiment with a 400-counter window) the load passes 329 frames, 17 short,
+  all of them in that step; every other gap between reads is the fork's. So equal
+  load lengths need the bank transfer's per-load timing too (open). A status
+  page's or a room's load (no bank) passes the original's frames with them:
+  over chain g20 g73 .. g77 every compared row is then in the original's frame
+  index (STARTUP.md "Guided chains").
 - **Result** (2026-11-18): all 79 kept takes recorded, every replay exact (84
   minutes, one batch). The chain from the title is exact through segment 1056
   (449,925 ticks; segments 454, 940 and 979 closed; next stop a static-world fault
@@ -504,7 +531,11 @@ are unchanged (the disc answers at host speed; the user's decision of 2026-09-27
   The user's test1 (recorded with `--human`): 413 of 413 reads served, 17212 /
   17212 with and without. `guided_chain.py g11 --drive-replay` and `g17 --steer
   g45 --drive-replay`: g56 7665 / 7665 (7664 without, AREA17_PORT.md).
-  `guided_chain.py g16` and `g20` without it are unchanged.
+  `guided_chain.py g16` and `g20` without it are unchanged. 2026-11-19 (port main
+  34416d10): `guided_chain.py g16` with it plays g59 .. g68 on every compared row
+  (g67 6355 / 6355 and g68 2801 / 2801; without it g67 6352 and g68 675 / 2805:
+  AREA16_PORT.md "Open: g67 rows 6866 .. 6868" was the stream timing), so the
+  chains serve it by default.
 
 ## The sound-bank transfer (chain step H7, 2026-09-29)
 

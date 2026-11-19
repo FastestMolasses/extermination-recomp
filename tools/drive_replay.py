@@ -186,14 +186,43 @@ GUIDED_DIR = ROOT.parent / 'Extermination/build/drive_replay_guided'
 TAKES_DIR = ROOT.parent / 'Extermination/build/drive_replay_takes'
 
 
-def guided_table(takes, out_path, table_dir=GUIDED_DIR):
+def guided_loader(take, table_dir=GUIDED_DIR):
+    """The take's screen-module loader reads (record_drive_replay_guided.py --loader:
+    <take>.loader, "L counter file sector sectors busy"), or None when not recorded.
+    A recording whose replay did not reproduce the take is refused."""
+    path = Path(table_dir) / take / f'{take}.loader'
+    if not path.exists():
+        return None
+    receipt = json.loads((Path(table_dir) / take / 'loader_receipt.json').read_text())
+    assert receipt['exact'], (take, 'the fork replay that recorded the loader reads did not reproduce the take')
+    reads = []
+    for line in path.read_text().splitlines():
+        if line.startswith('L '):
+            reads.append(tuple(map(int, line.split()[1:])))
+    assert all(a[0] <= b[0] for a, b in zip(reads, reads[1:])), (take, 'loader reads out of counter order')
+    return reads
+
+
+def guided_table(takes, out_path, table_dir=GUIDED_DIR, loader=True):
     """Merge the tables of the chain's takes, in chain order, into out_path.
     A take with no table (not recorded yet) is listed as missing: its reads take
     the model. A take whose replay did not reproduce it (.reads.diverged) is
-    refused. Returns a summary dict (entries 0: write nothing, no table)."""
+    refused. With `loader` the takes' recorded screen-module loader reads
+    (guided_loader) follow as "L" lines (em_scene_bindings' loader replay: the
+    area loads' reads take the original's busy polls); a take without them is
+    listed in loader_missing and its loader reads answer as before. Returns a
+    summary dict (entries 0: write nothing, no table)."""
     table_dir = Path(table_dir)
     entries, used, missing, last = [], [], [], None
+    loads, loader_missing = [], []
     for take in takes:
+        if loader:
+            got = guided_loader(take, table_dir)
+            if got is None:
+                loader_missing.append(take)
+            else:
+                assert not loads or not got or got[0][0] > loads[-1][0], (take, 'loader reads overlap on this chain')
+                loads.extend(got)
         path = table_dir / take / f'{take}.reads'
         if not path.exists():
             missing.append(take)
@@ -212,5 +241,7 @@ def guided_table(takes, out_path, table_dir=GUIDED_DIR):
         lines = ['# merged guided drive replay (comparison only; disc-derived, never committed)']
         lines.extend(f'# {take}' for take in used)
         lines.extend('%d %d %d %d' % e for e in entries)
+        lines.extend('L %d %d %d %d %d' % e for e in loads)
         Path(out_path).write_text('\n'.join(lines) + '\n')
-    return dict(table=str(out_path), takes=used, missing=missing, entries=len(entries))
+    return dict(table=str(out_path), takes=used, missing=missing, entries=len(entries), loader_entries=len(loads),
+                loader_missing=loader_missing)
