@@ -143,9 +143,31 @@ typedef struct {
     /* Diagnostics (the captures do not hold D_0027E0C0): each allocated
      * track's sound id (its registry entry), -1 for a free track. */
     int32_t track_id[48];
+    /* Each allocated track's volume request D_0027E0C0 + 0x48 / + 0x4C
+     * (0011A218's pair; 0 for a free track). */
+    int32_t track_lr[48][2];
 } EmSoundSample;
 /* The last field's sample (valid 0 before the first). */
 const EmSoundSample *em_stream_live_sound_sample(void);
+/* Comparison only (EM_SOUND_DUMP: em_scene_bindings_sound_dump,
+ * docs/SOUND_SECOND_HALF.md): with em_stream_live_exchange_log(1) every
+ * field records its RPC 0x64 exchange: the SFX side's commands
+ * (em_sfx_last_exchange) and the stream side's EE queue as the field sends
+ * it (em_iop_stream_ee_queue before em_iop_stream_field). The original
+ * sends both in one queue (D_0027F7C0); the comparison takes the stream
+ * side's commands out of it in order. em_stream_live_exchanges gives the
+ * fields since the last clear (at most 32; *dropped counts the rest).
+ * Nothing the game or the sound does changes. */
+enum { EM_SOUND_EXCHANGE_MAX = 255 };
+typedef struct {
+    uint32_t vblank;                         /* D_00810E90 after the field's += 1 */
+    unsigned nsfx, nstr;
+    uint32_t sfx[EM_SOUND_EXCHANGE_MAX][4];
+    uint32_t str[EM_SOUND_EXCHANGE_MAX][4];
+} EmSoundExchange;
+void em_stream_live_exchange_log(int on);
+const EmSoundExchange *em_stream_live_exchanges(unsigned *count, unsigned *dropped);
+void em_stream_live_exchanges_clear(void);
 /* The comparison-only drive replay (EM_PS2_DRIVE_REPLAY, em_stream_live.c):
  * the level smoke reports a compared phase's row 0 at the run's main-loop
  * counter; a phase the table anchors maps the run's counter onto the

@@ -433,10 +433,10 @@ static int target_sound_call(void *ctx,EmArea00LowCall *c)
        c->a[3] || c->f[0]!=0x43960000u || c->f[1]!=0x45800000u)return -1;
     const void *p=em_aim_fire_live_map(s->live,s->actor+0xB0u,12,0);
     if(!p)return -1;
-    float position[3],left,right;memcpy(position,p,sizeof position);
+    float position[3];memcpy(position,p,sizeof position);
     c->v0=0;c->f0=0;
-    if(!em_sfx_compute_gains(position,300.0f,&left,&right))return 0;
-    int32_t l=em_sfx_request_word(left),r=em_sfx_request_word(right);
+    int32_t l,r;
+    if(!em_sfx_request_words(position,0,300.0f,&l,&r))return 0;
     memcpy(s->stack+0x38,&l,4);memcpy(s->stack+0x3C,&r,4);c->v0=1;
     return 0;
 }

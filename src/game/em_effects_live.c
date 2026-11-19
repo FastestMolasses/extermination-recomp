@@ -731,10 +731,7 @@ static int w_001FBF50(void *ctx, const float pos[4], float f12, float f13, int32
     (void)ctx;
     *a = *b = *result = 0;
     if (fbits(f13) != 0x45800000u) return -1;
-    float gl, gr;
-    if (!em_sfx_compute_gains(pos, f12, &gl, &gr)) return 0;
-    *a = em_sfx_request_word(gl);
-    *b = em_sfx_request_word(gr);
+    if (!em_sfx_request_words(pos, 0, f12, a, b)) return 0;
     *result = 1;
     return 0;
 }

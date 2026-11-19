@@ -651,6 +651,12 @@ recording-derived and stay in the ignored `build/`.
   or EM_INPUT_PLAY ticks into EM_GS_DUMP_DIR (with EM_GS_DUMP_MEM=1 the
   model's whole local memory too) and quits after the last one
   (DRAW_LIST_AUDIT.md section 4).
+  `EM_SOUND_DUMP=<file>` with `EM_SOUND_DUMP_AT=<a>-<b>[,...]` (comparison
+  only; guided_chain.py / watch_takes.py --snd-dump) writes, at every script
+  frame (with EM_START_AT_COUNTER0) or EM_INPUT_PLAY tick whose recorded
+  engine counter lies in a range, the EE sound state and the fields' RPC
+  0x64 exchanges as one JSON line, and quits after the last range
+  (SOUND_SECOND_HALF.md).
   `EM_START_AT_RANDS=<file>` (lines `f state`) puts
   the rand() word in place at those script frames.
   `EM_START_AT_CLOCK=<f>:<hex>` (comparison only) sets 0x70003B68 to the

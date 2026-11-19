@@ -160,6 +160,11 @@ int em_scene_bindings_00119828(void *ctx, int32_t ch, int32_t l, int32_t r);
 int em_scene_bindings_module_loader_boot(const char *pack_path);
 void em_scene_bindings_module_loader_shutdown(void);
 void em_scene_bindings_module_loader_field(void);
+/* EM_SOUND_DUMP (comparison only; em_scene_bindings.c says the format):
+ * the replay's per-tick hook (em_replay.c) names the tick's recorded engine
+ * counter (has_counter 0 past the segment's recorded ticks) and its
+ * (segment, offset). */
+void em_scene_bindings_sound_dump(uint32_t counter, int has_counter, unsigned seg, unsigned off);
 int em_scene_bindings_module_loader_check(void);
 /* One "module loader: <drive mode>: ..." line with the run's counters
  * (the level smoke and newgame-control print it). */

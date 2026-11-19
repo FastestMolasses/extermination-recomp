@@ -1479,7 +1479,8 @@ static void log_route_block(FILE *f)
  * D_0027CCC0 records in use (+0x00 != 0, or +0x06 / +0x22 != 0xFFFF) as
  * [index, the 17 fields of EmSoundSample.voice], "envx": the nonzero
  * D_002817C0 words as [index, word], "tr": the allocated tracks as
- * [track, sound id] (diagnostic)}; null before the sound boot.
+ * [track, sound id] (diagnostic), "tlr": the same tracks' volume requests
+ * +0x48 / +0x4C as [track, left, right]}; null before the sound boot.
  * tools/level_smoke_audio.py. */
 static void log_sound(FILE *f)
 {
@@ -1523,7 +1524,106 @@ static void log_sound(FILE *f)
     n = 0;
     for (int k = 0; k < 48; ++k)
         if (s->track_id[k] >= 0) fprintf(f, "%s[%d, %d]", n++ ? ", " : "", k, s->track_id[k]);
+    fputs("], \"tlr\": [", f);
+    n = 0;
+    for (int k = 0; k < 48; ++k)
+        if (s->track_id[k] >= 0)
+            fprintf(f, "%s[%d, %d, %d]", n++ ? ", " : "", k, s->track_lr[k][0], s->track_lr[k][1]);
     fputs("]}", f);
+}
+
+/* EM_SOUND_DUMP=<file> with EM_SOUND_DUMP_AT=<a>-<b>[,<a>-<b>...]
+ * (comparison only; tools/watch_takes.py and tools/guided_chain.py
+ * --snd-dump, tools/compare_sound_ticks.py, docs/SOUND_SECOND_HALF.md): at
+ * every replay tick (EM_INPUT_PLAY, em_replay.c) or world frame of a pad
+ * script (EM_START_AT_PAD with EM_START_AT_COUNTER0: its head hook, "seg" 0
+ * and "off" the script frame) whose recorded engine counter lies in a range,
+ * one JSON line: {"c": the recording's counter, "seg" / "off": the replay's
+ * pair, "n": the port's own counter, "snd": log_sound's object (the EE sound
+ * state at this tick's main-loop top), "x": the fields' RPC 0x64 exchanges
+ * since the previous replay tick as [D_00810E90, [SFX commands], [stream
+ * commands], dropped], each command [command, voice, a, b]}. The run quits
+ * after the last range. Unset: nothing is read, logged or changed. */
+static struct {
+    int parsed, count, written;
+    uint32_t lo[32], hi[32], last;
+    FILE *f;
+} snd_dump;
+
+static void sound_dump_parse(void)
+{
+    snd_dump.parsed = 1;
+    const char *path = getenv("EM_SOUND_DUMP"), *v = getenv("EM_SOUND_DUMP_AT");
+    if (!path || !path[0] || !v || !v[0]) return;
+    while (*v && snd_dump.count < 32) {
+        char *end = NULL;
+        const unsigned long a = strtoul(v, &end, 10);
+        if (end == v) break;
+        unsigned long b = a;
+        if (*end == '-') {
+            const char *q = end + 1;
+            b = strtoul(q, &end, 10);
+            if (end == q) break;
+        }
+        snd_dump.lo[snd_dump.count] = (uint32_t)a;
+        snd_dump.hi[snd_dump.count++] = (uint32_t)b;
+        if ((uint32_t)b > snd_dump.last) snd_dump.last = (uint32_t)b;
+        v = *end == ',' ? end + 1 : end;
+    }
+    if (!snd_dump.count) return;
+    snd_dump.f = fopen(path, "w");
+    if (!snd_dump.f) {
+        fprintf(stderr, "em_scene: EM_SOUND_DUMP=%s cannot be opened\n", path);
+        snd_dump.count = 0;
+        return;
+    }
+    em_stream_live_exchange_log(1);
+    printf("startup: EM_SOUND_DUMP: %d counter range(s) into %s (comparison only)\n", snd_dump.count, path);
+}
+
+static void sound_dump_cmds(FILE *f, const uint32_t (*q)[4], unsigned n)
+{
+    fputc('[', f);
+    for (unsigned i = 0; i < n; ++i)
+        fprintf(f, "%s[%u, %u, %u, %u]", i ? ", " : "", q[i][0], q[i][1], q[i][2], q[i][3]);
+    fputc(']', f);
+}
+
+void em_scene_bindings_sound_dump(uint32_t counter, int has_counter, unsigned seg, unsigned off)
+{
+    if (!snd_dump.parsed) sound_dump_parse();
+    if (!snd_dump.f) return;
+    int in = 0;
+    for (int i = 0; i < snd_dump.count && has_counter; ++i)
+        in |= counter >= snd_dump.lo[i] && counter <= snd_dump.hi[i];
+    if (in) {
+        FILE *f = snd_dump.f;
+        fprintf(f, "{\"c\": %u, \"seg\": %u, \"off\": %u, \"n\": %u", counter, seg, off,
+                (unsigned)em_frame_counter());
+        log_sound(f);
+        unsigned n = 0, dropped = 0;
+        const EmSoundExchange *x = em_stream_live_exchanges(&n, &dropped);
+        fputs(", \"x\": [", f);
+        for (unsigned i = 0; i < n; ++i) {
+            fprintf(f, "%s[%u, ", i ? ", " : "", x[i].vblank);
+            sound_dump_cmds(f, (const uint32_t (*)[4])x[i].sfx, x[i].nsfx);
+            fputs(", ", f);
+            sound_dump_cmds(f, (const uint32_t (*)[4])x[i].str, x[i].nstr);
+            fputs(", 0]", f);
+        }
+        if (dropped) fprintf(f, "%s[0, [], [], %u]", n ? ", " : "", dropped);
+        fputs("]}\n", f);
+        snd_dump.written++;
+    }
+    em_stream_live_exchanges_clear();
+    if (has_counter && counter >= snd_dump.last) {
+        fclose(snd_dump.f);
+        snd_dump.f = NULL;
+        printf("startup: EM_SOUND_DUMP: %d tick(s) written; the last range ends at counter %u (comparison only)\n",
+               snd_dump.written, snd_dump.last);
+        fflush(stdout);
+        em_frame_request_quit();
+    }
 }
 
 static void log_tick_end(int rc)

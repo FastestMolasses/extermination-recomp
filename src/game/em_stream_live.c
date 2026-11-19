@@ -496,9 +496,60 @@ static void sound_sample(void)
          * backend's, not compared). */
         o->envx[v] = d->feedback ? d->feedback[v] : 0;
     }
-    for (int k = 0; k < 48; ++k)
+    for (int k = 0; k < 48; ++k) {
         o->track_id[k] = d->tracks[k].allocated && d->tracks[k].entry
                              ? (int32_t)d->tracks[k].entry->id : -1;
+        if (d->tracks[k].allocated) {
+            o->track_lr[k][0] = d->tracks[k].left;
+            o->track_lr[k][1] = d->tracks[k].right;
+        }
+    }
+}
+
+/* Comparison only (EM_SOUND_DUMP; em_stream_live.h EmSoundExchange): the
+ * fields' exchanges since the last take. */
+enum { XLOG_MAX = 32 };
+static struct {
+    int on;
+    unsigned n, dropped;
+    EmSoundExchange x[XLOG_MAX];
+} s_xlog;
+
+void em_stream_live_exchange_log(int on)
+{
+    s_xlog.on = on != 0;
+    s_xlog.n = s_xlog.dropped = 0;
+    em_sfx_keep_exchange(on);
+}
+
+const EmSoundExchange *em_stream_live_exchanges(unsigned *count, unsigned *dropped)
+{
+    if (count) *count = s_xlog.n;
+    if (dropped) *dropped = s_xlog.dropped;
+    return s_xlog.x;
+}
+
+void em_stream_live_exchanges_clear(void)
+{
+    s_xlog.n = s_xlog.dropped = 0;
+}
+
+static void xlog_add(void)
+{
+    if (s_xlog.n >= XLOG_MAX) {
+        s_xlog.dropped++;
+        return;
+    }
+    EmSoundExchange *e = &s_xlog.x[s_xlog.n++];
+    e->vblank = S.globals.d810E90;
+    unsigned n = 0;
+    const uint32_t (*q)[4] = em_sfx_last_exchange(&n);
+    e->nsfx = n > EM_SOUND_EXCHANGE_MAX ? EM_SOUND_EXCHANGE_MAX : n;
+    memcpy(e->sfx, q, sizeof e->sfx[0] * e->nsfx);
+    n = 0;
+    q = S.ctx.iop ? em_iop_stream_ee_queue(S.ctx.iop, &n) : NULL;
+    e->nstr = n > EM_SOUND_EXCHANGE_MAX ? EM_SOUND_EXCHANGE_MAX : n;
+    if (q) memcpy(e->str, q, sizeof e->str[0] * e->nstr);
 }
 
 int em_stream_live_field(void)
@@ -510,6 +561,7 @@ int em_stream_live_field(void)
      * then the field's IOP work (the tick's RPC 0x64 exchange). */
     S.globals.d810E90 += 1u;
     if (em_sfx_field() != 0) return fail("the SFX sequencer's tick (001152D8)");
+    if (s_xlog.on) xlog_add();   /* EM_SOUND_DUMP (comparison only) */
     if (em_iop_stream_field(S.ctx.iop) != 0) return fail("the IOP field (RPC 0x64, driver ticks)");
     sound_sample();
     return 0;
@@ -650,6 +702,12 @@ static const int32_t *bank_handles(void)
     return S.bank_bound ? S.bank.load.d281D50 : NULL;
 }
 
+/* D_002819C0 (one storage: the sound bank library's), for 00116DB8. */
+static uint8_t *bank_volumes(void)
+{
+    return S.bank_bound ? S.bank.lib.d2819C0 : NULL;
+}
+
 static int bank_replay_counter(void *ctx, uint32_t *counter)
 {
     (void)ctx;
@@ -668,6 +726,7 @@ int em_stream_live_bind_sound_bank(const int32_t base[5])
         return fail("EM_PS2_DRIVE_REPLAY's B lines (out of counter order)");
     S.bank_bound = 1;
     em_sfx_bind_bank_handles(bank_handles); /* 001FB9F0's D_00281D50 */
+    em_sfx_bind_bank_volumes(bank_volumes); /* 00116DB8's D_002819C0 */
     return 0;
 }
 

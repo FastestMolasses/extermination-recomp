@@ -300,6 +300,10 @@ void em_sfx_set_attachment(int index);
  * table bound (or a record outside it) latches a fault: em_sfx_field then
  * returns -1 and the frame loop stops. */
 void em_sfx_bind_bank_handles(const int32_t *(*reader)(void));
+/* D_002819C0 (the bank handles' pending volumes, 001199F0's), which the
+ * tick's 00116DB8 consumes (em_sfx_bank.c bank_volume); em_stream_live binds
+ * the sound bank library's storage. Unbound: nothing is pending. */
+void em_sfx_bind_bank_volumes(uint8_t *(*reader)(void));
 
 /* One NTSC field at the vblank: 001152B0's 001152D8 tick (the reaper over
  * D_002817C0, the previous exchange's reply; the tracks' operations, the
@@ -313,6 +317,15 @@ void em_sfx_bind_bank_handles(const int32_t *(*reader)(void));
  * calls it once per field from the boot on. 0, or -1 once a fault
  * latched. */
 int em_sfx_field(void);
+
+/* Comparison only (EM_SOUND_DUMP: em_scene_bindings_sound_dump,
+ * docs/SOUND_SECOND_HALF.md): with em_sfx_keep_exchange(1), each
+ * em_sfx_field keeps a copy of the commands its RPC 0x64 exchange sent
+ * (the game's stops since the last tick, then the tick's own, in queue
+ * order: D_0027F7C0's {command, voice, a, b}); em_sfx_last_exchange gives
+ * them (count 0 while off). Nothing the driver does changes. */
+void em_sfx_keep_exchange(int on);
+const uint32_t (*em_sfx_last_exchange(unsigned *count))[4];
 
 /* The driver as the last field / call left it (tracks D_0027E0C0, voices
  * D_0027CCC0, cursor and serial), with the ticks run: the level smoke's
@@ -400,6 +413,23 @@ void em_sfx_bind_output_mode(const uint8_t *(*reader)(void));
  * returns 0, or -1 for a fault (nothing is submitted). Unbound (fixtures),
  * em_sfx_listener's player position stands. */
 void em_sfx_bind_distance_listener(int (*reader)(float out[3]));
+
+/* 001FBF50 itself (the game binds it: em_render_frame.c sfx_gains_001FBF50,
+ * em_player_misc_001FBF50 over the EE float model and the SDK's own
+ * 0011E2A8 / 0011E748 / 001B1380 and VU0 leaves): the request words of a
+ * source at `pos` with D_00810360 = `listener`, the eye `eye`, the yaw
+ * `yaw` and D_0028215B = `mode`. Returns 1 (in range), 0 (out of range: not
+ * submitted) or -1 (unavailable: em_sfx_request_words then uses its own
+ * float approximation and counts it). */
+typedef int (*EmSfxGainsOriginal)(const float pos[3], int32_t flat, float radius, const float listener[3],
+                                  const float eye[3], float yaw, uint8_t mode, int32_t *left, int32_t *right);
+void em_sfx_bind_gains_original(EmSfxGainsOriginal fn);
+/* 001FBF50's request words (0011A218's pair) for a source at `pos`: 1 in
+ * range, 0 out of range. The original's arithmetic when bound (the host
+ * float sfx_gains otherwise; docs/SOUND_SECOND_HALF.md: the host path is a
+ * word or two off where the original's sine, square root and VU0 normalise
+ * round differently). */
+int em_sfx_request_words(const float pos[3], int32_t flat, float radius, int32_t *left, int32_t *right);
 int em_sfx_compute_gains(const float pos[3], float radius,
                          float *gain_l, float *gain_r);
 /* The same with 001FBD50's flat argument (its low byte nonzero: the
