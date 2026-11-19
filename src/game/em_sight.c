@@ -46,6 +46,15 @@
 #define F_PI      UINT32_C(0x40490FDB)
 #define F_PI_32   UINT32_C(0x3DC90FDB)
 #define F_13_23   UINT32_C(0x3F10B216)   /* 0.5652174 */
+#define F_96      UINT32_C(0x42C00000)
+#define F_340     UINT32_C(0x43AA0000)
+#define F_1792    UINT32_C(0x44E00000)
+#define F_1936    UINT32_C(0x44F20000)
+#define F_40000   UINT32_C(0x471C4000)
+#define F_2PI     UINT32_C(0x40C90FDB)
+#define F_MPI     UINT32_C(0xC0490FDB)
+#define F_RX      UINT32_C(0x3EC99999)   /* 0.39374998, the blip's x scale */
+#define F_RZ      UINT32_C(0x3EE66666)   /* 0.45, its z scale */
 #define F_10_23   UINT32_C(0x3EDE9BD4)   /* 0.43478262 */
 
 /* Original data (the ELF's .data). */
@@ -63,6 +72,18 @@
 #define D_275670  UINT32_C(0x00275670)   /* the render context's address */
 #define D_275B90  UINT32_C(0x00275B90)   /* the class-2 list cursor */
 #define D_275B98  UINT32_C(0x00275B98)   /* its count (halfword) */
+#define D_26A990  UINT32_C(0x0026A990)   /* 0022E7F0's heading fan corners */
+#define D_26A9A0  UINT32_C(0x0026A9A0)
+#define D_26A9B0  UINT32_C(0x0026A9B0)
+#define D_26A9C0  UINT32_C(0x0026A9C0)   /* its three 002082B0 ring records */
+#define D_26AA20  UINT32_C(0x0026AA20)
+#define D_26AA80  UINT32_C(0x0026AA80)
+#define D_275B54  UINT32_C(0x00275B54)   /* the radar list cursor */
+#define D_275B58  UINT32_C(0x00275B58)   /* its count (halfword) */
+#define S_36A0    UINT32_C(0x700036A0)
+#define S_36D0    UINT32_C(0x700036D0)
+#define S_36E0    UINT32_C(0x700036E0)
+#define S_38C0    UINT32_C(0x700038C0)
 #define S_3600    UINT32_C(0x70003600)
 #define S_3610    UINT32_C(0x70003610)
 #define S_3620    UINT32_C(0x70003620)
@@ -112,6 +133,16 @@
 #define FN_ACCEPT UINT32_C(0x00183B80)
 #define FN_WHERE  UINT32_C(0x00183C40)
 #define FN_MARK   UINT32_C(0x001DD170)
+#define FN_IDENT  UINT32_C(0x001029C0)   /* (m): identity */
+#define FN_NORM   UINT32_C(0x00102760)   /* (dst, src) */
+#define FN_ROTY   UINT32_C(0x00102BB0)   /* (dst, src, f12) */
+#define FN_MMUL   UINT32_C(0x001026D0)   /* (dst, a, b) */
+#define FN_31E0   UINT32_C(0x001031E0)   /* (dst, src) */
+#define FN_ATAN2  UINT32_C(0x0011E620)   /* (f12, f13) -> f0 */
+#define FN_WRAP   UINT32_C(0x001B1470)   /* (f12) -> f0 */
+#define FN_BLEND  UINT32_C(0x00207D00)   /* (slot, mode) */
+#define FN_SPRITE UINT32_C(0x00207E40)   /* (slot, x, y, w, h, rgba, tex0) */
+#define FN_FAN    UINT32_C(0x00208040)   /* (slot, a, b, c, rgba) */
 
 #define ADD em_ee_add_bits
 #define SUB em_ee_sub_bits
@@ -119,6 +150,7 @@
 #define DIV em_ee_div_bits
 #define CVT em_ee_cvt_s_w_bits
 #define LT em_ee_c_lt_bits
+#define LE em_ee_c_le_bits
 
 /* ---- the host ------------------------------------------------------------ */
 
@@ -258,6 +290,19 @@ static void call2(Run *r, uint32_t sp, uint32_t fn, uint32_t a0, uint32_t a1)
 static void call3(Run *r, uint32_t sp, uint32_t fn, uint32_t a0, uint32_t a1, uint32_t a2)
 {
     (void)callv(r, sp, fn, 3, 0, a0, a1, a2, 0, 0, 0, 0, 0);
+}
+static void call1(Run *r, uint32_t sp, uint32_t fn, uint32_t a0)
+{
+    (void)callv(r, sp, fn, 1, 0, a0, 0, 0, 0, 0, 0, 0, 0);
+}
+/* 0011E620(f12, f13) -> f0 */
+static uint32_t atan2c(Run *r, uint32_t sp, uint32_t f12, uint32_t f13)
+{
+    EmAimFireTargetCall c = {FN_ATAN2, sp, {0, 0, 0, 0, 0, 0, 0}, {f12, f13, 0, 0, 0, 0, 0, 0}, 0, 2, 0, 0};
+    if (r->h->fault) return 0;
+    if (!r->h->call) fault(r, 1, FN_ATAN2);
+    else if (r->h->call(r->h->context, &c) < 0) fault(r, 3, FN_ATAN2);
+    return c.f0;
 }
 
 /* The style record the text runs share: word rgb at +0, bytes 0x80 and 0
@@ -648,6 +693,134 @@ static void f199770(Run *r, uint32_t sp, uint32_t pl)
     } while (n != 0);
 }
 
+/* 0022E630: one radar blip (the player a0, the entry a1) */
+static void f22e630(Run *r, uint32_t sp, uint32_t pl, uint32_t e)
+{
+    sp -= 0x30;
+    const uint32_t f4 = lw(r, e + 0xB0), f3 = lw(r, pl + 0xA0);     /* 0022E648 */
+    const uint32_t f2 = lw(r, e + 0xB8), f1 = lw(r, pl + 0xA8);
+    const uint32_t dx = SUB(f4, f3), dz = SUB(f2, f1);               /* 0022E668 */
+    const uint32_t d2 = em_ee_madd_bits(em_ee_mula_bits(dx, dx), dz, dz);   /* 0022E670 */
+    if (failed(r) || !LE(d2, F_40000)) return;                       /* 0022E678: within 200 */
+    call1(r, sp, FN_IDENT, S_36A0);                                  /* 0022E688 */
+    const uint32_t yaw = ADD(F_PI, lw(r, pl + 0xC4));                /* 0022E6A4 */
+    const uint32_t a = fcall(r, sp, FN_WRAP, SUB(F_2PI, yaw));       /* 0022E6B0 */
+    (void)callv(r, sp, FN_ROTY, 2, 1, S_36A0, S_36A0, 0, 0, 0, 0, 0, a);   /* 0022E6C8 */
+    sw(r, S_38A0, dx);                                               /* 0022E6D4 */
+    sw(r, S_38A0 + 4, 0);
+    sw(r, S_38A0 + 8, dz);
+    sw(r, S_38A0 + 0xC, F_1);
+    call3(r, sp, FN_APPLY, S_38B0, S_36A0, S_38A0);                  /* 0022E708 */
+    uint32_t x = MUL(F_RX, lw(r, S_38B0));                           /* 0022E730 */
+    x = ADD(F_1792, ADD(F_96, x));                                   /* 0022E738 / 40 */
+    const int32_t ix = ftoi(r, sp, MUL(F_16, x));                    /* 0022E74C */
+    uint32_t z = MUL(F_RZ, lw(r, S_38B0 + 8));                           /* 0022E778 */
+    z = ADD(F_1936, DIV(ADD(F_340, z), F_2));                        /* 0022E780 .. 94 */
+    const int32_t iz = ftoi(r, sp, MUL(F_16, z));                    /* 0022E7A4 */
+    EmAimFireTargetCall c = {FN_SPRITE, sp, {1, sx((uint32_t)ix), sx((uint32_t)iz), 8, 8, sx(0x80008080u),
+                                             UINT64_C(0x20041605113222CD)},
+                             {0, 0, 0, 0, 0, 0, 0, 0}, 7, 0, 0, 0};
+    if (failed(r)) return;
+    if (!r->h->call) fault(r, 1, FN_SPRITE);                         /* 0022E7D0 */
+    else if (r->h->call(r->h->context, &c) < 0) fault(r, 3, FN_SPRITE);
+}
+
+static void f2082b0(Run *r, uint32_t sp, uint32_t slot, uint32_t rec);
+
+/* 0022E7F0: the radar of D_00810CA5 == 6 (the player) */
+static void f22e7f0(Run *r, uint32_t sp, uint32_t pl)
+{
+    sp -= 0xB0;
+    call2(r, sp, FN_BLEND, 1, 0);                                    /* 0022E810 */
+    int32_t n = lh(r, D_275B58);                                     /* 0022E818 */
+    uint32_t list = lw(r, D_275B54);
+    if (failed(r)) return;
+    if (n != 0) {
+        do {
+            const uint32_t e = lw(r, list);                          /* 0022E824 */
+            n = (int32_t)((uint32_t)n - 1u);
+            const uint32_t used = lbu(r, e);
+            list += 4;
+            if (failed(r)) return;
+            if (used) f22e630(r, sp, pl, e);                         /* 0022E838 */
+            if (failed(r)) return;
+        } while (n != 0);
+    }
+    call1(r, sp, FN_IDENT, S_36E0);                                  /* 0022E84C */
+    sw(r, S_36E0, F_0_8);                                            /* 0022E860 */
+    sw(r, S_36E0 + 0x14, F_1);
+    sw(r, S_36E0 + 0x28, F_0_5);
+    sw(r, S_36E0 + 0x3C, 0);
+    call2(r, sp, FN_COPY, sp + 0x60, lw(r, pl + 0x12C) + 0x90);      /* 0022E88C */
+    sw(r, sp + 0x64, 0);                                             /* 0022E8A0 */
+    call2(r, sp, FN_NORM, sp + 0x60, sp + 0x60);
+    const uint32_t a0 = atan2c(r, sp, lw(r, sp + 0x68), lw(r, sp + 0x60));   /* 0022E8A8 */
+    call2(r, sp, FN_COPY, sp + 0x50, pl + 0xF0);                     /* 0022E8B8 */
+    sw(r, sp + 0x54, 0);                                             /* 0022E8CC */
+    call2(r, sp, FN_NORM, sp + 0x50, sp + 0x50);
+    const uint32_t a1 = atan2c(r, sp, lw(r, sp + 0x58), lw(r, sp + 0x50));   /* 0022E8D4 */
+    uint32_t da = em_ee_neg_bits(SUB(a0, a1));                       /* 0022E8DC / F0 */
+    if (LE(da, F_MPI)) {                                             /* 0022E8F4 */
+        do {
+            if (failed(r)) return;
+            da = ADD(da, F_2PI);                                     /* 0022E910 */
+        } while (LE(da, F_MPI));
+    }
+    if (!LE(da, F_PI)) {                                             /* 0022E940 */
+        do {
+            if (failed(r)) return;
+            da = SUB(da, F_2PI);                                     /* 0022E95C */
+        } while (!LE(da, F_PI));
+    }
+    call1(r, sp, FN_IDENT, sp + 0x70);                               /* 0022E97C */
+    (void)callv(r, sp, FN_ROTY, 2, 1, sp + 0x70, sp + 0x70, 0, 0, 0, 0, 0, da);   /* 0022E98C */
+    call3(r, sp, FN_MMUL, S_36E0, sp + 0x70, S_36E0);                /* 0022E9A4 */
+    call1(r, sp, FN_IDENT, S_36A0);                                  /* 0022E9B0 */
+    call3(r, sp, FN_MMUL, S_36A0, S_36E0, S_36A0);                   /* 0022E9CC */
+    sw(r, S_38A0, F_96);                                             /* 0022E9DC */
+    sw(r, S_38A0 + 4, 0);
+    sw(r, S_38A0 + 8, F_340);
+    sw(r, S_38A0 + 0xC, F_1);
+    call2(r, sp, FN_31E0, S_36D0, S_38A0);                           /* 0022EA0C */
+    call2(r, sp, FN_COPY, S_38A0, D_26A990);                         /* 0022EA20 */
+    call2(r, sp, FN_COPY, S_38B0, D_26A9A0);
+    call2(r, sp, FN_COPY, S_38C0, D_26A9B0);
+    call3(r, sp, FN_APPLY, S_38A0, S_36A0, S_38A0);                  /* 0022EA64 */
+    call3(r, sp, FN_APPLY, S_38B0, S_36A0, S_38B0);
+    call3(r, sp, FN_APPLY, S_38C0, S_36A0, S_38C0);
+    /* 0022EAA8..0022EB88: x = 16 (1792 + x), z = 16 (1936 + z / 2) for the three corners */
+    uint32_t f0 = lw(r, S_38A0), f1 = lw(r, S_38B0), f2;
+    f2 = ADD(F_1792, f0);                                            /* 0022EACC */
+    f0 = lw(r, S_38C0);
+    f2 = MUL(F_16, f2);
+    sw(r, S_38A0, f2);                                               /* 0022EAEC */
+    f2 = lw(r, S_38A0 + 8);
+    f1 = ADD(F_1792, f1);                                            /* 0022EAFC */
+    f2 = DIV(f2, F_2);                                               /* 0022EB08 */
+    f2 = ADD(F_1936, f2);
+    f2 = MUL(F_16, f2);
+    sw(r, S_38A0 + 8, f2);                                           /* 0022EB30 */
+    f1 = MUL(F_16, f1);
+    f0 = ADD(F_1792, f0);                                            /* 0022EB3C */
+    sw(r, S_38B0, f1);
+    f1 = lw(r, S_38B0 + 8);
+    f0 = MUL(F_16, f0);                                              /* 0022EB4C */
+    sw(r, S_38C0, f0);
+    f0 = lw(r, S_38C0 + 8);
+    f1 = DIV(f1, F_2);                                               /* 0022EB60 */
+    f0 = DIV(f0, F_2);
+    f1 = ADD(F_1936, f1);
+    f0 = ADD(F_1936, f0);
+    f1 = MUL(F_16, f1);                                              /* 0022EB74 */
+    sw(r, S_38B0 + 8, f1);
+    f0 = MUL(F_16, f0);
+    sw(r, S_38C0 + 8, f0);                                           /* 0022EB88 */
+    (void)callv(r, sp, FN_FAN, 5, 0, 1, S_38A0, S_38B0, S_38C0, 0x8000FFFFu, 0, 0, 0);   /* 0022EB84 */
+    f2082b0(r, sp, 1, D_26A9C0);                                     /* 0022EB94 */
+    f2082b0(r, sp, 1, D_26AA20);
+    f2082b0(r, sp, 1, D_26AA80);
+}
+
 /* 002082B0: the ring builder */
 static void f2082b0(Run *r, uint32_t sp, uint32_t slot, uint32_t rec)
 {
@@ -866,6 +1039,20 @@ int em_sight_00199770(EmSight *h, uint32_t player)
     END();
 }
 
+int em_sight_0022E7F0(EmSight *h, uint32_t player)
+{
+    BEGIN(0x0022E7F0u);
+    f22e7f0(r, h->sp, player);
+    END();
+}
+
+int em_sight_0022E630(EmSight *h, uint32_t player, uint32_t entry)
+{
+    BEGIN(0x0022E630u);
+    f22e630(r, h->sp, player, entry);
+    END();
+}
+
 int em_sight_002082B0(EmSight *h, int32_t slot, uint32_t ring)
 {
     BEGIN(0x002082B0u);
@@ -889,7 +1076,7 @@ int em_sight_call(EmSight *h, const EmAimFireTargetCall *c)
     case 0x001DB830u: case 0x001DB9D0u: case 0x001DBCB0u: case 0x001DBD50u: case 0x001DBE20u:
     case 0x001DBF00u: case 0x001DC020u: case 0x001DC610u: case 0x001DC890u: case 0x001DC960u:
     case 0x001DCD40u: case 0x001DCF40u: case 0x001DCFF0u: case 0x00199770u: case 0x002082B0u:
-    case 0x002081A0u:
+    case 0x002081A0u: case 0x0022E7F0u: case 0x0022E630u:
         break;
     default:
         return 1;
@@ -912,6 +1099,8 @@ int em_sight_call(EmSight *h, const EmAimFireTargetCall *c)
     case 0x001DCFF0u: return em_sight_001DCFF0(h, a0, a1);
     case 0x00199770u: return em_sight_00199770(h, (uint32_t)c->a[0]);
     case 0x002082B0u: return em_sight_002082B0(h, a0, a1);
+    case 0x0022E7F0u: return em_sight_0022E7F0(h, (uint32_t)c->a[0]);
+    case 0x0022E630u: return em_sight_0022E630(h, (uint32_t)c->a[0], a1);
     default:          return em_sight_002081A0(h, a0, a1, (int32_t)(uint32_t)c->a[2], (int32_t)(uint32_t)c->a[3],
                                                (uint32_t)c->a[4]);
     }

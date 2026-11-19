@@ -489,15 +489,11 @@ collision world; the math through em_sdk_math_original; 001D2610 /
 
 **Reached only outside what AREA11 sets up** (fail-stops, each reported
 when reached): 00182F90 (001912B0's area-0x10 lift; AREA11 is area 0xB);
-0022E7F0 (D_00810CA5 == 6: the upper-rail part item 0x06 fitted on the
-SPR4 page UPPER U.R.S. (00217090 commits entry 1 + 5); the guided run owns
-the item from g40 on but never fits it, CA5 stays 5 in every take. In aim
-frames (00197D20's state, 001999C0's D_00810CA7 arms) it draws a radar:
-the 2D open 00207D00(1, 0), a 200-unit blip 0022E630 (00207E40
-sprite) per live entry of the list D_00275B54 / D_00275B58, the heading
-fan 00208040 and three 002082B0 icons, all into slot 1; 001B17A0 is the
-same item's object highlight. Not translated: lane PORT-FAILSTOPS ran out
-of budget after the reticle); 001B0300 (camera +5 == 1; the specials module
+0022E7F0 is no longer one (lane PORT-RADAR, 2026-11-18: item 0x06 UPPER
+U.R.S. on the upper rail, D_00810CA5 == 6; the radar and its blips
+0022E630 are em_sight's, routed to em_sight_live by aim_call; the
+001B1CE0 radar pushes of 001B17A0 are bound; WHOLE_GAME_LEDGER.md section
+4.3); 001B0300 (camera +5 == 1; the specials module
 requires its worker before it runs 00197490, so it is bound to a
 fail-stop). Evidence: every route and AIM capture holds D_00810CA4..CA7 =
 FF 05 00 07 and camera +5 = 0; their writers are the New Game reset

@@ -94,6 +94,9 @@ int em_collision_world_publish_001B1B70(const EmActor *actor);
 int em_collision_world_push4_001B1D20(const EmActor *actor);
 /* Direct interactive-list publication from slider/terminal owners. */
 int em_collision_world_push80_001B1DE0(const EmActor *actor);
+/* 001B1CE0(actor): the radar push (D_00275B54 / D_00275B58, 0022E7F0's
+ * list; 001B17A0's D_00810CA5 == 6 gate). 1, or -1 (not loaded). */
+int em_collision_world_push_001B1CE0(const EmActor *actor);
 /* 001A2370(actor, matrix): re-transform the actor's extended cell (uid
  * +0x0E >> 8) by `matrix` and rebuild its AABB. 1, or -1 (not loaded). */
 int em_collision_world_retransform_001A2370(const EmActor *actor, const float matrix[16]);

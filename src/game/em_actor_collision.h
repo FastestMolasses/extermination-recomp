@@ -116,9 +116,15 @@ typedef struct {
     int16_t published;  /* the published count (e.g. D_00275B84) */
 } EmActorClassList;
 
+#define EM_ACTOR_RADAR_MAX 0x40
 typedef struct {
     EmActorClassList list[EM_ACTOR_LIST_COUNT];
-    int16_t count_b58;  /* D_00275B58: 001AAD00 zeroes it; no pusher is translated */
+    /* The radar list (D_00275B54 cursor, base D_0028AAB0, D_00275B58
+     * count): 001B1CE0 pushes while D_00275B58 < 0x40 (001B17A0 with
+     * D_00810CA5 == 6, the UPPER U.R.S. item 0x06), 0022E7F0 reads it
+     * unpublished; 001AAD00 and 001AF8E0 reset it. Slot i = the i-th push. */
+    const EmActor *radar[EM_ACTOR_RADAR_MAX];
+    int16_t count_b58;  /* D_00275B58 */
 } EmActorClassLists;
 
 /* 001AF8E0's list half: every cursor at its base, every count 0. */
@@ -131,6 +137,8 @@ int em_actor_class_push4_001B1D20(EmActorClassLists *lists, const EmActor *actor
 int em_actor_class_push80_001B1DE0(EmActorClassLists *lists, const EmActor *actor);
 /* 001AAD00's list block (after its nine hooks, which are not this module's). */
 void em_actor_class_lists_swap_001AAD00(EmActorClassLists *lists);
+/* 001B1CE0(actor): the radar push (+0x14, the record's own address). */
+int em_actor_radar_push_001B1CE0(EmActorClassLists *lists, const EmActor *actor);
 /* Published entry j of a list (the pointer the original stored), or NULL. */
 const EmActor *em_actor_class_list_entry(const EmActorClassLists *lists, int which, int j);
 

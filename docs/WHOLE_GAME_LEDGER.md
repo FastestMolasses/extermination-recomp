@@ -217,11 +217,59 @@ not on the port's picture (by construction, not measured), like AREA21's
 Gatling gauge bars (em_sgp_00207F80). The capture's fields
 (build/sights_ref/zoom/frame_aim*/original.png) are the reference for the
 step that draws slot 1 in world frames. 00199770's lock mark 001DD170 is
-bound since lane PORT-FAILSTOPS (2026-11-18): em_sight_lock runs the reticle translations with vf23 = the fog quadword *D_00275670 + 0xA0 (measured in the original: the same vf23 at 001999C0, 00199770 and every 001DD170 entry of a tick, that quadword in 57 of 90 ticks, another owner's leftover in 33; a leftover changes only the w lane 0x7000360C, `make test-sight-lock-reference`); AIM_FIRE.md section 7. Live it is not yet reached: from the constructed start
-sight_missile_a22 (AREA22 past door 18, nine class-2 entries in range)
-00199770 faults reading the entry 0x7A8830, whose record no owner's view
-serves (open; `EM_SIGHT_OPEN=1 make test-sight-live`). The marks' pixels
-are unverified (no picture capture).
+bound since lane PORT-FAILSTOPS (2026-11-18): em_sight_lock runs the reticle translations with vf23 = the fog quadword *D_00275670 + 0xA0 (measured in the original: the same vf23 at 001999C0, 00199770 and every 001DD170 entry of a tick, that quadword in 57 of 90 ticks, another owner's leftover in 33; a leftover changes only the w lane 0x7000360C, `make test-sight-lock-reference`); AIM_FIRE.md section 7. Live since lane PORT-RADAR (2026-11-18): from the constructed start
+sight_missile_a22 (AREA22 past door 18) the nine class-2 entries are the
+small bugs 0012A5D0 (pool records 0x7A70B0..0x7A8830, kind byte 2, type 0);
+00199770 reads their +0 and +0x34, 00183B80 their +2, +3 (and +0xD / +0x9F
+for types 0x12 / 6), 00183C40 their +0xB0..+0xB8. AREA22's owners publish
+no record view to the collision world (its arrival binding has only the
+address map), so em_sight_live now reads an entry's fields, read only,
+through the area actor view (em_scene_bindings_actor_snapshot, the record
+as its owners compose it) after the owners' record views. `make
+test-sight-live` (no `EM_SIGHT_OPEN` gate any more) requires lock marks:
+267 of 801 drawer frames draw them, no fault. The marks' pixels are
+unverified (no picture capture).
+
+### 4.3 Lane PORT-RADAR (2026-11-18): the UPPER U.R.S. radar
+
+Item 0x06 (UPPER U.R.S.) fitted on the upper rail (the SPR4 page's
+00217090 commits entry 1 as D_00810CA5 = 6; with CA4 0xFF it leaves CA4,
+CA6, CA7 alone) turns on two original paths:
+
+| Function | What it does | Port |
+|---|---|---|
+| 001B17A0 | every owner's state-1 tail: with D_00810CA5 == 6 and the record's kind/type gate (kind 2 type 1 with +0xD bit 0, or type 7; kind 8 type 7; kind 0xA type 1; kind 7 type 0 with +0x2E >= 0x2D) it calls 001B1CE0 | em_owner_services_001B17A0 (byte-matched), its w_001B1CE0 now bound in em_area11_interaction_host's publish view |
+| 001B1CE0 | pushes the record's +0x14 onto the radar list D_00275B54 (base D_0028AAB0) while D_00275B58 < 0x40 | em_actor_radar_push_001B1CE0 (EmActorClassLists.radar); 001AAD00 / 001AF8E0 reset it |
+| 0022E7F0 | in aim frames (001999C0's tail when no CA4 arm ran, 00197D20's R1 state 2): 00207D00(1, 0); a blip 0022E630 per live entry of the list (+0 set); the heading fan 00208040 (the player's node *(player + 0x12C) row +0x90 against the player's +0xF0, corners D_0026A990..B0); three 002082B0 rings (D_0026A9C0, D_0026AA20, D_0026AA80) | em_sight_0022E7F0 |
+| 0022E630 | an entry within 200 (planar) of the player, turned by 001B1470(2 pi - (pi + yaw)), as one 8x8 00207E40 sprite, colour 0x80008080, tex0 0x20041605113222CD | em_sight_0022E630 |
+
+Both are translated in `src/game/em_sight.c` from the original
+instructions and served by em_sight_live from the aim camera's aim_call
+(em_camera_live routes 0022E7F0 there): the list words from the collision
+world's radar pushes, the entries' fields as the class-2 entries' (above),
+the player's node records (player_pose_record_bytes), a private
+0x700036A0..0x7000371F (the radar writes every word there before reading
+it), the .data block D_0026A990..D_0026AADF in `assets/sight_tables.emst`
+(tools/export_sight_tables.py, now three blocks; equal to 16 captures), the
+packets through em_sgp_00207D00 / 00207E40 / 00208040 into slot 1.
+
+Evidence: `make test-radar-reference` (tools/test_radar_reference.py: the
+two functions as original code against the translation over designed
+memory, 002082B0 and the SDK leaves as original code on both sides; every
+callee entry with its arguments, 00207E40's 64-bit tex0, f12 / f13 and the
+bytes behind its pointers; RAM, scratchpad and stack locals; all 362 words
+executed, every branch outcome but the wrap loops' two back edges, which
+0011E620's [-pi, pi] range never reaches; quick 120 cases, EM_TEST_FULL=1
+400; 24 callee-failure / unmapped cuts, 7 host refusals). `make
+test-sight-live` point sight_upper (constructed: g60's start, AREA06 sub 1,
+D_00810CA5 = 6; item 0x06 owned since g40): R2 held, 0022E7F0 runs in all
+269 aim frames, no fault, two blips each (the two kind-2 type-7 owners
+00147390 within 200).
+
+Open: no recording fits item 0x06 (CA5 is 5 in every take), so the radar
+has no original capture; its slot-1 packets and pixels are unverified
+against the original (only the oracle's packets). The R1 path (00197D20
+state 2) runs the same function and is not separately exercised live.
 
 ## 5. Lane GAP-3 (2026-11-18): the effects, the script commands, two oracles
 

@@ -1842,13 +1842,15 @@ every direct writer of the +0x14 cursor), and what the port does with them:
   (001CC1E0 -> 001CC8A0 / 001CC3B0: prompts, radio, examine text), the
   area-title card 001C5930, which uses them, the letterbox 001AEBE0 and
   the fade 001AEE70 (em_fade_packets.c);
-- bound since PORT-FAILSTOPS: the lock reticle 001DD170 from 00199770
-  (em_sight_lock, vf23 = the fog quadword; AIM_FIRE.md section 7); live it
-  stops before any packet at 00199770's read of a class-2 entry no owner
-  serves (AREA22, entry 0x7A8830; open); 00199220's reticle stays behind
-  the aim/fire composition's vf23 rule;
-- fail-stop before any packet: the CA5 == 6 marker 0022E7F0 / 0022E630
-  (item 0x06 on the upper rail; CAMERA_LIVE.md section 7);
+- bound since PORT-FAILSTOPS, live since PORT-RADAR: the lock reticle
+  001DD170 from 00199770 (em_sight_lock, vf23 = the fog quadword;
+  AIM_FIRE.md section 7; AREA22's class-2 entries read through the area
+  actor view); 00199220's reticle stays behind the aim/fire composition's
+  vf23 rule;
+- since PORT-RADAR: the CA5 == 6 radar 0022E7F0 / 0022E630 (item 0x06 on
+  the upper rail: 00207D00, 00207E40 blips, the 00208040 fan, three 002082B0
+  rings; WHOLE_GAME_LEDGER.md section 4.3; packets oracle-verified, pixels
+  not captured);
 - status screen only (D_008106C4 set; their own GIF-frame path): the
   status pages, the options and card screens.
 

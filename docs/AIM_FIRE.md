@@ -481,11 +481,11 @@ em_effects_live faults on each (an untranslated handler).
   sub-weapon byte +275 != 0; with D_00810CA4 = 0xFF and D_00810CA6 = 0,
   Square toggles the light and Cross (0017AAD0) changes nothing (aim_08),
   and +275 stays 0 in every AIM beat.
-- The aim camera's 0022E7F0, 00182F90 and 001B0300 (CAMERA_LIVE.md
-  section 7). Its sight drawers are translated and served (em_sight,
-  em_sight_live) except 00199770's lock mark 001DD170, which stays a named
-  fail-stop for the vf23 reason above: the camera step has no certified
-  vf23 (the reticle itself is unchanged).
+- The aim camera's 00182F90 and 001B0300 (CAMERA_LIVE.md section 7). Its
+  sight drawers, 00199770's lock mark 001DD170 (em_sight_lock, lane
+  PORT-FAILSTOPS; live in AREA22 since lane PORT-RADAR) and the CA5 == 6
+  radar 0022E7F0 (lane PORT-RADAR, WHOLE_GAME_LEDGER.md section 4.3) are
+  translated and served (em_sight, em_sight_live).
 
 ## 8. Findings for other owners
 

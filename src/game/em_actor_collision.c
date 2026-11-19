@@ -297,6 +297,13 @@ int em_actor_class_publish_001B1B70(EmActorClassLists *lists, const EmActor *act
     return 1;
 }
 
+int em_actor_radar_push_001B1CE0(EmActorClassLists *lists, const EmActor *actor)
+{
+    if (!lists || !actor) return -1;
+    if (lists->count_b58 < EM_ACTOR_RADAR_MAX) lists->radar[lists->count_b58++] = actor->self;   /* a0[5] */
+    return 1;
+}
+
 void em_actor_class_lists_swap_001AAD00(EmActorClassLists *lists)
 {
     if (!lists) return;

@@ -1909,6 +1909,14 @@ test-sight-reference:
 test-sight-lock-reference:
 	python3 tools/test_sight_lock_reference.py
 
+.PHONY: test-radar-reference
+# The radar of D_00810CA5 == 6 (item 0x06, UPPER U.R.S.): 0022E7F0 and its
+# blip 0022E630 (em_sight.c) against the original instructions over designed
+# memory, 002082B0 and the SDK leaves as original code on both sides
+# (docs/WHOLE_GAME_LEDGER.md section 4.3). EM_TEST_FULL=1 runs every case.
+test-radar-reference:
+	python3 tools/test_radar_reference.py
+
 .PHONY: test-sight-live
 # The five sights live from their start points (build/start_saves/sight_*,
 # built on demand), R2 held: no fault, the arm's drawers run, and the zoom

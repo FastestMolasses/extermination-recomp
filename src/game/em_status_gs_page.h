@@ -137,6 +137,14 @@ int em_sgp_00207F80(int32_t slot, int32_t x0, int32_t y0, int32_t x1, int32_t y1
  * latched). */
 int em_sgp_001CBA50(int32_t slot, int32_t x, int32_t y, int32_t advance, int32_t height, const uint8_t *text,
                     uint32_t avail, const uint8_t style[8]);
+/* The radar's builders from gameplay code (0022E7F0 / 0022E630,
+ * em_sight_live): 00207D00(slot, mode), 00207E40(slot, x, y, w, h, rgba,
+ * tex0), 00208040(slot, a, b, c, rgba) (each corner the bits of its +0 and
+ * +8 floats) into the frame's slot-1 packets. 1, or 0 refused (reported
+ * once, latched). */
+int em_sgp_00207D00(int32_t slot, int32_t mode);
+int em_sgp_00207E40(int32_t slot, int32_t x, int32_t y, int32_t w, int32_t h, uint32_t rgba, uint64_t tex0);
+int em_sgp_00208040(int32_t slot, const uint32_t a[2], const uint32_t b[2], const uint32_t c[2], uint32_t rgba);
 /* The latched fault, or NULL. */
 const char *em_sgp_fault(void);
 /* Packets built so far (all builders), for the tests. */

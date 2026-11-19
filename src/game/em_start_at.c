@@ -197,6 +197,7 @@ static const struct {
     {"sight_interceptor", 0x10},
     {"sight_missile", 0x10},
     {"sight_missile_a22", 0x16},
+    {"sight_upper", 0x06},
     {"k01_03", 0x0E},
     {"k01_04", 0x0E},
     {"k01_05", 0x0E},
@@ -713,7 +714,7 @@ int em_start_at_check(void)
                              "a06b_01, a01v, a01v_01, a01v_02, a22b, a22b_01, a04_00 .. a04_05, a04b_00 .. "
                              "a04b_04, boss, area13, a13_01 .. a13_05, a13b_01 .. a13b_05, "
                              "a13c_00 .. a13c_06, a13d_00 .. a13d_07, k01_01 .. k01_05, area14k, g40 .. g48, g49 .. g58, g59 .. g67, g72 .. g80, sight_zoom, sight_night, sight_delta, "
-                             "sight_interceptor, sight_missile, sight_missile_a22)", NULL);
+                             "sight_interceptor, sight_missile, sight_missile_a22, sight_upper)", NULL);
     }
     const char *ng = getenv("EM_NEW_GAME");
     if (ng && ng[0] && strcmp(ng, "0") != 0)

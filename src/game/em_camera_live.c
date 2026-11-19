@@ -1028,8 +1028,8 @@ static const EmArea22PortHooks k_a22 = {
 static int aim_unbound(uint32_t fn)
 {
     /* Reached only outside what AREA11 sets up (docs/CAMERA_LIVE.md section
-     * 7: the area-0x10 lift 00182F90 and the marker 0022E7F0 of D_00810CA5
-     * == 6; the sight drawers of D_00810CA4 0 / 1 / 2 and D_00810CA7 8 / 9
+     * 7: the area-0x10 lift 00182F90; the sight drawers of D_00810CA4 0 /
+     * 1 / 2 and D_00810CA7 8 / 9 and the radar 0022E7F0 of D_00810CA5 == 6
      * are em_sight's, served by em_sight_live in aim_call). */
     fprintf(stderr, "em_camera_live: aim camera callee %08X has no binding (not reachable in AREA11)\n", fn);
     return fail(fn);
@@ -1142,6 +1142,8 @@ static int aim_call(void *ctx, EmAimFireTargetCall *f)
     case 0x001DB830u: case 0x001DB9D0u: case 0x001DBCB0u: case 0x001DBD50u: case 0x001DBE20u:
     case 0x001DBF00u: case 0x001DC020u: case 0x001DC610u: case 0x001DC890u: case 0x001DC960u:
     case 0x00199770u:
+    /* the radar of D_00810CA5 == 6 (001999C0's tail, 00197D20's R1 state 2) */
+    case 0x0022E7F0u:
         return em_sight_live_call(f, aim_map_sized, aim_call) == 0 ? 0 : fail(f->function);
     default:
         return aim_unbound(f->function);

@@ -420,6 +420,16 @@ CONSTRUCTED['sight_missile_a22'] = {
     'state': 'levels-recordings-20261018-10/s87/route_a01v/a01v_02_door18', 'area': 0x16, 'check_area00_sub': False,
     'patches': CONSTRUCTED['sight_missile']['patches']}
 
+# The radar of the UPPER U.R.S. (item 0x06; lane PORT-RADAR, docs/WHOLE_GAME_LEDGER.md section 4.3):
+# g60's start (g59's end, AREA06 sub 1, two class-2 type-7 owners 00147390 within 200, which 001B17A0
+# pushes onto the radar list) with item 0x06 committed on the upper rail. The guided run owns the item
+# from g40 on (0x810C6A = 1 there) but never fits it; the SPR4 page UPPER U.R.S. (00217090) commits
+# entry 1 as D_00810CA5 = 1 + 5 and, with CA4 already 0xFF, leaves CA4, CA6 and CA7 as they are.
+CONSTRUCTED['sight_upper'] = {
+    'state': 'guided-20261117/s87/route_g16/g59_area01_area06', 'area': 0x06, 'check_area00_sub': False,
+    'patches': [(0x810CA5, bytes((0x06,)), 'CA5 = 6: UPPER U.R.S. (00217090) commits item 0x06 (owned since g40)')]}
+
+
 def constructed(name):
     """The arrival dict of a constructed start: the beat folder's own state, patched."""
     p = CONSTRUCTED[name]

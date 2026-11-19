@@ -15,6 +15,9 @@ Blocks (original address, bytes, what reads them):
                        (001DC610's line templates) and D_00253390 (001DC960's)
   0x0026E6F0   0x120   the strings the sight frames' text runs (001CBA50)
                        name, D_0026E6F0..D_0026E80F
+  0x0026A990   0x150   the radar 0022E7F0's heading fan corners D_0026A990 /
+                       A0 / B0 and its three 002082B0 ring records
+                       D_0026A9C0 / D_0026AA20 / D_0026AA80 (0x60 each)
 
 --verify-ram (default: the opening capture and every AREA11 route capture
 00..14) checks that each block equals captured RAM (nothing writes them).
@@ -42,7 +45,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DECOMP = ROOT.parent / 'Extermination'
 ELF_SHA256 = 'ee052236783e7d3e865754d3ff9fee71290addeb7d146c86caa7ff2724d1e17a'
-BLOCKS = ((0x00253240, 0x190), (0x0026E6F0, 0x120))
+BLOCKS = ((0x00253240, 0x190), (0x0026E6F0, 0x120), (0x0026A990, 0x150))
 
 
 def elf_block(elf: bytes, address: int, size: int) -> bytes:

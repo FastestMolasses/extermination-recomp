@@ -10,9 +10,11 @@
 #include "game/em_aim_fire_tables.h"
 #include "game/em_camera_live.h"
 #include "game/em_collision_world.h"
+#include "game/em_player.h"
 #include "game/em_player_stage_workers.h"
 #include "game/em_render_context_live.h"
 #include "game/em_render_verify_rest.h"
+#include "game/em_scene_bindings.h"
 #include "game/em_sight.h"
 #include "game/em_sight_lock.h"
 
@@ -21,26 +23,36 @@
 #define CLASS2_BASE UINT32_C(0x0028AF30)   /* the class-2 list's static base */
 #define D_275B90    UINT32_C(0x00275B90)
 #define D_275B98    UINT32_C(0x00275B98)
+#define RADAR_BASE  UINT32_C(0x0028AAB0)   /* the radar list's static base (001AAD00 resets D_00275B54 to it) */
+#define D_275B54    UINT32_C(0x00275B54)
+#define D_275B58    UINT32_C(0x00275B58)
 
 /* The ELF .data blocks the drawers read (tools/export_sight_tables.py). */
 static const struct {
     uint32_t address, size;
-} k_blocks[] = {{0x00253240u, 0x190u}, {0x0026E6F0u, 0x120u}};
+} k_blocks[] = {{0x00253240u, 0x190u}, {0x0026E6F0u, 0x120u}, {0x0026A990u, 0x150u}};
 #define BLOCKS (sizeof k_blocks / sizeof k_blocks[0])
 
 static struct {
     EmSightLiveServices services;
     int tables_tried, tables_ok;
-    uint8_t d253240[0x190], d26E6F0[0x120];
+    uint8_t d253240[0x190], d26E6F0[0x120], d26A990[0x150];
     uint8_t stack[STACK_SIZE];
     uint8_t class2_cursor[4], class2_count[2], class2_words[4 * EM_ACTOR_LIST_MAX];
+    uint8_t radar_cursor[4], radar_count[2], radar_words[4 * EM_ACTOR_RADAR_MAX];
+    /* 0x700036A0..0x7000371F: the radar's two matrices (0022E7F0 / 0022E630
+     * write every word they read there first: 001029C0, the stores, 001031E0) */
+    uint8_t s36a0[0x80];
     uint8_t number[16]; /* 001C5FB0's D_008111D0, this module's copy (as em_status_pages_live's) */
+    /* read-only copies of class-2 entry fields, taken at the read (owner_view) */
+    uint8_t entry[8][64];
+    unsigned entry_next;
     void *(*map)(void *, uint32_t, size_t, int);    /* the aim camera's, for the call */
     int (*call)(void *, EmAimFireTargetCall *);
     int reported;
 } L;
 
-static uint8_t *table(unsigned i) { return i == 0 ? L.d253240 : L.d26E6F0; }
+static uint8_t *table(unsigned i) { return i == 0 ? L.d253240 : i == 1 ? L.d26E6F0 : L.d26A990; }
 
 static uint32_t rd32(const uint8_t *p)
 {
@@ -113,6 +125,36 @@ static void *class2(uint32_t a, size_t n)
     return L.class2_words + 4u * EM_ACTOR_LIST_MAX - (CLASS2_BASE - a);
 }
 
+/* D_00275B54 / D_00275B58 and the radar list's words (the collision
+ * world's radar pushes, 001B1CE0): slot i at RADAR_BASE - 4 (i + 1), the
+ * cursor at the last push, as the original leaves them before 001AAD00. */
+static void *radar(uint32_t a, size_t n)
+{
+    const EmActorClassLists *ls = em_collision_world_lists();
+    if (!ls || ls->count_b58 < 0 || ls->count_b58 > EM_ACTOR_RADAR_MAX) return NULL;
+    const uint32_t live = (uint32_t)ls->count_b58;
+    if (within(a, n, D_275B54, 4)) {
+        wr32(L.radar_cursor, RADAR_BASE - 4u * live);
+        return L.radar_cursor + (a - D_275B54);
+    }
+    if (within(a, n, D_275B58, 2)) {
+        L.radar_count[0] = (uint8_t)live;
+        L.radar_count[1] = (uint8_t)(live >> 8);
+        return L.radar_count + (a - D_275B58);
+    }
+    const uint32_t low = RADAR_BASE - 4u * live;
+    if (!within(a, n, low, 4u * live)) return NULL;
+    const EmCollisionWorldOwners *o = em_collision_world_owners();
+    if (!o || !o->address_of) return NULL;
+    for (uint32_t at = (a - low) & ~3u; at < a - low + n; at += 4) {
+        const uint32_t i = live - 1u - at / 4u;
+        const uint32_t word = ls->radar[i] ? o->address_of(o->context, ls->radar[i]) : 0;
+        if (!word) return NULL;
+        wr32(L.radar_words + 4u * (EM_ACTOR_RADAR_MAX - 1u - i), word);
+    }
+    return L.radar_words + 4u * EM_ACTOR_RADAR_MAX - (RADAR_BASE - a);
+}
+
 /* 0x70003600..0x7000363F: one owner when the camera's three shared
  * quadwords are contiguous (then 0x70003620 is the one between them). */
 static uint8_t *scratch3600(uint32_t a, size_t n)
@@ -121,6 +163,22 @@ static uint8_t *scratch3600(uint32_t a, size_t n)
             *p3 = em_camera_live_scratch_bytes(0x70003630u, 16);
     if (p0 && p1 == p0 + 16 && p3 == p0 + 48) return p0 + (a - 0x70003600u);
     return n <= 16 ? em_camera_live_scratch_bytes(a, (uint32_t)n) : NULL;
+}
+
+/* A class-2 entry outside AREA11 (an area's own pool record, e.g. AREA22's
+ * creatures): 00199770 reads its +0 and +0x34, 00183B80 its +2, +3, +0xD and
+ * +0x9F, read only. The bytes are the record as the area's actor view
+ * composes it from its owners (em_scene_bindings_actor_snapshot), copied at
+ * the read into one of a few rotating buffers. */
+static void *owner_view(uint32_t a, size_t n)
+{
+    if (n > sizeof L.entry[0] || a < EM_ACTOR_POOL_BASE ||
+        a - EM_ACTOR_POOL_BASE >= EM_ACTOR_POOL_CAPACITY * EM_ACTOR_RECORD_SIZE)
+        return NULL;
+    uint8_t *b = L.entry[L.entry_next];
+    if (em_scene_bindings_actor_snapshot(a, (uint32_t)n, b) != 0) return NULL;
+    L.entry_next = (L.entry_next + 1u) % (sizeof L.entry / sizeof L.entry[0]);
+    return b;
 }
 
 static void *sight_map(void *ctx, uint32_t a, size_t n, int write)
@@ -132,6 +190,8 @@ static void *sight_map(void *ctx, uint32_t a, size_t n, int write)
             return write || !tables() ? NULL : table(i) + (a - k_blocks[i].address);
     void *p;
     if (!write && (p = class2(a, n))) return p;
+    if (!write && (p = radar(a, n))) return p;
+    if (within(a, n, 0x700036A0u, sizeof L.s36a0)) return L.s36a0 + (a - 0x700036A0u);
     if (within(a, n, 0x70003600u, 0x40)) return scratch3600(a, n);
     if (within(a, n, 0x008111D0u, sizeof L.number)) return L.number + (a - 0x008111D0u);
     /* 001DD2F0 / 001DD600's templates D_002533D0..D_0025348F (assets/aim_fire_tables.emaf) */
@@ -143,10 +203,14 @@ static void *sight_map(void *ctx, uint32_t a, size_t n, int write)
         return (void *)(uintptr_t)t;
     }
     if (L.map && (p = L.map(ctx, a, n, write))) return p;
+    /* the player's node records (its +0x110 words; the radar reads node 7's
+     * +0x90 row), read only */
+    if (!write && (p = (void *)(uintptr_t)player_pose_record_bytes(a, (uint32_t)n))) return p;
     if ((p = write ? em_rcl_bytes_mut(a, (uint32_t)n) : (void *)(uintptr_t)em_rcl_bytes(a, (uint32_t)n))) return p;
     /* a class-2 entry's fields: its publishing owner's record */
     const EmCollisionWorldOwners *o = em_collision_world_owners();
-    return o && o->record_bytes ? o->record_bytes(o->context, a, (uint32_t)n) : NULL;
+    if (o && o->record_bytes && (p = o->record_bytes(o->context, a, (uint32_t)n))) return p;
+    return write ? NULL : owner_view(a, n);
 }
 
 static uint8_t *sight_map32(void *ctx, uint32_t a, uint32_t n, int write) { return sight_map(ctx, a, n, write); }
@@ -223,7 +287,24 @@ static int leaf(void *ctx, EmAimFireTargetCall *c)
         c->v0 = (uint64_t)(int64_t)em_player_float_to_int(c->f[0]);
         return 0;
     case 0x00102948u: case 0x001028B8u: case 0x001028D0u: case 0x001026A0u:
+    case 0x001029C0u: case 0x00102760u: case 0x00102BB0u: case 0x001026D0u: case 0x001031E0u:
         return em_aim_fire_sdk_memory_call(NULL, sight_map, c) == 0 ? 0 : refuse(c->function, "an SDK operand");
+    /* the radar's 2D packets (0022E7F0 / 0022E630) */
+    case 0x00207D00u:
+        if (!L.services.blend) return refuse(c->function, "no 00207D00 service bound");
+        return L.services.blend(a0, a1) == 1 ? 0 : refuse(c->function, "refused");
+    case 0x00207E40u:
+        if (!L.services.sprite) return refuse(c->function, "no 00207E40 service bound");
+        return L.services.sprite(a0, a1, a2, a3, t0, (uint32_t)c->a[5], c->a[6]) == 1 ? 0
+                                                                                        : refuse(c->function, "refused");
+    case 0x00208040u: {
+        uint32_t v[3][3];
+        for (unsigned k = 0; k < 3; ++k)
+            if (read_words((uint32_t)c->a[1 + k], v[k], 3) < 0) return refuse(c->function, "a corner unmapped");
+        const uint32_t pa[2] = {v[0][0], v[0][2]}, pb[2] = {v[1][0], v[1][2]}, pc[2] = {v[2][0], v[2][2]};
+        if (!L.services.fan) return refuse(c->function, "no 00208040 service bound");
+        return L.services.fan(a0, pa, pb, pc, (uint32_t)c->a[4]) == 1 ? 0 : refuse(c->function, "refused");
+    }
     case 0x00102850u: {
         uint32_t v[4], out[4];
         EmRvrFault rf;
@@ -266,9 +347,9 @@ static int leaf(void *ctx, EmAimFireTargetCall *c)
         return 0;
     }
     default:
-        /* sin 0011E2A8, cos 0011DE90, sqrt 0011E748, fabs 0011DF78 */
+        /* sin 0011E2A8, cos 0011DE90, sqrt 0011E748, fabs 0011DF78, atan2 0011E620, the wrap 001B1470 */
         if (c->function != 0x0011E2A8u && c->function != 0x0011DE90u && c->function != 0x0011E748u &&
-            c->function != 0x0011DF78u)
+            c->function != 0x0011DF78u && c->function != 0x0011E620u && c->function != 0x001B1470u)
             return refuse(c->function, "not a sight leaf");
         return L.call && L.call(ctx, c) == 0 ? 0 : refuse(c->function, "the aim camera's math");
     }
@@ -314,7 +395,7 @@ int em_sight_live_call(EmAimFireTargetCall *f, void *(*map)(void *, uint32_t, si
     switch (f->function) {
     case 0x001DB830u: case 0x001DB9D0u: case 0x001DBCB0u: case 0x001DBD50u: case 0x001DBE20u:
     case 0x001DBF00u: case 0x001DC020u: case 0x001DC610u: case 0x001DC890u: case 0x001DC960u:
-    case 0x00199770u:
+    case 0x00199770u: case 0x0022E7F0u:
         break;
     default:
         return 1;

@@ -51,6 +51,26 @@
  *                       the player, projected by 0x70003AC0 inside 180 x 90
  *                       of the centre: the reticle 001DD170(1, 0x700038B0,
  *                       1, 0x80808080, distance)
+ *   0022E7F0(player)    the radar of D_00810CA5 == 6 (the UPPER U.R.S., item
+ *                       0x06; 001999C0's tail and 00197D20's R1 state 2):
+ *                       00207D00(1, 0); 0022E630(player, e) for each entry
+ *                       of the radar list (D_00275B54, D_00275B58 of them)
+ *                       whose +0 byte is set; the heading fan: 0x700036E0 =
+ *                       diag(0.8, 1, 0.5, 0) turned by the wrapped angle
+ *                       between the flattened row +0x90 of the player's
+ *                       node *(player + 0x12C) (its +0x110 word 7) and the
+ *                       player's +0xF0, 0x700036A0 = its
+ *                       product, 001031E0(0x700036D0, (96, 0, 340, 1)), the
+ *                       corners D_0026A990/A0/B0 turned by it and scaled to
+ *                       16 (1792 + x), 16 (1936 + z / 2), 00208040(1, the
+ *                       three, 0x8000FFFF); then 002082B0(1, D_0026A9C0 /
+ *                       D_0026AA20 / D_0026AA80)
+ *   0022E630(player, e) one blip: e's +0xB0 / +0xB8 within 200 of the
+ *                       player's +0xA0 / +0xA8, turned by 001B1470(2 pi -
+ *                       (pi + player +0xC4)) into 0x700038B0, the sprite
+ *                       00207E40(1, 16 (1888 + 0.39375 x), 16 (1936 + (340
+ *                       + 0.45 z) / 2), 8, 8, 0x80008080, tex0
+ *                       0x20041605113222CD)
  *   002082B0(slot, rec) the ring builder: one packet at the slot cursor,
  *                       a strip of 16-degree columns between rec's two
  *                       radii, colours ramped through 0x70003600..0x7000363F
@@ -61,7 +81,9 @@
  * original's argument registers (a[0..6] = a0..a3, t0..t2): 001D1F80,
  * 001D64A0, 00207F80, 001CBA50, float_to_int 001281C0, 0011E2A8, 0011DE90,
  * 00102948, 00102850, 001028B8, 001028D0, 001026A0, 00183B80, 00183C40,
- * 0011E748, 0011DF78, 001DD170. Calls between the functions above are
+ * 0011E748, 0011DF78, 001DD170, and for the radar 00207D00, 00207E40,
+ * 00208040, 001029C0, 00102760, 00102BB0, 001026D0, 001031E0, 0011E620
+ * (f12, f13), 001B1470. Calls between the functions above are
  * direct. The module never simulates a callee.
  *
  * Memory: every load and store goes through `map` by original address, the
@@ -119,6 +141,8 @@ int em_sight_001DCD40(EmSight *h, int32_t slot, uint32_t colour);
 int em_sight_001DCF40(EmSight *h, int32_t slot, uint32_t colour);
 int em_sight_001DCFF0(EmSight *h, int32_t slot, uint32_t colour);
 int em_sight_00199770(EmSight *h, uint32_t player);
+int em_sight_0022E7F0(EmSight *h, uint32_t player);
+int em_sight_0022E630(EmSight *h, uint32_t player, uint32_t entry);
 int em_sight_002082B0(EmSight *h, int32_t slot, uint32_t ring);
 int em_sight_002081A0(EmSight *h, int32_t slot, uint32_t buf, int32_t prim, int32_t count, uint32_t rgba);
 
