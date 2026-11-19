@@ -33,8 +33,10 @@ What runs (EM_START_AT, docs/STARTUP.md; comparison aids as the g4x beats'):
     D_00810E80 per script frame;
   - the original's recorded per-read drive timing (EM_PS2_DRIVE_REPLAY with
     EM_START_AT_COUNTER0) and the takes' recorded screen-module loader reads
-    (the table's "L" lines), by default as in tools/watch_takes.py
-    (--no-drive-replay, --no-loader-replay);
+    (the table's "L" lines) and sound-bank transfers ("B" lines: each area
+    load's 001FB370 status and acknowledgement answers), by default as in
+    tools/watch_takes.py (--no-drive-replay, --no-loader-replay,
+    --no-bank-replay);
   - row 0 in the recording's bank: a run whose row 0 has the other frame
     index starts again with EM_START_AT_DWELL=1 (--any-bank keeps it).
 
@@ -463,9 +465,16 @@ def main(argv):
                         help='without the takes\' recorded screen-module loader reads (record_drive_replay_guided.py '
                         '--loader: the area and bank loads\' busy polls, served as the drive replay\'s "L" lines); '
                         'by default a take that has them takes them, so its loads pass the original\'s read time '
-                        '(the area load\'s sound-bank transfer stays the port\'s: STARTUP.md "Guided chains")')
+                        '(the area load\'s sound-bank transfer: --no-bank-replay)')
     parser.add_argument('--loader-replay', dest='loader_replay', action='store_true', default=True,
                         help='(the default) the recorded loader reads')
+    parser.add_argument('--no-bank-replay', dest='bank_replay', action='store_false',
+                        help='without the takes\' recorded sound-bank transfers (record_drive_replay_guided.py '
+                        '--bank: each area load\'s 001FB370 status and acknowledgement answers, served as the drive '
+                        'replay\'s "B" lines); by default a take that has them takes them, so its area loads pass '
+                        'the original\'s frames (IOP_STREAM.md "The sound-bank transfer\'s recorded answers")')
+    parser.add_argument('--bank-replay', dest='bank_replay', action='store_true', default=True,
+                        help='(the default) the recorded sound-bank transfers')
     args = parser.parse_args(argv)
     if args.list or not args.chain:
         for n, (card, route, takes) in CHAINS.items():
@@ -507,7 +516,8 @@ def main(argv):
         extra = list(args.set)
         if args.drive_replay:
             import drive_replay
-            info = drive_replay.guided_table(takes, out / 'drive_replay.txt', loader=args.loader_replay)
+            info = drive_replay.guided_table(takes, out / 'drive_replay.txt', loader=args.loader_replay,
+                                             bank=args.bank_replay)
             gaps = f'; {len(info["missing"])} with no table take the drive model ({", ".join(info["missing"][:4])}' \
         f'{", ..." if len(info["missing"]) > 4 else ""})' if info['missing'] else ''
             print(f'drive replay: {info["entries"]} recorded reads from {len(info["takes"])} of {len(takes)} '
@@ -515,6 +525,9 @@ def main(argv):
             if args.loader_replay:
                 print(f'loader replay: {info["loader_entries"]} recorded loader reads; '
                       f'{len(info["loader_missing"])} takes without them', flush=True)
+            if args.bank_replay:
+                print(f'bank replay: {info["bank_entries"]} recorded sound-bank loads; '
+                      f'{len(info["bank_missing"])} takes without them', flush=True)
             if info['entries']:
                 extra += [f'EM_PS2_DRIVE_REPLAY={info["table"]}', f'EM_START_AT_COUNTER0={rows[0]["counter"]}']
         seconds, faults, trace, log_path = run(name, card, rows, files, timeout,

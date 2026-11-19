@@ -470,16 +470,18 @@ def choose_start(args, names, marks):
     return seg, o, idx
 
 
-def drive_replay_env(names, out):
+def drive_replay_env(names, out, bank=True):
     """The comparison-only drive replay (IOP_STREAM.md "Drive replay", "Guided
     takes"): the original's per-read drive timing, recorded on the fork's replay
     of each take (tools/record_drive_replay_guided.py), merged over the chain into
     out/drive_replay.txt and served through EM_PS2_DRIVE_REPLAY. The disc-drive
     timing switch is on in every playback here already. A take with no table takes
-    the drive model. Never game behaviour: LAUNCHER_OPTIONS.md "Not launcher options"."""
+    the drive model. The takes' recorded loader reads ("L" lines) and sound-bank
+    transfers ("B" lines; without them with bank=False, --no-bank-replay) come with
+    it. Never game behaviour: LAUNCHER_OPTIONS.md "Not launcher options"."""
     import drive_replay
     table_dir = drive_replay.GUIDED_DIR if TAKES != USER_TAKES else drive_replay.TAKES_DIR
-    info = drive_replay.guided_table(names, out / 'drive_replay.txt', table_dir)
+    info = drive_replay.guided_table(names, out / 'drive_replay.txt', table_dir, bank=bank)
     if not info['entries']:
         print('drive replay: no recorded tables for this chain (the drive model)', flush=True)
         return {}
@@ -487,6 +489,9 @@ def drive_replay_env(names, out):
         f'{", ..." if len(info["missing"]) > 4 else ""})' if info['missing'] else ''
     print(f'drive replay: {info["entries"]} recorded reads from {len(info["takes"])} of {len(names)} takes{gaps}',
           flush=True)
+    if bank and info['bank_entries']:
+        print(f'bank replay: {info["bank_entries"]} recorded sound-bank loads; {len(info["bank_missing"])} takes '
+              'without them', flush=True)
     return dict(EM_PS2_DRIVE_REPLAY=info['table'])
 
 
@@ -513,6 +518,8 @@ def main():
                         'and no sound (a test of the switch)')
     parser.add_argument('--no-drive-replay', action='store_true', help='leave out the recorded drive timing (the '
                         'default uses it wherever a take of the chain has a table: a comparison aid, below)')
+    parser.add_argument('--no-bank-replay', action='store_true', help='leave out the takes\' recorded sound-bank '
+                        'transfers (the drive replay\'s "B" lines: the area loads\' 001FB370 answers)')
     args = parser.parse_args()
     if args.root:
         use_root(args.root)
@@ -551,7 +558,7 @@ def main():
     if until:
         env.update(EM_FAST_UNTIL=f'{until[0]}:{until[1]}')
     if not args.no_drive_replay:
-        env.update(drive_replay_env(names, out))
+        env.update(drive_replay_env(names, out, bank=not args.no_bank_replay))
     if args.hidden:
         env.update(EM_HEADLESS='1', EM_MUTE='1')
     if args.check:

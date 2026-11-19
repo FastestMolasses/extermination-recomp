@@ -203,19 +203,59 @@ def guided_loader(take, table_dir=GUIDED_DIR):
     return reads
 
 
-def guided_table(takes, out_path, table_dir=GUIDED_DIR, loader=True):
+def guided_bank(take, table_dir=GUIDED_DIR):
+    """The take's sound-bank transfers (record_drive_replay_guided.py --bank:
+    <take>.bank, "B counter end calls answers"), or None when not recorded. A
+    recording whose replay did not reproduce the take is refused."""
+    path = Path(table_dir) / take / f'{take}.bank'
+    if not path.exists():
+        return None
+    receipt = json.loads((Path(table_dir) / take / 'bank_receipt.json').read_text())
+    assert receipt['exact'], (take, 'the fork replay that recorded the sound-bank transfers did not reproduce the take')
+    loads, opened, cont = [], None, None
+    for line in path.read_text().splitlines():
+        f = line.split()
+        if line.startswith('B '):
+            loads.append((int(f[1]), int(f[2]), int(f[3]), f[4] if len(f) > 4 else ''))
+        elif line.startswith('O '):         # running at the take's end: its part (counter calls answers)
+            opened = (int(f[1]), int(f[2]), f[3] if len(f) > 3 else '')
+        elif line.startswith('C '):         # the previous take's load's rest (end calls answers)
+            cont = (int(f[1]), int(f[2]), f[3] if len(f) > 3 else '')
+    assert all(a[0] <= b[0] for a, b in zip(loads, loads[1:])), (take, 'bank loads out of counter order')
+    return dict(loads=loads, opened=opened, cont=cont)
+
+
+def guided_table(takes, out_path, table_dir=GUIDED_DIR, loader=True, bank=True):
     """Merge the tables of the chain's takes, in chain order, into out_path.
     A take with no table (not recorded yet) is listed as missing: its reads take
     the model. A take whose replay did not reproduce it (.reads.diverged) is
     refused. With `loader` the takes' recorded screen-module loader reads
     (guided_loader) follow as "L" lines (em_scene_bindings' loader replay: the
     area loads' reads take the original's busy polls); a take without them is
-    listed in loader_missing and its loader reads answer as before. Returns a
-    summary dict (entries 0: write nothing, no table)."""
+    listed in loader_missing and its loader reads answer as before. With `bank`
+    the takes' recorded sound-bank transfers (guided_bank) follow as "B" lines
+    (em_sound_bank's replay: the area loads' 001FB370 status and
+    acknowledgement answers are the original's); a take without them is listed
+    in bank_missing. Returns a summary dict (entries 0: write nothing, no table)."""
     table_dir = Path(table_dir)
     entries, used, missing, last = [], [], [], None
     loads, loader_missing = [], []
+    banks, bank_missing, opened = [], [], None
     for take in takes:
+        if bank:
+            got = guided_bank(take, table_dir)
+            if got is None:
+                bank_missing.append(take)
+                opened = None
+            else:
+                # a load running across the takes' boundary: the earlier take's part and this one's rest
+                if opened and got['cont']:
+                    banks.append((opened[0], got['cont'][0], opened[1] + got['cont'][1], opened[2] + got['cont'][2]))
+                got_loads = got['loads']
+                assert not banks or not got_loads or got_loads[0][0] > banks[-1][0], \
+                    (take, 'bank loads overlap on this chain')
+                banks.extend(got_loads)
+                opened = got['opened']
         if loader:
             got = guided_loader(take, table_dir)
             if got is None:
@@ -242,6 +282,7 @@ def guided_table(takes, out_path, table_dir=GUIDED_DIR, loader=True):
         lines.extend(f'# {take}' for take in used)
         lines.extend('%d %d %d %d' % e for e in entries)
         lines.extend('L %d %d %d %d %d' % e for e in loads)
+        lines.extend('B %d %d %d %s' % e for e in banks)
         Path(out_path).write_text('\n'.join(lines) + '\n')
     return dict(table=str(out_path), takes=used, missing=missing, entries=len(entries), loader_entries=len(loads),
-                loader_missing=loader_missing)
+                loader_missing=loader_missing, bank_entries=len(banks), bank_missing=bank_missing)
