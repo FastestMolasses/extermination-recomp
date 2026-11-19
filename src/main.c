@@ -311,6 +311,11 @@ static int rcl_step_b(void *context, int32_t index)
  * Its kick is the renderer boundary: in a frame the load veil drew
  * (0021B1B0), the kicked list is the whole frame and the GS frame stage
  * draws it (em_load_veil_live, docs/LOAD_VEIL_PARTICLES.md section 3). */
+static int rcl_step_k(void *context)
+{
+    (void)context;
+    return em_rcl_001D7410();
+}
 static int rcl_step_v(void *context)
 {
     em_sgp_frame_end(); /* EM_STATUS_GS_DUMP's record, before the close */
@@ -528,6 +533,9 @@ int main(void)
     em_pad_actuator_reset();
     em_frame_set_pad_block(em_pad_actuator_block());
     em_frame_set_step_i(em_pad_actuator_step_i, NULL);
+    /* Main-loop step K: 001D7410, the GS read-back queue's drain (its count
+     * D_00275C08 cleared every frame; AREA21's far light queues into it). */
+    em_frame_set_step_k(rcl_step_k, NULL);
     /* No seed here: the original main never seeds the SDK RNG; its state
      * starts at the ELF's initialized value 1 (em_random.c). */
     const char *skip_startup = getenv("EM_SKIP_STARTUP");

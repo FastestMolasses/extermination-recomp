@@ -612,6 +612,41 @@ all).
   only; g17 matches there) / row 127 (g17), g51 row 1984 (g17 1056), g53
   row 3987; g45 from row 1 (the card).
 
+### Lane PORT-A11-RETURN (2026-11-18, branch `a11return`): AREA11 from the title
+
+The continuous chain from the title (`watch_takes.py --check --root
+../Extermination/build/guided_play g01_title_newgame`) stopped at segment
+1056's first tick (g48, the AREA11 entry-3 arrival after the cable ride,
+original counter 466,803): the render context faulted composing scene_snow
+at 0x4513113C (module 2, code 4: a float read as an object address).
+
+- **Cause**: rcl_bind always gave AREA11 the static-object bank from
+  static_world.emsw at 0x01516F40 (the New Game's address). 001D52E0 reads
+  the grid header at *D_0028A5A0 (decomp src/func_001D52E0.c), which an
+  area load sets to resource 0x44 at the screen-module loader's cursor. In
+  the original's g48 end RAM it is 0x0152AD00 (0x13DC0 higher; context
+  +0x140 = 0x0152B820), and the port's loader on the continuous run puts it
+  at the same 0x0152AD00. The grid header was read 0x13DC0 into the
+  export's bytes, so 001D5370 walked garbage. The bank's bytes are equal at
+  both addresses (all 0x2D6FE0 compared, g01 vs g48 end RAM): it holds
+  offsets only. The card chain g17 (card g45) puts it at 0x01519480 and
+  happened not to fault.
+- **Fix**: rcl_bind binds AREA11's bank like every arrival's: the bytes the
+  load delivered at *D_0028A5A0 (`em_rcl_static_world_bank` over
+  `em_module_loader_memory_rest`); the export serves only a load the loader
+  holds no bytes for, and then only when *D_0028A5A0 is its address
+  (fail-stop otherwise). A New Game's loader delivers it at 0x01516F40, as
+  before. STATIC_WORLD.md 2.1 / 7.1.
+- **Result**: with this fix alone the chain from the title played segments
+  0 .. 1391 exact and segment 1392 (AREA21, g75's arrival) to its offset
+  160, where the far light's queue overran (AREA21_PORT.md "Step K's count
+  clear", fixed in the same lane). With both, **the whole chain from the
+  title plays exact: all 1464 segments, 654,303 compared ticks on the
+  recording, g01 .. g80 with no fault** (drive replay on; 50 min with
+  `--check`). At its exit the drive replay lists 8 recorded reads the port
+  never asked for (counters 34993 .. 40727 of their takes); no tick
+  differs.
+
 ## Not done
 
 - **The live area** (section "Live"; 001F1F60 and 001BAD40 done by

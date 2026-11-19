@@ -34,7 +34,9 @@
  *   D_0026E810..4F; and from the static-world
  *   export (assets/scene_snow/static_world.emsw, tools/export_static_world.py):
  *   D_00253560..EF (001E1E60's upload block) and, read only, the
- *   static-object bank *D_0028A5A0 (0x01516F40, 0x2D6FE0 bytes in AREA11).
+ *   static-object bank *D_0028A5A0 (0x01516F40, 0x2D6FE0 bytes in a New
+ *   Game's AREA11; the bindings prefer the bytes the area load delivered
+ *   at *D_0028A5A0, em_rcl_static_world_bank).
  *
  * Every other byte these routines read belongs to another owner and is a
  * view the binder hands over (EmRclExternal): D_00810E80 and D_00810E88
@@ -132,6 +134,8 @@ int em_rcl_static_world_load(const char *path);
 /* The .data block alone, once (an area's background in a loaded game). */
 int em_rcl_static_world_block_load(const char *path);
 int em_rcl_static_world_loaded(void);
+/* The bank's original address (the export's or the delivered one), 0 when none. */
+uint32_t em_rcl_static_world_address(void);
 /* The static-object bank of an area whose bank is not the export's: `size`
  * bytes at the original `address` (D_0028A5A0's), as the area load
  * delivered them (the level exit's AREA01 arrival: its 001C1DC0's 001D52E0
@@ -282,6 +286,13 @@ int em_rcl_frame_views(uint8_t *d810E88, uint8_t *d8106C4);
 int em_rcl_001D2300(void);
 /* Main-loop step W: 001D2580(field), context +0x98 = the field bit. */
 int em_rcl_001D2580(int32_t a0);
+/* Main-loop step K: 001D7410, the GS read-back queue's drain. For each of
+ * the D_00275C08 entries of bank ctx+0x9C of D_008172C0 the original reads
+ * an 8 x 8 PSMZ24 block of the Z buffer at the entry's point back into the
+ * entry's +8; then D_00275C08 = 0. The read-back is not modelled (the GS Z
+ * buffer is not readable at step K: docs/AREA21_PORT.md "Far light"); the
+ * entries keep their bytes. The count's clear is. 0, or -1. */
+int em_rcl_001D7410(void);
 /* The condition under which 001D2300 calls 001E0DF0 (D_008106C4 == 0,
  * render flag 4 clear, flag 0x20 set), by the translation's own code: the
  * renderer's channel-3 gate reads it. *calls = 1 / 0. 0, or -1. */
