@@ -138,21 +138,92 @@ callers. A dynamic check (walk the port's channel 0 at each kick in list
 mode and match its primitives against what the modules drew) would close
 it; not built.
 
-## 4. Captures still needed
+## 4. The pictures compared (lane PORT-GS-PICS, 2026-11-19)
 
-The guided takes' end states hold GS memory, but from the fork's hardware
-renderer (not the exact GS), and the port has no field dump at a chain
-frame under the headless backend. Needed, each with the fork's software
-renderer (13, restored after) and a port field dump at the same chain frame
-(not built: `em_gfx_gs_field_read` exists, no switch writes it at a frame):
+**How.** The port: `tools/guided_chain.py <chain> --gs-dump TAKE:ROW,...`
+(EM_GS_DUMP_AT, comparison only, em_start_at.c) writes the Original
+profile's exact GS field of each row (the field the frame whose head hook
+traced the row drew) and quits after the last one; `watch_takes.py
+--gs-dump` does the same from the title (EM_INPUT_PLAY's segment:offset).
+The original: `tools/capture_gs_original.py TAKE ROW...` replays the kept
+take's input log from its start state on the fork, hidden, SOFTWARE
+renderer 13 (its own scratch ini: the user's settings are untouched), MTVU
+off, the take's block mode, and keeps the GS local memory at the loop tops
+of rows R + 1..R + 3, checking every stop against take.rec (counter,
+position): every stop of this lane was on the take. `tools/compare_gs_frame.py`
+pairs them: the frame the port drew for row R is the buffer the port's
+FRAME_1 names in the original's memory at loop top R + 2 (the list built in
+iteration R -> R + 1 is drawn in R + 1 -> R + 2), compared R, G, B and A
+pixel for pixel, with a diff picture under build/gspics/<run>/. Disc-derived
+captures stay in decomp build/gspics/orig/ and port build/gspics/ (ignored).
 
-| Area | Take, tick | What it shows |
-|---|---|---|
-| AREA21 entry 3 | g75_area20_area21, any tick after the arrival (port counters 12087..) | the snow from the main list (001E67C0, count 6) over the sea grid |
-| AREA21 entry 5 | g76_area21_prep, mid-take | the same, the prep |
-| AREA21 | g77_area21_phase1 | the sea grid's colour (+0x1E8, lane PORT-FLARE-DRAW: Z verified, colour not) |
-| AREA18 | g41_area14_area18, after the arrival | 001E5AC0's strips from the main list |
-| AREA15 sub 0 | g12_area19_area15, after the arrival | the same |
+**The half line.** A chain started from a card can have the other relation
+between the frame index D_00810E80 and the field D_00810E88 than the
+recording (the original's is equal at every loop top of the guided run;
+only a movie changes it). The field's OFY follows D_00810E88, so every line
+is then half a line off and only ~20 % of the pixels are exact (chain g18 at
+g42: 23,841 of 114,688). `--gs-dump` therefore passes EM_START_AT_FIELD (the
+card's source state's relation; comparison only): at the script's start the
+port's field bit flips once if needed (em_frame_flip_field). With it g42
+row 300 went from 23,841 to 114,278 exact.
+
+**Results** (RGB exact of 114,688; max = the largest channel difference):
+
+| Point | Area | Shows | Before this lane | After |
+|---|---|---|---|---|
+| g77 10 / 300 | AREA21 entry 5, the west room | indoor, title glyphs | 114,545 / 114,598 (max 37 / 6: one-LSB texel residue, a few window pixels) | not re-measured |
+| g77 3300 | AREA21 entry 6, the west tower | ladder, snow | 113,717 (max 44) | **114,677 (max 1)** |
+| g77 5000 | AREA21, the Gatling | sea grid (+0x1E8), snow, sight, gauge | 113,414 (max 43) | **114,641 (max 1)** |
+| g77 8000 | AREA21, the Gatling | the creature over the sea, splash, gauge | 111,577 (max 41) | **114,142 (max 3)** |
+| g75 2600 / 3500 | AREA21 entry 3 | the arrival scene: letterbox, glyphs | 114,622 / 114,626 (max 3) | same |
+| g76 800 | AREA21 entry 3 | the arrival room | 114,652 (max 2) | same |
+| g76 1300 | AREA21 entry 4, the deck | snow from the +0x2520 node | 113,803 (max 68) | **114,664 (max 1)** |
+| g73 2700 | AREA20 | the dock, the player's shadow | 114,622 (max 53) | same (open: 18 pixels on the shadow's edge) |
+| g73 3500 | AREA20 | a letterboxed scene with its message | 114,671 RGB, **35,140 RGBA** | same (open: alpha, below) |
+| g42 300 / 1500 / 2400 | AREA18 | cargo hold, weather node | 114,278 / 114,507 / 114,547 | same (open: the player's hair, below) |
+| g42 2600 / 3000 / 5600 | AREA18 | deck, crates | 114,577 / 114,642 / 114,671 (max 2) | same |
+
+- **(a) The sea grid's colour (+0x1E8): verified.** In g77 5000 and 8000 every
+  pixel of the sea (the screen grid sampling the ripple texture, colour only)
+  equals the original's; the differences before the fix were all snow flakes.
+- **(b, c) The weather node (+0x2520): verified in AREA21; drawn and in place
+  in AREA18.** AREA21's flakes were drawn at other places: **fixed.** 001E55F0
+  passes 001E67C0 flags bit 1 when the area key (D_00810700 << 8) +
+  D_00810701 is 0x1500 (decomp func_001E55F0.c), and 001E67C0 then takes the
+  reversed rows: the row tilt -row[0] minus the wobble, and each row's phase
+  moving down by 1.5 x row[2] x strength, wrapping below 1.0 (func_001E67C0.c).
+  The port's runtime tested the area flags D_008106C8's bit 1 instead (never
+  set) and always drew the normal rows; at g76 1300 its phases were 1.616 ..
+  1.884 where the original's record +0x1F0 held 1.150 .. 1.334 (drift,
+  intensity, target, seed equal). em_snow_tiles_mode takes the bit (em_snow.c,
+  em_snow_runtime.c), and tools/test_snow_tiles_reference.py runs the
+  original's own 001E67C0 instructions with flags 2 and area 0x1500 (3 quick,
+  12 full cases: post-state, matrices, parameters and descriptors equal; the
+  normal rows on the reversed cases fail it).
+- **Open: the player's hair in AREA18 (g42 300, 1500, 2400).** Drawn with other
+  texels (teal where the original is brown; up to 188 off), exact from g42
+  2600 on, after the bomb pickup's scene (phase C, rows ~2405..2505). The
+  chain starts from card g41 (a LOAD GAME into AREA14), so a state the card
+  start leaves (the player's face record, a CLUT the scene reloads) is the
+  first candidate; the GS memory outside the per-frame buffers was not found
+  to differ at row 300. Not traced.
+- **Open: g73 3500's alpha.** RGB 99.99 % exact, but the original's buffer
+  holds A = 0x80 over the whole picture inside the letterbox where the
+  port's holds 0: one primitive writes alpha there in the original (an
+  alpha-only pass) that the port does not. Nothing shows it (the display
+  ignores A); a later read of destination alpha would. Not traced.
+- **Open: g73 2700's shadow edge** (18 pixels, two lines at the player's
+  shadow decal's edge) and the one-LSB texel residue elsewhere (GS_EXACT.md
+  section 8).
+- **(e) The 2D layer:** the gauge bar (AREA21's 0x8260A0), the Gatling's
+  sight, the area-title and message glyphs and the letterbox are exact in
+  the points above (g77 5000 / 8000, g75 2600 / 3500, g73 3500, g77 10).
+  The radar (item 0x06 on the upper rail) is not in any kept take's AREA20 /
+  21 frame: not compared.
+
+Reference test: `tools/test_gs_second_half_reference.py` (quick: g76 1300;
+EM_TEST_FULL=1: every pinned point through g77), skipped where the
+original's captures are absent; timeout 900 s in tools/test_sweep.py.
 
 ## 5. Summary
 
@@ -161,4 +232,6 @@ renderer (13, restored after) and a port field dump at the same chain frame
   never drawn), fixed 1. Row 4 (+0x1E8) was the gap lane PORT-FLARE-DRAW
   fixed.
 - GPU renderer (Enhanced): rows 4 and 5 are not drawn there (open).
-- Open: the channel-0 dynamic census (section 3); the pictures (section 4).
+- Open: the channel-0 dynamic census (section 3). Pictures (section 4):
+  AREA21 verified after one fix (the reversed snow rows); open the hair in
+  AREA18 after a card start, g73's alpha-only pass, one shadow edge.

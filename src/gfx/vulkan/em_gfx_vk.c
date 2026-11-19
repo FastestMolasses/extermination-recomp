@@ -132,6 +132,7 @@ int em_gfx_gs_world_gif(EmGfx *gfx, const void *gif, size_t bytes) { (void)gfx; 
 int em_gfx_gs_world_tail(EmGfx *gfx, const void *gif, size_t bytes) { (void)gfx; (void)gif; (void)bytes; return -1; }
 const char *em_gfx_gs_world_fault(EmGfx *gfx) { (void)gfx; return NULL; }
 int em_gfx_gs_field_read(EmGfx *gfx, uint8_t *rgba, uint64_t *frame) { (void)gfx; (void)rgba; (void)frame; return -1; }
+int em_gfx_gs_memory_read(EmGfx *gfx, uint8_t *out) { (void)gfx; (void)out; return -1; }
 int em_gfx_gs_world_cost(EmGfx *gfx, EmGfxGsCost *out) { (void)gfx; (void)out; return -1; }
 int em_gfx_present_cost(EmGfx *gfx, EmGfxPresentCost *out) { (void)gfx; (void)out; return -1; }
 int em_gfx_background_prims_env(EmGfx *gfx, const EmGfxGsPrim *prims, const EmGfxGsEnv *envs, uint32_t count)

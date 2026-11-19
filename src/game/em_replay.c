@@ -45,6 +45,7 @@
 #include "em_input.h"
 #include "em_settings.h"
 #include "game/em_bgm.h"
+#include "game/em_start_at.h"
 #include "game/em_fast.h"
 #include "game/em_frame.h"
 #include "game/em_game_internal.h"
@@ -377,6 +378,7 @@ static void filter(EmPadState *pad, void *user)
                 em_fast_target(&seg, &off);
                 if (s.cur_seg > seg || (s.cur_seg == seg && s.off >= off)) em_fast_end();
             }
+            em_start_at_gs_dump_replay_tick(s.cur_seg, s.off);   /* EM_GS_DUMP_AT (comparison only) */
             const RecSeg *g0 = &s.segs[s.cur_seg];
             const uint32_t i = s.off < g0->len ? s.off : g0->len - 1;
             pad_set(pad, &s.ticks[g0->start + i]);

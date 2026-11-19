@@ -70,6 +70,8 @@ COMPATIBLE = {
     'EM_START_AT_MARKS', 'EM_START_AT_FINE', 'EM_START_AT_PHASES', 'EM_START_AT_CLOCKS', 'EM_START_AT_TRACE_KINDS',
     'EM_START_AT_CARD_RW', 'EM_START_AT_CARD_SWAP',  # comparison only: a scratch card (chain g21's save)
     'EM_START_AT_DWELL',  # comparison only: the title's dwell before LOAD GAME (a chain's bank)
+    'EM_START_AT_FIELD',  # comparison only: the field bit's relation (a chain's half line)
+    'EM_GS_DUMP_AT', 'EM_GS_DUMP_DIR', 'EM_GS_DUMP_MEM',  # comparison only: the exact GS field / memory of chosen frames
     'EM_NEW_GAME',  # its own; EM_NEW_GAME=1 refused apart
     'EM_HEADLESS', 'EM_HEADLESS_RASTER', 'EM_UNCAPPED', 'EM_MUTE', 'EM_INPUT_TEST',  # the host; the pad's changes printed
     'EM_NO_RENDER', 'EM_STATE_TRACE',                                     # no draws (state only); the state digests

@@ -520,6 +520,11 @@ def main():
                         'default uses it wherever a take of the chain has a table: a comparison aid, below)')
     parser.add_argument('--no-bank-replay', action='store_true', help='leave out the takes\' recorded sound-bank '
                         'transfers (the drive replay\'s "B" lines: the area loads\' 001FB370 answers)')
+    parser.add_argument('--gs-dump', metavar='TAKE:ROW[,TAKE:ROW...]',
+                        help='write the Original profile\'s exact GS field of these rows (a take prefix and its trace '
+                        'row: take.rec\'s rows without the movie rows; EM_GS_DUMP_AT with the tick\'s segment:offset, '
+                        'comparison only) into build/gspics/watch_<take>/port/; the port draws every frame and quits after '
+                        'the last one (with --check; tools/compare_gs_frame.py, DRAW_LIST_AUDIT.md section 4)')
     args = parser.parse_args()
     if args.root:
         use_root(args.root)
@@ -540,8 +545,24 @@ def main():
         shutil.rmtree(out / 'card')     # every run starts from an empty card, as the take did
     (out / 'card').mkdir(parents=True)
     rec, log = out / 'stitched.rec', out / 'played.rec'
-    marks = {} if fast else None
+    marks = {} if fast or args.gs_dump else None
     ticks = stitch(names, rec, args.ticks, marks)
+    dump_env = {}
+    if args.gs_dump:
+        points = {}
+        for item in args.gs_dump.split(','):
+            prefix, _, row = item.partition(':')
+            name = next((n for n in names if n.startswith(prefix)), None)
+            if name is None or not row.isdigit() or int(row) >= len(marks.get(name, [])) or \
+                    marks[name][int(row)] is None:
+                sys.exit(f'--gs-dump {item!r}: want TAKE:ROW, a take of the chain and one of its game rows')
+            seg, off = marks['_pos'][marks[name][int(row)]]
+            points[f'{name}:{row}'] = f's{seg}_{off}'
+        dump_dir = ROOT / 'build/gspics' / f'watch_{args.take}' / 'port'
+        dump_dir.mkdir(parents=True, exist_ok=True)
+        (dump_dir / 'points.json').write_text(json.dumps(points, indent=1) + '\n')
+        dump_env = dict(EM_GS_DUMP_AT=','.join(v[1:].replace('_', ':') for v in points.values()),
+                        EM_GS_DUMP_DIR=str(dump_dir))
     print(f'{" + ".join(names)}: {ticks} ticks, {ticks / 59.94 / 60:.1f} minutes', flush=True)
     until = None
     if fast:
@@ -555,6 +576,7 @@ def main():
                EM_REPLAY_MAX_OVERRUN='3600', EM_TEST_MEMCARD_ROOT=str(out / 'card'))
     env.update(EM_TEST_CARD_FRESH=str(fresh_until(names)))
     env.update(item.split('=', 1) for item in args.env)
+    env.update(dump_env)
     if until:
         env.update(EM_FAST_UNTIL=f'{until[0]}:{until[1]}')
     if not args.no_drive_replay:

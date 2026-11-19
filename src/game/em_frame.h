@@ -300,6 +300,12 @@ uint8_t *em_frame_d810E88(void);
  * first step): what the original route rows sample as fi, fld and vs (the
  * level smoke's rows). Any pointer may be NULL. */
 void em_frame_loop_top(uint16_t *d810E80, uint16_t *d810E88, uint64_t *vblanks);
+/* Comparison only (EM_START_AT_FIELD, em_start_at.c): the field bit
+ * D_00810E88 takes the other value from now on, so the relation between
+ * the frame index and the field at the loop top flips (in the original
+ * only a movie, which takes its own number of vblanks inside one
+ * iteration, sets that relation: GS_EXACT.md 10.4 "The field clock"). */
+void em_frame_flip_field(void);
 
 /* The sound service: `field` runs at the top of every em_frame_step (one
  * NTSC field: the vblank handler's D_00810E90 and the IOP's field work),

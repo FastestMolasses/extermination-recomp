@@ -85,5 +85,11 @@ int em_start_at_pad_clock(void);
  * reports the progress block (a chained beat's end, tools/
  * mid_route_beats.py). 1 on the frame the clock reaches the next mark. */
 int em_start_at_pad_mark(void);
+/* EM_GS_DUMP_AT (comparison only; em_start_at.c says the items and the
+ * files): at a frame's end, the exact GS field of a chosen script frame
+ * (EM_START_AT_PAD) or EM_INPUT_PLAY tick, into EM_GS_DUMP_DIR. The
+ * replay's per-tick hook names its tick's (segment, offset) first. */
+void em_start_at_gs_dump(void);
+void em_start_at_gs_dump_replay_tick(unsigned seg, unsigned off);
 
 #endif

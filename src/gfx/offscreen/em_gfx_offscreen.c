@@ -231,6 +231,17 @@ int em_gfx_gs_world_tail(EmGfx *g, const void *gif, size_t bytes)
 
 const char *em_gfx_gs_world_fault(EmGfx *g) { return g && g->gswWhy[0] ? g->gswWhy : NULL; }
 
+int em_gfx_gs_memory_read(EmGfx *g, uint8_t *out)
+{
+    if (!g || !out || !g->gsw) return -1;
+    if (!g->gswRaster) return gsw_fail(g, "a memory read under the headless raster skip");
+    gsw_complete(g);
+    const uint8_t *m = em_gs_world_memory(g->gsw);
+    if (!m) return -1;
+    memcpy(out, m, EM_GS_MEM_BYTES);
+    return 0;
+}
+
 int em_gfx_gs_field_read(EmGfx *g, uint8_t *rgba, uint64_t *frame)
 {
     uint32_t w, h;

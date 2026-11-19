@@ -925,6 +925,10 @@ static void pad_filter(EmPadState *out, void *user)
     out->buttons |= em_input_test_buttons();
 }
 
+/* The script frame a world frame's head hook traced (-1: none this frame):
+ * EM_GS_DUMP_AT's key (em_start_at_gs_dump). */
+static int head_row = -1;
+
 /* The previous frame's end (em_start_at_frame_end): the next frame's start. */
 static struct {
     unsigned counter;
@@ -975,6 +979,25 @@ void em_start_at_pad_control(unsigned counter)
     em_input_set_filter(pad_filter, NULL);
     printf("startup: EM_START_AT_PAD: %u rows over %u frames from control at engine frame %u\n", pad.count,
            pad.last, counter);
+    /* EM_START_AT_FIELD=<0|1> (comparison only; tools/guided_chain.py --gs-dump):
+     * the recording's relation between the frame index D_00810E80 and the
+     * field D_00810E88 at a loop top (their XOR; the card's source state
+     * holds it). A run whose relation is the other one draws every field
+     * half a line off the recording's (the field's OFY follows D_00810E88),
+     * which no pixel comparison survives; the field bit then flips once
+     * here, as one more vblank of a movie would. From the next loop top on
+     * the relation is the recording's. */
+    {
+        const char *fld = getenv("EM_START_AT_FIELD");
+        if (fld && (fld[0] == '0' || fld[0] == '1')) {
+            uint16_t e80 = 0, e88 = 0;
+            em_frame_loop_top(&e80, &e88, NULL);
+            const int want = fld[0] - '0';
+            if (((e80 ^ e88) & 1) != want) em_frame_flip_field();
+            printf("startup: EM_START_AT_FIELD: loop-top relation %d, the recording's %d%s (comparison only)\n",
+                   (e80 ^ e88) & 1, want, ((e80 ^ e88) & 1) != want ? ": the field bit flips" : "");
+        }
+    }
     /* Without EM_START_AT_FADE the script starts at control, as a level
      * smoke or a short test script expects. */
     pad.fade_wait = pad.fade_given || pad.scene_given;
@@ -1139,6 +1162,7 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
         pad.phase_was_load = load;
     }
     const int t = pad.t;
+    head_row = at_frame_end ? -1 : t;
     /* The comparison-only drive replay's counter (EM_START_AT_COUNTER0): the
      * frame this hook stands for is script frame t (a hook at a frame's end
      * stands for the next frame). Nothing happens without a table. */
@@ -1388,4 +1412,116 @@ int em_start_at_pad_mark(void)
     if (!pad.active || pad.mark_next >= pad.mark_count || pad.t < pad.mark[pad.mark_next]) return 0;
     ++pad.mark_next;
     return 1;
+}
+
+/* EM_GS_DUMP_AT (comparison only; tools/guided_chain.py --gs-dump,
+ * tools/watch_takes.py --gs-dump, tools/compare_gs_frame.py): the exact GS
+ * field of chosen frames, written at the frame's end once its list is
+ * kicked. Items, comma separated:
+ *   <f>          script frame f of EM_START_AT_PAD (the frame whose head hook
+ *                traced the recording's row f, EM_START_AT_TRACE's "t");
+ *   <seg>:<off>  the EM_INPUT_PLAY tick that plays segment seg, offset off
+ *                (em_replay.c's pair, the one watch_takes.py compares).
+ * Files in EM_GS_DUMP_DIR (default build/gspics/port): f<f> or s<seg>_<off>
+ * .gsfield (512 x 224 x 4 bytes, R, G, B, A as the GS model's memory holds
+ * them: em_gfx_gs_field_read, the field the frame drew) and .json (the
+ * field's FRAME_1, the loop top's D_00810E80 / D_00810E88, the engine
+ * counter, the area bytes, the rand() word).
+ * With EM_GS_DUMP_MEM=1 also <name>.gsmem, the GS model's whole local
+ * memory then (4 MiB, the GS's own layout). The run quits after the last
+ * one. A status frame (no head hook) is never dumped. The variable's name turns the GS model's raster on and
+ * EM_NO_RENDER off (em_gs_world_raster_wanted, em_norender.h): every frame
+ * is drawn, as the Original profile draws it. Unset: nothing is read,
+ * written or changed. */
+static struct {
+    int parsed, count, done;
+    int seg[64], off[64];          /* seg -1: a script frame (off) */
+    char dir[400];
+    int replay_seg, replay_off;    /* this frame's EM_INPUT_PLAY pair (-1: none) */
+} gsd = {.replay_seg = -1};
+
+static void gs_dump_parse(void)
+{
+    gsd.parsed = 1;
+    const char *v = getenv("EM_GS_DUMP_AT");
+    while (v && *v && gsd.count < 64) {
+        char *end = NULL;
+        const long a = strtol(v, &end, 10);
+        if (end == v) break;
+        if (*end == ':') {
+            const char *b = end + 1;
+            const long o = strtol(b, &end, 10);
+            if (end == b) break;
+            gsd.seg[gsd.count] = (int)a;
+            gsd.off[gsd.count++] = (int)o;
+        } else {
+            gsd.seg[gsd.count] = -1;
+            gsd.off[gsd.count++] = (int)a;
+        }
+        v = *end == ',' ? end + 1 : end;
+    }
+    const char *d = getenv("EM_GS_DUMP_DIR");
+    snprintf(gsd.dir, sizeof gsd.dir, "%s", d && d[0] ? d : "build/gspics/port");
+    if (gsd.count) printf("startup: EM_GS_DUMP_AT: %d frame(s) into %s (comparison only)\n", gsd.count, gsd.dir);
+}
+
+void em_start_at_gs_dump_replay_tick(unsigned seg, unsigned off)
+{
+    if (!gsd.parsed) gs_dump_parse();
+    if (!gsd.count) return;
+    gsd.replay_seg = (int)seg;
+    gsd.replay_off = (int)off;
+}
+
+void em_start_at_gs_dump(void)
+{
+    if (!gsd.parsed) gs_dump_parse();
+    const int row = head_row, rseg = gsd.replay_seg, roff = gsd.replay_off;
+    head_row = -1;
+    gsd.replay_seg = -1;
+    if (!gsd.count || gsd.done >= gsd.count) return;
+    char name[64] = "";
+    for (int i = 0; i < gsd.count && !name[0]; ++i) {
+        if (gsd.seg[i] < 0 && row >= 0 && gsd.off[i] == row)
+            snprintf(name, sizeof name, "f%d", row);
+        else if (gsd.seg[i] >= 0 && rseg >= 0 && gsd.seg[i] == rseg && gsd.off[i] == roff)
+            snprintf(name, sizeof name, "s%d_%d", rseg, roff);
+    }
+    if (!name[0]) return;
+    static uint8_t rgba[512u * 224u * 4u];   /* EM_GS_WORLD_FIELD_W x _H */
+    uint64_t frame = 0;
+    char path[512];
+    if (em_gfx_gs_field_read(em_frame_gfx(), rgba, &frame) != 0) {
+        printf("startup: EM_GS_DUMP_AT: %s: no field to read (the GS frame model draws none)\n", name);
+    } else {
+        snprintf(path, sizeof path, "%s/%s.gsfield", gsd.dir, name);
+        FILE *f = fopen(path, "wb");
+        const int ok = f && fwrite(rgba, 1, sizeof rgba, f) == sizeof rgba;
+        if (f) fclose(f);
+        snprintf(path, sizeof path, "%s/%s.json", gsd.dir, name);
+        FILE *j = ok ? fopen(path, "w") : NULL;
+        if (j) {
+            const EmSceneState *sc = em_scene_state();
+            uint16_t e80 = 0, e88 = 0;
+            em_frame_loop_top(&e80, &e88, NULL);
+            fprintf(j, "{\"name\": \"%s\", \"counter\": %u, \"frame_1\": \"0x%016llx\", \"e80\": %u, \"e88\": %u, "
+                       "\"area\": [%u, %u, %u], \"rand\": \"%08x\"}\n",
+                    name, (unsigned)em_frame_counter(), (unsigned long long)frame, e80, e88, sc->d810700,
+                    sc->d810701, sc->d810702, (unsigned)em_random_peek());
+            fclose(j);
+        }
+        printf("startup: EM_GS_DUMP_AT: %s -> %s/%s.gsfield%s (comparison only)\n", name, gsd.dir, name,
+               ok && j ? "" : " (write failed)");
+        const char *mem = getenv("EM_GS_DUMP_MEM");
+        if (mem && mem[0] == '1') {
+            static uint8_t local[4u << 20];   /* EM_GS_MEM_BYTES */
+            snprintf(path, sizeof path, "%s/%s.gsmem", gsd.dir, name);
+            FILE *m = em_gfx_gs_memory_read(em_frame_gfx(), local) == 0 ? fopen(path, "wb") : NULL;
+            const int mok = m && fwrite(local, 1, sizeof local, m) == sizeof local;
+            if (m) fclose(m);
+            printf("startup: EM_GS_DUMP_MEM: %s%s\n", path, mok ? "" : " (not written)");
+        }
+    }
+    fflush(stdout);
+    if (++gsd.done == gsd.count) em_frame_request_quit();
 }

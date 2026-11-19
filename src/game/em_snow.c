@@ -87,6 +87,14 @@ int em_snow_tiles(EmWeather *weather, const EmSnowConfig *config,
                    EmSnowSine sine, void *sine_ctx,
                    EmSnowTile tiles[EM_SNOW_TILE_COUNT])
 {
+    return em_snow_tiles_mode(weather, config, strength, eye, sine, sine_ctx, 0, tiles);
+}
+
+int em_snow_tiles_mode(EmWeather *weather, const EmSnowConfig *config,
+                       float strength, const float eye[3],
+                       EmSnowSine sine, void *sine_ctx, int reversed,
+                       EmSnowTile tiles[EM_SNOW_TILE_COUNT])
+{
     if (!sine) return -1;
     float cell[3];
     for (unsigned axis = 0; axis < 3; ++axis) {
@@ -102,7 +110,10 @@ int em_snow_tiles(EmWeather *weather, const EmSnowConfig *config,
         /* 0011E2A8, the SDK sinf (the original's own; not the host's). */
         float wave;
         if (sine(sine_ctx, ee_mul(6.2831855f, weather->drift[row]), &wave) < 0) return -1;
-        float angle = ee_add(data[0], ee_mul(0.5f, ee_mul(data[0], wave)));
+        /* 0x70003A20: row[0] + 0.5 x (row[0] x wave); reversed (flags bit 1):
+         * -row[0] - 0.5 x (row[0] x wave). */
+        const float wobble = ee_mul(0.5f, ee_mul(data[0], wave));
+        float angle = reversed ? ee_sub(-data[0], wobble) : ee_add(data[0], wobble);
         angle = snow_div(ee_mul(3.1415927f, angle), 180.0f);
         float sine, cosine;
         snow_rotation(angle, &sine, &cosine);
@@ -152,9 +163,15 @@ int em_snow_tiles(EmWeather *weather, const EmSnowConfig *config,
             }
         }
         weather->drift[row] = ee_add(weather->drift[row], drift_step);
-        weather->phase[row] = ee_add(weather->phase[row], ee_mul(1.5f, ee_mul(data[2], strength)));
-        if (weather->phase[row] > 2.0f)
-            weather->phase[row] = ee_add(weather->phase[row], -1.0f);
+        if (reversed) {
+            weather->phase[row] = ee_sub(weather->phase[row], ee_mul(1.5f, ee_mul(data[2], strength)));
+            if (weather->phase[row] < 1.0f)
+                weather->phase[row] = ee_add(weather->phase[row], 1.0f);
+        } else {
+            weather->phase[row] = ee_add(weather->phase[row], ee_mul(1.5f, ee_mul(data[2], strength)));
+            if (weather->phase[row] > 2.0f)
+                weather->phase[row] = ee_add(weather->phase[row], -1.0f);
+        }
     }
     return 0;
 }
