@@ -232,6 +232,11 @@ int shim_tiles(EmWeather *w, const EmSnowConfig *c, float strength, const float 
 {
     return em_snow_tiles(w, c, strength, eye, sine, NULL, out);
 }
+int shim_tiles_mode(EmWeather *w, const EmSnowConfig *c, float strength, const float eye[3], int reversed,
+                    EmSnowTile *out)
+{
+    return em_snow_tiles_mode(w, c, strength, eye, sine, NULL, reversed, out);
+}
 """
 PACKET_SHIM = r"""
 #include "game/em_snow.h"
@@ -362,10 +367,39 @@ def main():
                 packet_runs+=1
             cases+=1;tile_count+=108
     assert packet_runs==len(packet_cases),('packet cases run',packet_runs)
+    # AREA21's reversed rows (001E55F0 passes flags bit 1 for the area key 0x1500; DRAW_LIST_AUDIT.md
+    # section 4): the original's own instructions with flags 2 and area 0x1500 (its switch stores the
+    # count 6 into D_002551F0, the descriptor's [8][0]) against em_snow_tiles_mode(reversed 1). Phases
+    # start near 1.0 so the reversed wrap (below 1.0: + 1.0) is taken.
+    mode=native.shim_tiles_mode
+    mode.argtypes=[C.POINTER(Weather),C.POINTER(Config),C.c_float,C.POINTER(C.c_float),C.c_int,C.POINTER(Tile)]
+    mode.restype=C.c_int
+    raw21=bytearray(bytes(config));struct.pack_into('<I',raw21,8*16,6);config21=Config.from_buffer_copy(bytes(raw21))
+    descriptor21=bytes(config21.descriptor)
+    reversed_cases=0
+    for strength in [0.1,0.5,1.0]:
+        for case in range(4 if FULL else 1):
+            w=Weather();w.seed=rng.randrange(0x100000000);w.state=1
+            for i in range(6):w.phase[i]=rng.uniform(1.0,1.02) if i%2 else rng.uniform(1.0,2.0);w.drift[i]=rng.uniform(-0.2,1.5)
+            eye=[rng.uniform(-800,800) for _ in range(3)]
+            before=bytes(w)
+            expected,tiles,_,_=oracle(elf,before,strength,eye,descriptor,host_sine=False,flags=2,area_entry=0x1500)
+            out=(Tile*108)();assert mode(C.byref(w),C.byref(config21),strength,(C.c_float*3)(*eye),1,out)==0
+            assert bytes(w)[:68]==expected,('reversed poststate',strength,case)
+            assert len(tiles)==108
+            for i,(actual,ref) in enumerate(zip(out,tiles)):
+                for field in ['matrix','params']:
+                    want=struct.pack('<'+str(len(ref[field]))+'f',*ref[field])
+                    assert bytes(getattr(actual,field))==want,('reversed',field,strength,case,i)
+                assert bytes(actual.descriptor)==ref['descriptor'],('reversed descriptor',strength,case,i)
+            reversed_cases+=1;tile_count+=108
+    assert descriptor21!=descriptor
     banner(part(cases,48,'instruction-flow cases (every strength)'),
+           part(reversed_cases,12,'reversed-row cases (AREA21: flags 2, area 0x1500)'),
            part(packet_runs,48,'cases with the channel-3 packets executed')+f' ({packet_bytes:,} bytes equal)',
            'captured snapshot comparison in full when --reference-ee/--reference-tiles are given')
-    report={'status':'PASS','mode':MODE,'instruction_flow_cases':cases,'tiles_compared':tile_count,
+    report={'status':'PASS','mode':MODE,'instruction_flow_cases':cases,'reversed_cases':reversed_cases,
+            'tiles_compared':tile_count,
             'packet_cases':packet_runs,'packet_bytes_equal':packet_bytes,
             'sine':'0011E2A8 executed (original) and em_sdk_math_original (native)'}
     if args.reference_ee:

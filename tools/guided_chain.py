@@ -475,6 +475,11 @@ def main(argv):
                         'the original\'s frames (IOP_STREAM.md "The sound-bank transfer\'s recorded answers")')
     parser.add_argument('--bank-replay', dest='bank_replay', action='store_true', default=True,
                         help='(the default) the recorded sound-bank transfers')
+    parser.add_argument('--gs-dump', metavar='TAKE:ROW[,TAKE:ROW...]',
+                        help='write the Original profile\'s exact GS field of these rows (a take prefix and its '
+                        'trace row; EM_GS_DUMP_AT, comparison only) into build/gspics/<name>/port/f<chain frame>'
+                        '.gsfield; the run draws every frame and quits after the last one '
+                        '(tools/compare_gs_frame.py, DRAW_LIST_AUDIT.md section 4)')
     args = parser.parse_args(argv)
     if args.list or not args.chain:
         for n, (card, route, takes) in CHAINS.items():
@@ -514,6 +519,25 @@ def main(argv):
                 state = json.loads((refs.capture(take_route(route, take)) / take / 'trace.json').read_text())
                 more.append((Path(state['source_state']).parent / 'eeMemory.bin', starts[k]))
         extra = list(args.set)
+        if args.gs_dump:
+            frames = []
+            for item in args.gs_dump.split(','):
+                prefix, _, row = item.partition(':')
+                k = [i for i, t in enumerate(takes) if t.startswith(prefix)]
+                if not k or not row.isdigit():
+                    sys.exit(f'guided_chain: --gs-dump {item!r}: want TAKE:ROW with a take of the chain')
+                frames.append(starts[k[0]] + int(row))
+            dump_dir = ROOT / 'build/gspics' / name / 'port'
+            dump_dir.mkdir(parents=True, exist_ok=True)
+            extra += [f'EM_GS_DUMP_AT={",".join(map(str, sorted(frames)))}', f'EM_GS_DUMP_DIR={dump_dir}']
+            if source_ram and source_ram.exists():
+                # the field's half line follows D_00810E88: the recording's relation to the frame index
+                # D_00810E80 at a loop top (EM_START_AT_FIELD; the card's source state holds both)
+                ram = source_ram.read_bytes()
+                extra.append(f'EM_START_AT_FIELD={(ram[0x810E80] ^ ram[0x810E88]) & 1}')
+            (dump_dir / 'points.json').write_text(json.dumps(
+                {f'{takes[[i for i, t in enumerate(takes) if t.startswith(it.partition(":")[0])][0]]}:'
+                 f'{it.partition(":")[2]}': f'f{f}' for it, f in zip(args.gs_dump.split(','), frames)}, indent=1) + '\n')
         if args.drive_replay:
             import drive_replay
             info = drive_replay.guided_table(takes, out / 'drive_replay.txt', loader=args.loader_replay,

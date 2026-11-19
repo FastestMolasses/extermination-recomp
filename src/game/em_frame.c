@@ -356,6 +356,8 @@ void em_frame_set_unpaced(int on)
 uint8_t  *em_frame_d810E80(void)        { return (uint8_t *)&s_frame.parity; }
 uint8_t  *em_frame_d810E88(void)        { return (uint8_t *)&s_frame.field; }
 
+void em_frame_flip_field(void) { s_frame.field ^= 1u; }
+
 void em_frame_loop_top(uint16_t *d810E80, uint16_t *d810E88, uint64_t *vblanks)
 {
     if (d810E80) *d810E80 = (uint16_t)s_frame.parity;

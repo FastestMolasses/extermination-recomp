@@ -1171,6 +1171,10 @@ const char *em_gfx_gs_world_fault(EmGfx *gfx);
  * frame): rgba = 512 x 224 x 4 bytes (R, G, B, A as GS memory holds them),
  * *frame = its FRAME_1. 0, or -1 (this frame shows no GS field). */
 int em_gfx_gs_field_read(EmGfx *gfx, uint8_t *rgba, uint64_t *frame);
+/* The GS model's whole local memory after the frame being ended is drawn
+ * (4 MiB in the GS's own layout, as a PCSX2 gs_vram holds it): a
+ * comparison aid (EM_GS_DUMP_MEM, em_start_at.c). 0, or -1 (no model). */
+int em_gfx_gs_memory_read(EmGfx *gfx, uint8_t *out);
 /* The model's last frame (a diagnostic for the frame cost, EM_FRAME_TIMING):
  * its wall time, the busiest worker's and all workers' CPU time, the pixels
  * drawn, and the count of frames run so far. 0, or -1. */

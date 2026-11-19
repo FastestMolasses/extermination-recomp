@@ -642,6 +642,15 @@ recording-derived and stay in the ignored `build/`.
   once from the ELF's .data and never resets it, so a card from boot holds
   the .data image where the recording holds what its earlier pages left
   (guided_chain passes the card's source state).
+  `EM_START_AT_FIELD=<0|1>` (comparison only; guided_chain.py --gs-dump
+  passes the card's source state's D_00810E80 XOR D_00810E88) flips the
+  field bit D_00810E88 once at control when the port's relation is the
+  other one, so its fields are drawn on the recording's half line.
+  `EM_GS_DUMP_AT=<f>[,<seg>:<off>...]` (comparison only; guided_chain.py /
+  watch_takes.py --gs-dump) writes the exact GS field of those script frames
+  or EM_INPUT_PLAY ticks into EM_GS_DUMP_DIR (with EM_GS_DUMP_MEM=1 the
+  model's whole local memory too) and quits after the last one
+  (DRAW_LIST_AUDIT.md section 4).
   `EM_START_AT_RANDS=<file>` (lines `f state`) puts
   the rand() word in place at those script frames.
   `EM_START_AT_CLOCK=<f>:<hex>` (comparison only) sets 0x70003B68 to the

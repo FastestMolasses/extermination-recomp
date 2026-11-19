@@ -137,7 +137,10 @@ static int draw_tiles(EmWeather *weather, const EmSnowConfig *config, const EmWe
     if (!emit) goto close;
     if (em_rcl_0021B9A0(2, 0, 0) < 0 || em_rcl_0021B9A0(3, 0, UINT32_C(0x43960000)) < 0)
         return refuse("001E67C0's 0021B9A0 faulted (the render context)", 0x0021B9A0u);
-    if (em_snow_tiles(weather, config, frame->strength, eye, sdk_sine, NULL, snow.tiles) < 0)
+    /* 001E67C0's flags bit 1 (001E55F0: the area key 0x1500, AREA21): the
+     * reversed row (em_snow_tiles_mode). */
+    if (em_snow_tiles_mode(weather, config, frame->strength, eye, sdk_sine, NULL, (frame->render_flags & 2u) != 0,
+                           snow.tiles) < 0)
         return refuse("001E67C0's SDK 00102900 or 0011E2A8 faulted", 0x001E67C0u);
     uint8_t p3_first[0x100];
     for (unsigned i = 0; i < EM_SNOW_TILE_COUNT; ++i) {
@@ -321,16 +324,16 @@ int em_snow_runtime_tick_outdoor(EmWeather *weather, uint32_t self, uint32_t fla
     *d8106BF = frame.intensity;
     if (frame.draw == 0) return 0;
     if (frame.draw != 2) {
-        /* 001E67C0's branch: AREA11's emission (flags & 2 clear) with the
-         * count D_002551F0 its area switch sets: 0xA for key 0xF01 (AREA15
-         * sub 1), 0x14 for every key the switch does not list (AREA17's
-         * 0x1100 among them), 6 for key 0x1500 (AREA21), where camera top
-         * mode 3 (D_008101E4) reads the scene id D_0081024E: 0x1F returns
-         * at once (no fog call, no tile), 0x1E sets 3, 0x20 sets 9; the
-         * camera is D_008105D0. The reversed row (flags & 2) is not this
-         * translation's. AREA13 never takes it. */
-        if (flags & 2u)
-            return refuse("001E67C0 with the reversed row", 0x001E67C0u);
+        /* 001E67C0's branch with the count D_002551F0 its area switch
+         * sets: 0xA for key 0xF01 (AREA15 sub 1), 0x14 for every key the
+         * switch does not list (AREA17's 0x1100 among them), 6 for key
+         * 0x1500 (AREA21), where camera top mode 3 (D_008101E4) reads the
+         * scene id D_0081024E: 0x1F returns at once (no fog call, no tile,
+         * no phase step), 0x1E sets 3, 0x20 sets 9; the camera is
+         * D_008105D0. 001E55F0 passes flags bit 1 for that same key 0x1500
+         * (frame.render_flags, em_weather_tick): AREA21's rows are the
+         * reversed ones (draw_tiles, em_snow_tiles_mode). AREA13 never takes
+         * this branch. */
         const unsigned key = (area << 8) + sub;
         uint32_t count = key == 0xF01u ? 0xAu : 0x14u;                        /* D_002551F0 */
         int emit = 1;

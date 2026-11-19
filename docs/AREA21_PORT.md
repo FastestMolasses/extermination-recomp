@@ -360,9 +360,13 @@ grid, em_static_world) after 001E1E60. Its missing pieces are bound:
 - **001E67C0 in AREA21** (em_snow_runtime): the area switch's key 0x1500
   sets the count D_002551F0 to 6; with camera top mode 3 (D_008101E4) the
   scene id D_0081024E 0x1F returns before any fog call or tile, 0x1E sets
-  3, 0x20 sets 9 (decomp C, byte-identical). The reversed row (flags & 2)
-  still faults; AREA21's weather flags in g75..g79 (0x22070001,
-  0x30070010) do not set it.
+  3, 0x20 sets 9 (decomp C, byte-identical). The reversed rows: 001E55F0
+  passes flags bit 1 for that same key 0x1500, so AREA21's snow always
+  takes them (row tilt -row[0] minus the wobble, phases moving down,
+  wrapping below 1.0). Until lane PORT-GS-PICS (2026-11-19) the port tested
+  D_008106C8's bit 1 instead and drew the normal rows: flakes in other
+  places in every AREA21 frame (DRAW_LIST_AUDIT.md section 4); now
+  em_snow_tiles_mode, checked against the original's instructions.
 - **Background reader** (em_static_world_live, renderer side): a DIRECT
   packet in 001E1E60's list that is not an A+D one (the far light's sprite,
   001D75E0) is skipped instead of refused.
@@ -377,7 +381,11 @@ grid, em_static_world) after 001E1E60. Its missing pieces are bound:
   frame model draws it (DRAW_LIST_AUDIT.md section 2); before, the snow of
   g75 / g76 was built and never drawn. The chain through g76 with the raster
   draws it in 4,416 frames (108 tiles each); the read-back counts are
-  unchanged. Picture not compared.
+  unchanged. Picture compared since lane PORT-GS-PICS (2026-11-19,
+  DRAW_LIST_AUDIT.md section 4): with the reversed rows the snow, the sea
+  grid's colour, the Gatling's sight and the gauge bar equal the original's
+  fields (g76 1300, g77 3300 / 5000 / 8000: every pixel within 3, 99.5 to
+  99.99 % exact; tools/test_gs_second_half_reference.py).
 
 Chain g20 (card g73): g73 4191 / 4192 compared rows on the row (heading
 0.0012 off from row 1130, as before), g74 3736 / 3736, **g75 3864 / 3864

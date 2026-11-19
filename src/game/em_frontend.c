@@ -1371,6 +1371,7 @@ static int start_at_end_pending;
 void em_frontend_start_at_after_frame(void)
 {
     if (f.start_at && lt.phase == 6) em_start_at_frame_end(em_frame_counter(), g.pos, g.yaw);
+    em_start_at_gs_dump();
     start_at_end_pending = f.start_at && lt.phase == 6 && !start_at_pad_stepped;
     start_at_pad_stepped = 0;
 }

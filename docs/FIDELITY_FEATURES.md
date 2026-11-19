@@ -768,6 +768,13 @@ programs.
   `test-vu-page-host-differential` shows it writes the same words as the
   integer model on every captured, synthetic and fuzzed MSCAL
   (`PERFORMANCE.md` "Progress" P5).
+- AREA21's snow takes 001E67C0's reversed rows (flags bit 1 for the area key
+  0x1500: tilt negated, phases moving down), checked against the original's
+  instructions (`tools/test_snow_tiles_reference.py`) and against the
+  original's GS fields at the same rows of the guided run (AREA21: every
+  pixel within 3 of the original's, the snow included;
+  `tools/test_gs_second_half_reference.py`, `DRAW_LIST_AUDIT.md` section 4).
+  Before 2026-11-19 the port drew AREA21's flakes with the normal rows.
 - Status: **PARTIAL**. First level only. Sprite positions/colours follow the
   draws, whose values differ from a capture's at every snapshot
   (`RAND_ORDER.md`); only glow markers are compared with captures (count and

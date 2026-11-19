@@ -147,7 +147,8 @@ dispatch, bound by em_area01_runtime_bind_area; op14's data window
 0x826280 .. 0x828E80; shadow receivers and world textures of profile 17;
 the snow 001E67C0 takes its count from the original's area switch (0x14
 for every key it does not list, AREA17's 0x1100 included; 0xF01 0xA;
-0x1500 and the reversed row still refuse).
+0x1500 6; the reversed rows, AREA21's, since lane PORT-GS-PICS:
+AREA21_PORT.md "Grid").
 
 **Start cards** g46, g47, g48 (`build_start_saves.py`, the source state of
 each take; `em_start_at.c`), beats g46 .. g48 in `mid_route_beats.py`.

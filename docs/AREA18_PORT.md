@@ -86,3 +86,12 @@ g42 (all of AREA18 and the walk-out on AREA14's ramp) is on the row for
 8821 of 8821 compared rows, its three hits at the original's rows;
 g44 (AREA18 again, the rifle refill) 5295 of 5295. See AREA14_PORT.md
 "Lane PORT-A18A14" for the chain and what it needed in AREA14.
+
+**Picture** (lane PORT-GS-PICS, 2026-11-19; DRAW_LIST_AUDIT.md section 4):
+the exact GS field of g42 rows 300 .. 5600 against the original's
+(`guided_chain.py g18 --steer g41 --until g42 --gs-dump ...`, which sets
+EM_START_AT_FIELD: from card g41 the port's field bit is on the other half
+line until it flips). Rows 2600, 3000 and 5600 are exact within 2 (99.90 to
+99.99 %). Open: rows 300, 1500 and 2400 draw the player's hair with other
+texels (teal), exact from 2600 on, after the bomb pickup's scene; a state
+the card start leaves is the first candidate.
