@@ -154,6 +154,21 @@ void em_frame_screen_fade_start(int dir, int speed);
 void em_frame_screen_fade_gate(uint8_t request, uint8_t suppress);
 const EmScreenFade *em_frame_screen_fade(void);
 
+/* The two effects' GS packets and the frame's 2D layer (GS_EXACT.md
+ * section 9 "Slot 1"). At step D after 001AEBE0's state step, and at G
+ * (and O) after 001AEE70's, em_frame hands the packet half its inputs:
+ * D_00810E80, the post-step level, the colour byte and whether the
+ * original appends its REF (em_fade_packets.h). Before the frame ends it
+ * asks `in_field` whether the frame's slot 1 (the bars, the message glyph
+ * runs, the fade) was drawn into the GS field; if not, the GPU overlay
+ * pass draws the bars, the strips and the fade as before. NULL removes. */
+typedef struct {
+    void (*letterbox)(int parity, int32_t level, int draw);
+    void (*fade)(int parity, int16_t level, uint8_t colour, int draw);
+    int (*in_field)(void);
+} EmFrameSlot1;
+void em_frame_set_slot1(const EmFrameSlot1 *slot1);
+
 /* Native continuation of original blocking 00203350. Arm movie_active
  * during task dispatch, and install a pump that presents one movie frame
  * and returns 1 while playing or 0 once complete. While suspended only

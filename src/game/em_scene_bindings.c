@@ -644,7 +644,7 @@ static uint8_t r_008102B9(void *ctx)
  * tools/test_room_move_reference.py. `counter` is the main-loop counter
  * 0x70003B64 at the tick start, the clock of EM_RAND_TRACE's lines
  * (tools/rand_order.py). It never changes behaviour. */
-enum { LOG_SNAP = 168, LOG_VEIL = 0x1C, LOG_TRACE_MAX = 96 };
+enum { LOG_SNAP = 208, LOG_VEIL = 0x1C, LOG_TRACE_MAX = 96 };
 static FILE *s_log;
 static int s_log_checked;
 static uint32_t s_log_tick;
@@ -725,6 +725,23 @@ static void log_snapshot(uint8_t out[LOG_SNAP])
     put_le(&p, s_state.d810E74, 2);
     put_le(&p, s_state.d810E70, 2);
     *p++ = s_state.d810E50;
+    /* 001AD740 (the ending): D_0081070A, the dog tags D_00810C90..9F and
+     * D_00810CA6..CB1; 001ACA20 (the attract demo): the demo counter
+     * D_00275BD4 and its seeds (tools/test_scene_task_reference.py LAYOUT,
+     * whose order this follows: 208 bytes) */
+    static const struct { uint32_t address, size; } progress[] = {
+        {0x0081070Au, 1}, {0x00810C90u, 0x10}, {0x00810CA6u, 12}, {0, 4}, {0x00810C61u, 1}, {0x00810C65u, 1},
+        {0x00810C68u, 1}, {0x00810C7Eu, 1}, {0x00810774u, 1}, {0x008107F4u, 1}, {0x0081079Au, 1}};
+    for (size_t i = 0; i < sizeof progress / sizeof progress[0]; ++i) {
+        if (!progress[i].address) {
+            put_le(&p, (uint32_t)s_demo_bd4, 4);
+            continue;
+        }
+        const uint8_t *b = em_scene_progress_at(&s_state, progress[i].address, progress[i].size);
+        if (b) memcpy(p, b, progress[i].size);
+        else memset(p, 0, progress[i].size);
+        p += progress[i].size;
+    }
 }
 
 /* The block *D_00275888 at its original offsets. */

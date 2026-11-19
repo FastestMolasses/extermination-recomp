@@ -8,6 +8,7 @@
 #include "em_gfx.h"
 #include "em_settings.h"
 #include "game/em_battery_ui.h"
+#include "game/em_fade_packets.h"
 #include "game/em_frame.h"
 #include "game/em_message_glyph_original.h"
 #include "game/em_message_live.h"
@@ -25,7 +26,7 @@
 #define ARENA 0x0028F700u
 #define SLOT1_BASE (ARENA + 0xC9000u) /* 001D1AE0's +0x14 cursor for index 0 */
 #define SLOT1_SIZE 0x95760u           /* the index stride: slot 2's buffer follows */
-#define GLYPH_RUNS_MAX 256u
+#define RUNS_2D_MAX 256u
 
 _Static_assert(sizeof(EmStatusBackground) == 0x60, "D_002655A0 is three 0x20-byte blocks");
 
@@ -52,13 +53,40 @@ static struct {
     uint8_t *vif, *gif;    /* the kicked list's VIF stream and its GIF data */
     size_t vif_cap, gif_cap;
     /* a world frame's slot-1 packets (em_sgp_world_slot1): the cursor
-     * ranges the message service's glyph runs filled this frame (the GPU
-     * overlay draws them), and the stream left for after the kick */
-    uint32_t glyph_runs[GLYPH_RUNS_MAX][2];
-    unsigned glyph_run_count;
-    int glyph_runs_over;
+     * ranges of this frame's 2D layer (the letterbox REF, the message
+     * service's glyph runs, the fade REF: what the GPU overlay pass draws
+     * when slot 1 is not drawn into the field), and the stream left for
+     * after the kick */
+    uint32_t runs_2d[RUNS_2D_MAX][2];
+    unsigned run_2d_count;
+    int runs_2d_over;
     size_t tail_bytes;
+    /* the frame (em_frame_serial) whose 2D layer the GS field holds */
+    uint32_t in_field_serial;
+    int in_field_set;
+    /* the screen effects' blocks D_0028A7B0 / D_0028A8E0 (em_fade_packets,
+     * held by the render context so every list walker reads them) */
+    EmFadePackets *fpk;
+    int fpk_ready;
+    unsigned effect_refs;  /* this frame's letterbox and fade REFs */
+    FILE *s1log;           /* EM_SLOT1_LOG (a diagnostic) */
+    int s1log_tried;
 } G;
+
+/* EM_SLOT1_LOG=<file> (a diagnostic; it changes nothing drawn): one line per
+ * frame whose GS field took a 2D layer, "<counter> world|status runs <n>
+ * effects <m>" (the 2D ranges and the letterbox / fade REFs of its slot 1). */
+static void slot1_log(const char *kind)
+{
+    if (!G.s1log_tried) {
+        G.s1log_tried = 1;
+        const char *p = getenv("EM_SLOT1_LOG");
+        if (p && p[0] && !(G.s1log = fopen(p, "w"))) fprintf(stderr, "status GS page: cannot write %s\n", p);
+    }
+    if (G.s1log && (G.run_2d_count || G.effect_refs))
+        fprintf(G.s1log, "%u %s runs %u effects %u\n", (unsigned)em_frame_counter(), kind, G.run_2d_count,
+                G.effect_refs);
+}
 
 static uint32_t rd32(const uint8_t *p)
 {
@@ -146,23 +174,30 @@ static EmMessageTextStyle style_of(uint64_t record)
 
 static int slot1_cursor(uint32_t *cursor);
 
+/* Keeps [before, after) as a range of the frame's 2D layer (a glyph run's
+ * packets, the letterbox's or the fade's REF) for em_sgp_world_slot1: a
+ * world frame drawn with D_008106C4 set leaves them to the GPU overlay
+ * pass (em_message_live_render, em_frame.c's bars and fade), which keeps
+ * their order. A frame with more ranges than the list holds marks it full
+ * (its slot 1 is then refused). */
+static void run_2d(uint32_t before, uint32_t after)
+{
+    if (after <= before) return;
+    if (G.run_2d_count && G.runs_2d[G.run_2d_count - 1][1] == before)
+        G.runs_2d[G.run_2d_count - 1][1] = after;
+    else if (G.run_2d_count < RUNS_2D_MAX) {
+        G.runs_2d[G.run_2d_count][0] = before;
+        G.runs_2d[G.run_2d_count++][1] = after;
+    } else
+        G.runs_2d_over = 1;
+}
+
 /* The slot-1 range a glyph run's packet took (from `before` to the cursor
- * now), kept for em_sgp_world_slot1: the message service's strips are still
- * drawn by the GPU overlay over a world frame's field (em_message_live_render),
- * as are the letterbox bars and the fade they must stay ordered with. A
- * frame with more runs than the list holds marks it full (its slot 1 is
- * then refused, never drawn with a run in it). Returns ok. */
+ * now). Returns ok. */
 static int glyph_run(int known, uint32_t before, int ok)
 {
     uint32_t after = 0;
-    if (!ok || !known || !slot1_cursor(&after) || after <= before) return ok;
-    if (G.glyph_run_count && G.glyph_runs[G.glyph_run_count - 1][1] == before)
-        G.glyph_runs[G.glyph_run_count - 1][1] = after;
-    else if (G.glyph_run_count < GLYPH_RUNS_MAX) {
-        G.glyph_runs[G.glyph_run_count][0] = before;
-        G.glyph_runs[G.glyph_run_count++][1] = after;
-    } else
-        G.glyph_runs_over = 1;
+    if (ok && known && slot1_cursor(&after)) run_2d(before, after);
     return ok;
 }
 
@@ -532,6 +567,14 @@ static int grow(uint8_t **buf, size_t *cap, size_t need)
     return 1;
 }
 
+/* The bytes a list sends from `address`: the render context's storage, or
+ * the screen effects' blocks its letterbox and fade REFs point at. */
+static const uint8_t *sent(uint32_t address, uint32_t size)
+{
+    const uint8_t *p = em_rcl_bytes(address, size);
+    return p ? p : G.fpk_ready ? em_fpk_bytes(G.fpk, address, size) : NULL;
+}
+
 /* The VIF stream the kicked list sends from tag `chain` (VIF1 source chain,
  * TTE off: CNT, NEXT, REF, REFS, CALL, RET, END; the data at original
  * addresses in the render context's storage), then its GIF data (VIF NOP /
@@ -572,7 +615,7 @@ static int list_gif(uint32_t chain, size_t *gif_bytes)
         default: return refuse("a DMA tag of the kicked list is REFE", at);
         }
         if (qwc) {
-            const uint8_t *p = em_rcl_bytes(data, 16u * qwc);
+            const uint8_t *p = sent(data, 16u * qwc);
             if (!p) return refuse("data the kicked list sends is not in the render context's storage", at);
             if (!grow(&G.vif, &G.vif_cap, vn + 16u * qwc)) return refuse("the kicked list is too long", at);
             memcpy(G.vif + vn, p, 16u * qwc);
@@ -605,25 +648,29 @@ int em_sgp_kick(EmGfx *gfx)
     if (list_gif(chain, &bytes) < 0) return -1;
     if (em_gfx_gs_gif_frame(gfx, G.gif, bytes, frame, scissor) < 0)
         return refuse("the GS frame refused the status page's list", em_gfx_gs_world_fault(gfx));
+    G.in_field_serial = em_frame_serial();   /* its slot 1, the 2D layer, drawn with it */
+    G.in_field_set = 1;
+    slot1_log("status");
     return 0;
 }
 
 /* ---- a world frame's slot-1 packets (GS_EXACT.md section 9 "Slot 1") ----- */
 
-static int in_glyph_run(uint32_t t)
+static int in_run_2d(uint32_t t)
 {
-    for (unsigned i = 0; i < G.glyph_run_count; ++i)
-        if (t >= G.glyph_runs[i][0] && t < G.glyph_runs[i][1]) return 1;
+    for (unsigned i = 0; i < G.run_2d_count; ++i)
+        if (t >= G.runs_2d[i][0] && t < G.runs_2d[i][1]) return 1;
     return 0;
 }
 
 /* The VIF stream of the kicked list's slot-1 segment of buffer `index`
  * (001D2300 NEXTs from the main list to D_0028F700 + 0xC9000 + index *
  * 0x95760 and 001D2160 NEXTs back at its end: the walk ends at the first
- * NEXT that leaves the buffer), the glyph runs' tags left out, then its GIF
- * data. Tags as list_gif takes them; a CALL / RET / END inside the segment
- * is refused (001D2300's segments hold none). 0, or -1 (reported). */
-static int slot1_gif(uint32_t index, size_t *gif_bytes)
+ * NEXT that leaves the buffer), with `skip_2d` the 2D layer's tags left
+ * out, then its GIF data. Tags as list_gif takes them; a CALL / RET / END
+ * inside the segment is refused (001D2300's segments hold none). 0, or -1
+ * (reported). */
+static int slot1_gif(uint32_t index, int skip_2d, size_t *gif_bytes)
 {
     char at[64];
     const uint32_t base = SLOT1_BASE + index * SLOT1_SIZE;
@@ -645,8 +692,8 @@ static int slot1_gif(uint32_t index, size_t *gif_bytes)
         case 3: case 4: data = addr; next = t + 16u; break;          /* REF, REFS */
         default: return refuse("a slot-1 DMA tag other than CNT / NEXT / REF / REFS", at);
         }
-        if (qwc && !in_glyph_run(t)) {
-            const uint8_t *p = em_rcl_bytes(data, 16u * qwc);
+        if (qwc && !(skip_2d && in_run_2d(t))) {
+            const uint8_t *p = sent(data, 16u * qwc);
             if (!p) return refuse("data slot 1 sends is not in the render context's storage", at);
             if (!grow(&G.vif, &G.vif_cap, vn + 16u * qwc)) return refuse("a world frame's slot 1 is too long", at);
             memcpy(G.vif + vn, p, 16u * qwc);
@@ -696,21 +743,27 @@ int em_sgp_world_slot1(EmGfx *gfx)
     G.tail_bytes = 0;
     if (!G.field_on || G.slot1_off || G.field || !gfx || !em_gfx_gs_world_recording(gfx)) return 0;
     if (G.fault) return -1;
-    if (G.glyph_runs_over) return refuse("a world frame with more glyph runs than the slot-1 walk keeps", NULL);
+    if (G.runs_2d_over) return refuse("a world frame with more 2D ranges than the slot-1 walk keeps", NULL);
     uint32_t context, index;
     const uint8_t *c4 = em_rcl_bytes(0x008106C4u, 1);
     if (!word(D_00275670, &context) || !word(context + 0x9Cu, &index) || index > 1u || !c4)
         return refuse("no render context for a world frame's slot 1", NULL);
     size_t bytes = 0;
-    if (slot1_gif(index, &bytes) < 0) return -1;
+    if (slot1_gif(index, c4[0] != 0, &bytes) < 0) return -1;
     if (c4[0]) {
         /* 001D2300 with D_008106C4 set kicks slot 1 BEFORE slot 0 and the
          * page; the recorded body cannot take it there. Its state blocks
-         * alone draw nothing; anything more stops the game. */
+         * alone draw nothing; anything more stops the game. Its 2D layer
+         * (the bars, the glyph runs, the fade) is left to the GPU overlay
+         * pass, as before GS_EXACT.md 9 "Slot 1". */
         if (gif_draws(G.gif, bytes))
             return refuse("a world frame whose slot 1 draws, kicked before the world (D_008106C4 set)", NULL);
         return 0;
     }
+    /* the frame's 2D layer is in the field: no overlay pass for it */
+    G.in_field_serial = em_frame_serial();
+    G.in_field_set = 1;
+    slot1_log("world");
     if (!bytes) return 0;
     if (em_gs_gif_registers_only(G.gif, bytes)) {
         if (em_gfx_gs_world_gif(gfx, G.gif, bytes) < 0)
@@ -728,6 +781,89 @@ int em_sgp_world_tail(EmGfx *gfx)
     if (!bytes) return 0;
     if (em_gfx_gs_world_tail(gfx, G.gif, bytes) < 0)
         return refuse("the GS frame refused a world frame's slot 1 (after the kick)", em_gfx_gs_world_fault(gfx));
+    return 0;
+}
+
+/* ---- the screen effects' packet halves (em_frame's EmFrameSlot1) ---------- */
+
+/* The quadword at the slot-1 cursor for an effect's REF, or NULL when the
+ * frame has no slot 1 here (no render context: nothing walks it). A cursor
+ * outside the frame's slot-1 buffer is a fault. */
+static uint8_t *effect_tag(uint32_t *cursor)
+{
+    if (!active() || G.fault) return NULL;
+    if (!slot1_cursor(cursor)) return fault("no slot-1 cursor for a screen effect's REF", NULL), NULL;
+    uint8_t *tag = bytes(NULL, *cursor, 16);
+    if (!tag) fault("a screen effect's REF outside the frame's slot-1 buffer", NULL);
+    return tag;
+}
+
+static void effect_appended(uint32_t cursor)
+{
+    uint32_t context;
+    if (!word(D_00275670, &context)) return;
+    uint8_t *c = bytes(NULL, context + 0x14u, 4);
+    if (!c) {
+        fault("the slot-1 cursor word is not writable", NULL);
+        return;
+    }
+    const uint32_t next = cursor + 16u;
+    c[0] = (uint8_t)next;
+    c[1] = (uint8_t)(next >> 8);
+    c[2] = (uint8_t)(next >> 16);
+    c[3] = (uint8_t)(next >> 24);
+    run_2d(cursor, next);
+    G.effect_refs++;
+}
+
+static void slot1_letterbox(int parity, int32_t level, int draw)
+{
+    if (!G.fpk_ready) return;
+    uint32_t cursor = 0;
+    uint8_t *tag = draw ? effect_tag(&cursor) : NULL;
+    em_fpk_001AEBE0(G.fpk, parity, level, tag != NULL, tag);
+    if (tag) effect_appended(cursor);
+}
+
+static void slot1_fade(int parity, int16_t level, uint8_t colour, int draw)
+{
+    if (!G.fpk_ready) return;
+    uint32_t cursor = 0;
+    uint8_t *tag = draw ? effect_tag(&cursor) : NULL;
+    em_fpk_001AEE70(G.fpk, parity, level, (int8_t)colour, tag != NULL, tag);
+    if (tag) effect_appended(cursor);
+}
+
+void em_sgp_2d_layer_drawn(void)
+{
+    G.in_field_serial = em_frame_serial();
+    G.in_field_set = 1;
+    slot1_log("veil");
+}
+
+int em_sgp_2d_in_field(void)
+{
+    return G.in_field_set && G.in_field_serial == em_frame_serial();
+}
+
+static const EmFrameSlot1 k_slot1 = {slot1_letterbox, slot1_fade, em_sgp_2d_in_field};
+
+/* D_0024A8C0, the bars' corners 001AE900 reads (eight halfwords), from the
+ * render context's fade export (tools/export_render_context.py). */
+static int load_corners(int16_t corners[8])
+{
+    FILE *f = fopen(EM_SGP_FADE_PATH, "rb");
+    uint8_t b[0x30];
+    const int ok = f && fread(b, 1, sizeof b, f) == sizeof b && memcmp(b, "EMRC", 4) == 0 && rd32(b + 4) == 1 &&
+                   rd32(b + 8) == 1 && rd32(b + 0x10) == 0x0024A8C0u && rd32(b + 0x14) == 16u &&
+                   rd32(b + 0x18) == 0x20u;
+    if (f) fclose(f);
+    if (!ok) {
+        fprintf(stderr, "status GS page: %s is missing or not the fade export (run tools/export_render_context.py)\n",
+                EM_SGP_FADE_PATH);
+        return -1;
+    }
+    for (int i = 0; i < 8; ++i) corners[i] = (int16_t)(b[0x20 + 2 * i] | b[0x21 + 2 * i] << 8);
     return 0;
 }
 
@@ -768,11 +904,18 @@ int em_sgp_install(const char *font_path)
                 em_gfx_gs_world_fault(gfx) ? em_gfx_gs_world_fault(gfx) : "?");
         return -1;
     }
+    /* 001AB430's 001AEA50: the screen effects' blocks */
+    int16_t corners[8];
+    if (load_corners(corners) < 0) return -1;
+    G.fpk = em_rcl_fade_packets();
+    em_fpk_001AEA50(G.fpk, corners);
+    G.fpk_ready = 1;
     G.installed = 1;
+    em_frame_set_slot1(&k_slot1);
     em_battery_ui_set_sink(&k_battery_sink);
     em_status_runtime_set_item_sink(&k_item_sink);
     em_status_pages_live_set_sink(&k_pages_sink);
-    em_message_live_set_glyph_sink(&k_glyph_sink, em_sgp_field_frame);
+    em_message_live_set_glyph_sink(&k_glyph_sink, em_sgp_2d_in_field);
     return 0;
 }
 
@@ -786,8 +929,9 @@ void em_sgp_frame_begin(void)
 {
     G.frame_page = G.frame_any = G.frame_item = G.frame_pages = G.bg_seen = 0;
     G.field = 0;
-    G.glyph_run_count = 0;
-    G.glyph_runs_over = 0;
+    G.run_2d_count = 0;
+    G.runs_2d_over = 0;
+    G.effect_refs = 0;
     G.tail_bytes = 0;
     if (!G.installed || !em_rcl_bound() || !slot1_cursor(&G.frame_start)) G.frame_start = 0;
 }

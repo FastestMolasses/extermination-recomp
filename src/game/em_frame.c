@@ -65,6 +65,10 @@ static struct {
     bool         movie_suspended;     /* main iteration stopped at phase M */
     bool         movie_frame;         /* this iteration's movie returned (em_frame_movie_frame) */
     bool         suspended_draw_transition;
+    /* the frame's 2D layer, drawn by the GPU overlay pass at the frame's
+     * end unless slot 1 put it into the GS field (EmFrameSlot1) */
+    EmFrameSlot1 slot1;
+    bool         bars_draw, message_draw, transition_draw;
     EmFrameMoviePump movie_pump;
     void        *movie_user;
     EmFrameMovieVblank movie_vblank;
@@ -224,6 +228,22 @@ void em_frame_screen_fade_gate(uint8_t request, uint8_t suppress)
 
 const EmScreenFade *em_frame_screen_fade(void) { return &s_frame.screen_fade; }
 
+void em_frame_set_slot1(const EmFrameSlot1 *slot1)
+{
+    if (slot1)
+        s_frame.slot1 = *slot1;
+    else
+        memset(&s_frame.slot1, 0, sizeof s_frame.slot1);
+}
+
+/* 001AEE70's packet half after its state step (steps G and O). */
+static void frame_transition_packets(bool draw)
+{
+    if (s_frame.slot1.fade)
+        s_frame.slot1.fade((int)(int16_t)s_frame.parity, s_frame.transition.level, s_frame.transition.colour,
+                           draw);
+}
+
 static void frame_transition_draw(void)
 {
     float level = em_frame_fade_level();
@@ -248,6 +268,20 @@ static void frame_screen_fade_draw(void)
     em_gfx_overlay_rect_sub_before_text(s_frame.gfx, 0, 0, EM_GFX_OVERLAY_W, bar_height, rgb);
     em_gfx_overlay_rect_sub_before_text(s_frame.gfx, 0, EM_GFX_OVERLAY_H - bar_height,
                             EM_GFX_OVERLAY_W, bar_height, rgb);
+}
+
+/* The frame's 2D layer on the GPU overlay pass: the letterbox bars, the
+ * message glyph strips and the transition fade (the pass orders them: bars
+ * under the text, the fade over everything), unless step V drew the
+ * frame's slot 1, which holds all three, into the GS field. */
+static void frame_2d_overlays(void)
+{
+    const bool field = s_frame.slot1.in_field && s_frame.slot1.in_field();
+    if (s_frame.bars_draw && !field) frame_screen_fade_draw();
+    if (s_frame.message_draw && s_frame.message.render)
+        s_frame.message.render(s_frame.message.context, s_frame.gfx);
+    if (s_frame.transition_draw && !field) frame_transition_draw();
+    s_frame.bars_draw = s_frame.message_draw = s_frame.transition_draw = false;
 }
 const EmFrameInput *em_frame_input(void){ return &s_frame.input; }
 const EmPadUnpack *em_frame_pad_block(void) { return &s_frame.pad_block; }
@@ -583,10 +617,12 @@ int em_frame_step(void)
 
     if (s_frame.movie_suspended) goto movie_phase;
 
-    /* D: 001AEBE0 updates the separate letterbox effect before tasks. */
-    if (em_screen_fade_tick(&s_frame.screen_fade, s_frame.screen_request,
-                            s_frame.screen_suppress))
-        frame_screen_fade_draw();
+    /* D: 001AEBE0 updates the separate letterbox effect before tasks, then
+     * fills its block and appends its slot-1 REF (em_fade_packets). */
+    s_frame.bars_draw = em_screen_fade_tick(&s_frame.screen_fade, s_frame.screen_request,
+                                            s_frame.screen_suppress) != 0;
+    if (s_frame.slot1.letterbox)
+        s_frame.slot1.letterbox((int)(int16_t)s_frame.parity, s_frame.screen_fade.level, s_frame.bars_draw);
 
     /* E/F/G: task requests affect the transition's SAME-frame tick. */
     em_task_dispatch();
@@ -599,12 +635,13 @@ int em_frame_step(void)
     /* F: 001FCA10, the message service, after every script worker. */
     if (s_frame.message.tick && s_frame.message.tick(s_frame.message.context) < 0)
         s_frame.quit = true;
-    /* Original message presentation overlays the already queued bars,
-     * then the full-screen transition composites over the whole image. */
-    if (s_frame.message.render)
-        s_frame.message.render(s_frame.message.context, s_frame.gfx);
+    /* The glyph strips the message service built this frame: slot 1
+     * holds them; the overlay pass draws them at the frame's end unless
+     * slot 1 was drawn into the GS field (frame_2d_overlays). */
+    s_frame.message_draw = true;
     s_frame.suspended_draw_transition =
         em_transition_fade_tick(&s_frame.transition) != 0;
+    frame_transition_packets(s_frame.suspended_draw_transition);
     /* H: 001FB100 unless D_00821058 == 1 (a movie armed this frame): the
      * stream lanes' service 001F9CF0, the D_0028215B output-mode commit,
      * the D_00281B70 copy and 001FC6E0's delayed cues (em_stream_live_step_h;
@@ -638,17 +675,18 @@ movie_phase:
         if (s_frame.movie_active && s_frame.movie_pump)
             s_frame.movie_active = s_frame.movie_pump(s_frame.movie_user) != 0;
         if (s_frame.movie_active && !s_frame.quit) {
+            frame_2d_overlays();
             em_gfx_end_frame(s_frame.gfx);
             return 1;
         }
         /* N/O occur once after the blocking movie function returns. */
         s_frame.movie_suspended = false;
         s_frame.movie_frame = true;
-        s_frame.suspended_draw_transition |=
-            em_transition_fade_tick(&s_frame.transition) != 0;
+        const bool o_draw = em_transition_fade_tick(&s_frame.transition) != 0;
+        frame_transition_packets(o_draw);
+        s_frame.suspended_draw_transition |= o_draw;
     }
-    if (s_frame.suspended_draw_transition)
-        frame_transition_draw();
+    s_frame.transition_draw = s_frame.suspended_draw_transition;
 
     /* P: the vblank the original loop waits for is this step's, delivered
      * at its top (D_00810E88 as the handler latched it there). After a
@@ -666,6 +704,7 @@ movie_phase:
     /* V: 001D2300 builds the frame's list; its kick is the presentation. */
     if (s_frame.step_v && s_frame.step_v(s_frame.step_vw_context) < 0)
         s_frame.quit = true;
+    frame_2d_overlays();
     em_gfx_end_frame(s_frame.gfx);
     /* W: the field is read first, then D_00810E80 flips, then 001D2580. */
     const int32_t field = (int16_t)s_frame.field;

@@ -39,7 +39,7 @@ COMMON  := src/main.c src/em_model.c src/em_input.c src/em_settings.c \
            src/game/em_area03_arrival_actors.c src/game/em_area03_arrival_probe.c \
            src/game/em_player_target_live.c src/game/em_level14_port_boot.c src/game/em_level14_port_grip.c src/game/em_level14_port_creature.c src/game/em_level10_port_boot.c src/game/em_level11_port_boot.c src/game/em_level12_port_boot.c src/game/em_level13_port_boot.c src/game/em_level15_creatures.c src/game/em_level15_fountain.c src/game/em_level15_motion.c src/game/em_level16_creature.c src/game/em_level16_beast.c src/game/em_level16_boot.c src/game/em_level17_boot.c src/game/em_area17_creature.c src/game/em_area17_creature_moves.c src/game/em_area17_creature_parts.c src/game/em_area17_creature_spit.c src/game/em_area17_creature_haze.c src/game/em_area16_water.c src/game/em_area21_boot.c src/game/em_area21_boot_small.c src/game/em_area21_creature_b.c src/game/em_area21_creature_b_moves.c src/game/em_area21_creature_b_parts.c src/game/em_area21_creature_c.c src/game/em_area21_creature_c_moves.c src/game/em_area21_creature_c_parts.c src/game/em_area00s2_creature.c src/game/em_area00s2_creature_moves.c src/game/em_area00s2_creature_parts.c src/game/em_area14_overlay.c src/game/em_area17_overlay.c src/game/em_area17_overlay_npc.c src/game/em_area16_overlay.c src/game/em_area16_overlay_b.c src/game/em_area16_overlay_c.c src/game/em_area16_overlay_d.c src/game/em_area16_overlay_e.c src/game/em_area16_overlay_f.c src/game/em_area20_overlay.c src/game/em_level15_perception.c src/game/em_level15_particles.c src/game/em_level15_support.c src/game/em_level9_port_anim.c src/game/em_level9_port_area13.c src/game/em_level9_port_exit.c src/game/em_level9_port_turret.c src/game/em_level11_port_area13.c src/game/em_level11_port_creature.c src/game/em_level11_port_creature_b.c src/game/em_level12_port_creature.c src/game/em_level13_port_creature.c src/game/em_level14_port_area15.c src/game/em_level10_port_area19.c src/game/em_level12_port_area19.c src/game/em_level13_port_area19.c src/game/em_level14_port_area19.c src/game/em_area19_route_flame.c src/game/em_area19_route_turret.c src/game/em_area01_hull_live.c src/game/em_area01_transition_services.c \
            src/game/em_area21_overlay.c src/game/em_area21_overlay_cannon.c src/game/em_area21_owners.c src/game/em_area21_doors.c src/game/em_area21_groups.c src/game/em_area21_use.c \
-           src/game/em_fade.c src/game/em_startup.c src/game/em_frontend.c src/game/em_startup_audio.c \
+           src/game/em_fade.c src/game/em_fade_packets.c src/game/em_startup.c src/game/em_frontend.c src/game/em_startup_audio.c \
            src/game/em_movie_field.c src/game/em_movie_sound.c \
            src/game/em_task.c src/game/em_frame.c src/game/em_game.c src/game/em_player_frame.c src/game/em_render_frame.c src/game/em_game_selftest.c src/game/em_props.c src/game/em_scene.c src/game/em_camera.c src/game/em_player_damage.c src/game/em_player.c src/game/em_player_heading.c src/game/em_player_motor.c src/game/em_script.c src/game/em_area11_opening.c \
            src/game/em_opening_runtime.c src/game/em_cinematic_camera.c src/game/em_random.c src/game/em_opening_control_test.c src/game/em_aim_fire_test.c src/game/em_level_smoke_test.c src/game/em_new_game_switch.c src/game/em_start_at.c \
@@ -1918,6 +1918,12 @@ test-sight-live: all
 # build/sights_ref/zoom), ~15 s.
 test-slot1-field: all
 	python3 tools/test_slot1_field.py
+
+.PHONY: test-fade-packets-reference
+# The letterbox and fade GS packets (em_fade_packets.c: 001AEA50 / 001AE900,
+# 001AEBE0, 001AEE70) against the original instructions (GS_EXACT.md 9).
+test-fade-packets-reference:
+	python3 tools/test_fade_packets_reference.py
 
 .PHONY: test-aim-fire-marker-reference
 # The round's impact marker 0018ABA0 (em_aim_fire_marker.c, bound in

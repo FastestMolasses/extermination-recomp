@@ -358,7 +358,7 @@ const uint8_t *em_rcl_bytes(uint32_t address, uint32_t size);
  * em_aim_fire_world_live). Returns the count, writing at most `capacity`
  * (0 before the load). The external windows are read-only. */
 /* The most views em_rcl_views can report. */
-#define EM_RCL_VIEWS_MAX 40u
+#define EM_RCL_VIEWS_MAX 42u
 unsigned em_rcl_views(uint32_t *address, uint32_t *size, uint8_t **bytes, int *writable, unsigned capacity);
 /* The fog the frame's world draws use: the context +0xA8 / +0xAC pair
  * 001D30A0 copied into the skin records (A, B) and FOGCOL (context +0xB0
@@ -388,6 +388,12 @@ struct EmPacketChain *em_rcl_packet_chain(void);
  * owner draw 001CAA00 appends its unit at the context's channel cursor
  * (em_owner_draw_live). */
 uint8_t *em_rcl_bytes_mut(uint32_t address, uint32_t size);
+/* The screen effects' blocks D_0028A7B0 (letterbox) and D_0028A8E0 (fade),
+ * read-only views of this storage so every walker of the kicked list reads
+ * what their slot-1 REFs send; em_status_gs_page fills them
+ * (em_fade_packets.h). Never NULL. */
+struct EmFadePackets;
+struct EmFadePackets *em_rcl_fade_packets(void);
 /* Area-reset handoff of scratch 70003400..7000347F. Non-NULL borrows
  * exactly 0x80 bytes already initialized by the known last original writer;
  * no bytes are copied or reset. NULL explicitly returns to this owner's

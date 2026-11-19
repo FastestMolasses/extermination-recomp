@@ -862,7 +862,9 @@ int em_gfx_gs_texture(EmGfx *gfx, uint64_t tex0, const uint8_t *rgba, uint32_t w
  * page and channel 1's environment REFs) is drawn at the GS's own
  * resolution into GS memory, then shown. em_chain_page's list mode walks
  * the list and hands every primitive with the environment the list set
- * before it (EmGfxGsEnv, context 1).
+ * before it (EmGfxGsEnv: context 1, and the context-2 registers slot 1's
+ * letterbox and fade sprites draw with, which only the GS model path
+ * replays).
  *
  * GS memory is modelled as surfaces: one per frame buffer base (FBP, FBW)
  * the list draws into, PSMCT32 only, width FBW * 64, height the SCISSOR's.
@@ -881,8 +883,19 @@ int em_gfx_gs_texture(EmGfx *gfx, uint64_t tex0, const uint8_t *rgba, uint32_t w
 #define EM_GFX_GS_ENV_PABE       0x080u
 #define EM_GFX_GS_ENV_TEXA       0x100u
 #define EM_GFX_GS_ENV_SCANMSK    0x200u
+/* Context 2 (PRIM CTXT 1: the letterbox bars and the fade, 001AEBE0 /
+ * 001AEE70's sprites; GS_EXACT.md section 9 "Slot 1"): the _2 registers the
+ * list wrote, replayed to the GS model only (the Metal list path refuses
+ * CTXT 1). */
+#define EM_GFX_GS_ENV_FRAME2     0x400u
+#define EM_GFX_GS_ENV_ZBUF2      0x800u
+#define EM_GFX_GS_ENV_XYOFFSET2  0x1000u
+#define EM_GFX_GS_ENV_SCISSOR2   0x2000u
+#define EM_GFX_GS_ENV_TEST2      0x4000u
+#define EM_GFX_GS_ENV_ALPHA2     0x8000u
 typedef struct {
     uint64_t frame, zbuf, xyoffset, scissor, prmodecont, dthe, fba, pabe, texa, scanmsk;
+    uint64_t frame2, zbuf2, xyoffset2, scissor2, test2, alpha2;
     uint32_t set;          /* EM_GFX_GS_ENV_* the list wrote before the primitive */
 } EmGfxGsEnv;
 

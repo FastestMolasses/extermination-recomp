@@ -1858,7 +1858,11 @@ static int draw_setup(EmGs *gs, Draw *d, unsigned kind)
         const char *why = NULL;
         if (attr & 0x80) why = "AA1";
         else if (attr & 0x400) why = "PRIM FIX";
-        else if (ctxt) why = "context 2";
+        /* context 2 is allowed: the letterbox bars and the fade
+         * (001AEBE0 / 001AEE70's sprites, PRIM CTXT 1) draw through the _2
+         * registers the frame's open block writes, measured against the
+         * original's fields (GS_EXACT.md section 9 "Slot 1"); the raster is
+         * the same code for both register sets */
         else if (d->tme && bits(c->tex1, 2, 3)) why = "mipmapping (MXL > 0)";
         else if (d->tme && d->mmag != (d->mmin & 1)) why = "MMAG != MMIN";
         else if (d->tme && d->mmin > 1) why = "mipmap MMIN";
