@@ -159,6 +159,11 @@ def main():
     for n in fixed:
         print(f"  FIXED  {n} passes now; remove it from the baseline")
     print(f"results: {os.path.relpath(outdir, ROOT)}/results.json")
+    # Installed assets made by an older exporter (tools/asset_freshness.py): a warning, never a failure.
+    fresh = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'asset_freshness.py')], cwd=ROOT,
+                           capture_output=True, text=True)
+    lines = (fresh.stdout or fresh.stderr or 'asset_freshness: no output').strip().splitlines()
+    print(('WARNING ' if ' 0 stale' not in lines[0] else '') + '\n'.join(lines[:12]))
 
     if a.update_baseline:
         nb = {}

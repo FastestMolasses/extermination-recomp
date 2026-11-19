@@ -584,6 +584,11 @@ def run(name, card, beats, timeout):
     log_path = OUT / f'{name}.log'
     env = {k: v for k, v in os.environ.items() if not k.startswith('EM_')}
     env.update(HOST)
+    # EM_MID_ROUTE_FB: GS fields to capture (EM_FB_CAPTURE_TICKS' "tick:path;..."), with
+    # EM_MID_ROUTE_RENDER=1, for a pixel comparison with the beat's original capture.
+    if os.environ.get('EM_MID_ROUTE_FB'):
+        env['EM_FB_CAPTURE_TICKS'] = os.environ['EM_MID_ROUTE_FB']
+        env['EM_AREA_CHANGE_LOG'] = str(OUT / f'{name}.area_change.log')    # captures count its ticks
     env.update(EM_START_AT=card, EM_START_AT_PAD=str(pad), EM_START_AT_PATH=str(path),
                EM_START_AT_RAND=f'{source_rand(beats[0]):08x}',
                EM_START_AT_FADE=str(row0_fade(beats[0])))
