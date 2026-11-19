@@ -677,6 +677,20 @@ static int background_gate(EmGfx *gfx)
     uint64_t want_tex0 = 0, tex0 = 0;
     uint32_t want_rgbaq = 0, rgbaq = 0;
     const int list = em_static_world_live_background_state(&want_tex0, &want_rgbaq);
+    if (list == 0) {
+        /* No +0x1D8 list: 001E0DF0 still CALLs +0x1E8 and the +0x2520 node
+         * when they are non-zero. No route meets that (DRAW_LIST_AUDIT.md);
+         * a first meeting faults instead of dropping them. */
+        uint32_t node = 0;
+        const uint8_t *grid = em_rcl_bytes(EM_RCL_CONTEXT + 0x1E8u, 4);
+        if (em_background_live_node_pending(&node) < 0 || !grid)
+            return -1;
+        if (node || grid[0] | grid[1] | grid[2] | grid[3]) {
+            fprintf(stderr, "background: 001E0DF0 CALLs +0x1E8 / the +0x2520 node (%08X) with no +0x1D8 "
+                            "list: not modelled (DRAW_LIST_AUDIT.md)\n", (unsigned)node);
+            return -1;
+        }
+    }
     if (list <= 0)
         return list;
     static int reported;

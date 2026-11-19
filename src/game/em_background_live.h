@@ -31,10 +31,16 @@ extern "C" {
 /* Walk the list at context +0x1D8 and draw its triangles, then, with the
  * GS frame on, the list at +0x1E8 when it is non-zero (001E1AD0's, AREA21:
  * 001E0DF0 CALLs it after +0x1D8; its primitives with the environment it
- * writes). Call only when step V's gate CALLs them (em_render_frame.c
- * background_gate). 0, or -1 (latched). */
+ * writes), then the +0x2520 node 001E0DF0 CALLs third (the weather's list
+ * when 001E0D70 left it: em_background_live_node_pending). Call only when
+ * step V's gate CALLs them (em_render_frame.c background_gate). 0, or -1
+ * (latched). */
 int em_background_live_draw(EmGfx *gfx);
 uint32_t em_background_live_fault(void);
+/* Whether step V's 001E0DF0 CALLs its third list: *start = context
+ * +0x2520 when it is non-zero and render flag 5 is clear, else 0 (the
+ * gate's own condition, flag 0x20, is the caller's). 0, or -1. */
+int em_background_live_node_pending(uint32_t *start);
 /* Step V's kick (main.c): the background of a list that CALLs channel 3 in
  * an iteration whose frame close did not draw it (em_render_frame.c, where
  * the gate lives; docs/GS_EXACT.md section 11 "Frames that draw nothing").
@@ -52,6 +58,9 @@ typedef struct {
     uint32_t upload[11][4];    /* dmem 0x000, 0x081, 0x102, 0x200..0x207     */
     uint32_t grid_start;       /* the last +0x1E8 list drawn (001E1AD0's)    */
     uint32_t grid_prims;       /* its primitives                             */
+    uint32_t node_start;       /* the last +0x2520 node drawn (001E0DF0's third CALL) */
+    uint32_t node_prims;       /* its primitives                             */
+    uint32_t node_draws;       /* cumulative                                 */
 } EmBackgroundLiveLog;
 void em_background_live_log(EmBackgroundLiveLog *out);
 

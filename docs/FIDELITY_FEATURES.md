@@ -3005,6 +3005,30 @@ if nothing was drawn there.
 - Status: PARTIAL (depth verified through the read-back; picture not
   compared).
 
+### The weather drawn from the frame's own list
+
+**The snow and the outdoor strips appear where the original sends them from
+the main list (AREA15 sub 0, AREA18, AREA21's entries 1, 3 and 5)**
+
+- What: the weather actor's list (001E55F0: 001E67C0's snow tiles or
+  001E5AC0's strips) is drawn from the chain page in most areas, but where
+  the area's flag word has a bit of 0x0E000000 the frame close leaves it
+  and step V's 001E0DF0 CALLs it from the main list (its third CALL, after
+  the background and the sea grid, before the world). The port built the
+  list there and never drew it.
+- How: em_background_live walks the node (context +0x2520, render flag 5
+  clear) after +0x1E8 and the GS frame model draws its primitives with the
+  environment the list wrote (docs/DRAW_LIST_AUDIT.md section 2). The GPU
+  renderer does not draw it.
+- Evidence: the original's end states of g12, g41 / g43 and g75 / g76 hold
+  the node with render flag 5 clear (the condition); in the port's chain
+  g20 through g76 with the raster (`make test-far-light-readback-reference`)
+  the node is drawn in 4,416 frames, 108 snow-program tiles each, with no
+  GS frame fault and the read-back's pinned counts unchanged. The picture is
+  not compared with a capture (DRAW_LIST_AUDIT.md section 4).
+- Status: PARTIAL (the call condition and the program are the original's;
+  picture not compared).
+
 ### AREA19 from its start cards
 
 - What: AREA19 subs 0 and 1: the rooms, ledges, bars, ceiling and ladders, the

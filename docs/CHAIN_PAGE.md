@@ -405,11 +405,15 @@ gives the same values.
   programs share one translation). The only CPU-side remains are the owners'
   own translations: 008235F0's controller (em_area11_effect.c) and 001E67C0's
   tiles (em_snow.c).
-- **001E0DF0.** Step V's 001E0DF0 would send a pending list 001E0D70 left
-  (with render flag 4, a movie frame, or when flags & 0x0E000000); in the
+- **001E0DF0.** Step V's 001E0DF0 sends a pending list 001E0D70 left
+  (with render flag 4, a movie frame, or when flags & 0x0E000000) as its
+  third CALL, from the main list, when render flag 5 is clear. In the
   first level 001E0D70 always runs first (flag 4 is never set by the port,
   AREA11's flags are 0x10) and clears it, as in every capture (+0x2520 = 0
-  at every route snapshot).
+  at every route snapshot). AREA15 sub 0, AREA18 and AREA21's entries 1, 3
+  and 5 have a bit of 0x0E000000: there the weather is drawn from the main
+  list, by em_background_live since lane PORT-DRAW-AUDIT
+  (DRAW_LIST_AUDIT.md section 2); before, it was built and never drawn.
 
 - **The object units 001CAAC0 depth-sorts (chain step AIMLIVE; behind the
   aim/fire gate until its fix round, in ordinary play since 2026-10-02).** 001CABA0 (the muzzle node's +0x4C draw, AIM_FIRE.md
