@@ -1,10 +1,11 @@
 /* The production region enumerator and world composition, with unrelated
  * optional owners absent. Only actual native actor fields are available. */
-#define em_sfx_compute_gains ah_gain_boundary
+#define em_sfx_request_words ah_gain_boundary
 #include "game/em_aim_fire_runtime.c"
-#undef em_sfx_compute_gains
+#undef em_sfx_request_words
 #include "game/em_aim_fire_sdk_memory.h"
-int em_sfx_compute_gains(const float pos[3],float radius,float *left,float *right);
+int em_sfx_request_words(const float pos[3],int32_t flat,float radius,int32_t *left,int32_t *right);
+int32_t em_sfx_request_word(float gain);
 static EmActorPool hit_pool;
 static EmCollProbeState hit_probe;
 static EmCollSegmentFaceScratch hit_face;
@@ -16,12 +17,14 @@ static int gain_result,cue_missing,gain_calls,gain_bad;
 static float gain_left,gain_right;
 int32_t (*em_stream_live_d281F30(void))[4]
 { return cue_missing?NULL:(int32_t (*)[4])(void *)(hit_ram+0x281F30); }
-int ah_gain_boundary(const float p[3],float radius,float *left,float *right)
+/* 001FBF50 as the runtime calls it (em_sfx_request_words: the gains and
+ * their request words). Result 2 runs the shared exact solver. */
+int ah_gain_boundary(const float p[3],int32_t flat,float radius,int32_t *left,int32_t *right)
 {
     ++gain_calls;
-    if(radius!=300.0f || memcmp(p,hit_ram+hit_node+0xB0,12)){gain_bad=1;return 0;}
-    if(gain_result==2)return em_sfx_compute_gains(p,radius,left,right);
-    *left=gain_left;*right=gain_right;return gain_result;
+    if(flat || radius!=300.0f || memcmp(p,hit_ram+hit_node+0xB0,12)){gain_bad=1;return 0;}
+    if(gain_result==2)return em_sfx_request_words(p,flat,radius,left,right);
+    *left=em_sfx_request_word(gain_left);*right=em_sfx_request_word(gain_right);return gain_result;
 }
 /* Owners outside this composition: reaching one is a refusal, as in
  * aim_fire_world_live_test.c (the hull lock and sight rays are compared by
