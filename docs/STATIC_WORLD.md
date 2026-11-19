@@ -81,8 +81,13 @@ The composition also reuses these verified translations as its workers:
 
 ### 2.1 The static-object bank
 
-`*D_0028A5A0` is 0x01516F40 in every AREA11 capture. It is resource 0x44 of
-the area.
+`*D_0028A5A0` is resource 0x44 of the area, at the screen-module loader's
+cursor. It is 0x01516F40 in every New Game AREA11 capture; the guided run's
+return to AREA11 entry 3 (g48, after AREA17's cable ride) loads it at
+0x0152AD00, 0x13DC0 higher, with the same bytes (all 0x2D6FE0 compared in
+g01's and g48's end RAM): the bank holds offsets only, and 001D52E0 adds
+*D_0028A5A0 (context +0x140 is 0x01517A60 after a New Game, 0x0152B820 in
+g48).
 - Word 0 is the entry count, 702.
 - Words 1..n are entry offsets. 001C6120(bank, id) reads word
   `1 + (id & 0xFFFF & ~0x8000)`, shifts it right by two (signed), shifts it
@@ -464,16 +469,18 @@ beyond it); a first-level bind has 27:
   zero at start), the scratchpad 0x70003400 (0x80, zero at start), the
   state block D_008101D0..DF (0x10; the bind zeroes it, as 001AF690 does at
   0x1AE040 state 0, the step the binder binds at) and, read only, the bank
-  (block 0 of static_world.emsw at its original address 0x01516F40,
-  0x2D6FE0 bytes; `em_rcl_static_world_load`, called by the binder's
-  rcl_bind: fail-stop when the export is missing);
+  (as the area load delivered it at *D_0028A5A0, `em_rcl_static_world_bank`
+  over `em_module_loader_memory_rest`, called by the binder's rcl_bind;
+  block 0 of static_world.emsw at 0x01516F40, `em_rcl_static_world_load`,
+  only when the loader holds no bytes there, and then fail-stop unless
+  *D_0028A5A0 is the export's address);
 - read only, the external views: D_00810E80 (2), D_00810610 (0x40),
   D_008105E0 (0x10), D_008106B0 (0x48), D_00810700..702, D_008101E4 (1),
   0x70003B8D (1), D_008102B0 (0x320), D_00810E88 (2), D_008106C4 (1) and
   D_0028A5A0 (4): the bank's address word, which is slot 0x44 of the
   screen-module loader's resource table (em_module_loader's `d28A490`, the
   one storage of D_0028A490..; the export seeds it with 0x01516F40, the
-  value every AREA11 capture holds).
+  value every New Game AREA11 capture holds; an area load sets it).
 
 Rehearsal E of test_static_world_reference runs 001C1D00 over exactly this
 set, marking included.
@@ -636,9 +643,12 @@ static-object bank: its 001C1DC0 -> 001C1E70 -> 001D52E0 copies the grid
 header from *D_0028A5A0 (resource 0x44: the base of AREA01 room 0's nested
 resident region). The bindings hand the render context that bank as the
 area load delivered it (`em_rcl_static_world_bank` over
-`em_module_loader_memory_rest`); the next `em_rcl_static_world_load`
-returns to AREA11's export. No AREA01 world frame runs, so its grid pass
-(001C1D00) never walks it.
+`em_module_loader_memory_rest`). AREA11 binds its bank the same way
+(lane PORT-A11-RETURN, 2026-11-18): before it, an AREA11 load always took
+the export at 0x01516F40, so the guided run's return from AREA17 (bank at
+0x0152AD00) read the grid header 0x13DC0 into the export's bytes and
+001D5370 used a float as an object address (fault 0x4513113C, module 2
+code 4, at segment 1056 of the chain from the title).
 
 ### 7.2 The level kernel (em_vu1_level_kernel.h)
 

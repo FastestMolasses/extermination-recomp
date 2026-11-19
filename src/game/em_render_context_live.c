@@ -1876,6 +1876,7 @@ int em_rcl_static_world_bank(uint32_t address, const uint8_t *bytes, uint32_t si
 }
 
 int em_rcl_static_world_loaded(void) { return s_bank != NULL; }
+uint32_t em_rcl_static_world_address(void) { return s_bank ? s_bank_address : 0u; }
 
 int em_rcl_dynamic_world_bind(const uint8_t *table_word, const uint8_t *bytes, uint32_t size)
 {
@@ -2253,6 +2254,17 @@ int em_rcl_kick_called_001E0DF0(int *called)
 {
     if (!R.loaded || R.fault || !R.kicks || !called) return -1;
     *called = R.kick_called_0DF0;
+    return 0;
+}
+
+int em_rcl_001D7410(void)
+{
+    READY(0);
+    uint8_t *count = wr(D_275C08, 4, 0x001D7410u);
+    if (!count) return -1;
+    /* The drain loop over rd32(count) entries: its GS read-back is not
+     * modelled (em_render_context_live.h), so it changes no byte here. */
+    put32(count, 0);
     return 0;
 }
 

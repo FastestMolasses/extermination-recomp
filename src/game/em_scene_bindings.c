@@ -2914,8 +2914,32 @@ static int rcl_bind(void)
     /* AREA04 sub 0 delivers a dynamic list at slot 0x45 too (54 entries,
      * docs/AREA04_ASSETS.md). */
     const int area01 = strcmp(g.scene_dir, AREA01_SCENE_DIR) == 0 || strcmp(g.scene_dir, AREA04_SCENE_DIR) == 0;
-    if (!arrival_scene() && em_rcl_static_world_load(NULL) < 0)
-        return -1;
+    /* AREA11: 001D52E0 reads the grid header at *D_0028A5A0, wherever the
+     * area load put the bank (resource 0x44 at the screen-module loader's
+     * cursor): 0x01516F40 after a New Game, 0x0152AD00 on the guided run's
+     * return from AREA17's cable ride (g48's end RAM; the port's loader
+     * puts it there too). The bank holds offsets only, so the render
+     * context reads the bytes the load delivered at that address. The
+     * export (0x01516F40) serves only a load whose bytes the loader does
+     * not hold, and only at its own address. */
+    if (!arrival_scene()) {
+        const uint32_t bank = ld->d28A490[EM_STATUS_SCENE_SLOT_D_0028A5A0];
+        uint32_t size = 0;
+        const uint8_t *bytes = bank ? em_module_loader_memory_rest(ml, bank, &size) : NULL;
+        if (bytes) {
+            if (em_rcl_static_world_block_load(NULL) < 0 || em_rcl_static_world_bank(bank, bytes, size) < 0)
+                return -1;
+        } else {
+            if (em_rcl_static_world_load(NULL) < 0)
+                return -1;
+            if (bank != em_rcl_static_world_address()) {
+                fprintf(stderr, "em_scene: AREA11's static-object bank D_0028A5A0 = %08X is not the export's "
+                                "%08X and the area load delivered no bytes there\n",
+                        (unsigned)bank, (unsigned)em_rcl_static_world_address());
+                return -1;
+            }
+        }
+    }
     if (arrival_scene() && em_rcl_static_world_block_load(NULL) < 0)
         return -1;
     if (em_rcl_bind(views, sizeof views / sizeof views[0], &workers) < 0)
@@ -3230,7 +3254,7 @@ static int w_001AFCA0(void *ctx)
         /* The render context's static-object bank *D_0028A5A0 (resource
          * 0x44: AREA01's, at the nested block's resident base) as the area
          * load delivered it; 001C1DC0's 001C1E70 -> 001D52E0 reads its grid
-         * header. AREA11's comes from its export (rcl_bind). */
+         * header. AREA11's is bound the same way in rcl_bind. */
         EmModuleLoader *ml = em_module_loader_live();
         EmStatusSceneLoader *ld = ml ? em_module_loader_state(ml) : NULL;
         const uint32_t bank = ld ? ld->d28A490[EM_STATUS_SCENE_SLOT_D_0028A5A0] : 0;

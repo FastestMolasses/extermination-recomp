@@ -76,6 +76,8 @@ static struct {
     EmFrameMessageService message;    /* step F 001FCA10 presenter */
     int (*step_i)(void *);            /* step I 001B5B70 (em_pad_actuator) */
     void        *step_i_context;
+    int (*step_k)(void *);            /* step K 001D7410 (em_render_context_live) */
+    void        *step_k_context;
     int (*task_check)(void *);        /* after step E: a latched task fault */
     void        *task_check_context;
     int (*step_b)(void *, int32_t);   /* step B 001D1AE0 (em_render_context_live) */
@@ -194,6 +196,12 @@ void em_frame_set_step_i(int (*service)(void *context), void *context)
 {
     s_frame.step_i = service;
     s_frame.step_i_context = context;
+}
+
+void em_frame_set_step_k(int (*service)(void *context), void *context)
+{
+    s_frame.step_k = service;
+    s_frame.step_k_context = context;
 }
 
 void em_frame_set_sound_service(const EmFrameSoundService *service)
@@ -651,6 +659,10 @@ int em_frame_step(void)
         s_frame.quit = true;
     /* I: 001B5B70, the rumble countdown. */
     if (s_frame.step_i && s_frame.step_i(s_frame.step_i_context) < 0)
+        s_frame.quit = true;
+    /* K: 001D7410, the GS read-back queue's drain (its count D_00275C08 = 0
+     * at its end); called every frame, its gate is inside it. */
+    if (s_frame.step_k && s_frame.step_k(s_frame.step_k_context) < 0)
         s_frame.quit = true;
 
     /* 00203350 blocks the original main iteration at M while playing.

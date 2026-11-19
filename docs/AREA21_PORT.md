@@ -190,6 +190,22 @@ packet chain over R.pc).
   read-back word was non-zero. This only changes packets (no game byte
   reads them); exact behaviour needs the GS world's Z buffer at step K
   (renderer work, decision for the orchestrator).
+- **Step K's count clear** (lane PORT-A11-RETURN, 2026-11-18): 001D7410
+  ends with D_00275C08 = 0 every frame (decomp gs_readback_queue_drain);
+  the port had no step K, so the count only grew: after 16 frames
+  001D72D0 found the list full (-1), and on the frame after it queued
+  entry 15 001D73A0 read entry 16 of the other bank. With bank 0 that is
+  0x00817BC8, past the list (far light fault 1, "static world fault in
+  module 6 at 001D73A0"): the chain from the title stopped there at
+  segment 1392 (g75's AREA21 arrival). The card chain g20 passed it: by
+  the code, with the other bank parity that read stays inside the list,
+  and from then on the full queue returns -1, so 001D73A0 is never called
+  again (no flare, unlike the documented model above). g20 is unchanged
+  with the clear (g73 .. g80 as before).
+  em_frame now runs step K (em_rcl_001D7410: the read-back is not
+  modelled, the clear is). Evidence: the original's g75 .. g78 end RAM
+  holds D_00275C08 = 0 and a handle D_0027569C of 0 or -1 (never above
+  0), the read-back words of entry 0 non-zero from g76 on.
 
 ## Grid (lane PORT-A21-GRID, 2026-11-18, branch `a21grid`)
 

@@ -213,6 +213,12 @@ void em_frame_set_message_service(const EmFrameMessageService *service);
  * service (em_pad_actuator_step_i); -1 is a fault (the frame quits). NULL
  * uninstalls it. */
 void em_frame_set_step_i(int (*service)(void *context), void *context);
+/* Main-loop step K (0x1AAFB0), 001D7410, the GS read-back queue's drain:
+ * every iteration the movie does not hold, after step I (J, 00100A60,
+ * returned 0 in every traced frame and calls nothing after it). The game
+ * installs the render context's (em_rcl_001D7410); -1 is a fault (the
+ * frame quits). NULL uninstalls it. */
+void em_frame_set_step_k(int (*service)(void *context), void *context);
 
 /* Step C's pad block D_00810E40..D_00810E69 (0x2A bytes, original layout):
  * the game installs em_pad_actuator's block, the one storage of those bytes
