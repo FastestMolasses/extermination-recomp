@@ -77,14 +77,14 @@ int main(int argc,char **argv)
     replacement[0]^=1;assert(!area.image(area.ctx,0x828D60u));replacement[0]^=1;
     missing=1;assert(!area.image(area.ctx,0x828D60u));missing=0;
     int32_t result=0;
-    const uint32_t accepted[]={0x824E40u,0x8253E0u,0x1BAC00u,0x1B7670u,0x1B7700u};
+    const uint32_t accepted[]={0x824E40u,0x8253E0u,0x8260B0u,0x1BAC00u,0x1B7670u,0x1B7700u};
     for(unsigned i=0;i<sizeof accepted/sizeof accepted[0];++i) {
         assert(area.record(area.ctx,accepted[i],0x7A8250u,0x7A8440u,0x828FA0u,&result)==0);
         assert(result==7 && last.function==accepted[i] && last.na==3 && last.a[0]==0x7A8250u &&
                last.a[1]==0x7A8440u && last.a[2]==0x828FA0u);
     }
     unsigned before=calls;
-    const uint32_t denied[]={0x825130u,0x825240u,0x825910u,0x826950u,0x8260B0u,0xFFFFFFFFu};
+    const uint32_t denied[]={0x825130u,0x825240u,0x825910u,0x826950u,0x8260F0u,0xFFFFFFFFu};
     for(unsigned i=0;i<sizeof denied/sizeof denied[0];++i)
         assert(area.record(area.ctx,denied[i],0,0,0x828FA0u,&result)<0 && calls==before);
     assert(area.record(area.ctx,0x824E40u,0,0,0x82D370u,&result)<0 && calls==before);
