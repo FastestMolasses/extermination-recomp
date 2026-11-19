@@ -506,7 +506,10 @@ are unchanged (the disc answers at host speed; the user's decision of 2026-09-27
   `loader_rows.tbl` (the raw recording, never deleted) and `loader_receipt.json`
   (the replay checked against end.json). `drive_replay.guided_table(...,
   loader=True)` appends them as `L` lines; `guided_chain.py` serves them by
-  default (`--no-loader-replay` without; watch_takes does not use them yet). Measured on g73's AREA04 -> AREA20 load (346
+  default (`--no-loader-replay` without); watch_takes.py takes them through the
+  same guided_table (174 recorded loader reads of g41 .. g80 on 2026-11-19: the
+  chain from the title stays exact, 654,989 of 654,989 ticks compared, more than
+  the 654,303 before because those loads now pass the original's frames). Measured on g73's AREA04 -> AREA20 load (346
   rows in the take): without them the port's load passes 153 frames (its area
   reads answer at host speed: MODULE_LOADER.md 1.7 "Any other read"); with them
   the overlay (6 busy polls), header (1) and the bank's read (20) are served, and
