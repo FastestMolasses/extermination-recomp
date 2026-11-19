@@ -13,6 +13,7 @@
 
 #define PRIMS_MAX 2048u          /* 31 strips of 62 triangles: 1922 */
 #define GRID_PRIMS_MAX 4096u     /* +0x1E8 (AREA21): 2786 or 2787 measured over g75 .. g77 */
+#define NODE_PRIMS_MAX 4096u     /* +0x2520: the weather's list (DRAW_LIST_AUDIT.md)          */
 
 static struct {
     EmChainPage page;
@@ -21,6 +22,9 @@ static struct {
     EmChainPage grid;
     EmGfxGsPrim grid_prims[GRID_PRIMS_MAX];
     EmGfxGsEnv grid_env[GRID_PRIMS_MAX];
+    EmChainPage node;
+    EmGfxGsPrim node_prims[NODE_PRIMS_MAX];
+    EmGfxGsEnv node_env[NODE_PRIMS_MAX];
     uint32_t fault;
     EmBackgroundLiveLog log;
 } S;
@@ -41,6 +45,35 @@ static const uint8_t *reader(void *ctx, uint32_t address, uint32_t size)
 {
     (void)ctx;
     return em_chain_page_live_read(address, size);
+}
+
+static uint32_t rd32(const uint8_t *b)
+{
+    return (uint32_t)b[0] | (uint32_t)b[1] << 8 | (uint32_t)b[2] << 16 | (uint32_t)b[3] << 24;
+}
+
+/* 001E0DF0's third CALL: the node 001D2E00(0) reads (context +0x2520,
+ * 001D2DE0's word: the weather's channel-3 list 001E55F0 closed), when it
+ * is non-zero and render flag 5 (context +0x0C bit 5, 001D2710) is clear.
+ * The frame close's 001E0D70 runs before (001D1EA0(1)) and, when it
+ * appends the list to the chain page, zeroes the word; it does not when
+ * D_008106C8 & 0x0E000000 (AREA15 sub 0, AREA18, AREA21's entries 1, 3
+ * and 5: DRAW_LIST_AUDIT.md), and then step V's list CALLs it here, after
+ * +0x1E8's, ahead of channel 0. *start = the node, 0: none. 0, or -1. */
+static int node_called(uint32_t *start)
+{
+    *start = 0;
+    const uint8_t *node = em_rcl_bytes(EM_RCL_CONTEXT + 0x2520u, 4);
+    const uint8_t *flags = em_rcl_bytes(EM_RCL_CONTEXT + 0x0Cu, 4);
+    if (!node || !flags) return fail(0x001E0DF0u, "the render context has no +0x2520 / +0x0C word");
+    if (rd32(node) && !(rd32(flags) & (1u << 5))) *start = rd32(node);
+    return 0;
+}
+
+int em_background_live_node_pending(uint32_t *start)
+{
+    if (S.fault) return -1;
+    return node_called(start);
 }
 
 static uint32_t fnv(uint32_t h, uint32_t w)
@@ -103,6 +136,32 @@ int em_background_live_draw(EmGfx *gfx)
             return fail(grid_start, "the renderer refused the +0x1E8 list's primitives");
         S.log.grid_start = grid_start;
         S.log.grid_prims = q->prim_count;
+    }
+    /* 001E0DF0's third CALL (node_called): the weather's list, walked in
+     * call mode like +0x1E8 (its tiles' CALLs of D_00233800 load the snow
+     * program, 001CFFE0's MSCALs run it; 001E5AC0's 001E6F60 records are
+     * DIRECT), each primitive with the environment the list wrote, drawn by
+     * the GS frame model. The GPU renderer does not draw it. */
+    uint32_t node_start = 0;
+    if (node_called(&node_start) < 0) return -1;
+    S.log.node_start = S.log.node_prims = 0;
+    if (node_start && em_gfx_gs_world_enabled(gfx)) {
+        EmChainPage *q = &S.node;
+        memset(q, 0, sizeof *q);
+        q->read = reader;
+        q->prims = S.node_prims;
+        q->prim_env = S.node_env;
+        q->prim_capacity = NODE_PRIMS_MAX;
+        if (em_chain_page_run_call(q, node_start) < 0) {
+            S.page.fault = q->fault;
+            S.page.fault_detail = q->fault_detail;
+            return fail(q->fault_address, "the +0x2520 node walk (001E0DF0's third CALL) faulted");
+        }
+        if (em_gfx_background_prims_env(gfx, S.node_prims, S.node_env, q->prim_count) < 0)
+            return fail(node_start, "the renderer refused the +0x2520 node's primitives");
+        S.log.node_start = node_start;
+        S.log.node_prims = q->prim_count;
+        S.log.node_draws++;
     }
     EmBackgroundLiveLog *l = &S.log;
     l->frame = em_frame_counter();

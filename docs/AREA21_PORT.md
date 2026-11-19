@@ -370,6 +370,14 @@ grid, em_static_world) after 001E1E60. Its missing pieces are bound:
   +0x1E8 after +0x1D8; em_background_live walks it and the GS frame model
   draws it (Far light, "The sea's depth"). Before, it was built but not
   drawn: no sea Z and no screen grid in the picture.
+- **The weather's node** (lane PORT-DRAW-AUDIT, 2026-11-19): in entries 1,
+  3 and 5 (D_008106C8 0x02070001 / 0x22070001, bit 0x02000000) 001E0D70
+  leaves 001E67C0's snow list at +0x2520 and 001E0DF0's third CALL sends it
+  from the main list after +0x1E8. em_background_live walks it and the GS
+  frame model draws it (DRAW_LIST_AUDIT.md section 2); before, the snow of
+  g75 / g76 was built and never drawn. The chain through g76 with the raster
+  draws it in 4,416 frames (108 tiles each); the read-back counts are
+  unchanged. Picture not compared.
 
 Chain g20 (card g73): g73 4191 / 4192 compared rows on the row (heading
 0.0012 off from row 1130, as before), g74 3736 / 3736, **g75 3864 / 3864
