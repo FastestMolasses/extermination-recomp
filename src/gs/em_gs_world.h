@@ -276,6 +276,17 @@ int em_gs_head_probe(uint8_t *scratch, const void *env, size_t env_bytes, const 
  * (a test hook: the veil's surfaces, the shadow target). 0, or -1. */
 int em_gs_world_read(EmGsWorld *w, uint32_t fbp, uint32_t fbw, uint32_t width, uint32_t height, uint8_t *rgba);
 
+/* A local -> host transfer (BITBLTBUF SBP / SBW / SPSM, TRXPOS SSAX /
+ * SSAY with DIR 0, TRXREG RRW x RRH, TRXDIR 1) after waiting for the
+ * workers: the bytes the GS sends, rows top to bottom, pixels left to
+ * right; PSMCT32 / PSMZ32 four bytes a pixel, PSMCT24 / PSMZ24 three (the
+ * low three bytes, packed). For the main loop's Z read-back (step K,
+ * 001D7410: docs/AREA21_PORT.md "Far light"). 0; 1 under the headless
+ * raster skip (local memory does not hold the drawn frames: nothing is
+ * written to out); -1 (another PSM, cap too small, or the fault latched). */
+int em_gs_world_store_image(EmGsWorld *w, uint32_t sbp, uint32_t sbw, unsigned spsm, uint32_t ssax, uint32_t ssay,
+                            uint32_t rrw, uint32_t rrh, uint8_t *out, size_t cap);
+
 /* The GIF data of a VIF1 transfer: from word `word` of `p` (`bytes`),
  * NOP / FLUSHE / FLUSH / FLUSHA pass and DIRECT / DIRECTHL append their
  * qword-aligned data to out (`*used` bytes so far, `cap` at most). Any other

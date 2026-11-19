@@ -499,7 +499,8 @@ recording-derived and stay in the ignored `build/`.
   `EM_FRAME_TIMING`, `EM_FRAME_TRACE`, `EM_GS_LIST_COUNTERS`,
   `EM_GS_SPEC_COUNTERS`, `EM_GS_TC_COUNTERS`, `EM_GS_TEX_COUNTERS`,
   `EM_GS_Z_COUNTERS`, `EM_GLOW_TRACE`, `EM_LOG_AIM_RECORDS`, `EM_LOG_BUGS`, `EM_PRESENT_LOG`,
-  `EM_PRESENT_PX`, `EM_PROBE_TRACE`, `EM_RAND_TRACE`,
+  `EM_PRESENT_PX`, `EM_PROBE_TRACE`, `EM_RAND_TRACE`, `EM_READBACK_TRACE` (step K's Z read-backs,
+  tools/test_far_light_readback_reference.py),
   `EM_STARTUP_CAPTURE_DIR`, `EM_STATUS_GS_DUMP`, `EM_LAMP_PAGE_DUMP` (the gun lamp's cone
   pages, tools/test_aim_fire_lamp_cone.py), `EM_SIGHT_DUMP` (the weapon sights' slot-1
   packets, tools/test_sight_live.py), `EM_SLOT1_LOG` (the frames whose GS field took a 2D layer),

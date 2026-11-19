@@ -380,6 +380,8 @@ def main(argv):
                         help='steer along the recorded path (EM_START_AT_PATH, mid_route_beats\' rule) where the '
                         'player falls behind, through TAKE (a prefix; default the whole chain); without it the '
                         'pad alone plays')
+    parser.add_argument('--name', help='the output folder under build/guided_chain (default: the chain\'s name; '
+                        'a test\'s own run, e.g. tools/test_far_light_readback_reference.py)')
     parser.add_argument('--compare-only', action='store_true', help='compare the last run\'s trace again')
     parser.add_argument('--drive-replay', action='store_true', help='serve the original\'s recorded per-read drive '
                         'timing (tools/record_drive_replay_guided.py tables, EM_PS2_DRIVE_REPLAY with '
@@ -397,7 +399,8 @@ def main(argv):
         takes = takes[:cut[0] + 1]
     if not mrb.BIN.exists():
         sys.exit(f'{mrb.BIN} is missing (make all)')
-    out = OUT / args.chain
+    name = args.name or args.chain
+    out = OUT / name
     out.mkdir(parents=True, exist_ok=True)
     rows, inputs, starts = load(route, takes)
     steer = None
@@ -431,7 +434,7 @@ def main(argv):
                   f'takes{gaps}', flush=True)
             if info['entries']:
                 extra += [f'EM_PS2_DRIVE_REPLAY={info["table"]}', f'EM_START_AT_COUNTER0={rows[0]["counter"]}']
-        seconds, faults, trace, log_path = run(args.chain, card, rows, files, timeout,
+        seconds, faults, trace, log_path = run(name, card, rows, files, timeout,
                                                args.kinds or KINDS.get(args.chain), extra, steer, source_ram,
                                                args.chain in RESTORE_AT_START, args.chain in SCENE_WAIT_AT_START, more)
         print(f'run: {seconds:.0f} s, {log_path.relative_to(ROOT)}')

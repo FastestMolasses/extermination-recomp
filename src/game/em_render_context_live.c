@@ -104,6 +104,7 @@ static uint32_t s_spad3A40_words[0x100 / 4];
 static uint32_t s_spad3B60_words[1];
 static uint32_t s_spad3B70_words[1];
 static uint8_t s_d241010[8];
+static uint8_t s_d810F00[0x20];   /* D_00810F00: buffer 0's draw environment (FRAME_1, ZBUF_1) */
 static uint8_t s_d26E510[16];
 static uint8_t s_d26E850[16];
 static uint8_t s_d26E880[16];
@@ -183,6 +184,7 @@ static struct {
      * whether the last run called 001E0DF0 (the channel-3 CALL) */
     u32 kick_chain, kicks;
     int kick_called_0DF0;
+    uint32_t far_flare_calls;   /* 001CEFD0 calls so far (EM_READBACK_TRACE) */
     /* the load veil's 0021B1B0 in this frame: its channel-0 run and the
      * buffer index (em_rcl_veil_span), cleared by the frame head */
     u32 veil_start, veil_end, veil_slot;
@@ -782,6 +784,7 @@ static int far_001CEFD0(void *ctx, const uint32_t snd[4], const uint32_t vol[4])
     (void)ctx;
     EmFarLight f;
     if (far_begin(&f, 0x001CEFD0u) < 0) return -1;
+    R.far_flare_calls++;
     return far_end(&f, em_far_light_001CEFD0(&f, snd, vol));
 }
 
@@ -881,8 +884,8 @@ static int swc_setup(EmSwc *c)
     c->host.ctx = c;
     c->host.w_001D5BD0 = dynamic_pass;
     /* 001E1E60's flag-0x23 branch (em_far_light). 001D7410, the main loop's
-     * GS read-back (step K) that fills the list 001D73A0 reads, is not
-     * modelled: the entries stay as stored (AREA21_PORT.md "Far light").
+     * GS read-back (step K) that fills the list 001D73A0 reads, is
+     * em_rcl_001D7410 (AREA21_PORT.md "Step K's Z read-back").
      * 001E1AD0's 001E1760 / 001E17E0 (flag 0x22): em_grid_water. */
     c->host.w_00122BB8 = far_00122BB8;
     c->host.w_001D73A0 = far_001D73A0;
@@ -1687,6 +1690,17 @@ int em_rcl_init(const char *export_path, uint8_t *d810E80)
     s_spad3B70_words[0] = UINT32_C(0x08000800);
     if (em_gs_blocks_001D0F20(own(GS_BLOCKS, EM_GS_BLOCKS_SIZE), s_d241010) < 0)
         return fail(0x001D0F20u, "the GS blocks are not in the context storage");
+    /* 001AB370's 00101898(&D_00810EA0, 0, 0x200, 0xE0, 2, 0x31, 1): the SDK's
+     * double-buffer descriptor; its buffer-0 draw environment D_00810F00
+     * (+0x60: FRAME_1, ZBUF_1 at +0x10) is what step K's read-back reads
+     * (em_rcl_001D7410). Nothing else writes those words. */
+    {
+        uint8_t fb[EM_GS_BLOCKS_DBUFF_SIZE];
+        memset(fb, 0, sizeof fb);
+        if (em_gs_blocks_00101898(fb, 0, 0x200, 0xE0, 2, 0x31, 1, s_d241010) < 0)
+            return fail(0x00101898u, "the double-buffer descriptor");
+        memcpy(s_d810F00, fb + 0x60, sizeof s_d810F00);
+    }
     if (done(em_frh_001D25F0(&R.frh, UINT32_C(0x43F00000)), 0x001D25F0u) < 0) return -1;
     return done(em_render_context_001DEDE0(&R.rc), 0x001DEDE0u);
 }
@@ -2250,6 +2264,8 @@ int em_rcl_001D2300(void)
     return rc;
 }
 
+uint32_t em_rcl_far_flare_calls(void) { return R.far_flare_calls; }
+
 int em_rcl_kick_called_001E0DF0(int *called)
 {
     if (!R.loaded || R.fault || !R.kicks || !called) return -1;
@@ -2257,13 +2273,58 @@ int em_rcl_kick_called_001E0DF0(int *called)
     return 0;
 }
 
-int em_rcl_001D7410(void)
+/* 001D7410 (decomp gs_readback_queue_drain, NEARMISS: register choice only)
+ * with its callees: 001281C0 (float_to_int), 00100D78 (the SDK's StoreImage
+ * packet: BITBLTBUF SBP / SBW / SPSM, TRXPOS SSAX / SSAY, TRXREG RRW x RRH,
+ * TRXDIR 1), FlushCache(0), 00100EB8 (gs_vram_readback: the packet out on
+ * VIF1, then the transfer in) and 00100A60(0, 0). */
+int em_rcl_001D7410(EmRclStoreImage store, void *store_ctx)
 {
     READY(0);
-    uint8_t *count = wr(D_275C08, 4, 0x001D7410u);
+    const u32 fn = 0x001D7410u;
+    uint8_t *count = wr(D_275C08, 4, fn);
     if (!count) return -1;
-    /* The drain loop over rd32(count) entries: its GS read-back is not
-     * modelled (em_render_context_live.h), so it changes no byte here. */
+    if (rd32(count) != 0) {
+        /* while (i < D_00275C08): the count is read again every pass. */
+        for (u32 i = 0; (int32_t)i < (int32_t)rd32(count); ++i) {
+            const uint8_t *slot = rd(d275670() + 0x9Cu, 4, fn);
+            if (!slot) return -1;
+            const u32 e = D_8172C0 + rd32(slot) * 0x480u + i * 0x48u;
+            const uint8_t *xy = rd(e, 8, fn);
+            if (!xy) return -1;
+            const int32_t x = em_player_float_to_int(rd32(xy));
+            const int32_t y = em_player_float_to_int(rd32(xy + 4));
+            /* (short)((D_00810F10 & 0x1FF) << 5): ZBUF_1's ZBP as a block
+             * address; D_00810F02 & 0x3F: FRAME_1's FBW. PSMZ24, 8 x 8. The
+             * packet keeps each register field's width. */
+            const u32 sbp = (u32)(int32_t)(int16_t)(uint16_t)((((u32)s_d810F00[0x10] | (u32)s_d810F00[0x11] << 8) &
+                                                              0x1FFu) << 5) & 0x3FFFu;
+            const u32 sbw = s_d810F00[0x02] & 0x3Fu;
+            /* gs_vram_readback with RRW 8, RRH 8, PSMZ24: 192 bytes, no
+             * remainder: 8 quadwords by the VIF1 DMA (MADR = the destination
+             * with its low four bits ignored), then 4 by quadword stores (the
+             * same alignment): all 192 bytes at (e + 8) & ~0xF. The
+             * original's capture shows entry 0's bytes from e + 0 on
+             * (docs/AREA21_PORT.md "Far light"). */
+            uint8_t data[192];
+            const int rc = store ? store(store_ctx, sbp, sbw, 0x31u, (u32)x & 0x7FFu, (u32)y & 0x7FFu, 8u, 8u, data,
+                                         sizeof data) : 1;
+            if (rc < 0) return fail(fn, "the GS read-back (local -> host transfer) failed");
+            if (rc > 0) {
+                /* No GS frame model drew the frame (the headless raster
+                 * skip, or no Original-profile GS frame): the Z is not
+                 * known. Fail-safe: a covered point (every byte 0xFF, the
+                 * read-back of a point under the far geometry), so the
+                 * flare 001CEFD0 is not built; the original built it on 334
+                 * of g76's 1497 read-backs (AREA21_PORT.md "Far light"). */
+                memset(data, 0xFF, sizeof data);
+            }
+            uint8_t *dst = wr((e + 8u) & ~0xFu, sizeof data, fn);
+            if (!dst) return -1;
+            memcpy(dst, data, sizeof data);
+            /* 00100A60(0, 0): the DMA wait, a hardware boundary. */
+        }
+    }
     put32(count, 0);
     return 0;
 }

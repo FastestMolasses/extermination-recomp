@@ -645,7 +645,16 @@ at 0x4513113C (module 2, code 4: a float read as an object address).
   recording, g01 .. g80 with no fault** (drive replay on; 50 min with
   `--check`). At its exit the drive replay lists 8 recorded reads the port
   never asked for (counters 34993 .. 40727 of their takes); no tick
-  differs.
+  differs. All eight are g03_area01's (AREA01's first visit), two
+  stretches of the two stream lanes' reads (sectors 698xxx and 800xxx):
+  the recording has 698369 at 34993, 800422 at 34996, 800342 at 35005,
+  698385 at 35011 and 800837 at 40700, 698319 at 40709, 800911 at 40718,
+  801046 at 40727; the port reads the same sectors with the lanes in the
+  other order (800422 at 34993, 698369 at 35002, 800342 at 35011, 698385
+  at 35020; 800911 at 40701, 800837 at 40710, 698319 at 40715), so the
+  table's counter keys miss and those reads take the drive model (seven of
+  the run's 46 "no recorded entry" reads; lane PORT-FLARE-Z's title-chain
+  run, 2026-11-19). Not fixed (no tick differs).
 
 ## Not done
 
