@@ -1,0 +1,3141 @@
+{
+ "what": "Asset freshness: which installed assets were made by an older exporter.",
+ "steps": {
+  "startup_audio": {
+   "cmd": [
+    "python3",
+    "tools/export_startup_audio.py",
+    "--decomp-root",
+    "../Extermination"
+   ],
+   "outputs": [
+    "assets/startup_audio/provenance.json",
+    "assets/startup_audio/sample_00.wav",
+    "assets/startup_audio/sample_01.wav",
+    "assets/startup_audio/startup_audio.txt"
+   ]
+  },
+  "disc_textures": {
+   "cmd": [
+    "python3",
+    "tools/export_disc_textures.py"
+   ],
+   "outputs": [
+    "assets/font.emfn",
+    "assets/scene_snow/background.embg",
+    "assets/scene_snow/interaction.emis",
+    "assets/scene_snow/object_textures.emot",
+    "assets/scene_snow/object_textures.json",
+    "assets/scene_snow/page_textures.emot",
+    "assets/scene_snow/page_textures.json",
+    "assets/scene_snow/panel/battery.emba",
+    "assets/scene_snow/panel/item_root.emir",
+    "assets/scene_snow/panel/status_hub_atlas.emha",
+    "assets/status_models/letter_2f.emdl",
+    "assets/status_models/letter_30.emdl",
+    "assets/status_models/letter_31.emdl",
+    "assets/status_models/letter_32.emdl",
+    "assets/status_models/letter_33.emdl",
+    "assets/status_models/letter_34.emdl",
+    "assets/status_models/letter_35.emdl",
+    "assets/status_models/letter_36.emdl",
+    "assets/status_models/letter_37.emdl",
+    "assets/status_models/letter_38.emdl",
+    "assets/status_models/letter_39.emdl",
+    "assets/status_models/letter_3a.emdl",
+    "assets/status_models/letter_3b.emdl",
+    "assets/status_models/letter_3c.emdl",
+    "assets/status_models/letter_3d.emdl",
+    "assets/status_models/letter_40.emdl",
+    "assets/status_models/letter_6d.emdl",
+    "assets/status_models/menu_player.emdl",
+    "assets/status_models/menu_player.empc",
+    "assets/status_models/menu_player_3d.emdl",
+    "assets/status_models/menu_player_3f.emdl",
+    "assets/status_models/menu_player_40.emdl",
+    "assets/status_models/models.emsk"
+   ]
+  },
+  "message_data": {
+   "cmd": [
+    "python3",
+    "tools/export_message_data.py"
+   ],
+   "outputs": [
+    "assets/message/message_data.emmd",
+    "assets/message/message_presenters.emmp"
+   ]
+  },
+  "player_clips": {
+   "cmd": [
+    "python3",
+    "tools/export_player_clips.py"
+   ],
+   "outputs": [
+    "assets/player_clips_full.bank",
+    "assets/player_clips_full.empx"
+   ]
+  },
+  "player_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_player_tables.py"
+   ],
+   "outputs": [
+    "assets/player_clip_rates.emcr",
+    "assets/player_clip_row0.emch",
+    "assets/player_loco_tables.emrg"
+   ]
+  },
+  "opening_scenery": {
+   "cmd": [
+    "python3",
+    "tools/export_opening_scenery.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/scene.txt"
+   ]
+  },
+  "area11_props": {
+   "cmd": [
+    "python3",
+    "tools/export_area11_props.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/props/area_elevator.emdl",
+    "assets/scene_snow/props/area_indicator_10.emdl",
+    "assets/scene_snow/props/area_item_04.emdl",
+    "assets/scene_snow/props/item_75.emdl",
+    "assets/scene_snow/props/panel_cell18.emcb",
+    "assets/scene_snow/scene.txt"
+   ]
+  },
+  "pickup_lights": {
+   "cmd": [
+    "python3",
+    "tools/export_pickup_lights.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/props/item_72.emdl",
+    "assets/scene_snow/props/item_73.emdl",
+    "assets/scene_snow/scene.txt"
+   ]
+  },
+  "area11_panel_collision": {
+   "cmd": [
+    "python3",
+    "tools/export_area11_panel_collision.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/props/panel_cell18.emcb"
+   ]
+  },
+  "door_original": {
+   "cmd": [
+    "python3",
+    "tools/export_door_original.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/door_original/channels.empc",
+    "assets/scene_snow/door_original/model.emdl",
+    "assets/scene_snow/door_original/source.emdo"
+   ]
+  },
+  "area11_effect": {
+   "cmd": [
+    "python3",
+    "tools/export_area11_effect.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/area11_effect.emef",
+    "assets/scene_snow/scene.txt"
+   ]
+  },
+  "snow": {
+   "cmd": [
+    "python3",
+    "tools/export_snow.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/scene.txt",
+    "assets/scene_snow/snow.emsn"
+   ]
+  },
+  "streams": {
+   "cmd": [
+    "python3",
+    "tools/export_streams.py"
+   ],
+   "outputs": [
+    "assets/streams/streams.emst",
+    "assets/streams/streams.json"
+   ]
+  },
+  "area11_opening": {
+   "cmd": [
+    "python3",
+    "tools/export_area11_opening.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/cable_scene.emsc",
+    "assets/scene_snow/opening.emsc"
+   ]
+  },
+  "opening_camera": {
+   "cmd": [
+    "python3",
+    "tools/export_opening_camera.py",
+    "--source",
+    "../Extermination/extract/chunk15/f12_id44.bin",
+    "--bank-offset",
+    "0xD0800",
+    "--out",
+    "assets/scene_snow/opening_camera.emcc"
+   ],
+   "outputs": [
+    "assets/scene_snow/opening_camera.emcc",
+    "assets/scene_snow/opening_camera.json"
+   ]
+  },
+  "opening_media": {
+   "cmd": [
+    "python3",
+    "tools/export_opening_media.py",
+    "--decomp-root",
+    "../Extermination",
+    "--out",
+    "assets/scene_snow"
+   ],
+   "outputs": [
+    "assets/scene_snow/opening.emfx",
+    "assets/scene_snow/opening.wav",
+    "assets/scene_snow/opening_media.json",
+    "assets/scene_snow/opening_resume.wav"
+   ]
+  },
+  "area11_roster": {
+   "cmd": [
+    "python3",
+    "tools/export_area11_roster.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/roster.emro"
+   ]
+  },
+  "spawn_table": {
+   "cmd": [
+    "python3",
+    "tools/export_spawn_table.py"
+   ],
+   "outputs": [
+    "assets/spawn/spawn_table.emsp"
+   ]
+  },
+  "interaction_scan": {
+   "cmd": [
+    "python3",
+    "tools/export_interaction_scan.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/interaction.emis"
+   ]
+  },
+  "elevator": {
+   "cmd": [
+    "python3",
+    "tools/export_elevator.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/elevator.emsc"
+   ]
+  },
+  "panel": {
+   "cmd": [
+    "python3",
+    "tools/export_panel.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/panel/battery.emba",
+    "assets/scene_snow/panel/player_15c.bin",
+    "assets/scene_snow/panel/scripts.emsc",
+    "assets/scene_snow/panel/source.json"
+   ]
+  },
+  "sdk_math_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_sdk_math_tables.py"
+   ],
+   "outputs": [
+    "assets/sdk_math_tables.emsm",
+    "assets/sdk_soft_float.emsf"
+   ]
+  },
+  "status_models": {
+   "cmd": [
+    "python3",
+    "tools/export_status_models.py"
+   ],
+   "outputs": [
+    "assets/status_models/letter_2f.emdl",
+    "assets/status_models/letter_30.emdl",
+    "assets/status_models/letter_31.emdl",
+    "assets/status_models/letter_32.emdl",
+    "assets/status_models/letter_33.emdl",
+    "assets/status_models/letter_34.emdl",
+    "assets/status_models/letter_35.emdl",
+    "assets/status_models/letter_36.emdl",
+    "assets/status_models/letter_37.emdl",
+    "assets/status_models/letter_38.emdl",
+    "assets/status_models/letter_39.emdl",
+    "assets/status_models/letter_3a.emdl",
+    "assets/status_models/letter_3b.emdl",
+    "assets/status_models/letter_3c.emdl",
+    "assets/status_models/letter_3d.emdl",
+    "assets/status_models/letter_40.emdl",
+    "assets/status_models/letter_6d.emdl",
+    "assets/status_models/menu_player.emdl",
+    "assets/status_models/menu_player.empc",
+    "assets/status_models/menu_player_3d.emdl",
+    "assets/status_models/menu_player_3f.emdl",
+    "assets/status_models/menu_player_40.emdl",
+    "assets/status_models/models.emsk"
+   ]
+  },
+  "pickup_programs": {
+   "cmd": [
+    "python3",
+    "tools/export_pickup_programs.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/pickup_0015afa0.emsc",
+    "assets/scene_snow/pickup_00219550.emsc"
+   ]
+  },
+  "sfx_registry": {
+   "cmd": [
+    "python3",
+    "tools/export_sfx_registry.py"
+   ],
+   "outputs": [
+    "assets/sfx/sfx_registry.emsr",
+    "assets/sfx/sfx_registry.json"
+   ]
+  },
+  "area11_scripts": {
+   "cmd": [
+    "python3",
+    "tools/export_area11_scripts.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/area11_scripts/director_quads.emsc",
+    "assets/scene_snow/area11_scripts/scripts.emsc"
+   ]
+  },
+  "roger_resources": {
+   "cmd": [
+    "python3",
+    "tools/export_roger_resources.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/roger/channels.empc",
+    "assets/scene_snow/roger/programs.emsc",
+    "assets/scene_snow/roger/roger.emdl",
+    "assets/scene_snow/roger/trigger.empg"
+   ]
+  },
+  "disc_textures_bg": {
+   "cmd": [
+    "python3",
+    "tools/export_disc_textures.py",
+    "--only",
+    "background"
+   ],
+   "outputs": [
+    "assets/scene_snow/background.embg"
+   ]
+  },
+  "actor_collision_export": {
+   "cmd": [
+    "python3",
+    "tools/test_actor_collision_reference.py",
+    "--export"
+   ],
+   "outputs": [
+    "assets/scene_snow/area11_cells.bin"
+   ]
+  },
+  "world_models": {
+   "cmd": [
+    "python3",
+    "tools/export_world_models.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/world_models.emwm",
+    "assets/scene_snow/world_models.json"
+   ]
+  },
+  "box_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_box_tables.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/box_tables.emrg"
+   ]
+  },
+  "pad_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_pad_tables.py"
+   ],
+   "outputs": [
+    "assets/pad_rumble.emrg"
+   ]
+  },
+  "roger_banks": {
+   "cmd": [
+    "python3",
+    "tools/export_roger_banks.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/roger/resources.emrs"
+   ]
+  },
+  "coat_face": {
+   "cmd": [
+    "python3",
+    "tools/export_coat_face.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/roger/resources.emrs"
+   ]
+  },
+  "cable_scene": {
+   "cmd": [
+    "python3",
+    "tools/export_cable_scene.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/cable_scene/camera.emcc",
+    "assets/scene_snow/cable_scene/camera.json",
+    "assets/scene_snow/cable_scene/events.emfx",
+    "assets/scene_snow/roger/resources.emrs"
+   ]
+  },
+  "area00_library": {
+   "cmd": [
+    "python3",
+    "tools/export_area00_library.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/roger/resources.emrs"
+   ]
+  },
+  "area02_library": {
+   "cmd": [
+    "python3",
+    "tools/export_area02_library.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/roger/resources.emrs"
+   ]
+  },
+  "area04_library": {
+   "cmd": [
+    "python3",
+    "tools/export_area04_library.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/roger/resources.emrs"
+   ]
+  },
+  "mid_library": {
+   "cmd": [
+    "python3",
+    "tools/export_mid_library.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/roger/resources.emrs"
+   ]
+  },
+  "boss_library": {
+   "cmd": [
+    "python3",
+    "tools/export_boss_library.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/roger/resources.emrs"
+   ]
+  },
+  "later_library": {
+   "cmd": [
+    "python3",
+    "tools/export_later_library.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/roger/resources.emrs"
+   ]
+  },
+  "camera_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_camera_tables.py"
+   ],
+   "outputs": [
+    "assets/camera_eye_rows.emrg",
+    "assets/camera_tables.emrg"
+   ]
+  },
+  "render_context": {
+   "cmd": [
+    "python3",
+    "tools/export_render_context.py"
+   ],
+   "outputs": [
+    "assets/render_context.emrc",
+    "assets/render_context_effects.emrc"
+   ]
+  },
+  "area00_runtime_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_area00_runtime_tables.py"
+   ],
+   "outputs": [
+    "assets/effect_tables.emet"
+   ]
+  },
+  "object_textures": {
+   "cmd": [
+    "python3",
+    "tools/export_object_textures.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/object_textures.emot",
+    "assets/scene_snow/object_textures.json"
+   ]
+  },
+  "page_textures": {
+   "cmd": [
+    "python3",
+    "tools/export_page_textures.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/page_textures.emot",
+    "assets/scene_snow/page_textures.json"
+   ]
+  },
+  "player_model": {
+   "cmd": [
+    "python3",
+    "tools/export_player_model.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/player_model.emom",
+    "assets/scene_snow/player_model.json"
+   ]
+  },
+  "status_pages": {
+   "cmd": [
+    "python3",
+    "tools/export_status_pages.py"
+   ],
+   "outputs": [
+    "assets/status_pages/status_pages.emsp",
+    "assets/status_pages/status_pages_source.json"
+   ]
+  },
+  "status_map": {
+   "cmd": [
+    "python3",
+    "tools/export_status_map.py"
+   ],
+   "outputs": [
+    "assets/status_map/map_00.emdl",
+    "assets/status_map/map_01.emdl",
+    "assets/status_map/map_02.emdl",
+    "assets/status_map/map_03.emdl",
+    "assets/status_map/map_04.emdl",
+    "assets/status_map/map_05.emdl",
+    "assets/status_map/map_06.emdl",
+    "assets/status_map/map_07.emdl",
+    "assets/status_map/map_08.emdl",
+    "assets/status_map/map_09.emdl",
+    "assets/status_map/map_0a.emdl",
+    "assets/status_map/map_0b.emdl",
+    "assets/status_map/map_0c.emdl",
+    "assets/status_map/map_0d.emdl",
+    "assets/status_map/map_0e.emdl",
+    "assets/status_map/map_0f.emdl",
+    "assets/status_map/map_10.emdl",
+    "assets/status_map/map_11.emdl",
+    "assets/status_map/map_12.emdl",
+    "assets/status_map/map_13.emdl",
+    "assets/status_map/map_14.emdl",
+    "assets/status_map/map_15.emdl",
+    "assets/status_map/map_models.emmp"
+   ]
+  },
+  "module_loader": {
+   "cmd": [
+    "python3",
+    "tools/export_module_loader.py"
+   ],
+   "outputs": [
+    "assets/module_loader/modules.emml",
+    "assets/module_loader/modules.json"
+   ]
+  },
+  "static_world": {
+   "cmd": [
+    "python3",
+    "tools/export_static_world.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/static_world.emsw"
+   ]
+  },
+  "aim_fire_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_aim_fire_tables.py"
+   ],
+   "outputs": [
+    "assets/aim_fire_tables.emaf"
+   ]
+  },
+  "collision_contact": {
+   "cmd": [
+    "python3",
+    "tools/export_collision_contact.py"
+   ],
+   "outputs": [
+    "assets/collision_contact.emrg",
+    "assets/collision_knockback.emrg"
+   ]
+  },
+  "area_title": {
+   "cmd": [
+    "python3",
+    "tools/export_area_title.py"
+   ],
+   "outputs": [
+    "assets/area_title.emat"
+   ]
+  },
+  "script_walk_clips": {
+   "cmd": [
+    "python3",
+    "tools/export_script_walk_clips.py"
+   ],
+   "outputs": [
+    "assets/script_walk_clips.emwc"
+   ]
+  },
+  "area01_level": {
+   "cmd": [
+    "python3",
+    "tools/export_area01_level.py"
+   ],
+   "outputs": [
+    "assets/area01/area01.emcl",
+    "assets/area01/area01_cells.bin",
+    "assets/area01/level/00_f00_id44.emdl",
+    "assets/area01/level/00_f00_id44.gsmat.json",
+    "assets/area01/level/01_f01_id45.emdl",
+    "assets/area01/level/01_f01_id45.gsmat.json",
+    "assets/area01/level/02_f02_id43.emdl",
+    "assets/area01/level/02_f02_id43.gsmat.json",
+    "assets/area01/level/03_f03_id42.emdl",
+    "assets/area01/level/03_f03_id42.gsmat.json",
+    "assets/area01/level/04_f04_id46.emdl",
+    "assets/area01/level/04_f04_id46.gsmat.json",
+    "assets/area01/level/05_f05_id4a.emdl",
+    "assets/area01/level/05_f05_id4a.gsmat.json",
+    "assets/area01/level/06_f06_id4d.emdl",
+    "assets/area01/level/06_f06_id4d.gsmat.json",
+    "assets/area01/level/07_f07_id4c.emdl",
+    "assets/area01/level/07_f07_id4c.gsmat.json",
+    "assets/area01/level/08_f08_id99.emdl",
+    "assets/area01/level/08_f08_id99.gsmat.json",
+    "assets/area01/level/09_f09_id52.emdl",
+    "assets/area01/level/09_f09_id52.gsmat.json",
+    "assets/area01/level/10_f10_id47.emdl",
+    "assets/area01/level/10_f10_id47.gsmat.json",
+    "assets/area01/level/11_f11_id4b.emdl",
+    "assets/area01/level/11_f11_id4b.gsmat.json",
+    "assets/area01/level/dynamic_objects.emsc",
+    "assets/area01/level/level.json",
+    "assets/area01/level/static_bank.emsc",
+    "assets/area01/scene.txt"
+   ]
+  },
+  "game_over": {
+   "cmd": [
+    "python3",
+    "tools/export_game_over.py"
+   ],
+   "outputs": [
+    "assets/startup/game_over.emui",
+    "assets/startup/game_over.json"
+   ]
+  },
+  "area01_shadow_receivers": {
+   "cmd": [
+    "python3",
+    "tools/export_area01_shadow_receivers.py"
+   ],
+   "outputs": [
+    "assets/area01_shadow_receivers.emsr",
+    "assets/area01_shadow_receivers.json"
+   ]
+  },
+  "area01_world_textures": {
+   "cmd": [
+    "python3",
+    "tools/export_area01_world_textures.py"
+   ],
+   "outputs": [
+    "assets/area01_world_textures.emot",
+    "assets/area01_world_textures.json"
+   ]
+  },
+  "area01_boot_scripts": {
+   "cmd": [
+    "python3",
+    "tools/export_area01_boot_scripts.py",
+    "--out",
+    "assets/area01_boot_scripts"
+   ],
+   "outputs": [
+    "assets/area01_boot_scripts/doors.emsc",
+    "assets/area01_boot_scripts/lift.emsc",
+    "assets/area01_boot_scripts/manifest.json",
+    "assets/area01_boot_scripts/panels.emsc",
+    "assets/area01_boot_scripts/pickup.emsc",
+    "assets/area01_boot_scripts/take.emsc",
+    "assets/area01_boot_scripts/timeline.emsp",
+    "assets/area01_boot_scripts/timeline.json"
+   ]
+  },
+  "gs_memory": {
+   "cmd": [
+    "python3",
+    "tools/export_gs_memory.py"
+   ],
+   "outputs": [
+    "assets/gs_library.emgm"
+   ]
+  },
+  "area04_level": {
+   "cmd": [
+    "python3",
+    "tools/export_area04_level.py"
+   ],
+   "outputs": [
+    "assets/area04/loaded_sub_proof.json",
+    "assets/area04/sub0/area04.emcl",
+    "assets/area04/sub0/area04_cells.bin",
+    "assets/area04/sub0/cells.json",
+    "assets/area04/sub0/level/00_f01_id44.emdl",
+    "assets/area04/sub0/level/00_f01_id44.gsmat.json",
+    "assets/area04/sub0/level/01_f02_id45.emdl",
+    "assets/area04/sub0/level/01_f02_id45.gsmat.json",
+    "assets/area04/sub0/level/02_f03_id42.emdl",
+    "assets/area04/sub0/level/02_f03_id42.gsmat.json",
+    "assets/area04/sub0/level/03_f04_id46.emdl",
+    "assets/area04/sub0/level/03_f04_id46.gsmat.json",
+    "assets/area04/sub0/level/04_f05_id6f.emdl",
+    "assets/area04/sub0/level/04_f05_id6f.gsmat.json",
+    "assets/area04/sub0/level/05_f06_id6e.emdl",
+    "assets/area04/sub0/level/05_f06_id6e.gsmat.json",
+    "assets/area04/sub0/level/06_f07_id72.emdl",
+    "assets/area04/sub0/level/06_f07_id72.gsmat.json",
+    "assets/area04/sub0/level/07_f08_id4e.emdl",
+    "assets/area04/sub0/level/07_f08_id4e.gsmat.json",
+    "assets/area04/sub0/level/08_f09_id4f.emdl",
+    "assets/area04/sub0/level/08_f09_id4f.gsmat.json",
+    "assets/area04/sub0/level/09_f10_id6c.emdl",
+    "assets/area04/sub0/level/09_f10_id6c.gsmat.json",
+    "assets/area04/sub0/level/dynamic_objects.emsc",
+    "assets/area04/sub0/level/level.json",
+    "assets/area04/sub0/level/static_bank.emsc",
+    "assets/area04/sub0/scene.txt"
+   ]
+  },
+  "player_pose_channels": {
+   "cmd": [
+    "python3",
+    "tools/export_player_pose_channels.py"
+   ],
+   "outputs": [
+    "assets/player_channels.empc"
+   ]
+  },
+  "door_program": {
+   "cmd": [
+    "python3",
+    "tools/export_door_program.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/door_original/program.emsc"
+   ]
+  },
+  "item_root": {
+   "cmd": [
+    "python3",
+    "tools/export_item_root.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/panel/item_root.emir",
+    "assets/scene_snow/panel/item_root_source.json"
+   ]
+  },
+  "player_hull": {
+   "cmd": [
+    "python3",
+    "tools/export_player_hull.py"
+   ],
+   "outputs": [
+    "assets/player_hull.emom"
+   ]
+  },
+  "player_model_variants": {
+   "cmd": [
+    "python3",
+    "tools/export_player_model_variants.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/player_model_3d.emom",
+    "assets/scene_snow/player_model_3e.emom",
+    "assets/scene_snow/player_model_3f.emom",
+    "assets/scene_snow/player_model_40.emom",
+    "assets/scene_snow/player_model_variants.json"
+   ]
+  },
+  "area11_player_variants": {
+   "cmd": [
+    "python3",
+    "tools/export_area11_player_variants.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/object_textures_mode0_costume1.emot",
+    "assets/scene_snow/object_textures_mode0_costume2.emot",
+    "assets/scene_snow/object_textures_mode1_costume0.emot",
+    "assets/scene_snow/object_textures_mode1_costume1.emot",
+    "assets/scene_snow/object_textures_mode1_costume2.emot",
+    "assets/scene_snow/object_textures_mode2_costume0.emot",
+    "assets/scene_snow/player_texture_variants.json"
+   ]
+  },
+  "status_coat": {
+   "cmd": [
+    "python3",
+    "tools/export_status_coat.py"
+   ],
+   "outputs": [
+    "assets/status_models/menu_player_coat.emdl",
+    "assets/status_models/menu_player_coat.emsk"
+   ]
+  },
+  "status_hub": {
+   "cmd": [
+    "python3",
+    "tools/export_status_hub.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/panel/status_hub.emhs",
+    "assets/scene_snow/panel/status_hub_atlas.emha",
+    "assets/scene_snow/panel/status_hub_commands.json"
+   ]
+  },
+  "roger_cinematic": {
+   "cmd": [
+    "python3",
+    "tools/export_roger_cinematic.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/roger/camera_projection.emcp",
+    "assets/scene_snow/roger/encounter_camera.emcc",
+    "assets/scene_snow/roger/encounter_camera.json",
+    "assets/scene_snow/roger/encounter_player.empc"
+   ]
+  },
+  "roger_media": {
+   "cmd": [
+    "python3",
+    "tools/export_roger_media.py"
+   ],
+   "outputs": [
+    "assets/scene_snow/roger/encounter.wav",
+    "assets/scene_snow/roger/encounter_resume.wav",
+    "assets/scene_snow/roger/media.json"
+   ]
+  },
+  "boot_constants": {
+   "cmd": [
+    "python3",
+    "tools/export_boot_constants.py"
+   ],
+   "outputs": [
+    "assets/boot_constants.embc"
+   ]
+  },
+  "credits": {
+   "cmd": [
+    "python3",
+    "tools/export_credits.py"
+   ],
+   "outputs": [
+    "assets/credits/credits.emcr"
+   ]
+  },
+  "sight_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_sight_tables.py"
+   ],
+   "outputs": [
+    "assets/sight_tables.emst"
+   ]
+  },
+  "spu2_effects": {
+   "cmd": [
+    "python3",
+    "tools/export_spu2_effects.py"
+   ],
+   "outputs": [
+    "assets/spu2/effects.emrv",
+    "assets/spu2/effects.json"
+   ]
+  },
+  "area00_level": {
+   "cmd": [
+    "python3",
+    "tools/export_area00_level.py"
+   ],
+   "outputs": [
+    "assets/area00/area00.emcl",
+    "assets/area00/area00_cells.bin",
+    "assets/area00/cells.json",
+    "assets/area00/scene.txt",
+    "assets/area00/sub0/level/00_f06_id44.emdl",
+    "assets/area00/sub0/level/00_f06_id44.gsmat.json",
+    "assets/area00/sub0/level/level.json",
+    "assets/area00/sub0/level/static_bank.emsc",
+    "assets/area00/sub1/level/00_f06_id44.emdl",
+    "assets/area00/sub1/level/00_f06_id44.gsmat.json",
+    "assets/area00/sub1/level/level.json",
+    "assets/area00/sub1/level/static_bank.emsc"
+   ]
+  },
+  "area00_sfx": {
+   "cmd": [
+    "python3",
+    "tools/export_area00_sfx.py"
+   ],
+   "outputs": [
+    "assets/area00/sfx/area00_banks.bin",
+    "assets/area00/sfx/banks.json",
+    "assets/area00/sub0/sfx/sfx_registry.emsr",
+    "assets/area00/sub0/sfx/sfx_registry.json",
+    "assets/area00/sub1/sfx/sfx_registry.emsr",
+    "assets/area00/sub1/sfx/sfx_registry.json"
+   ]
+  },
+  "area00_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_area00_tables.py"
+   ],
+   "outputs": [
+    "assets/area00/area00_scripts/scripts.emsc",
+    "assets/area00/door_destinations.emsp",
+    "assets/area00/message_data.emmd",
+    "assets/area00/overlay_data.emsc",
+    "assets/area00/spawn_table.emsp",
+    "assets/area00/sub0/roster.emro",
+    "assets/area00/sub1/roster.emro",
+    "assets/area00/tables.json",
+    "assets/area00/world_models.emwm",
+    "assets/area00/world_models.json"
+   ]
+  },
+  "area00_shadow_receivers": {
+   "cmd": [
+    "python3",
+    "tools/export_area00_shadow_receivers.py"
+   ],
+   "outputs": [
+    "assets/area00_sub0_shadow_receivers.emsr",
+    "assets/area00_sub0_shadow_receivers.json",
+    "assets/area00_sub1_shadow_receivers.emsr",
+    "assets/area00_sub1_shadow_receivers.json"
+   ]
+  },
+  "area00_world_textures": {
+   "cmd": [
+    "python3",
+    "tools/export_area00_world_textures.py"
+   ],
+   "outputs": [
+    "assets/area00_sub0_world_textures.emot",
+    "assets/area00_sub0_world_textures.json",
+    "assets/area00_sub1_world_textures.emot",
+    "assets/area00_sub1_world_textures.json"
+   ]
+  },
+  "area00s2_assets": {
+   "cmd": [
+    "python3",
+    "tools/export_area00s2_assets.py"
+   ],
+   "outputs": [
+    "assets/area00/sub2/area00.emcl",
+    "assets/area00/sub2/area00_cells.bin",
+    "assets/area00/sub2/cells.json",
+    "assets/area00/sub2/level/00_id44.emdl",
+    "assets/area00/sub2/level/00_id44.gsmat.json",
+    "assets/area00/sub2/level/level.json",
+    "assets/area00/sub2/level/static_bank.emsc",
+    "assets/area00/sub2/message_data.emmd",
+    "assets/area00/sub2/roster.emro",
+    "assets/area00/sub2/scene.txt",
+    "assets/area00/sub2/sfx/area00_banks.bin",
+    "assets/area00/sub2/sfx/banks.json",
+    "assets/area00/sub2/sfx/sfx_registry.emsr",
+    "assets/area00/sub2/sfx/sfx_registry.json",
+    "assets/area00/sub2/sub2.json",
+    "assets/area00/sub2/tables.json",
+    "assets/area00/sub2/world_models.emwm",
+    "assets/area00/sub2/world_models.json"
+   ]
+  },
+  "area01_sfx": {
+   "cmd": [
+    "python3",
+    "tools/export_area01_sfx.py"
+   ],
+   "outputs": [
+    "assets/area01/sfx/area01_banks.bin",
+    "assets/area01/sfx/banks.json",
+    "assets/area01/sfx/sfx_registry.emsr",
+    "assets/area01/sfx/sfx_registry.json"
+   ]
+  },
+  "area01_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_area01_tables.py"
+   ],
+   "outputs": [
+    "assets/area01/area01_scripts/scripts.emsc",
+    "assets/area01/door_destinations.emsp",
+    "assets/area01/message_data.emmd",
+    "assets/area01/overlay_data.emsc",
+    "assets/area01/roster.emro",
+    "assets/area01/spawn_table.emsp",
+    "assets/area01/tables.json",
+    "assets/area01/world_models.emwm",
+    "assets/area01/world_models.json"
+   ]
+  },
+  "area01s1_assets": {
+   "cmd": [
+    "python3",
+    "tools/export_area01s1_assets.py"
+   ],
+   "outputs": [
+    "assets/area01/sub1/area01.emcl",
+    "assets/area01/sub1/area01_cells.bin",
+    "assets/area01/sub1/cells.json",
+    "assets/area01/sub1/level/00_id44.emdl",
+    "assets/area01/sub1/level/00_id44.gsmat.json",
+    "assets/area01/sub1/level/dynamic_objects.emsc",
+    "assets/area01/sub1/level/level.json",
+    "assets/area01/sub1/level/static_bank.emsc",
+    "assets/area01/sub1/message_data.emmd",
+    "assets/area01/sub1/roster.emro",
+    "assets/area01/sub1/scene.txt",
+    "assets/area01/sub1/sfx/area01_banks.bin",
+    "assets/area01/sub1/sfx/banks.json",
+    "assets/area01/sub1/sfx/sfx_registry.emsr",
+    "assets/area01/sub1/sfx/sfx_registry.json",
+    "assets/area01/sub1/sub1.json",
+    "assets/area01/sub1/tables.json",
+    "assets/area01/sub1/world_models.emwm",
+    "assets/area01/sub1/world_models.json"
+   ]
+  },
+  "area02_level": {
+   "cmd": [
+    "python3",
+    "tools/export_area02_level.py"
+   ],
+   "outputs": [
+    "assets/area02/loaded_sub_proof.json",
+    "assets/area02/sub0/area02.emcl",
+    "assets/area02/sub0/area02_cells.bin",
+    "assets/area02/sub0/cells.json",
+    "assets/area02/sub0/level/00_f02_id44.emdl",
+    "assets/area02/sub0/level/00_f02_id44.gsmat.json",
+    "assets/area02/sub0/level/01_f03_id43.emdl",
+    "assets/area02/sub0/level/01_f03_id43.gsmat.json",
+    "assets/area02/sub0/level/02_f04_id72.emdl",
+    "assets/area02/sub0/level/02_f04_id72.gsmat.json",
+    "assets/area02/sub0/level/level.json",
+    "assets/area02/sub0/level/static_bank.emsc",
+    "assets/area02/sub0/scene.txt",
+    "assets/area02/sub1/area02.emcl",
+    "assets/area02/sub1/area02_cells.bin",
+    "assets/area02/sub1/cells.json",
+    "assets/area02/sub1/level/00_f02_id44.emdl",
+    "assets/area02/sub1/level/00_f02_id44.gsmat.json",
+    "assets/area02/sub1/level/01_f03_id43.emdl",
+    "assets/area02/sub1/level/01_f03_id43.gsmat.json",
+    "assets/area02/sub1/level/level.json",
+    "assets/area02/sub1/level/static_bank.emsc",
+    "assets/area02/sub1/scene.txt"
+   ]
+  },
+  "area02_sfx": {
+   "cmd": [
+    "python3",
+    "tools/export_area02_sfx.py"
+   ],
+   "outputs": [
+    "assets/area02/sub0/sfx/area02_banks.bin",
+    "assets/area02/sub0/sfx/banks.json",
+    "assets/area02/sub0/sfx/sfx_registry.emsr",
+    "assets/area02/sub0/sfx/sfx_registry.json",
+    "assets/area02/sub1/sfx/area02_banks.bin",
+    "assets/area02/sub1/sfx/banks.json",
+    "assets/area02/sub1/sfx/sfx_registry.emsr",
+    "assets/area02/sub1/sfx/sfx_registry.json"
+   ]
+  },
+  "area02_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_area02_tables.py"
+   ],
+   "outputs": [
+    "assets/area02/area02_scripts/scripts.emsc",
+    "assets/area02/door_destinations.emsp",
+    "assets/area02/overlay_data.emsc",
+    "assets/area02/spawn_table.emsp",
+    "assets/area02/sub0/message_data.emmd",
+    "assets/area02/sub0/roster.emro",
+    "assets/area02/sub0/world_models.emwm",
+    "assets/area02/sub0/world_models.json",
+    "assets/area02/sub1/roster.emro",
+    "assets/area02/sub1/world_models.emwm",
+    "assets/area02/sub1/world_models.json",
+    "assets/area02/tables.json"
+   ]
+  },
+  "area02_shadow_receivers": {
+   "cmd": [
+    "python3",
+    "tools/export_area02_shadow_receivers.py"
+   ],
+   "outputs": [
+    "assets/area02_sub0_shadow_receivers.emsr",
+    "assets/area02_sub0_shadow_receivers.json",
+    "assets/area02_sub1_shadow_receivers.emsr",
+    "assets/area02_sub1_shadow_receivers.json"
+   ]
+  },
+  "area02_world_textures": {
+   "cmd": [
+    "python3",
+    "tools/export_area02_world_textures.py"
+   ],
+   "outputs": [
+    "assets/area02_sub0_world_textures.emot",
+    "assets/area02_sub0_world_textures.json",
+    "assets/area02_sub1_world_textures.emot",
+    "assets/area02_sub1_world_textures.json"
+   ]
+  },
+  "area02s2_assets": {
+   "cmd": [
+    "python3",
+    "tools/export_area02s2_assets.py"
+   ],
+   "outputs": [
+    "assets/area02/sub2/area02.emcl",
+    "assets/area02/sub2/area02_cells.bin",
+    "assets/area02/sub2/cells.json",
+    "assets/area02/sub2/level/00_id44.emdl",
+    "assets/area02/sub2/level/00_id44.gsmat.json",
+    "assets/area02/sub2/level/level.json",
+    "assets/area02/sub2/level/static_bank.emsc",
+    "assets/area02/sub2/roster.emro",
+    "assets/area02/sub2/scene.txt",
+    "assets/area02/sub2/sfx/area02_banks.bin",
+    "assets/area02/sub2/sfx/banks.json",
+    "assets/area02/sub2/sfx/sfx_registry.emsr",
+    "assets/area02/sub2/sfx/sfx_registry.json",
+    "assets/area02/sub2/sub2.json",
+    "assets/area02/sub2/tables.json",
+    "assets/area02/sub2/world_models.emwm",
+    "assets/area02/sub2/world_models.json"
+   ]
+  },
+  "area03_assets": {
+   "cmd": [
+    "python3",
+    "tools/export_area03_assets.py"
+   ],
+   "outputs": [
+    "assets/levels/03/door_destinations.emsp",
+    "assets/levels/03/overlay_data.emsc",
+    "assets/levels/03/scripts.emsc",
+    "assets/levels/03/spawn_table.emsp",
+    "assets/levels/03/sub0/area03.emcl",
+    "assets/levels/03/sub0/area03_cells.bin",
+    "assets/levels/03/sub0/cells.json",
+    "assets/levels/03/sub0/level/00_id44.emdl",
+    "assets/levels/03/sub0/level/00_id44.gsmat.json",
+    "assets/levels/03/sub0/level/level.json",
+    "assets/levels/03/sub0/level/static_bank.emsc",
+    "assets/levels/03/sub0/message_data.emmd",
+    "assets/levels/03/sub0/roster.emro",
+    "assets/levels/03/sub0/scene.txt",
+    "assets/levels/03/sub0/sfx/area03_banks.bin",
+    "assets/levels/03/sub0/sfx/banks.json",
+    "assets/levels/03/sub0/sfx/sfx_registry.emsr",
+    "assets/levels/03/sub0/sfx/sfx_registry.json",
+    "assets/levels/03/sub0/world_models.emwm",
+    "assets/levels/03/sub0/world_models.json",
+    "assets/levels/03/tables.json"
+   ]
+  },
+  "area03x_split": {
+   "cmd": [
+    "python3",
+    "tools/export_area03x_split.py"
+   ],
+   "outputs": [
+    "assets/levels/03/sub1/area03.emcl",
+    "assets/levels/03/sub1/area03_cells.bin",
+    "assets/levels/03/sub1/cells.json",
+    "assets/levels/03/sub1/level/00_id44.emdl",
+    "assets/levels/03/sub1/level/00_id44.gsmat.json",
+    "assets/levels/03/sub1/level/dynamic_objects.emsc",
+    "assets/levels/03/sub1/level/level.json",
+    "assets/levels/03/sub1/level/static_bank.emsc",
+    "assets/levels/03/sub1/message_data.emmd",
+    "assets/levels/03/sub1/roster.emro",
+    "assets/levels/03/sub1/scene.txt",
+    "assets/levels/03/sub1/sfx/area03_banks.bin",
+    "assets/levels/03/sub1/sfx/banks.json",
+    "assets/levels/03/sub1/sfx/sfx_registry.emsr",
+    "assets/levels/03/sub1/sfx/sfx_registry.json",
+    "assets/levels/03/sub1/tables.json",
+    "assets/levels/03/sub1/world_models.emwm",
+    "assets/levels/03/sub1/world_models.json",
+    "assets/levels/03/sub2/area03.emcl",
+    "assets/levels/03/sub2/area03_cells.bin",
+    "assets/levels/03/sub2/cells.json",
+    "assets/levels/03/sub2/level/00_id44.emdl",
+    "assets/levels/03/sub2/level/00_id44.gsmat.json",
+    "assets/levels/03/sub2/level/level.json",
+    "assets/levels/03/sub2/level/static_bank.emsc",
+    "assets/levels/03/sub2/message_data.emmd",
+    "assets/levels/03/sub2/roster.emro",
+    "assets/levels/03/sub2/scene.txt",
+    "assets/levels/03/sub2/sfx/area03_banks.bin",
+    "assets/levels/03/sub2/sfx/banks.json",
+    "assets/levels/03/sub2/sfx/sfx_registry.emsr",
+    "assets/levels/03/sub2/sfx/sfx_registry.json",
+    "assets/levels/03/sub2/tables.json",
+    "assets/levels/03/sub2/world_models.emwm",
+    "assets/levels/03/sub2/world_models.json",
+    "assets/levels/04/sub1/area04.emcl",
+    "assets/levels/04/sub1/area04_cells.bin",
+    "assets/levels/04/sub1/cells.json",
+    "assets/levels/04/sub1/level/00_id44.emdl",
+    "assets/levels/04/sub1/level/00_id44.gsmat.json",
+    "assets/levels/04/sub1/level/dynamic_objects.emsc",
+    "assets/levels/04/sub1/level/level.json",
+    "assets/levels/04/sub1/level/static_bank.emsc",
+    "assets/levels/04/sub1/message_data.emmd",
+    "assets/levels/04/sub1/roster.emro",
+    "assets/levels/04/sub1/scene.txt",
+    "assets/levels/04/sub1/sfx/area04_banks.bin",
+    "assets/levels/04/sub1/sfx/banks.json",
+    "assets/levels/04/sub1/sfx/sfx_registry.emsr",
+    "assets/levels/04/sub1/sfx/sfx_registry.json",
+    "assets/levels/04/sub1/tables.json",
+    "assets/levels/04/sub1/world_models.emwm",
+    "assets/levels/04/sub1/world_models.json"
+   ]
+  },
+  "area04_sfx": {
+   "cmd": [
+    "python3",
+    "tools/export_area04_sfx.py"
+   ],
+   "outputs": [
+    "assets/area04/sub0/sfx/area04_banks.bin",
+    "assets/area04/sub0/sfx/banks.json",
+    "assets/area04/sub0/sfx/sfx_registry.emsr",
+    "assets/area04/sub0/sfx/sfx_registry.json"
+   ]
+  },
+  "area04_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_area04_tables.py"
+   ],
+   "outputs": [
+    "assets/area04/area04_scripts/scripts.emsc",
+    "assets/area04/door_destinations.emsp",
+    "assets/area04/overlay_data.emsc",
+    "assets/area04/spawn_table.emsp",
+    "assets/area04/sub0/message_data.emmd",
+    "assets/area04/sub0/roster.emro",
+    "assets/area04/sub0/world_models.emwm",
+    "assets/area04/sub0/world_models.json",
+    "assets/area04/tables.json"
+   ]
+  },
+  "area04_shadow_receivers": {
+   "cmd": [
+    "python3",
+    "tools/export_area04_shadow_receivers.py"
+   ],
+   "outputs": [
+    "assets/area04_sub0_shadow_receivers.emsr",
+    "assets/area04_sub0_shadow_receivers.json"
+   ]
+  },
+  "area04_world_textures": {
+   "cmd": [
+    "python3",
+    "tools/export_area04_world_textures.py"
+   ],
+   "outputs": [
+    "assets/area04_sub0_world_textures.emot",
+    "assets/area04_sub0_world_textures.json"
+   ]
+  },
+  "area06_level": {
+   "cmd": [
+    "python3",
+    "tools/export_area06_level.py"
+   ],
+   "outputs": [
+    "assets/area06/loaded_sub_proof.json",
+    "assets/area06/sub0/area06.emcl",
+    "assets/area06/sub0/area06_cells.bin",
+    "assets/area06/sub0/cells.json",
+    "assets/area06/sub0/level/00_id44.emdl",
+    "assets/area06/sub0/level/00_id44.gsmat.json",
+    "assets/area06/sub0/level/dynamic_objects.emsc",
+    "assets/area06/sub0/level/level.json",
+    "assets/area06/sub0/level/static_bank.emsc",
+    "assets/area06/sub0/scene.txt"
+   ]
+  },
+  "area06_sfx": {
+   "cmd": [
+    "python3",
+    "tools/export_area06_sfx.py"
+   ],
+   "outputs": [
+    "assets/area06/sub0/sfx/area06_banks.bin",
+    "assets/area06/sub0/sfx/banks.json",
+    "assets/area06/sub0/sfx/sfx_registry.emsr",
+    "assets/area06/sub0/sfx/sfx_registry.json"
+   ]
+  },
+  "area06_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_area06_tables.py"
+   ],
+   "outputs": [
+    "assets/area06/area06_scripts/scripts.emsc",
+    "assets/area06/door_destinations.emsp",
+    "assets/area06/overlay_data.emsc",
+    "assets/area06/spawn_table.emsp",
+    "assets/area06/sub0/message_data.emmd",
+    "assets/area06/sub0/roster.emro",
+    "assets/area06/sub0/world_models.emwm",
+    "assets/area06/sub0/world_models.json",
+    "assets/area06/tables.json"
+   ]
+  },
+  "area06s1_assets": {
+   "cmd": [
+    "python3",
+    "tools/export_area06s1_assets.py"
+   ],
+   "outputs": [
+    "assets/area06/sub1/area06.emcl",
+    "assets/area06/sub1/area06_cells.bin",
+    "assets/area06/sub1/cells.json",
+    "assets/area06/sub1/level/00_id44.emdl",
+    "assets/area06/sub1/level/00_id44.gsmat.json",
+    "assets/area06/sub1/level/dynamic_objects.emsc",
+    "assets/area06/sub1/level/level.json",
+    "assets/area06/sub1/level/static_bank.emsc",
+    "assets/area06/sub1/message_data.emmd",
+    "assets/area06/sub1/roster.emro",
+    "assets/area06/sub1/scene.txt",
+    "assets/area06/sub1/sfx/area06_banks.bin",
+    "assets/area06/sub1/sfx/banks.json",
+    "assets/area06/sub1/sfx/sfx_registry.emsr",
+    "assets/area06/sub1/sfx/sfx_registry.json",
+    "assets/area06/sub1/sub1.json",
+    "assets/area06/sub1/tables.json",
+    "assets/area06/sub1/world_models.emwm",
+    "assets/area06/sub1/world_models.json"
+   ]
+  },
+  "area08_assets": {
+   "cmd": [
+    "python3",
+    "tools/export_area08_assets.py"
+   ],
+   "outputs": [
+    "assets/area07/area07.json",
+    "assets/area07/door_destinations.emsp",
+    "assets/area07/overlay_data.emsc",
+    "assets/area07/scripts.emsc",
+    "assets/area07/spawn_table.emsp",
+    "assets/area07/sub0/area07.emcl",
+    "assets/area07/sub0/area07_cells.bin",
+    "assets/area07/sub0/cells.json",
+    "assets/area07/sub0/level/00_id44.emdl",
+    "assets/area07/sub0/level/00_id44.gsmat.json",
+    "assets/area07/sub0/level/dynamic_objects.emsc",
+    "assets/area07/sub0/level/level.json",
+    "assets/area07/sub0/level/static_bank.emsc",
+    "assets/area07/sub0/message_data.emmd",
+    "assets/area07/sub0/roster.emro",
+    "assets/area07/sub0/scene.txt",
+    "assets/area07/sub0/sfx/area07_banks.bin",
+    "assets/area07/sub0/sfx/banks.json",
+    "assets/area07/sub0/sfx/sfx_registry.emsr",
+    "assets/area07/sub0/sfx/sfx_registry.json",
+    "assets/area07/sub0/tables.json",
+    "assets/area07/sub0/world_models.emwm",
+    "assets/area07/sub0/world_models.json",
+    "assets/area07/sub2/area07.emcl",
+    "assets/area07/sub2/area07_cells.bin",
+    "assets/area07/sub2/cells.json",
+    "assets/area07/sub2/level/00_id44.emdl",
+    "assets/area07/sub2/level/00_id44.gsmat.json",
+    "assets/area07/sub2/level/level.json",
+    "assets/area07/sub2/level/static_bank.emsc",
+    "assets/area07/sub2/message_data.emmd",
+    "assets/area07/sub2/roster.emro",
+    "assets/area07/sub2/scene.txt",
+    "assets/area07/sub2/sfx/area07_banks.bin",
+    "assets/area07/sub2/sfx/banks.json",
+    "assets/area07/sub2/sfx/sfx_registry.emsr",
+    "assets/area07/sub2/sfx/sfx_registry.json",
+    "assets/area07/sub2/tables.json",
+    "assets/area07/sub2/world_models.emwm",
+    "assets/area07/sub2/world_models.json",
+    "assets/area07/sub3/area07.emcl",
+    "assets/area07/sub3/area07_cells.bin",
+    "assets/area07/sub3/cells.json",
+    "assets/area07/sub3/level/00_id44.emdl",
+    "assets/area07/sub3/level/00_id44.gsmat.json",
+    "assets/area07/sub3/level/dynamic_objects.emsc",
+    "assets/area07/sub3/level/level.json",
+    "assets/area07/sub3/level/static_bank.emsc",
+    "assets/area07/sub3/message_data.emmd",
+    "assets/area07/sub3/roster.emro",
+    "assets/area07/sub3/scene.txt",
+    "assets/area07/sub3/sfx/area07_banks.bin",
+    "assets/area07/sub3/sfx/banks.json",
+    "assets/area07/sub3/sfx/sfx_registry.emsr",
+    "assets/area07/sub3/sfx/sfx_registry.json",
+    "assets/area07/sub3/tables.json",
+    "assets/area07/sub3/world_models.emwm",
+    "assets/area07/sub3/world_models.json",
+    "assets/area08/area08.json",
+    "assets/area08/door_destinations.emsp",
+    "assets/area08/overlay_data.emsc",
+    "assets/area08/scripts.emsc",
+    "assets/area08/spawn_table.emsp",
+    "assets/area08/sub0/area08.emcl",
+    "assets/area08/sub0/area08_cells.bin",
+    "assets/area08/sub0/cells.json",
+    "assets/area08/sub0/level/00_id44.emdl",
+    "assets/area08/sub0/level/00_id44.gsmat.json",
+    "assets/area08/sub0/level/dynamic_objects.emsc",
+    "assets/area08/sub0/level/level.json",
+    "assets/area08/sub0/level/static_bank.emsc",
+    "assets/area08/sub0/message_data.emmd",
+    "assets/area08/sub0/roster.emro",
+    "assets/area08/sub0/scene.txt",
+    "assets/area08/sub0/sfx/area08_banks.bin",
+    "assets/area08/sub0/sfx/banks.json",
+    "assets/area08/sub0/sfx/sfx_registry.emsr",
+    "assets/area08/sub0/sfx/sfx_registry.json",
+    "assets/area08/sub0/tables.json",
+    "assets/area08/sub0/world_models.emwm",
+    "assets/area08/sub0/world_models.json",
+    "assets/area08/sub2/area08.emcl",
+    "assets/area08/sub2/area08_cells.bin",
+    "assets/area08/sub2/cells.json",
+    "assets/area08/sub2/level/00_id44.emdl",
+    "assets/area08/sub2/level/00_id44.gsmat.json",
+    "assets/area08/sub2/level/level.json",
+    "assets/area08/sub2/level/static_bank.emsc",
+    "assets/area08/sub2/message_data.emmd",
+    "assets/area08/sub2/roster.emro",
+    "assets/area08/sub2/scene.txt",
+    "assets/area08/sub2/sfx/area08_banks.bin",
+    "assets/area08/sub2/sfx/banks.json",
+    "assets/area08/sub2/sfx/sfx_registry.emsr",
+    "assets/area08/sub2/sfx/sfx_registry.json",
+    "assets/area08/sub2/tables.json",
+    "assets/area08/sub2/world_models.emwm",
+    "assets/area08/sub2/world_models.json",
+    "assets/area08/sub3/area08.emcl",
+    "assets/area08/sub3/area08_cells.bin",
+    "assets/area08/sub3/cells.json",
+    "assets/area08/sub3/level/00_id44.emdl",
+    "assets/area08/sub3/level/00_id44.gsmat.json",
+    "assets/area08/sub3/level/dynamic_objects.emsc",
+    "assets/area08/sub3/level/level.json",
+    "assets/area08/sub3/level/static_bank.emsc",
+    "assets/area08/sub3/message_data.emmd",
+    "assets/area08/sub3/roster.emro",
+    "assets/area08/sub3/scene.txt",
+    "assets/area08/sub3/sfx/area08_banks.bin",
+    "assets/area08/sub3/sfx/banks.json",
+    "assets/area08/sub3/sfx/sfx_registry.emsr",
+    "assets/area08/sub3/sfx/sfx_registry.json",
+    "assets/area08/sub3/tables.json",
+    "assets/area08/sub3/world_models.emwm",
+    "assets/area08/sub3/world_models.json"
+   ]
+  },
+  "area13_level": {
+   "cmd": [
+    "python3",
+    "tools/export_area13_level.py"
+   ],
+   "outputs": [
+    "assets/area13/area19/loaded_sub_proof.json",
+    "assets/area13/area19/sub0/area19.emcl",
+    "assets/area13/area19/sub0/area19_cells.bin",
+    "assets/area13/area19/sub0/cells.json",
+    "assets/area13/area19/sub0/level/00_id44.emdl",
+    "assets/area13/area19/sub0/level/00_id44.gsmat.json",
+    "assets/area13/area19/sub0/level/level.json",
+    "assets/area13/area19/sub0/level/static_bank.emsc",
+    "assets/area13/area19/sub0/scene.txt",
+    "assets/area13/sub0/area13.emcl",
+    "assets/area13/sub0/area13_cells.bin",
+    "assets/area13/sub0/background.embg",
+    "assets/area13/sub0/cells.json",
+    "assets/area13/sub0/level/00_id44.emdl",
+    "assets/area13/sub0/level/00_id44.gsmat.json",
+    "assets/area13/sub0/level/level.json",
+    "assets/area13/sub0/level/static_bank.emsc",
+    "assets/area13/sub0/scene.txt"
+   ]
+  },
+  "area13_sfx": {
+   "cmd": [
+    "python3",
+    "tools/export_area13_sfx.py"
+   ],
+   "outputs": [
+    "assets/area13/area19/sub0/sfx/area19_banks.bin",
+    "assets/area13/area19/sub0/sfx/banks.json",
+    "assets/area13/area19/sub0/sfx/sfx_registry.emsr",
+    "assets/area13/area19/sub0/sfx/sfx_registry.json",
+    "assets/area13/sub0/sfx/area13_banks.bin",
+    "assets/area13/sub0/sfx/banks.json",
+    "assets/area13/sub0/sfx/sfx_registry.emsr",
+    "assets/area13/sub0/sfx/sfx_registry.json"
+   ]
+  },
+  "area13_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_area13_tables.py"
+   ],
+   "outputs": [
+    "assets/area13/area19/door_destinations.emsp",
+    "assets/area13/area19/overlay_data.emsc",
+    "assets/area13/area19/scripts.emsc",
+    "assets/area13/area19/spawn_table.emsp",
+    "assets/area13/area19/sub0/message_data.emmd",
+    "assets/area13/area19/sub0/roster.emro",
+    "assets/area13/area19/sub0/world_models.emwm",
+    "assets/area13/area19/sub0/world_models.json",
+    "assets/area13/area19/tables.json",
+    "assets/area13/door_destinations.emsp",
+    "assets/area13/overlay_data.emsc",
+    "assets/area13/scripts.emsc",
+    "assets/area13/spawn_table.emsp",
+    "assets/area13/sub0/message_data.emmd",
+    "assets/area13/sub0/roster.emro",
+    "assets/area13/sub0/world_models.emwm",
+    "assets/area13/sub0/world_models.json",
+    "assets/area13/tables.json"
+   ]
+  },
+  "area13x_split": {
+   "cmd": [
+    "python3",
+    "tools/export_area13x_split.py"
+   ],
+   "outputs": [
+    "assets/area13/reload/reload.json",
+    "assets/area13/reload/sub0/cells.json",
+    "assets/area13/reload/sub0/level/level.json",
+    "assets/area13/reload/sub0/level/static_bank.emsc",
+    "assets/area13/reload/sub0/sfx/banks.json",
+    "assets/area13/reload/sub0/world_models.emwm",
+    "assets/area13/reload/sub0/world_models.json",
+    "assets/area13/reload/tables.json"
+   ]
+  },
+  "area15_split": {
+   "cmd": [
+    "python3",
+    "tools/export_area15_split.py"
+   ],
+   "outputs": [
+    "assets/area15/area15.json",
+    "assets/area15/door_destinations.emsp",
+    "assets/area15/loaded_sub_proof.json",
+    "assets/area15/overlay_data.emsc",
+    "assets/area15/scripts.emsc",
+    "assets/area15/spawn_table.emsp",
+    "assets/area15/sub0/area15.emcl",
+    "assets/area15/sub0/area15_cells.bin",
+    "assets/area15/sub0/background.embg",
+    "assets/area15/sub0/cells.json",
+    "assets/area15/sub0/level/00_id44.emdl",
+    "assets/area15/sub0/level/00_id44.gsmat.json",
+    "assets/area15/sub0/level/dynamic_objects.emsc",
+    "assets/area15/sub0/level/level.json",
+    "assets/area15/sub0/level/static_bank.emsc",
+    "assets/area15/sub0/message_data.emmd",
+    "assets/area15/sub0/roster.emro",
+    "assets/area15/sub0/scene.txt",
+    "assets/area15/sub0/sfx/area15_banks.bin",
+    "assets/area15/sub0/sfx/banks.json",
+    "assets/area15/sub0/sfx/sfx_registry.emsr",
+    "assets/area15/sub0/sfx/sfx_registry.json",
+    "assets/area15/sub0/tables.json",
+    "assets/area15/sub0/world_models.emwm",
+    "assets/area15/sub0/world_models.json",
+    "assets/area15/sub1/area15.emcl",
+    "assets/area15/sub1/area15_cells.bin",
+    "assets/area15/sub1/background.embg",
+    "assets/area15/sub1/cells.json",
+    "assets/area15/sub1/level/00_id44.emdl",
+    "assets/area15/sub1/level/00_id44.gsmat.json",
+    "assets/area15/sub1/level/level.json",
+    "assets/area15/sub1/level/static_bank.emsc",
+    "assets/area15/sub1/message_data.emmd",
+    "assets/area15/sub1/roster.emro",
+    "assets/area15/sub1/scene.txt",
+    "assets/area15/sub1/sfx/area15_banks.bin",
+    "assets/area15/sub1/sfx/banks.json",
+    "assets/area15/sub1/sfx/sfx_registry.emsr",
+    "assets/area15/sub1/sfx/sfx_registry.json",
+    "assets/area15/sub1/tables.json",
+    "assets/area15/sub1/world_models.emwm",
+    "assets/area15/sub1/world_models.json"
+   ]
+  },
+  "area19_level": {
+   "cmd": [
+    "python3",
+    "tools/export_area19_level.py"
+   ],
+   "outputs": [
+    "assets/area19/loaded_sub_proof.json",
+    "assets/area19/sub0/area19.emcl",
+    "assets/area19/sub0/area19_cells.bin",
+    "assets/area19/sub0/cells.json",
+    "assets/area19/sub0/level/00_id44.emdl",
+    "assets/area19/sub0/level/00_id44.gsmat.json",
+    "assets/area19/sub0/level/level.json",
+    "assets/area19/sub0/level/static_bank.emsc",
+    "assets/area19/sub0/scene.txt"
+   ]
+  },
+  "area19_sfx": {
+   "cmd": [
+    "python3",
+    "tools/export_area19_sfx.py"
+   ],
+   "outputs": [
+    "assets/area19/sub0/sfx/area19_banks.bin",
+    "assets/area19/sub0/sfx/banks.json",
+    "assets/area19/sub0/sfx/sfx_registry.emsr",
+    "assets/area19/sub0/sfx/sfx_registry.json"
+   ]
+  },
+  "area19_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_area19_tables.py"
+   ],
+   "outputs": [
+    "assets/area19/door_destinations.emsp",
+    "assets/area19/overlay_data.emsc",
+    "assets/area19/scripts.emsc",
+    "assets/area19/spawn_table.emsp",
+    "assets/area19/sub0/message_data.emmd",
+    "assets/area19/sub0/roster.emro",
+    "assets/area19/sub0/world_models.emwm",
+    "assets/area19/sub0/world_models.json",
+    "assets/area19/tables.json"
+   ]
+  },
+  "area19s1_split": {
+   "cmd": [
+    "python3",
+    "tools/export_area19s1_split.py"
+   ],
+   "outputs": [
+    "assets/area19s1/loaded_sub_proof.json",
+    "assets/area19s1/sub1.json",
+    "assets/area19s1/sub1/area19.emcl",
+    "assets/area19s1/sub1/area19_cells.bin",
+    "assets/area19s1/sub1/cells.json",
+    "assets/area19s1/sub1/level/00_id44.emdl",
+    "assets/area19s1/sub1/level/00_id44.gsmat.json",
+    "assets/area19s1/sub1/level/level.json",
+    "assets/area19s1/sub1/level/static_bank.emsc",
+    "assets/area19s1/sub1/message_data.emmd",
+    "assets/area19s1/sub1/roster.emro",
+    "assets/area19s1/sub1/scene.txt",
+    "assets/area19s1/sub1/sfx/area19_banks.bin",
+    "assets/area19s1/sub1/sfx/banks.json",
+    "assets/area19s1/sub1/sfx/sfx_registry.emsr",
+    "assets/area19s1/sub1/sfx/sfx_registry.json",
+    "assets/area19s1/sub1/world_models.emwm",
+    "assets/area19s1/sub1/world_models.json",
+    "assets/area19s1/tables.json"
+   ]
+  },
+  "area19x_split": {
+   "cmd": [
+    "python3",
+    "tools/export_area19x_split.py"
+   ],
+   "outputs": [
+    "assets/area19/reload/loaded_sub_proof.json",
+    "assets/area19/reload/reload.json",
+    "assets/area19/reload/sub0/cells.json",
+    "assets/area19/reload/sub0/creature/creature.json",
+    "assets/area19/reload/sub0/creature/id70.emsc",
+    "assets/area19/reload/sub0/creature/id71.emsc",
+    "assets/area19/reload/sub0/level/level.json",
+    "assets/area19/reload/sub0/level/static_bank.emsc",
+    "assets/area19/reload/sub0/sfx/banks.json",
+    "assets/area19/reload/sub0/world_models.emwm",
+    "assets/area19/reload/sub0/world_models.json",
+    "assets/area19/reload/tables.json"
+   ]
+  },
+  "area21_ending_background": {
+   "cmd": [
+    "python3",
+    "tools/export_area21_ending_background.py"
+   ],
+   "outputs": [
+    "assets/area21/sub0/background_20076C0121323740.embg"
+   ]
+  },
+  "area22_level": {
+   "cmd": [
+    "python3",
+    "tools/export_area22_level.py"
+   ],
+   "outputs": [
+    "assets/area22/sub0/area22.emcl",
+    "assets/area22/sub0/area22_cells.bin",
+    "assets/area22/sub0/cells.json",
+    "assets/area22/sub0/level/00_id44.emdl",
+    "assets/area22/sub0/level/00_id44.gsmat.json",
+    "assets/area22/sub0/level/level.json",
+    "assets/area22/sub0/level/static_bank.emsc",
+    "assets/area22/sub0/scene.txt"
+   ]
+  },
+  "area22_sfx": {
+   "cmd": [
+    "python3",
+    "tools/export_area22_sfx.py"
+   ],
+   "outputs": [
+    "assets/area22/sub0/sfx/area22_banks.bin",
+    "assets/area22/sub0/sfx/banks.json",
+    "assets/area22/sub0/sfx/sfx_registry.emsr",
+    "assets/area22/sub0/sfx/sfx_registry.json"
+   ]
+  },
+  "area22_tables": {
+   "cmd": [
+    "python3",
+    "tools/export_area22_tables.py"
+   ],
+   "outputs": [
+    "assets/area22/door_destinations.emsp",
+    "assets/area22/overlay_data.emsc",
+    "assets/area22/spawn_table.emsp",
+    "assets/area22/sub0/message_data.emmd",
+    "assets/area22/sub0/roster.emro",
+    "assets/area22/sub0/world_models.emwm",
+    "assets/area22/sub0/world_models.json",
+    "assets/area22/tables.json"
+   ]
+  },
+  "second_half_static": {
+   "cmd": [
+    "python3",
+    "tools/export_second_half_assets.py",
+    "--kind",
+    "static"
+   ],
+   "outputs": [
+    "assets/area14/door_destinations.emsp",
+    "assets/area14/overlay_data.emsc",
+    "assets/area14/scripts.emsc",
+    "assets/area14/spawn_table.emsp",
+    "assets/area14/static.json",
+    "assets/area14/sub0/roster.emro",
+    "assets/area16/door_destinations.emsp",
+    "assets/area16/overlay_data.emsc",
+    "assets/area16/scripts.emsc",
+    "assets/area16/spawn_table.emsp",
+    "assets/area16/static.json",
+    "assets/area16/sub0/roster.emro",
+    "assets/area16/sub1/roster.emro",
+    "assets/area17/door_destinations.emsp",
+    "assets/area17/overlay_data.emsc",
+    "assets/area17/scripts.emsc",
+    "assets/area17/spawn_table.emsp",
+    "assets/area17/static.json",
+    "assets/area17/sub0/roster.emro",
+    "assets/area18/door_destinations.emsp",
+    "assets/area18/overlay_data.emsc",
+    "assets/area18/spawn_table.emsp",
+    "assets/area18/static.json",
+    "assets/area18/sub0/roster.emro",
+    "assets/area20/door_destinations.emsp",
+    "assets/area20/overlay_data.emsc",
+    "assets/area20/scripts.emsc",
+    "assets/area20/spawn_table.emsp",
+    "assets/area20/static.json",
+    "assets/area20/sub0/roster.emro",
+    "assets/area21/door_destinations.emsp",
+    "assets/area21/overlay_data.emsc",
+    "assets/area21/scripts.emsc",
+    "assets/area21/spawn_table.emsp",
+    "assets/area21/static.json",
+    "assets/area21/sub0/roster.emro"
+   ]
+  },
+  "second_half_all": {
+   "cmd": [
+    "python3",
+    "tools/export_second_half_assets.py",
+    "--kind",
+    "all"
+   ],
+   "outputs": [
+    "assets/area14/area14.json",
+    "assets/area14/door_destinations.emsp",
+    "assets/area14/overlay_data.emsc",
+    "assets/area14/scripts.emsc",
+    "assets/area14/spawn_table.emsp",
+    "assets/area14/sub0/area14.emcl",
+    "assets/area14/sub0/area14_cells.bin",
+    "assets/area14/sub0/background.embg",
+    "assets/area14/sub0/cells.json",
+    "assets/area14/sub0/level/00_id44.emdl",
+    "assets/area14/sub0/level/00_id44.gsmat.json",
+    "assets/area14/sub0/level/level.json",
+    "assets/area14/sub0/level/static_bank.emsc",
+    "assets/area14/sub0/message_data.emmd",
+    "assets/area14/sub0/roster.emro",
+    "assets/area14/sub0/scene.txt",
+    "assets/area14/sub0/sfx/area14_banks.bin",
+    "assets/area14/sub0/sfx/banks.json",
+    "assets/area14/sub0/sfx/sfx_registry.emsr",
+    "assets/area14/sub0/sfx/sfx_registry.json",
+    "assets/area14/sub0/tables.json",
+    "assets/area14/sub0/world_models.emwm",
+    "assets/area14/sub0/world_models.json",
+    "assets/area16/area16.json",
+    "assets/area16/door_destinations.emsp",
+    "assets/area16/overlay_data.emsc",
+    "assets/area16/scripts.emsc",
+    "assets/area16/spawn_table.emsp",
+    "assets/area16/sub0/area16.emcl",
+    "assets/area16/sub0/area16_cells.bin",
+    "assets/area16/sub0/cells.json",
+    "assets/area16/sub0/level/00_id44.emdl",
+    "assets/area16/sub0/level/00_id44.gsmat.json",
+    "assets/area16/sub0/level/dynamic_objects.emsc",
+    "assets/area16/sub0/level/level.json",
+    "assets/area16/sub0/level/static_bank.emsc",
+    "assets/area16/sub0/message_data.emmd",
+    "assets/area16/sub0/roster.emro",
+    "assets/area16/sub0/scene.txt",
+    "assets/area16/sub0/sfx/area16_banks.bin",
+    "assets/area16/sub0/sfx/banks.json",
+    "assets/area16/sub0/sfx/sfx_registry.emsr",
+    "assets/area16/sub0/sfx/sfx_registry.json",
+    "assets/area16/sub0/tables.json",
+    "assets/area16/sub0/world_models.emwm",
+    "assets/area16/sub0/world_models.json",
+    "assets/area16/sub1/area16.emcl",
+    "assets/area16/sub1/area16_cells.bin",
+    "assets/area16/sub1/cells.json",
+    "assets/area16/sub1/level/00_id44.emdl",
+    "assets/area16/sub1/level/00_id44.gsmat.json",
+    "assets/area16/sub1/level/dynamic_objects.emsc",
+    "assets/area16/sub1/level/level.json",
+    "assets/area16/sub1/level/static_bank.emsc",
+    "assets/area16/sub1/message_data.emmd",
+    "assets/area16/sub1/roster.emro",
+    "assets/area16/sub1/scene.txt",
+    "assets/area16/sub1/sfx/area16_banks.bin",
+    "assets/area16/sub1/sfx/banks.json",
+    "assets/area16/sub1/sfx/sfx_registry.emsr",
+    "assets/area16/sub1/sfx/sfx_registry.json",
+    "assets/area16/sub1/tables.json",
+    "assets/area16/sub1/world_models.emwm",
+    "assets/area16/sub1/world_models.json",
+    "assets/area17/area17.json",
+    "assets/area17/door_destinations.emsp",
+    "assets/area17/overlay_data.emsc",
+    "assets/area17/scripts.emsc",
+    "assets/area17/spawn_table.emsp",
+    "assets/area17/sub0/area17.emcl",
+    "assets/area17/sub0/area17_cells.bin",
+    "assets/area17/sub0/background.embg",
+    "assets/area17/sub0/cells.json",
+    "assets/area17/sub0/level/00_id44.emdl",
+    "assets/area17/sub0/level/00_id44.gsmat.json",
+    "assets/area17/sub0/level/dynamic_objects.emsc",
+    "assets/area17/sub0/level/level.json",
+    "assets/area17/sub0/level/static_bank.emsc",
+    "assets/area17/sub0/message_data.emmd",
+    "assets/area17/sub0/roster.emro",
+    "assets/area17/sub0/scene.txt",
+    "assets/area17/sub0/sfx/area17_banks.bin",
+    "assets/area17/sub0/sfx/banks.json",
+    "assets/area17/sub0/sfx/sfx_registry.emsr",
+    "assets/area17/sub0/sfx/sfx_registry.json",
+    "assets/area17/sub0/tables.json",
+    "assets/area17/sub0/world_models.emwm",
+    "assets/area17/sub0/world_models.json",
+    "assets/area18/area18.json",
+    "assets/area18/door_destinations.emsp",
+    "assets/area18/overlay_data.emsc",
+    "assets/area18/spawn_table.emsp",
+    "assets/area18/sub0/area18.emcl",
+    "assets/area18/sub0/area18_cells.bin",
+    "assets/area18/sub0/background.embg",
+    "assets/area18/sub0/cells.json",
+    "assets/area18/sub0/level/00_id44.emdl",
+    "assets/area18/sub0/level/00_id44.gsmat.json",
+    "assets/area18/sub0/level/level.json",
+    "assets/area18/sub0/level/static_bank.emsc",
+    "assets/area18/sub0/message_data.emmd",
+    "assets/area18/sub0/roster.emro",
+    "assets/area18/sub0/scene.txt",
+    "assets/area18/sub0/sfx/area18_banks.bin",
+    "assets/area18/sub0/sfx/banks.json",
+    "assets/area18/sub0/sfx/sfx_registry.emsr",
+    "assets/area18/sub0/sfx/sfx_registry.json",
+    "assets/area18/sub0/tables.json",
+    "assets/area18/sub0/world_models.emwm",
+    "assets/area18/sub0/world_models.json",
+    "assets/area20/area20.json",
+    "assets/area20/door_destinations.emsp",
+    "assets/area20/overlay_data.emsc",
+    "assets/area20/scripts.emsc",
+    "assets/area20/spawn_table.emsp",
+    "assets/area20/sub0/area20.emcl",
+    "assets/area20/sub0/area20_cells.bin",
+    "assets/area20/sub0/cells.json",
+    "assets/area20/sub0/level/00_id44.emdl",
+    "assets/area20/sub0/level/00_id44.gsmat.json",
+    "assets/area20/sub0/level/level.json",
+    "assets/area20/sub0/level/static_bank.emsc",
+    "assets/area20/sub0/message_data.emmd",
+    "assets/area20/sub0/roster.emro",
+    "assets/area20/sub0/scene.txt",
+    "assets/area20/sub0/sfx/area20_banks.bin",
+    "assets/area20/sub0/sfx/banks.json",
+    "assets/area20/sub0/sfx/sfx_registry.emsr",
+    "assets/area20/sub0/sfx/sfx_registry.json",
+    "assets/area20/sub0/tables.json",
+    "assets/area20/sub0/world_models.emwm",
+    "assets/area20/sub0/world_models.json",
+    "assets/area21/area21.json",
+    "assets/area21/door_destinations.emsp",
+    "assets/area21/overlay_data.emsc",
+    "assets/area21/scripts.emsc",
+    "assets/area21/spawn_table.emsp",
+    "assets/area21/sub0/area21.emcl",
+    "assets/area21/sub0/area21_cells.bin",
+    "assets/area21/sub0/background.embg",
+    "assets/area21/sub0/cells.json",
+    "assets/area21/sub0/level/00_id44.emdl",
+    "assets/area21/sub0/level/00_id44.gsmat.json",
+    "assets/area21/sub0/level/dynamic_objects.emsc",
+    "assets/area21/sub0/level/level.json",
+    "assets/area21/sub0/level/static_bank.emsc",
+    "assets/area21/sub0/message_data.emmd",
+    "assets/area21/sub0/roster.emro",
+    "assets/area21/sub0/scene.txt",
+    "assets/area21/sub0/sfx/area21_banks.bin",
+    "assets/area21/sub0/sfx/banks.json",
+    "assets/area21/sub0/sfx/sfx_registry.emsr",
+    "assets/area21/sub0/sfx/sfx_registry.json",
+    "assets/area21/sub0/tables.json",
+    "assets/area21/sub0/world_models.emwm",
+    "assets/area21/sub0/world_models.json"
+   ]
+  },
+  "level_world_textures@00": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "00"
+   ],
+   "outputs": [
+    "assets/levels/00/sub0/world_texture_catalog.json",
+    "assets/levels/00/sub0/world_textures_mode0_costume0.emot",
+    "assets/levels/00/sub1/world_texture_catalog.json",
+    "assets/levels/00/sub1/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@00": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "00"
+   ],
+   "outputs": [
+    "assets/levels/00/sub0/shadow_receivers.emsr",
+    "assets/levels/00/sub0/shadow_receivers.json",
+    "assets/levels/00/sub1/shadow_receivers.emsr",
+    "assets/levels/00/sub1/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@00": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "00"
+   ],
+   "outputs": [
+    "assets/levels/00/sub0/player_texture_variants.json",
+    "assets/levels/00/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/00/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/00/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/00/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/00/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/00/sub0/world_textures_mode2_costume0.emot",
+    "assets/levels/00/sub1/player_texture_variants.json",
+    "assets/levels/00/sub1/world_textures_mode0_costume1.emot",
+    "assets/levels/00/sub1/world_textures_mode0_costume2.emot",
+    "assets/levels/00/sub1/world_textures_mode1_costume0.emot",
+    "assets/levels/00/sub1/world_textures_mode1_costume1.emot",
+    "assets/levels/00/sub1/world_textures_mode1_costume2.emot",
+    "assets/levels/00/sub1/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@01": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "01"
+   ],
+   "outputs": [
+    "assets/levels/01/sub0/world_texture_catalog.json",
+    "assets/levels/01/sub0/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@01": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "01"
+   ],
+   "outputs": [
+    "assets/levels/01/sub0/shadow_receivers.emsr",
+    "assets/levels/01/sub0/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@01": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "01"
+   ],
+   "outputs": [
+    "assets/levels/01/sub0/player_texture_variants.json",
+    "assets/levels/01/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/01/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/01/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/01/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/01/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/01/sub0/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@02": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "02"
+   ],
+   "outputs": [
+    "assets/levels/02/sub0/world_texture_catalog.json",
+    "assets/levels/02/sub0/world_textures_mode0_costume0.emot",
+    "assets/levels/02/sub1/world_texture_catalog.json",
+    "assets/levels/02/sub1/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@02": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "02"
+   ],
+   "outputs": [
+    "assets/levels/02/sub0/shadow_receivers.emsr",
+    "assets/levels/02/sub0/shadow_receivers.json",
+    "assets/levels/02/sub1/shadow_receivers.emsr",
+    "assets/levels/02/sub1/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@02": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "02"
+   ],
+   "outputs": [
+    "assets/levels/02/sub0/player_texture_variants.json",
+    "assets/levels/02/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/02/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/02/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/02/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/02/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/02/sub0/world_textures_mode2_costume0.emot",
+    "assets/levels/02/sub1/player_texture_variants.json",
+    "assets/levels/02/sub1/world_textures_mode0_costume1.emot",
+    "assets/levels/02/sub1/world_textures_mode0_costume2.emot",
+    "assets/levels/02/sub1/world_textures_mode1_costume0.emot",
+    "assets/levels/02/sub1/world_textures_mode1_costume1.emot",
+    "assets/levels/02/sub1/world_textures_mode1_costume2.emot",
+    "assets/levels/02/sub1/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@03": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "03"
+   ],
+   "outputs": [
+    "assets/levels/03/sub0/world_texture_catalog.json",
+    "assets/levels/03/sub0/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@03": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "03"
+   ],
+   "outputs": [
+    "assets/levels/03/sub0/shadow_receivers.emsr",
+    "assets/levels/03/sub0/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@03": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "03"
+   ],
+   "outputs": [
+    "assets/levels/03/sub0/player_texture_variants.json",
+    "assets/levels/03/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/03/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/03/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/03/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/03/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/03/sub0/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@07": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "07"
+   ],
+   "outputs": [
+    "assets/levels/07/sub0/world_texture_catalog.json",
+    "assets/levels/07/sub0/world_textures_mode0_costume0.emot",
+    "assets/levels/07/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/07/sub2/world_texture_catalog.json",
+    "assets/levels/07/sub2/world_textures_mode0_costume0.emot",
+    "assets/levels/07/sub3/world_texture_catalog.json",
+    "assets/levels/07/sub3/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@07": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "07"
+   ],
+   "outputs": [
+    "assets/levels/07/sub0/shadow_receivers.emsr",
+    "assets/levels/07/sub0/shadow_receivers.json",
+    "assets/levels/07/sub2/shadow_receivers.emsr",
+    "assets/levels/07/sub2/shadow_receivers.json",
+    "assets/levels/07/sub3/shadow_receivers.emsr",
+    "assets/levels/07/sub3/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@07": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "07"
+   ],
+   "outputs": [
+    "assets/levels/07/sub0/player_texture_variants.json",
+    "assets/levels/07/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/07/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/07/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/07/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/07/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/07/sub0/world_textures_mode2_costume0.emot",
+    "assets/levels/07/sub2/player_texture_variants.json",
+    "assets/levels/07/sub2/world_textures_mode0_costume1.emot",
+    "assets/levels/07/sub2/world_textures_mode0_costume2.emot",
+    "assets/levels/07/sub2/world_textures_mode1_costume0.emot",
+    "assets/levels/07/sub2/world_textures_mode1_costume1.emot",
+    "assets/levels/07/sub2/world_textures_mode1_costume2.emot",
+    "assets/levels/07/sub2/world_textures_mode2_costume0.emot",
+    "assets/levels/07/sub3/player_texture_variants.json",
+    "assets/levels/07/sub3/world_textures_mode0_costume1.emot",
+    "assets/levels/07/sub3/world_textures_mode0_costume2.emot",
+    "assets/levels/07/sub3/world_textures_mode1_costume0.emot",
+    "assets/levels/07/sub3/world_textures_mode1_costume1.emot",
+    "assets/levels/07/sub3/world_textures_mode1_costume2.emot",
+    "assets/levels/07/sub3/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@08": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "08"
+   ],
+   "outputs": [
+    "assets/levels/08/sub0/world_texture_catalog.json",
+    "assets/levels/08/sub0/world_textures_mode0_costume0.emot",
+    "assets/levels/08/sub2/world_texture_catalog.json",
+    "assets/levels/08/sub2/world_textures_mode0_costume0.emot",
+    "assets/levels/08/sub3/world_texture_catalog.json",
+    "assets/levels/08/sub3/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@08": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "08"
+   ],
+   "outputs": [
+    "assets/levels/08/sub0/shadow_receivers.emsr",
+    "assets/levels/08/sub0/shadow_receivers.json",
+    "assets/levels/08/sub2/shadow_receivers.emsr",
+    "assets/levels/08/sub2/shadow_receivers.json",
+    "assets/levels/08/sub3/shadow_receivers.emsr",
+    "assets/levels/08/sub3/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@08": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "08"
+   ],
+   "outputs": [
+    "assets/levels/08/sub0/player_texture_variants.json",
+    "assets/levels/08/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/08/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/08/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/08/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/08/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/08/sub0/world_textures_mode2_costume0.emot",
+    "assets/levels/08/sub2/player_texture_variants.json",
+    "assets/levels/08/sub2/world_textures_mode0_costume1.emot",
+    "assets/levels/08/sub2/world_textures_mode0_costume2.emot",
+    "assets/levels/08/sub2/world_textures_mode1_costume0.emot",
+    "assets/levels/08/sub2/world_textures_mode1_costume1.emot",
+    "assets/levels/08/sub2/world_textures_mode1_costume2.emot",
+    "assets/levels/08/sub2/world_textures_mode2_costume0.emot",
+    "assets/levels/08/sub3/player_texture_variants.json",
+    "assets/levels/08/sub3/world_textures_mode0_costume1.emot",
+    "assets/levels/08/sub3/world_textures_mode0_costume2.emot",
+    "assets/levels/08/sub3/world_textures_mode1_costume0.emot",
+    "assets/levels/08/sub3/world_textures_mode1_costume1.emot",
+    "assets/levels/08/sub3/world_textures_mode1_costume2.emot",
+    "assets/levels/08/sub3/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@04": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "04"
+   ],
+   "outputs": [
+    "assets/levels/04/sub0/world_texture_catalog.json",
+    "assets/levels/04/sub0/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@04": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "04"
+   ],
+   "outputs": [
+    "assets/levels/04/sub0/shadow_receivers.emsr",
+    "assets/levels/04/sub0/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@04": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "04"
+   ],
+   "outputs": [
+    "assets/levels/04/sub0/player_texture_variants.json",
+    "assets/levels/04/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/04/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/04/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/04/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/04/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/04/sub0/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@06": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "06"
+   ],
+   "outputs": [
+    "assets/levels/06/sub0/world_texture_catalog.json",
+    "assets/levels/06/sub0/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@06": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "06"
+   ],
+   "outputs": [
+    "assets/levels/06/sub0/shadow_receivers.emsr",
+    "assets/levels/06/sub0/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@06": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "06"
+   ],
+   "outputs": [
+    "assets/levels/06/sub0/player_texture_variants.json",
+    "assets/levels/06/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/06/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/06/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/06/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/06/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/06/sub0/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@13": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "13"
+   ],
+   "outputs": [
+    "assets/levels/13/sub0/world_texture_catalog.json",
+    "assets/levels/13/sub0/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@13": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "13"
+   ],
+   "outputs": [
+    "assets/levels/13/sub0/shadow_receivers.emsr",
+    "assets/levels/13/sub0/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@13": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "13"
+   ],
+   "outputs": [
+    "assets/levels/13/sub0/player_texture_variants.json",
+    "assets/levels/13/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/13/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/13/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/13/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/13/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/13/sub0/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@13x": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "13x"
+   ],
+   "outputs": [
+    "assets/levels/13x/sub0/world_texture_catalog.json",
+    "assets/levels/13x/sub0/world_textures_mode0_costume0.emot",
+    "assets/levels/13x/sub0/world_textures_mode0_costume1.emot"
+   ]
+  },
+  "level_shadow_receivers@13x": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "13x"
+   ],
+   "outputs": [
+    "assets/levels/13x/sub0/shadow_receivers.emsr",
+    "assets/levels/13x/sub0/shadow_receivers.json"
+   ]
+  },
+  "level_world_textures@15": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "15"
+   ],
+   "outputs": [
+    "assets/levels/15/sub0/world_texture_catalog.json",
+    "assets/levels/15/sub0/world_textures_mode0_costume0.emot",
+    "assets/levels/15/sub1/world_texture_catalog.json",
+    "assets/levels/15/sub1/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@15": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "15"
+   ],
+   "outputs": [
+    "assets/levels/15/sub0/shadow_receivers.emsr",
+    "assets/levels/15/sub0/shadow_receivers.json",
+    "assets/levels/15/sub1/shadow_receivers.emsr",
+    "assets/levels/15/sub1/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@15": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "15"
+   ],
+   "outputs": [
+    "assets/levels/15/sub0/player_texture_variants.json",
+    "assets/levels/15/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/15/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/15/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/15/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/15/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/15/sub0/world_textures_mode2_costume0.emot",
+    "assets/levels/15/sub1/player_texture_variants.json",
+    "assets/levels/15/sub1/world_textures_mode0_costume1.emot",
+    "assets/levels/15/sub1/world_textures_mode0_costume2.emot",
+    "assets/levels/15/sub1/world_textures_mode1_costume0.emot",
+    "assets/levels/15/sub1/world_textures_mode1_costume1.emot",
+    "assets/levels/15/sub1/world_textures_mode1_costume2.emot",
+    "assets/levels/15/sub1/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@19": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "19"
+   ],
+   "outputs": [
+    "assets/levels/19/sub0/world_texture_catalog.json",
+    "assets/levels/19/sub0/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@19": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "19"
+   ],
+   "outputs": [
+    "assets/levels/19/sub0/shadow_receivers.emsr",
+    "assets/levels/19/sub0/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@19": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "19"
+   ],
+   "outputs": [
+    "assets/levels/19/sub0/player_texture_variants.json",
+    "assets/levels/19/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/19/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/19/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/19/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/19/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/19/sub0/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@19x": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "19x"
+   ],
+   "outputs": [
+    "assets/levels/19x/sub0/world_texture_catalog.json",
+    "assets/levels/19x/sub0/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@19x": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "19x"
+   ],
+   "outputs": [
+    "assets/levels/19x/sub0/shadow_receivers.emsr",
+    "assets/levels/19x/sub0/shadow_receivers.json"
+   ]
+  },
+  "level_world_textures@19s1": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "19s1"
+   ],
+   "outputs": [
+    "assets/levels/19s1/sub1/world_texture_catalog.json",
+    "assets/levels/19s1/sub1/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@19s1": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "19s1"
+   ],
+   "outputs": [
+    "assets/levels/19s1/sub1/shadow_receivers.emsr",
+    "assets/levels/19s1/sub1/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@19s1": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "19s1"
+   ],
+   "outputs": [
+    "assets/levels/19s1/sub1/player_texture_variants.json",
+    "assets/levels/19s1/sub1/world_textures_mode0_costume1.emot",
+    "assets/levels/19s1/sub1/world_textures_mode0_costume2.emot",
+    "assets/levels/19s1/sub1/world_textures_mode1_costume0.emot",
+    "assets/levels/19s1/sub1/world_textures_mode1_costume1.emot",
+    "assets/levels/19s1/sub1/world_textures_mode1_costume2.emot",
+    "assets/levels/19s1/sub1/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@22": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "22"
+   ],
+   "outputs": [
+    "assets/levels/22/sub0/world_texture_catalog.json",
+    "assets/levels/22/sub0/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@22": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "22"
+   ],
+   "outputs": [
+    "assets/levels/22/sub0/shadow_receivers.emsr",
+    "assets/levels/22/sub0/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@22": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "22"
+   ],
+   "outputs": [
+    "assets/levels/22/sub0/player_texture_variants.json",
+    "assets/levels/22/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/22/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/22/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/22/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/22/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/22/sub0/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@00s2": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "00s2"
+   ],
+   "outputs": [
+    "assets/levels/00/sub2/world_texture_catalog.json",
+    "assets/levels/00/sub2/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@00s2": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "00s2"
+   ],
+   "outputs": [
+    "assets/levels/00/sub2/shadow_receivers.emsr",
+    "assets/levels/00/sub2/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@00s2": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "00s2"
+   ],
+   "outputs": [
+    "assets/levels/00/sub2/player_texture_variants.json",
+    "assets/levels/00/sub2/world_textures_mode0_costume1.emot",
+    "assets/levels/00/sub2/world_textures_mode0_costume2.emot",
+    "assets/levels/00/sub2/world_textures_mode1_costume0.emot",
+    "assets/levels/00/sub2/world_textures_mode1_costume1.emot",
+    "assets/levels/00/sub2/world_textures_mode1_costume2.emot",
+    "assets/levels/00/sub2/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@06s1": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "06s1"
+   ],
+   "outputs": [
+    "assets/levels/06/sub1/world_texture_catalog.json",
+    "assets/levels/06/sub1/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@06s1": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "06s1"
+   ],
+   "outputs": [
+    "assets/levels/06/sub1/shadow_receivers.emsr",
+    "assets/levels/06/sub1/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@06s1": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "06s1"
+   ],
+   "outputs": [
+    "assets/levels/06/sub1/player_texture_variants.json",
+    "assets/levels/06/sub1/world_textures_mode0_costume1.emot",
+    "assets/levels/06/sub1/world_textures_mode0_costume2.emot",
+    "assets/levels/06/sub1/world_textures_mode1_costume0.emot",
+    "assets/levels/06/sub1/world_textures_mode1_costume1.emot",
+    "assets/levels/06/sub1/world_textures_mode1_costume2.emot",
+    "assets/levels/06/sub1/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@01s1": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "01s1"
+   ],
+   "outputs": [
+    "assets/levels/01/sub1/world_texture_catalog.json",
+    "assets/levels/01/sub1/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@01s1": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "01s1"
+   ],
+   "outputs": [
+    "assets/levels/01/sub1/shadow_receivers.emsr",
+    "assets/levels/01/sub1/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@01s1": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "01s1"
+   ],
+   "outputs": [
+    "assets/levels/01/sub1/player_texture_variants.json",
+    "assets/levels/01/sub1/world_textures_mode0_costume1.emot",
+    "assets/levels/01/sub1/world_textures_mode0_costume2.emot",
+    "assets/levels/01/sub1/world_textures_mode1_costume0.emot",
+    "assets/levels/01/sub1/world_textures_mode1_costume1.emot",
+    "assets/levels/01/sub1/world_textures_mode1_costume2.emot",
+    "assets/levels/01/sub1/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@02s2": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "02s2"
+   ],
+   "outputs": [
+    "assets/levels/02/sub2/world_texture_catalog.json",
+    "assets/levels/02/sub2/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@02s2": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "02s2"
+   ],
+   "outputs": [
+    "assets/levels/02/sub2/shadow_receivers.emsr",
+    "assets/levels/02/sub2/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@02s2": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "02s2"
+   ],
+   "outputs": [
+    "assets/levels/02/sub2/player_texture_variants.json",
+    "assets/levels/02/sub2/world_textures_mode0_costume1.emot",
+    "assets/levels/02/sub2/world_textures_mode0_costume2.emot",
+    "assets/levels/02/sub2/world_textures_mode1_costume0.emot",
+    "assets/levels/02/sub2/world_textures_mode1_costume1.emot",
+    "assets/levels/02/sub2/world_textures_mode1_costume2.emot",
+    "assets/levels/02/sub2/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@14": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "14"
+   ],
+   "outputs": [
+    "assets/levels/14/sub0/world_texture_catalog.json",
+    "assets/levels/14/sub0/world_textures_mode0_costume0.emot",
+    "assets/levels/14/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/14/sub0/world_textures_mode1_costume2.emot"
+   ]
+  },
+  "level_shadow_receivers@14": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "14"
+   ],
+   "outputs": [
+    "assets/levels/14/sub0/shadow_receivers.emsr",
+    "assets/levels/14/sub0/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@14": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "14"
+   ],
+   "outputs": [
+    "assets/levels/14/sub0/player_texture_variants.json",
+    "assets/levels/14/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/14/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/14/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/14/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/14/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/14/sub0/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@17": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "17"
+   ],
+   "outputs": [
+    "assets/levels/17/sub0/world_texture_catalog.json",
+    "assets/levels/17/sub0/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@17": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "17"
+   ],
+   "outputs": [
+    "assets/levels/17/sub0/shadow_receivers.emsr",
+    "assets/levels/17/sub0/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@17": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "17"
+   ],
+   "outputs": [
+    "assets/levels/17/sub0/player_texture_variants.json",
+    "assets/levels/17/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/17/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/17/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/17/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/17/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/17/sub0/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@16": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "16"
+   ],
+   "outputs": [
+    "assets/levels/16/sub0/world_texture_catalog.json",
+    "assets/levels/16/sub0/world_textures_mode0_costume0.emot",
+    "assets/levels/16/sub1/world_texture_catalog.json",
+    "assets/levels/16/sub1/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@16": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "16"
+   ],
+   "outputs": [
+    "assets/levels/16/sub0/shadow_receivers.emsr",
+    "assets/levels/16/sub0/shadow_receivers.json",
+    "assets/levels/16/sub1/shadow_receivers.emsr",
+    "assets/levels/16/sub1/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@16": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "16"
+   ],
+   "outputs": [
+    "assets/levels/16/sub0/player_texture_variants.json",
+    "assets/levels/16/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/16/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/16/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/16/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/16/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/16/sub0/world_textures_mode2_costume0.emot",
+    "assets/levels/16/sub1/player_texture_variants.json",
+    "assets/levels/16/sub1/world_textures_mode0_costume1.emot",
+    "assets/levels/16/sub1/world_textures_mode0_costume2.emot",
+    "assets/levels/16/sub1/world_textures_mode1_costume0.emot",
+    "assets/levels/16/sub1/world_textures_mode1_costume1.emot",
+    "assets/levels/16/sub1/world_textures_mode1_costume2.emot",
+    "assets/levels/16/sub1/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@20": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "20"
+   ],
+   "outputs": [
+    "assets/levels/20/sub0/world_texture_catalog.json",
+    "assets/levels/20/sub0/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@20": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "20"
+   ],
+   "outputs": [
+    "assets/levels/20/sub0/shadow_receivers.emsr",
+    "assets/levels/20/sub0/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@20": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "20"
+   ],
+   "outputs": [
+    "assets/levels/20/sub0/player_texture_variants.json",
+    "assets/levels/20/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/20/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/20/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/20/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/20/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/20/sub0/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@21": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "21"
+   ],
+   "outputs": [
+    "assets/levels/21/sub0/world_texture_catalog.json",
+    "assets/levels/21/sub0/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@21": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "21"
+   ],
+   "outputs": [
+    "assets/levels/21/sub0/shadow_receivers.emsr",
+    "assets/levels/21/sub0/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@21": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "21"
+   ],
+   "outputs": [
+    "assets/levels/21/sub0/player_texture_variants.json",
+    "assets/levels/21/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/21/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/21/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/21/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/21/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/21/sub0/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_world_textures@18": {
+   "cmd": [
+    "python3",
+    "tools/export_level_world_textures.py",
+    "--profile",
+    "18"
+   ],
+   "outputs": [
+    "assets/levels/18/sub0/world_texture_catalog.json",
+    "assets/levels/18/sub0/world_textures_mode0_costume0.emot"
+   ]
+  },
+  "level_shadow_receivers@18": {
+   "cmd": [
+    "python3",
+    "tools/export_level_shadow_receivers.py",
+    "--profile",
+    "18"
+   ],
+   "outputs": [
+    "assets/levels/18/sub0/shadow_receivers.emsr",
+    "assets/levels/18/sub0/shadow_receivers.json"
+   ]
+  },
+  "player_texture_variants@18": {
+   "cmd": [
+    "python3",
+    "tools/export_player_texture_variants.py",
+    "--profile",
+    "18"
+   ],
+   "outputs": [
+    "assets/levels/18/sub0/player_texture_variants.json",
+    "assets/levels/18/sub0/world_textures_mode0_costume1.emot",
+    "assets/levels/18/sub0/world_textures_mode0_costume2.emot",
+    "assets/levels/18/sub0/world_textures_mode1_costume0.emot",
+    "assets/levels/18/sub0/world_textures_mode1_costume1.emot",
+    "assets/levels/18/sub0/world_textures_mode1_costume2.emot",
+    "assets/levels/18/sub0/world_textures_mode2_costume0.emot"
+   ]
+  },
+  "level_module_pack_final": {
+   "cmd": [
+    "python3",
+    "tools/export_level_module_pack.py"
+   ],
+   "outputs": [
+    "assets/levels/modules.emml",
+    "assets/levels/modules.json"
+   ]
+  },
+  "module_loader_final": {
+   "cmd": [
+    "python3",
+    "tools/export_module_loader.py"
+   ],
+   "outputs": [
+    "assets/module_loader/modules.emml",
+    "assets/module_loader/modules.json"
+   ]
+  },
+  "sfx_registry_final": {
+   "cmd": [
+    "python3",
+    "tools/export_sfx_registry.py"
+   ],
+   "outputs": [
+    "assets/sfx/sfx_registry.emsr",
+    "assets/sfx/sfx_registry.json"
+   ]
+  },
+  "streams_final": {
+   "cmd": [
+    "python3",
+    "tools/export_streams.py"
+   ],
+   "outputs": [
+    "assets/streams/streams.emst",
+    "assets/streams/streams.json"
+   ]
+  }
+ }
+}

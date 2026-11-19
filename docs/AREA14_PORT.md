@@ -95,7 +95,14 @@ level: sixteen files, none equal to n0's. It is bound as a later area's sub.
   14` writes `assets/levels/14/sub0/` (textures: (0, 0), (1, 1), (1, 2) from
   the captures, the other pairs by export_player_texture_variants; (1, 1) and
   (1, 2) are cross-checked by k01_02 .. k01_05). The sfx registry holds
-  (0x0E, 0).
+  (0x0E, 0). Order: `export_player_texture_variants.py --profile 14` must run
+  after `export_level_world_textures.py --profile 14` (also 07 and every other
+  profile): the level tool rewrites the recorded pairs with the recorded keys
+  only, the variants tool adds the pair's player model keys (model 0x3E: 17
+  added, 0x3F: 23, 0x40: 11; 10 changed each). A level-tool run alone on
+  2026-11-18 left levels/07 (1, 0) and levels/14 (1, 1), (1, 2) without them
+  until lane ASSET-FRESH re-ran both; `tools/asset_freshness.py`
+  flags that order.
 - **Runtime**: a mid area (`assets/area14/sub0`), a later area for the boot
   dispatch, bound by em_area01_runtime_bind_area; its placements' overlay
   behaviours (0x823580, 0x823760, 0x8238E0, 0x823B30, 0x823E30, 0x823FC0,
