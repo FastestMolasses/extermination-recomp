@@ -52,13 +52,22 @@ REFS = DECOMP / 'build/fork_refs/far_light_readback'
 NAME = 'far_light_readback'
 OUT = ROOT / 'build/guided_chain' / NAME
 TAKES = ['g75_area20_area21', 'g76_area21_prep'] + (['g77_area21_phase1'] if reference_mode.FULL else [])
-# Pinned per take (measured 2026-11-19, lane PORT-FLARE-Z): in-phase transfers with
-# Z one LSB off / more than one off (GS_EXACT.md "Not exact": Z), and the transfers
-# in the other phase after a load.
+# Pinned per take: in-phase transfers with Z one LSB off / more than one off
+# (GS_EXACT.md "Not exact": Z), in-phase transfers whose decision (the word at +8
+# zero or not) differs, and the transfers in the other phase. Measured 2026-11-19,
+# lane PORT-CARD-CHAINS: the chain starts in the recording's bank and its loads take
+# the takes' recorded loader reads (tools/guided_chain.py defaults, STARTUP.md
+# "Guided chains"), so every transfer of g75 .. g77 is in the original's phase
+# (lane PORT-FLARE-Z had g76 428 and all of g77 in the other). g77's 139 decisions
+# (ticks 1687..1747, 1763..1765, 4474..4489, 6618..6639, 7273..7294, 7597..7609,
+# 8558..8561, 12025): the port's Z at the point is 0 (nothing drawn) where the
+# original's is not, and 25 transfers at those stretches' edges have other pixels at
+# Z 0 with the decision equal: a draw difference of the GS frame model, open
+# (AREA21_PORT.md "Step K's Z read-back").
 PINNED = {
-    'g75_area20_area21': dict(lsb1=1, more=0, other_phase=0, other_phase_decision=0),
-    'g76_area21_prep': dict(lsb1=102, more=7, other_phase=428, other_phase_decision=0),
-    'g77_area21_phase1': dict(lsb1=0, more=0, other_phase=3523, other_phase_decision=143),
+    'g75_area20_area21': dict(lsb1=1, more=0, decision=0, coverage=0, other_phase=0, other_phase_decision=0),
+    'g76_area21_prep': dict(lsb1=297, more=8, decision=0, coverage=0, other_phase=0, other_phase_decision=0),
+    'g77_area21_phase1': dict(lsb1=213, more=349, decision=139, coverage=25, other_phase=0, other_phase_decision=0),
 }
 
 
@@ -146,9 +155,12 @@ def main():
                 continue
             o, p = z24(data), z24(r['data'])
             if (data[16:24] == '00000000') != (r['data'][16:24] == '00000000'):
-                bad.append(f'{where}: the word at +8 {r["data"][16:24]}, original {data[16:24]} (the flare decision)')
+                # Counted and pinned (PINNED 'decision'); its coverage, Z and the flare
+                # calls after it follow from it and are not compared.
+                c['decision'] += 1
+                continue
             if [v == 0 for v in o] != [v == 0 for v in p]:
-                bad.append(f'{where}: the pixels with nothing drawn (Z 0) differ')
+                c['coverage'] += 1      # pinned: the same draw difference's edges (decision equal)
             worst = max(abs(a - b) for a, b in zip(o, p))
             c['exact' if worst == 0 else 'lsb1' if worst == 1 else 'more'] += 1
             if data[16:24] == '00000000':
@@ -175,10 +187,11 @@ def main():
         c = counts[take]
         print(f'  {take}: {len(takes[take]["readbacks"])} original transfers ({len(takes[take]["flares"])} flares); '
               f'port {c["transfers"]}: in phase {c["exact"]} exact, {c["lsb1"]} one LSB, {c["more"]} more '
-              f'({c["decision_flare"]} with the word 0); {c["other_phase"]} in the other phase '
-              f'({c["other_phase_decision"]} with another decision)')
+              f'({c["decision_flare"]} with the word 0), {c["decision"]} with another decision, '
+              f'{c["coverage"]} with other pixels at Z 0; '
+              f'{c["other_phase"]} in the other phase ({c["other_phase_decision"]} with another decision)')
         pin = PINNED[take]
-        for key in ('lsb1', 'more', 'other_phase', 'other_phase_decision'):
+        for key in ('lsb1', 'more', 'decision', 'coverage', 'other_phase', 'other_phase_decision'):
             if pin[key] is not None and c[key] != pin[key]:
                 bad.append(f'{take}: {key} {c[key]}, pinned {pin[key]} (update PINNED with the reason)')
     if bad:

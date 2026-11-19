@@ -2971,17 +2971,18 @@ if nothing was drawn there.
   transfer of chain g20 (AREA20 into AREA21 and the prep, g75 and g76)
   with the original's, replayed on the PCSX2 fork's software renderer:
   g75's 1,251 transfers equal (1,250 byte-exact, one Z off by one LSB; all
-  484 flares on the original's frames); g76: every point, and in the
-  original's field phase all 1,120 decisions and coverages equal (1,011
-  byte-exact; Z one LSB off in 102, up to 6 in 7: the GS model's open Z
-  items). The fork's Metal renderer reads back a different depth (335
+  484 flares on the original's frames); g76: all 1,548 transfers in the
+  original's field phase since lane PORT-CARD-CHAINS (the chain starts in the
+  recording's bank and its loads take the recorded loader reads), every
+  decision and coverage equal (1,243 byte-exact; Z one LSB off in 297, more
+  in 8: the GS model's open Z items). The fork's Metal renderer reads back a different depth (335
   flares over g76 where the exact GS has none): the reference is the
   software renderer.
-- Status: VERIFIED for the decision on g75 and the in-phase part of g76;
-  PARTIAL beyond: after some of the chain's loads the port's frames run in
-  the other field (the port's loads are shorter), so a transfer reads the
-  other field's depth (g77: 143 of 3,523 decisions differ). Not a launcher
-  option; the picture of the flare itself is not compared with a capture.
+- Status: VERIFIED for the decision on g75 and g76; PARTIAL on g77: all
+  3,523 transfers in the original's phase, 139 decisions differ where the
+  port's Z at the point is 0 and the original's is not (eight stretches: a
+  draw difference, open; AREA21_PORT.md). Not a launcher option; the picture
+  of the flare itself is not compared with a capture.
 
 ### AREA19 from its start cards
 

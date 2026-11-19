@@ -412,23 +412,25 @@ backend fail-stopped on the cue's first sector (00112610, code 8).
 tools/export_streams.py exports it (MUSIC_EXTRA); assets/streams must be
 re-exported.
 
-**Open: g67 rows 6866 .. 6868.** The arrival scene (script 0x8276C0, 3B8D
-= 2 from row 5314 in both) ends at row 6865 in the port and 6866 in the
-original (the take's rows.tbl, 0x70003B8C..8F), so the player's drop to the
-floor starts one frame early; the end position is the original's. The
-same with EM_PS2_DISC_DRIVE_TIMING=1, so not the stream's host speed.
-rand() also differs from g67 row 5645 (inside the scene) with no position
-change. Not yet traced to an op.
+**g67 rows 6866 .. 6868 (closed 2026-11-19, lane PORT-CARD-CHAINS).** The
+arrival scene (script 0x8276C0, 3B8D = 2 from row 5314 in both) ended at row
+6865 in the port and 6866 in the original with the drive model (the
+EM_PS2_DISC_DRIVE_TIMING=1 model, not host speed, as tried before). With the
+original's recorded per-read drive timing (`EM_PS2_DRIVE_REPLAY`, the guided
+takes' tables, IOP_STREAM.md "Guided takes"; the chains' default since this
+lane) it ends at 6866: g67 is 6355 of 6355 compared rows on the row. The
+scene's end follows its stream reads' drive time, not an op.
 
 **g68 (AREA06 sub 1 -> AREA01).** route_g16 now holds g68_area06_area01
 (capture_from_take, takes g59 .. g68; the folders of g59 .. g67
-unchanged) and chain g16 plays it: 675 of 2805 compared rows on the row,
-no fault, the run reaches g68's last row. First divergences: rand() from
-row 8 (the draw count of the frame before), position 0.05 away in z at row
-675 (port -674.013, row -674.063, the pit's east side), heading pi/8 off
-from row 701; the port then misses the area change into AREA01 entry 7
-(row 2958: bytes 06 01 03 where the original has 01 01 07) and takes a hit
-at 2981 the original did not. Not investigated yet.
+unchanged) and chain g16 plays it. With the drive model: 675 of 2805
+compared rows on the row (position 0.05 away at row 675, then the area
+change into AREA01 entry 7 missed). With the recorded drive timing (the
+chains' default since lane PORT-CARD-CHAINS, 2026-11-19): **2801 of 2801
+compared rows on the row**, the area change into AREA01 entry 7 at the
+original's row; rand() differs at row 1973 only (the frame before drew
+differently; the row's word is re-seeded). Chain g16 is then on the row
+from g59 to g68's end.
 
 ### Lane PORT-A16-DRAW (2026-11-17, branch `a16draw`): model kind 3's draw
 

@@ -751,12 +751,13 @@ Overlay functions: 49 (AI 1, AU 3, C 43, NM 2; decomp status at the census commi
   ends at the original's end position. New: 001EF780 (em_area06_port,
   bound in em_effects_live), the module loader keeps a split read's
   untouched suffix in place (the player's script bank under launcher C's
-  read), MUSIC.DAT cue 0x15 exported (0x825E20's 001FB0B0). Open: g67's
-  arrival scene ends one frame early (3B8D 2 -> 0 at row 6865, the
-  original's 6866; the same with EM_PS2_DISC_DRIVE_TIMING=1). The chain
-  now includes g68 (AREA06 sub 1 -> AREA01; route_g16 extended): on the
-  row to row 674, then 0.05 off at 675 and the area change missed (row
-  2958).
+  read), MUSIC.DAT cue 0x15 exported (0x825E20's 001FB0B0). The chain
+  now includes g68 (AREA06 sub 1 -> AREA01; route_g16 extended). With the
+  drive model g67's arrival scene ended one frame early and g68 left the
+  row at 675; with the original's recorded per-read drive timing (the
+  chains' default since lane PORT-CARD-CHAINS, 2026-11-19) g67 is 6355 /
+  6355 and g68 2801 / 2801: chain g16 is on the row from g59 to g68's end
+  (AREA16_PORT.md).
 
 - AREA02 sub 2 (lane PORT-A02S2, AREA02_ASSETS.md, its section on sub 2):
   exported (tools/export_area02s2_assets.py over the fork captures

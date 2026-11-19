@@ -285,7 +285,8 @@ its statuses are the ones that count.
     playback follows the original's disc timing read for read and stays on the
     recording (the guided chain from the title was exact only to segment 978
     without it); `--no-drive-replay` plays with the drive model instead.
-    `tools/guided_chain.py` takes it only with `--drive-replay`. This is never
+    `tools/guided_chain.py` serves it by default too since lane PORT-CARD-CHAINS
+    (2026-11-19; `--no-drive-replay` without). This is never
     game behaviour: the game itself, every launcher setting and the Original
     profile answer at host speed (the user's decision of 2026-09-27), and the
     PS2 disc-drive timing switch the playbacks set stays the optional switch it

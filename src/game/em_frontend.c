@@ -73,6 +73,7 @@ static struct {
     uint32_t movie_sound_first; /* the first sounding field's vblank (em_frame_vblanks), or UINT32_MAX */
     unsigned menu_ticks;
     unsigned menu_wait;  /* EM_STARTUP_MENU_WAIT (fixtures only) */
+    unsigned load_dwell; /* EM_START_AT_DWELL (comparison only) */
     unsigned seen_screens;
     unsigned captured;
     uint32_t load_serial;  /* the title's load screen (001AC070 state 5) */
@@ -1331,6 +1332,13 @@ static void start_at_pad_end(void)
     const EmSceneState *sc = em_scene_state();
     printf("%s: pad end at (%.3f,%.3f,%.3f) area %02X %02X %02X 3B8D %u\n", load_prefix(), g.pos[0], g.pos[1],
            g.pos[2], sc->d810700, sc->d810701, sc->d810702, sc->spad3B8D);
+    /* The comparison-only drive replay's account (EM_PS2_DRIVE_REPLAY):
+     * which recorded reads the run served, the stream lanes' and the module
+     * loader's (tools/guided_chain.py stops the run at the block below). */
+    if (getenv("EM_PS2_DRIVE_REPLAY")) {
+        em_stream_live_drive_report(stdout);
+        em_scene_bindings_module_loader_report(stdout);
+    }
     load_test_block("at the pad end");
     fflush(stdout);
 }
@@ -1565,7 +1573,7 @@ static void startup_task(void)
             input.held = input.pressed = EM_PAD_DOWN;
             expected_cursor = 1;
         }
-        if (load_drive() && f.menu_ticks == 15)
+        if (load_drive() && f.menu_ticks == 15 + f.load_dwell)
             input.held = input.pressed = EM_PAD_CROSS;
         /* EM_STARTUP_TEST=options: Down twice to OPTIONS, its CROSS. */
         if (options_test() && ot.phase == 0 && (f.menu_ticks == 13 || f.menu_ticks == 14)) {
@@ -1738,6 +1746,15 @@ void em_frontend_install(void)
     f.menu_wait = wait ? (unsigned)strtoul(wait, NULL, 10) : 0;
     if (f.menu_wait > 14)
         f.menu_wait = 14;
+    /* EM_START_AT_DWELL=<n> (0..14; comparison only, STARTUP.md "Guided
+     * chains"): the title holds n more idle ticks before LOAD GAME's CROSS,
+     * as a player's later press does. Every frame after it comes n frames
+     * later, so the loaded game's frame index D_00810E80 flips when n is
+     * odd: tools/guided_chain.py starts a chain in the recording's bank. */
+    const char *dwell = getenv("EM_START_AT") ? getenv("EM_START_AT_DWELL") : NULL;
+    f.load_dwell = dwell ? (unsigned)strtoul(dwell, NULL, 10) : 0;
+    if (f.load_dwell > 14)
+        f.load_dwell = 14;
     em_startup_init(&f.flow, notify, NULL);
     em_frame_set_movie_pump(movie_pump, NULL);
     em_frame_set_movie_vblank(movie_vblank, NULL);

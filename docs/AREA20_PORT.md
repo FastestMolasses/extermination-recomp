@@ -166,7 +166,27 @@ on the guided run's rows (the takes g73 / g74 were re-recorded and kept on
 
 ## What is left
 
-- The two one-frame differences of g73 (rows 1077 and 1130) are not traced.
+- The two one-frame differences of g73 (rows 1077 and 1130) are the card's,
+  not AREA04's or AREA20's code (lane PORT-CARD-CHAINS, 2026-11-19). The radio
+  scene (3B8D from row 49, five Cross presses 121 rows apart) is 1028 rows in
+  the take and in the chain from the title (watch_takes: every C and P
+  segment of the whole run has the original's length), 1030 from card g73.
+  The stream replay's account at the pad's end shows why: from row 48 the
+  port's lane-0 music refills read one 16-sector block behind the
+  recording's (the port's 710545 at counter 595406, 710561 at 595460; the
+  recording's 710561 at 595390, 710577 at 595408), and the voiced lines'
+  reads (812676, 812738) are issued 5 and 11 counters earlier than the
+  recording's, as the sequencer 001FA0D0 serves a refill or a voice read
+  first by what is pending (IOP_STREAM.md item 3). The card's LOAD GAME
+  starts AREA04's music when its load ends (and the lift [10]'s arrival
+  scene runs again, EM_START_AT_SCENE_WAIT), where the continuous run's music
+  had played since g72's area load: a LOAD GAME's music position, which the
+  original's LOAD GAME has too. The IOP tick phase does not move it
+  (EM_IOP_TICK_PHASE 0, 32, 64, 96: the same two rows). Row 1130's 0.0012
+  rad heading, 53 rows after the scene's end, is not traced (not proven to be
+  the same two frames).
+  Restoring the music lanes' IOP-side state at row 0 is not a comparison aid
+  the port has; g74 .. g80 are on every compared row.
 - Who spawns 0x823660 and 0x823840 is not traced: no overlay word names
   them, but boot data does (0x823660 at 0x259A0C; 0x823840 at 0x259A3C and
   0x275A3C; 0x823580 / 0x823600 / 0x823780 appear in the same tables), so

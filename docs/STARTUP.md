@@ -606,6 +606,11 @@ recording-derived and stay in the ignored `build/`.
   `tools/guided_chain.py g21 --set EM_START_AT_CARD_SWAP=27800:<empty folder
   with slot1/ and slot2/>`, docs/AREA21_PORT.md "Ending 2"). The host card
   needs no re-seat of its own: em_memcard answers a formatted card every time.
+  `EM_START_AT_DWELL=<n>` (0..14, comparison only; tools/guided_chain.py) makes the
+  title hold n more idle ticks before LOAD GAME's CROSS (menu tick 15 + n), so
+  every later frame comes n frames later and the loaded game's frame index
+  D_00810E80 flips when n is odd ("Guided chains": a chain's row 0 in the
+  recording's bank).
   `EM_START_AT_COUNTER0=<counter>` (comparison only, with `EM_PS2_DRIVE_REPLAY`;
   `tools/guided_chain.py --drive-replay`) is the recording's main-loop counter at
   script frame 0: every script frame maps the run's counter onto that counter
@@ -780,6 +785,64 @@ frame-end hook (em_start_at_frame_end) keeps the rand() word, position and
 heading, the next hook traces them and re-seeds the row's word with the
 draws made since the frame's start replayed (0x1AE040 state 4's re-place
 and 001FAE70 draw on a room move run before the hook).
+
+**Lane PORT-CARD-CHAINS (2026-11-19, from port main 34416d10).** The chains
+serve the original's recorded per-read drive timing by default, as
+tools/watch_takes.py does (`--no-drive-replay` plays the drive model;
+IOP_STREAM.md "Guided takes"): with the model g16's g67 arrival scene ended a
+frame early and g68 left the rows at 675 (the stream reads' drive time; the
+chains' rows were never the drive model's). Results with it:
+
+| Chain | Card | On every compared row | Left |
+|---|---|---|---|
+| g16 | g59 | g59 .. g68 (g67 6355 / 6355, g68 2801 / 2801) | nothing |
+| g11 | g49 | g49 .. g58 | nothing |
+| g17 `--steer g45` | g45 | g46 .. g58 (g56 7665 / 7665) | g45 667 / 1819 |
+| g18 `--steer g41` | g41 | g42 .. g58: g48's AREA11 entry-3 arrival no longer faults (lane PORT-A11-RETURN), all 104,731 frames played | g41 7 / 2201 |
+| g20 | g73 | g74 .. g80 (g80 28171 / 28171) | g73 4191 / 4192 (row 1077's script selector two frames, row 1130's heading 0.0012) |
+
+Every difference left is in a chain's first take, the card stretch: what the
+card's LOAD GAME rebuilds that the continuous run had mid-way, which a player's
+LOAD GAME of that save does too (original behaviour, not the areas' code; a chain
+that reaches the same take through a real area change plays it on the row: g18's
+g45 1819 / 1819). g41 and g45: AREA14's timer-driven effects and beasts start
+from the load (AREA17_PORT.md "Lane PORT-CHAIN"; g41 is steered and restored,
+AREA14_PORT.md). g73: AREA04's music starts at the card's load, so the radio
+scene's voiced lines meet other music refills and the scene ends two frames
+later (AREA20_PORT.md "What is left"; the IOP tick phase does not move it).
+Plain g17 (no steering) leaves g45 at row 248 as before (AREA17_PORT.md).
+
+The report now also counts the rows whose frame index D_00810E80 (the trace's
+`e80`) is the other bank than the recording's: the recording's is `counter & 1`
+(a take's source state stops in the previous take's last vsync wait, before its
+flip and count, and holds 1 - (row 0's counter & 1); the far light's recorded
+bank agrees on g75). A frame in the other bank draws with the other half-line
+XYOFFSET and step K's Z read-back reads the other field (AREA21_PORT.md "Step
+K's Z read-back"). It is a comparison alignment, not a row, and two things set
+it:
+
+- **Row 0.** The bank there follows the frames the port spent from the boot.
+  When the trace's row 0 is in the other bank, guided_chain stops the run and
+  starts it again with `EM_START_AT_DWELL=1` (the title holds one more idle tick
+  before LOAD GAME's CROSS, as a player's later press: both banks are a
+  player's; `--any-bank` keeps the first). Chain g20 needs it.
+- **Each load.** The port's loads are shorter unless their reads take the
+  original's time: under the timing switch only the New Game's are measured
+  (MODULE_LOADER.md 1.7). By default the chains serve the takes' recorded
+  screen-module loader reads too (`record_drive_replay_guided.py --loader`,
+  IOP_STREAM.md "Guided takes"; `--no-loader-replay` without; a take with no
+  recording keeps the old timing): a status page's or a room's load then passes
+  the original's frames. An area load's sound-bank transfer (001FB370) is still
+  the port's (29 frames against the fork's 46 on g73's AREA20 load) and the reads
+  after it miss their 2-counter window, so an area load stays shorter; the bank
+  holds across it when the difference is even (g73's AREA20 load: 194, g75's
+  AREA21 load: 220).
+
+g20 with the default drive replay and nothing else: g73 and g74 to row 3643
+in the other bank from the card, g75 in the original's, g76 from its row-2008
+load 1764 of 6383, g77 and g78 all, g79 2780, g80 424. With the dwell and the
+loader replay: every compared row of g73 .. g77 in the original's bank, the
+rows unchanged.
 
 ### EM_SKIP_STARTUP=1: the older debug fixture
 

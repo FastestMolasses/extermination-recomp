@@ -1172,6 +1172,11 @@ void em_scene_creature_trace(FILE *f, int t, const float pos[3], const float *he
      * 0x70003B8D (take.rec's s8d, the 'C' phase when nonzero): the caller's
      * frame-start value when it has one (s8d >= 0), else the current byte. */
     const EmTask *t0 = em_task_slot(0);
+    /* e80: the frame index D_00810E80 (the bank step K's Z read-back and the
+     * draw environments follow); the recording's is counter & 1 on the guided
+     * takes (their source states' D_00810E80 against take.rec's counter), so a
+     * chain can say where its frames run in the other bank. */
+    fprintf(f, "\"e80\": %u, ", (unsigned)em_frame_parity());
     fprintf(f, "\"c\": %u, \"tb\": %u, \"bd8\": %u, \"s8d\": %u, ", (unsigned)em_frame_counter(),
             t0 ? (unsigned)t0->user[0x0B - EM_SCENE_TASK_FIRST] : 0u, (unsigned)s_state.d275BD8,
             s8d >= 0 ? (unsigned)s8d : (unsigned)s_state.spad3B8D);
