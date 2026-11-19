@@ -28,9 +28,11 @@
 extern "C" {
 #endif
 
-/* Walk the list at context +0x1D8 and draw its triangles. Call only when
- * step V's gate CALLs it (em_render_frame.c background_gate). 0, or -1
- * (latched). */
+/* Walk the list at context +0x1D8 and draw its triangles, then, with the
+ * GS frame on, the list at +0x1E8 when it is non-zero (001E1AD0's, AREA21:
+ * 001E0DF0 CALLs it after +0x1D8; its primitives with the environment it
+ * writes). Call only when step V's gate CALLs them (em_render_frame.c
+ * background_gate). 0, or -1 (latched). */
 int em_background_live_draw(EmGfx *gfx);
 uint32_t em_background_live_fault(void);
 /* Step V's kick (main.c): the background of a list that CALLs channel 3 in
@@ -48,6 +50,8 @@ typedef struct {
     uint32_t prims;            /* its triangles                              */
     uint32_t digest;           /* FNV-1a of every vertex's X, Y, S, T words  */
     uint32_t upload[11][4];    /* dmem 0x000, 0x081, 0x102, 0x200..0x207     */
+    uint32_t grid_start;       /* the last +0x1E8 list drawn (001E1AD0's)    */
+    uint32_t grid_prims;       /* its primitives                             */
 } EmBackgroundLiveLog;
 void em_background_live_log(EmBackgroundLiveLog *out);
 

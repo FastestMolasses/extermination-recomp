@@ -281,11 +281,38 @@ packet chain over R.pc).
     6618..6639, 7273..7294, 7597..7609, 8558..8561, 12025: the port's Z at the
     point is 0, nothing drawn, where the original's is not; 143 when they were
     in the other bank, so not the phase) and 25 transfers at those stretches'
-    edges have other pixels at Z 0. Open: what the original draws at the point
-    in those frames (a GS frame model or draw difference; the test pins the
-    counts). An area load's sound-bank transfer is still the port's (shorter),
+    edges have other pixels at Z 0 (closed below). An area load's sound-bank transfer is still the port's (shorter),
     so a later chain can leave the bank after an area load with an odd
     difference; the chain report counts such rows.
+  - **The sea's depth (lane PORT-FLARE-DRAW, 2026-11-19).** The 139
+    decisions were a missing draw. Evidence: the original's GS local memory
+    at step K of g77 ticks 1685, 1700, 1740, 4480, 6625, 7280, 7600, 8560
+    and 12025 (fork, hidden replay of g77's pad log, software renderer 13,
+    gs_vram at the 001D7410 entry; the 8 x 8 blocks at the points equal the
+    recorded transfers byte for byte except 1685, a tick early) against the
+    port's at the same chain frames (a scratch dump of the model's memory
+    at its transfer): where the original's Z buffer holds the sea's
+    gradient (the horizon down in the boat scene of ticks 1687..1765; the
+    sky-side gradient from the turret in 4474..8561), the port's held 0,
+    and its colour differed there too (mean |dRGB| 63..84 against 0..8
+    elsewhere). The point at x 511 reads x 512.. through the next pages,
+    i.e. the left edge 32 rows down; the point clamped to (0, 0) reads the
+    top-left block. The cause: 001E0DF0 CALLs two channel-3 lists, +0x1D8
+    (001E1E60's background) and then +0x1E8 (001E1AD0's, render flag 0x22,
+    section Grid); the port drew only the first. The +0x1E8 list is GIF
+    DIRECT data (74 packets, 2786 or 2787 triangles a frame): 001E1760's
+    strips into the 256 x 256 texture at FBP 0x12C (ZMSK 1, ALPHA
+    0x80000000A8), the 32 x 32 screen grid sampling it (TBP 0x2580, ALPHA
+    0x44, TEST AFAIL RGB_ONLY: colour only) and 001E17E0's untextured
+    strips with TEST AFAIL ZB_ONLY and ZBUF ZMSK 0: they write the sea's
+    Z and nothing else. em_background_live now walks it after +0x1D8 (the
+    chain page walker's call mode, every primitive with the environment
+    the list wrote) and the GS frame model draws it; without the GS frame
+    (the GPU renderer) it is not drawn. Not the streak decision
+    (AREA19_PORT.md "Open items" 1): no VU1 program runs in this list.
+    Result (EM_TEST_FULL=1): g77 3523 in phase, 2986 byte-exact, 213 one Z
+    LSB off, 324 more (the GS model's open Z items, GS_EXACT.md "Not
+    exact"), **every decision and coverage equal**; g75 and g76 unchanged.
 
 ## Grid (lane PORT-A21-GRID, 2026-11-18, branch `a21grid`)
 
@@ -339,6 +366,10 @@ grid, em_static_world) after 001E1E60. Its missing pieces are bound:
 - **Background reader** (em_static_world_live, renderer side): a DIRECT
   packet in 001E1E60's list that is not an A+D one (the far light's sprite,
   001D75E0) is skipped instead of refused.
+- **The list is drawn** (lane PORT-FLARE-DRAW, 2026-11-19): 001E0DF0 CALLs
+  +0x1E8 after +0x1D8; em_background_live walks it and the GS frame model
+  draws it (Far light, "The sea's depth"). Before, it was built but not
+  drawn: no sea Z and no screen grid in the picture.
 
 Chain g20 (card g73): g73 4191 / 4192 compared rows on the row (heading
 0.0012 off from row 1130, as before), g74 3736 / 3736, **g75 3864 / 3864
@@ -1031,7 +1062,10 @@ em_equipment_live) faults at address 0x7A6DE4. g80 not reached.
    0x824FE0, 0x824CF0, 001EB600 and cue 0xC (The boss fight).
 1b. (done) 001D7410's Z read-back (Far light, "Step K's Z read-back");
     the chain's field phase closed for g75 .. g77 (lane PORT-CARD-CHAINS);
-    open there: g77's 139 decisions where the port draws nothing at the point.
+    g77's 139 decisions closed by drawing 001E1AD0's +0x1E8 list (lane
+    PORT-FLARE-DRAW): every g75 .. g77 decision equal. g78 is recorded
+    (decomp build/fork_refs/far_light_readback/g78_area21_phase2.json) but
+    not yet in the test.
 1c. The haze ring's vf23 (Haze ring, open item): the logic walk's last
     vf23 writer before each ring.
 2. Run the live owners of that recording through these oracles (as

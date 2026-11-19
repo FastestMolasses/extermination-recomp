@@ -2968,8 +2968,8 @@ if nothing was drawn there.
   local memory read as the GS transfers it). Under the headless raster
   skip (no drawn frame) the port writes a covered point: no flare.
 - Evidence: `make test-far-light-readback-reference` compares every
-  transfer of chain g20 (AREA20 into AREA21 and the prep, g75 and g76)
-  with the original's, replayed on the PCSX2 fork's software renderer:
+  transfer of chain g20 (AREA20 into AREA21 and the prep, g75 and g76;
+  EM_TEST_FULL=1 adds g77, the boss's phase 1) with the original's, replayed on the PCSX2 fork's software renderer:
   g75's 1,251 transfers equal (1,250 byte-exact, one Z off by one LSB; all
   484 flares on the original's frames); g76: all 1,548 transfers in the
   original's field phase since lane PORT-CARD-CHAINS (the chain starts in the
@@ -2978,11 +2978,32 @@ if nothing was drawn there.
   in 8: the GS model's open Z items). The fork's Metal renderer reads back a different depth (335
   flares over g76 where the exact GS has none): the reference is the
   software renderer.
-- Status: VERIFIED for the decision on g75 and g76; PARTIAL on g77: all
-  3,523 transfers in the original's phase, 139 decisions differ where the
-  port's Z at the point is 0 and the original's is not (eight stretches: a
-  draw difference, open; AREA21_PORT.md). Not a launcher option; the picture
-  of the flare itself is not compared with a capture.
+- Status: VERIFIED for the decision on g75, g76 and g77: g77's 3,523
+  transfers all in the original's phase, every decision and coverage equal
+  (2,986 byte-exact; Z one LSB off in 213, more in 324: the GS model's open
+  Z items). Until 2026-11-19, 139 g77 decisions differed: the port did not
+  draw 001E1AD0's sea grid list (+0x1E8), whose Z-only strips are the depth
+  the read-back meets (AREA21_PORT.md "The sea's depth"). Not a launcher
+  option; the picture of the flare itself is not compared with a capture.
+
+### AREA21's sea grid
+
+**The sea's ripple grid and its depth are drawn, as the original draws them**
+
+- What: in AREA21 the original draws a second channel-3 list after the sky
+  background: a 256 x 256 ripple texture, a 32 x 32 screen grid that
+  samples it over the sea (colour only) and strips that write the sea's
+  depth alone.
+- How: the list 001E1AD0 builds (already translated) is walked as its DMA
+  sends it and drawn by the Original profile's GS frame model
+  (em_background_live). The GPU renderer does not draw it.
+- Evidence: the original's GS memory at nine g77 moments (fork, software
+  renderer) against the port's: the sea's Z and the colour there were
+  missing; with the list drawn every far-light read-back decision of g77
+  equals the original's (`make test-far-light-readback-reference`,
+  EM_TEST_FULL=1). The colour is not yet compared with a capture.
+- Status: PARTIAL (depth verified through the read-back; picture not
+  compared).
 
 ### AREA19 from its start cards
 
