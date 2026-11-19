@@ -532,6 +532,14 @@ source receipts. Scratch source copies, capture executables and derived
 binary caches are removed; referenced captures, comparison WAVs, patches
 and receipts are retained.
 
+## The second half's EE commands (2026-11-19)
+
+Lane PORT-SND2 compared the second half's sound with the original at the
+boundary above the IOP: the EE sound state and every RPC 0x64 exchange's
+commands, tick by tick over Claude's guided run (`SOUND_SECOND_HALF.md`:
+tools, results per area, fixes, what is open). The mixed PCM below that
+boundary stays as this document leaves it.
+
 ## Requests for main
 
 ### Integration still required

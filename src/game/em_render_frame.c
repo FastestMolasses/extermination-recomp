@@ -63,6 +63,13 @@
 #include "game/em_owner_draw_live.h"
 #include "game/em_shadow_live.h"
 #include "game/em_status_runtime.h"
+#include "game/em_sdk_math_original.h"
+#include "game/em_collision_world.h"
+#include "game/em_script_host_workers.h"
+#include "game/em_coll_probe_original.h"
+#include "game/em_effect_original.h"
+#include "game/em_owner_services_original.h"
+#include "game/em_player_misc_workers.h"
 
 /* See em_render_001D1EA0. */
 static int s_request_status_frame;
@@ -1201,8 +1208,73 @@ static void camera_cooldown_0018B9C0(void)
  * (em_area11_bindings.c player_closeout). */
 static int sfx_d810360(float out[3])
 {
+    /* D_00810360 IS the player record's +0xB0 (the record at 0x008102B0):
+     * while the live stage runs, read that one storage, so a sound the
+     * player record places at its own +0xB0 (001FBD50(p, ...): the steps,
+     * the stage's sounds) is at distance 0 and full and centred, whatever
+     * +0xB0 holds inside 0015BCF0 (the original's tracks: 0011A218's
+     * 0x1000 / 0x1000; docs/SOUND_SECOND_HALF.md). */
+    if (player_states_stage_live()) {
+        const EmPlayerLiveActor *a = player_states_actor();
+        for (unsigned k = 0; k < 3; ++k) out[k] = em_live_f32(a, 0xB0 + 4 * k);
+        return 0;
+    }
     if (!player_pose_hip(out)) memcpy(out, g.pos, 3 * sizeof *out);
     return 0;
+}
+
+/* 001FBF50 for em_sfx (em_sfx_bind_gains_original): the routine's
+ * translation em_player_misc_001FBF50 over the EE float model, with the
+ * SDK's own leaves (001029C0, 00102C58, 001026A0, 001028D0, 00102760,
+ * 00102738, 0011E2A8, 0011E748 and 001B1380), as em_area01_audio_services
+ * binds them. Its scratchpad temporaries (0x70003400 / 3600 / 3610) stay
+ * local: nothing the port runs reads them after a submit. -1 while the SDK
+ * math context has no tables. */
+typedef struct { EmSdkMathContext *sdk; EmScriptHostWorkers side; } SfxGainLeaves;
+static int sg_identity(void *c, float out[16]) { (void)c; return em_owner_services_identity_001029C0(out) == 0 ? 0 : -1; }
+static int sg_euler(void *c, float out[16], const float in[16], const float angles[4])
+{ (void)c; return em_owner_services_euler_00102C58(out, in, angles) == 0 ? 0 : -1; }
+static int sg_transform(void *c, float out[4], const float m[16], const float v[4])
+{ (void)c; em_effect_original_001026A0(out, m, v); return 0; }
+static int sg_sub(void *c, float out[4], const float a[4], const float b[4])
+{ (void)c; return em_coll_probe_sdk_sub(out, a, b); }
+static int sg_normalize(void *c, float out[4], const float in[4]) { (void)c; em_effect_original_00102760(out, in); return 0; }
+static int sg_dot(void *c, const float a[4], const float b[4], float *out) { (void)c; return em_coll_probe_sdk_dot(out, a, b); }
+static int sg_sine(void *c, float in, float *out) { SfxGainLeaves *l = c; return em_sdk_math_original_w_0011E2A8(l->sdk, in, out); }
+static int sg_sqrt(void *c, float in, float *out)
+{ SfxGainLeaves *l = c; *out = em_sdk_math_original_float_0011E748(l->sdk, in); return l->sdk->fault ? -1 : 0; }
+static int sg_side(void *c, const float from[4], const float to[4], float yaw, int32_t *out)
+{ SfxGainLeaves *l = c; return em_script_host_w_001B1380(&l->side, from, to, yaw, out); }
+
+static int sfx_gains_001FBF50(const float pos[3], int32_t flat, float radius, const float listener[3],
+                              const float eye[3], float yaw, uint8_t mode, int32_t *left, int32_t *right)
+{
+    EmSdkMathContext *sdk = em_collision_world_sdk();
+    if (!sdk || !sdk->tables || sdk->fault) return -1;
+    SfxGainLeaves leaves;
+    memset(&leaves, 0, sizeof leaves);
+    leaves.sdk = sdk;
+    leaves.side.world.sdk_tables = sdk->tables;
+    leaves.side.world.sdk_world = &sdk->world;
+    leaves.side.world.sdk_workers = &sdk->workers;
+    const EmPlayerMiscWorkers workers = {.context = &leaves, .identity = sg_identity, .euler = sg_euler,
+        .transform = sg_transform, .vsub = sg_sub, .normalize = sg_normalize, .dot = sg_dot, .sine = sg_sine,
+        .sqrt = sg_sqrt, .side = sg_side};
+    EmPlayerMiscScene scene;
+    memset(&scene, 0, sizeof scene);
+    scene.d28215B = mode;
+    memcpy(scene.d810360, listener, 3 * sizeof *listener);
+    scene.d81027C = yaw;
+    memcpy(scene.d8105D0, eye, 3 * sizeof *eye);
+    EmPlayerMiscScratch scratch;
+    memset(&scratch, 0, sizeof scratch);
+    EmPlayerMiscHost host = {&workers, &scene, &scratch};
+    const float obj[4] = {pos[0], pos[1], pos[2], 0.0f};
+    int32_t in_range = 0;
+    if (em_player_misc_001FBF50(&host, obj, left, right, flat, radius, 4096.0f, &in_range) < 0 ||
+        leaves.side.fault_address || sdk->fault)
+        return -1;
+    return in_range ? 1 : 0;
 }
 
 static void camera_listener(void)
@@ -1211,6 +1283,7 @@ static void camera_listener(void)
     const uint8_t *heading = em_camera_live_bound() ? em_camera_live_bytes(0x0081027Cu, 4) : NULL;
     if (heading) memcpy(&pan, heading, sizeof pan);
     em_sfx_bind_distance_listener(sfx_d810360);
+    em_sfx_bind_gains_original(sfx_gains_001FBF50);
     em_sfx_listener(g.pos, g.cam.eye, pan);
 }
 

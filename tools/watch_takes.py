@@ -171,6 +171,22 @@ def read_pads(name, carried):
     return pads, log[keys[-1]] if keys else carried
 
 
+def trace_counters(name):
+    """The engine counter of each trace row of a take (take.rec's rows without the movie rows,
+    as tools/guided_chain.py and the decomp's capture tools number them)."""
+    cols, out = None, []
+    for line in (TAKES / name / 'take.rec').read_text().splitlines():
+        if line.startswith('#cols'):
+            cols = line[1:].split()[1:]
+            continue
+        if not line or line[0] == '#':
+            continue
+        r = dict(zip(cols, line.split()))
+        if r.get('mv', '0') == '0':
+            out.append(int(r['counter']))
+    return out
+
+
 def stitch(names, path, ticks=None, marks=None):
     """Write the stitched recording; returns its game ticks. `marks`, when given,
     becomes {take: [stitched row index of each game row of its take.rec, or None
@@ -525,6 +541,11 @@ def main():
                         'row: take.rec\'s rows without the movie rows; EM_GS_DUMP_AT with the tick\'s segment:offset, '
                         'comparison only) into build/gspics/watch_<take>/port/; the port draws every frame and quits after '
                         'the last one (with --check; tools/compare_gs_frame.py, DRAW_LIST_AUDIT.md section 4)')
+    parser.add_argument('--snd-dump', metavar='TAKE:R0-R1[,TAKE:R0-R1...]',
+                        help='write the EE sound state and the RPC 0x64 exchanges of every tick of these trace-row '
+                        'ranges (EM_SOUND_DUMP, keyed by the recording\'s engine counter; comparison only) into '
+                        'build/sndpics/watch_<take>/port/sound.jsonl; the port quits after the last one (with '
+                        '--check; tools/compare_sound_ticks.py, docs/SOUND_SECOND_HALF.md)')
     args = parser.parse_args()
     if args.root:
         use_root(args.root)
@@ -563,6 +584,25 @@ def main():
         (dump_dir / 'points.json').write_text(json.dumps(points, indent=1) + '\n')
         dump_env = dict(EM_GS_DUMP_AT=','.join(v[1:].replace('_', ':') for v in points.values()),
                         EM_GS_DUMP_DIR=str(dump_dir))
+    if args.snd_dump:
+        ranges, points = [], {}
+        for item in args.snd_dump.split(','):
+            prefix, _, span = item.partition(':')
+            name = next((n for n in names if n.startswith(prefix)), None)
+            a, _, b = span.partition('-')
+            if name is None or not a.isdigit() or not (b or a).isdigit():
+                sys.exit(f'--snd-dump {item!r}: want TAKE:R0-R1 with a take of the chain')
+            counters = trace_counters(name)
+            lo, hi = int(a), int(b or a)
+            if hi >= len(counters) or lo > hi:
+                sys.exit(f'--snd-dump {item!r}: {name} has {len(counters)} trace rows')
+            ranges.append((counters[lo], counters[hi]))
+            points[f'{name}:{lo}-{hi}'] = [counters[lo], counters[hi]]
+        dump_dir = ROOT / 'build/sndpics' / f'watch_{args.take}' / 'port'
+        dump_dir.mkdir(parents=True, exist_ok=True)
+        (dump_dir / 'points.json').write_text(json.dumps(points, indent=1) + '\n')
+        dump_env.update(EM_SOUND_DUMP=str(dump_dir / 'sound.jsonl'),
+                        EM_SOUND_DUMP_AT=','.join(f'{lo}-{hi}' for lo, hi in sorted(ranges)))
     print(f'{" + ".join(names)}: {ticks} ticks, {ticks / 59.94 / 60:.1f} minutes', flush=True)
     until = None
     if fast:

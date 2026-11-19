@@ -480,6 +480,11 @@ def main(argv):
                         'trace row; EM_GS_DUMP_AT, comparison only) into build/gspics/<name>/port/f<chain frame>'
                         '.gsfield; the run draws every frame and quits after the last one '
                         '(tools/compare_gs_frame.py, DRAW_LIST_AUDIT.md section 4)')
+    parser.add_argument('--snd-dump', metavar='TAKE:R0-R1[,TAKE:R0-R1...]',
+                        help='write the EE sound state and the RPC 0x64 exchanges of these trace-row ranges (a take '
+                        'prefix and its rows; EM_SOUND_DUMP keyed by the recording\'s counter, comparison only; it '
+                        'needs the drive replay\'s EM_START_AT_COUNTER0) into build/sndpics/<name>/port/sound.jsonl; '
+                        'the run quits after the last one (tools/compare_sound_ticks.py, docs/SOUND_SECOND_HALF.md)')
     args = parser.parse_args(argv)
     if args.list or not args.chain:
         for n, (card, route, takes) in CHAINS.items():
@@ -538,6 +543,21 @@ def main(argv):
             (dump_dir / 'points.json').write_text(json.dumps(
                 {f'{takes[[i for i, t in enumerate(takes) if t.startswith(it.partition(":")[0])][0]]}:'
                  f'{it.partition(":")[2]}': f'f{f}' for it, f in zip(args.gs_dump.split(','), frames)}, indent=1) + '\n')
+        if args.snd_dump:
+            ranges = []
+            for item in args.snd_dump.split(','):
+                prefix, _, span = item.partition(':')
+                k = [i for i, t in enumerate(takes) if t.startswith(prefix)]
+                lo, _, hi = span.partition('-')
+                if not k or not lo.isdigit() or not (hi or lo).isdigit():
+                    sys.exit(f'guided_chain: --snd-dump {item!r}: want TAKE:R0-R1 with a take of the chain')
+                ranges.append((rows[starts[k[0]] + int(lo)]['counter'], rows[starts[k[0]] + int(hi or lo)]['counter']))
+            if not args.drive_replay:
+                sys.exit('guided_chain: --snd-dump keys on EM_START_AT_COUNTER0 (the drive replay)')
+            dump_dir = ROOT / 'build/sndpics' / name / 'port'
+            dump_dir.mkdir(parents=True, exist_ok=True)
+            extra += [f'EM_SOUND_DUMP={dump_dir / "sound.jsonl"}',
+                      f'EM_SOUND_DUMP_AT={",".join(f"{a}-{b}" for a, b in sorted(ranges))}']
         if args.drive_replay:
             import drive_replay
             info = drive_replay.guided_table(takes, out / 'drive_replay.txt', loader=args.loader_replay,

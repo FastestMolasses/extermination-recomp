@@ -708,12 +708,11 @@ static int h_sound_call(void *ctx, EmArea00LowCall *c)
         (uint32_t)c->a[1] != c->sp + 0x38u || (uint32_t)c->a[2] != c->sp + 0x3Cu || c->a[3] != 0 ||
         c->f[0] != 0x43960000u /* 300.0 */ || c->f[1] != 0x45800000u /* 4096.0 */ || c->sp != lo)
         return report("001FC580 called something other than 001FBF50(self, sp + 0x38, sp + 0x3C, 0; 300, 4096)");
-    float gl, gr;
+    int32_t l, r;
     c->v0 = 0;
     c->f0 = 0;
-    if (!em_sfx_compute_gains(sc->box->actor->pos, 300.0f, &gl, &gr))
+    if (!em_sfx_request_words(sc->box->actor->pos, 0, 300.0f, &l, &r))
         return 0;
-    const int32_t l = em_sfx_request_word(gl), r = em_sfx_request_word(gr);
     memcpy(sc->stack + 0x38, &l, 4);
     memcpy(sc->stack + 0x3C, &r, 4);
     c->v0 = 1;

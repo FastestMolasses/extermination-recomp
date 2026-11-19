@@ -932,6 +932,35 @@ static void voice_update(EmSfxDriver *driver, int index, EmSfxCommandSink sink,
     }
 }
 
+/* 00116DB8 (byte-matched decomp C), the SFX track's arm (+0x2E 0, +0x32
+ * 1): when the track's bank handle (+0x24) has a pending volume in
+ * D_002819C0 (001199F0, which each area load's bank chain calls with 0x64:
+ * em_startup_load_gaps_sound.c), the pending byte is cleared, the volume is
+ * stored into the bank, and every voice the track owns (state 1, kind not
+ * 3) has its +0x30 set from it and its volume words sent again (001179E0,
+ * 001157F0 command 1). The banks' own volume byte is what the registry's
+ * key-on products already carry, and the chain's 0x64 leaves it as it was
+ * (the original's re-sent words equal the key-on's: AREA15's arrival,
+ * docs/SOUND_SECOND_HALF.md), so the words are the voice's current ones;
+ * the swap of the pair's volume with the track's +0x6C is not modelled
+ * (the port keeps no +0x6C). The first track of a freshly loaded bank to
+ * run after the load thus re-sends its voices' volumes, as the original. */
+static void bank_volume(EmSfxDriver *driver, int index, EmSfxCommandSink sink, void *context)
+{
+    EmSfxTrack *track = &driver->tracks[index];
+    if (!driver->bank_volumes || !track->allocated || track->handle >= 0x80) return;
+    uint8_t *pair = &driver->bank_volumes[2u * track->handle];
+    if (pair[1] != 1) return;
+    pair[1] = 0;
+    for (int v = 0; v < EM_SFX_VOICES; ++v) {
+        const EmSfxVoice *voice = &driver->voices[v];
+        if (voice->state != 1 || voice->kind == 3 || voice->owner != (uint16_t)index) continue;
+        uint16_t words[2];
+        em_sfx_volume_words(voice->scalar, voice->pan, track->left, track->right, words);
+        emit(driver, sink, context, 1, v, words[0], words[1]);
+    }
+}
+
 void em_sfx_driver_tick(EmSfxDriver *driver, EmSfxCommandSink sink,
                         void *context)
 {
@@ -953,10 +982,14 @@ void em_sfx_driver_tick(EmSfxDriver *driver, EmSfxCommandSink sink,
             voice_reset(voice);
         voice->age++;
     }
-    /* The track loop: running tracks dispatch this tick's operations. */
+    /* The track loop: running tracks dispatch this tick's operations, then
+     * 00116DB8 runs on every track. */
     for (int i = 0; i < EM_SFX_TRACKS; ++i) {
         EmSfxTrack *track = &driver->tracks[i];
-        if (!track->running || !track->allocated || !track->entry) continue;
+        if (!track->running || !track->allocated || !track->entry) {
+            bank_volume(driver, i, sink, context);
+            continue;
+        }
         const EmSfxEntry *entry = track->entry;
         while (track->next < entry->count &&
                entry->ops[track->next].tick <= track->tick) {
@@ -982,6 +1015,7 @@ void em_sfx_driver_tick(EmSfxDriver *driver, EmSfxCommandSink sink,
             }
         }
         track->tick++;
+        bank_volume(driver, i, sink, context);
     }
     /* 00116598 */
     for (int i = 0; i < EM_SFX_VOICES; ++i) voice_update(driver, i, sink, context);

@@ -113,6 +113,11 @@ static const int32_t *(*s_bank_handles)(void);
 
 void em_sfx_bind_bank_handles(const int32_t *(*reader)(void)) { s_bank_handles = reader; }
 
+/* D_002819C0's reader (em_stream_live binds the sound bank's library). */
+static uint8_t *(*s_bank_volumes)(void);
+
+void em_sfx_bind_bank_volumes(uint8_t *(*reader)(void)) { s_bank_volumes = reader; }
+
 static void sfx_fault(const char *what)
 {
     if (!s.fault) {
@@ -180,6 +185,26 @@ static void render_to(uint64_t target)
     }
 }
 
+/* Comparison only (EM_SOUND_DUMP, em_sfx.h em_sfx_keep_exchange): a copy
+ * of the commands the last field's RPC 0x64 exchange sent. */
+static struct {
+    int on;
+    unsigned n;
+    uint32_t q[SFX_QUEUE][4];
+} s_exchange;
+
+void em_sfx_keep_exchange(int on)
+{
+    s_exchange.on = on != 0;
+    s_exchange.n = 0;
+}
+
+const uint32_t (*em_sfx_last_exchange(unsigned *count))[4]
+{
+    if (count) *count = s_exchange.on ? s_exchange.n : 0;
+    return (const uint32_t (*)[4])s_exchange.q;
+}
+
 int em_sfx_field(void)
 {
     if (s.fault) return -1;
@@ -194,10 +219,15 @@ int em_sfx_field(void)
      * which the tick's reaper reads. */
     memcpy(s.feedback, s.reply, sizeof s.feedback);
     s.driver.feedback = s.feedback;
+    s.driver.bank_volumes = s_bank_volumes ? s_bank_volumes() : NULL;
     em_sfx_driver_tick(&s.driver, queue_push, NULL);
     /* The tick's RPC 0x64: the queue joins the IOP driver's ring; the reply
      * is the status block as the driver's last tick wrote it. */
     memcpy(s.reply, s.status, sizeof s.reply);
+    if (s_exchange.on) {
+        s_exchange.n = s.queued;
+        memcpy(s_exchange.q, s.queue, sizeof s.queue[0] * s.queued);
+    }
     for (unsigned i = 0; i < s.queued; ++i) {
         if (s.ring_n >= SFX_IOP_RING) {
             sfx_fault("the IOP driver's command ring overflowed");
@@ -408,6 +438,32 @@ static int sfx_gains(const float pos[3], float radius, int flat, float *gain_l, 
     return 1;
 }
 
+static EmSfxGainsOriginal s_gains_original;
+static unsigned s_gains_fallbacks;
+
+void em_sfx_bind_gains_original(EmSfxGainsOriginal fn) { s_gains_original = fn; }
+
+int em_sfx_request_words(const float pos[3], int32_t flat, float radius, int32_t *left, int32_t *right)
+{
+    *left = *right = 0;
+    if (s_gains_original && s.lis_valid) {
+        float listener[3];
+        memcpy(listener, s.lis_player, sizeof listener);
+        if (s_distance_listener && s_distance_listener(listener) < 0) return 0;
+        const uint8_t *mode = s_output_mode ? s_output_mode() : NULL;
+        if (s_output_mode && !mode) return 0; /* the lanes faulted: nothing is submitted */
+        const int rc = s_gains_original(pos, flat, radius, listener, s.lis_eye, s.lis_yaw, mode ? *mode : 0,
+                                        left, right);
+        if (rc >= 0) return rc;
+        s_gains_fallbacks++;
+    }
+    float gl, gr;
+    if (!sfx_gains(pos, radius, (uint8_t)flat != 0, &gl, &gr)) return 0;
+    *left = em_sfx_request_word(gl);
+    *right = em_sfx_request_word(gr);
+    return 1;
+}
+
 int em_sfx_compute_gains(const float pos[3], float radius,
                          float *gain_l, float *gain_r)
 {
@@ -548,13 +604,13 @@ int em_sfx_play_at_mode_track(unsigned id, const float pos[3], int32_t flat, flo
     if (!pos) return -1;
     const EmSfxEntry *entry = sfx_accept(id);
     if (!entry) return -1;
-    float gl, gr;
-    if (!em_sfx_compute_gains_mode(pos, flat, radius, &gl, &gr)) {
+    int32_t left, right;
+    if (!em_sfx_request_words(pos, flat, radius, &left, &right)) {
         s.culls++;                      /* engine play_sound -1 */
         return -1;
     }
     /* 001FBF50 hands float_to_int(4096 * gain) words to 001FB9F0. */
-    return sfx_start(entry, em_sfx_request_word(gl), em_sfx_request_word(gr));
+    return sfx_start(entry, left, right);
 }
 
 /* ---- 001FC3C0 / 001FC520 service ---------------------------------------- */
@@ -574,13 +630,10 @@ static int loop_status(void *context, int track)
 static int loop_gains(void *context, int32_t *left, int32_t *right)
 {
     const SfxLoopSource *source = context;
-    float gl, gr;
-    if (!source || !em_sfx_compute_gains(source->pos, source->radius, &gl, &gr)) {
+    if (!source || !em_sfx_request_words(source->pos, 0, source->radius, left, right)) {
         s.culls++;
         return 0;
     }
-    *left = em_sfx_request_word(gl);
-    *right = em_sfx_request_word(gr);
     return 1;
 }
 
@@ -738,6 +791,9 @@ void em_sfx_shutdown(void)
     if (s.driver.slide_unknown)
         printf("sfx: %u volume slide step(s) on a voice whose key-on carried no product "
                "(the volume kept its key-on scalar)\n", s.driver.slide_unknown);
+    if (s_gains_fallbacks)
+        printf("sfx: %u positional gain(s) without the original's 001FBF50 (the host float approximation)\n",
+               s_gains_fallbacks);
     em_sfx_registry_free(&s.registry);
     s.fault = NULL;
     s.ticks = s.samples = s.half_line = 0;

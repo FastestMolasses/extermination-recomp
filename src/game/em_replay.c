@@ -381,6 +381,8 @@ static void filter(EmPadState *pad, void *user)
             em_start_at_gs_dump_replay_tick(s.cur_seg, s.off);   /* EM_GS_DUMP_AT (comparison only) */
             const RecSeg *g0 = &s.segs[s.cur_seg];
             const uint32_t i = s.off < g0->len ? s.off : g0->len - 1;
+            em_scene_bindings_sound_dump(s.ticks[g0->start + i].counter, s.off < g0->len, s.cur_seg,
+                                         s.off);   /* EM_SOUND_DUMP (comparison only) */
             pad_set(pad, &s.ticks[g0->start + i]);
             if (s.rands && s.cur_seg && s.off < g0->len) em_random_seed(s.ticks[g0->start + i].rand);
             /* The comparison-only drive replay (EM_PS2_DRIVE_REPLAY): this

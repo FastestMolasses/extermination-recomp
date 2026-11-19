@@ -1168,6 +1168,11 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
      * stands for the next frame). Nothing happens without a table. */
     if (pad.counter0_set && t >= 0)
         em_stream_live_drive_replay_map(pad.counter0 + (uint32_t)t, counter + (at_frame_end ? 1u : 0u));
+    /* EM_SOUND_DUMP (comparison only; tools/guided_chain.py --snd-dump): a
+     * world frame's head hook stands at script frame t, the recording's
+     * counter counter0 + t (the drive replay's key above). */
+    if (pad.counter0_set && t >= 0 && !at_frame_end)
+        em_scene_bindings_sound_dump(pad.counter0 + (uint32_t)t, 1, 0, (unsigned)t);
     /* The frame's start (em_start_at_frame_end): what a recording's row
      * samples. A hook at a world frame's head has the frame machine's own
      * work before it (state 4's re-place on a room move draws rand() in

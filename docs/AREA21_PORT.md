@@ -1089,3 +1089,7 @@ em_equipment_live) faults at address 0x7A6DE4. g80 not reached.
 3. (done) 0x8243B0, [52], lane PORT-A21-52.
 4. The SDK reach of 0x827040 (001FBC50 -> the sound library) and the
    ending: SECOND_HALF_AREAS.md section 6.
+
+## Sound against the original
+
+g75 rows 1884..2484, g77 rows 1000..1600 and the ending (g80) captured; not yet compared against the port. Tools, results and open items: SOUND_SECOND_HALF.md (lane PORT-SND2, 2026-11-19).

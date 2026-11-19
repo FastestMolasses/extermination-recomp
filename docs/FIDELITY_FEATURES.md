@@ -1515,6 +1515,28 @@ of the game's own stream code; nothing is scripted by hand.
   H7 (its output-mode commit never fires on the route). The last full sweep
   predates commit 7dea4ce. Audio output is not compared.
 
+**Every sound command the game sends matches the original's, tick by tick, through the second half**
+
+The commands the game's sound code sends each field (key-ons and key-offs,
+pitch, volume, envelope, effect sends, the music and voice streams'
+commands) and its sound tables are compared with the original's over
+Claude's guided run, from the title to the credits.
+
+- How: the original's EE sound state and every RPC 0x64 exchange sampled on
+  the fork (`tools/capture_sound_original.py`), the port's at the same
+  engine counters (`EM_SOUND_DUMP`, `tools/watch_takes.py --snd-dump`),
+  paired by `tools/compare_sound_ticks.py`. Three fixes came out of it: the
+  distance listener is the player record's +0xB0 itself, so the player's
+  own sounds (the steps) are full and centred as in the original; the
+  sequencer's 00116DB8 re-sends a freshly loaded bank's volumes; and every
+  positional gain runs the original's 001FBF50 arithmetic (the EE float
+  model and the SDK's own sine, square root and VU0 leaves).
+- Evidence: `SOUND_SECOND_HALF.md` (results per area);
+  `tools/test_sound_second_half_reference.py`.
+- Status: **PARTIAL**. The EE command boundary only: the mixed output (IOP
+  driver, SPU2 voices, reverb, the cores) is not compared
+  (`SPU2_OUTPUT.md`); the open items are listed in `SOUND_SECOND_HALF.md`.
+
 **The AREA11 flame's looped sound runs on the game's own looped-voice service**
 
 Near the flame in the first level the fire's sound loop (0x413) starts,

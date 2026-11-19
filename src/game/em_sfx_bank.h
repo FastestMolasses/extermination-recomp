@@ -217,6 +217,10 @@ typedef struct {
      * driver's last tick wrote before the previous exchange), tests may
      * substitute recorded values. */
     const int32_t *feedback;
+    /* D_002819C0, the bank handles' {volume, pending} byte pairs 001199F0
+     * writes (em_ee_sound_lib's storage): 00116DB8 consumes a pending pair
+     * (below). NULL: nothing is pending (the tests). */
+    uint8_t *bank_volumes;
     /* 1: the commands reach the SPU2 model only through
      * em_sfx_driver_apply (em_sfx's IOP side); 0: at once (the tests). */
     int deferred;

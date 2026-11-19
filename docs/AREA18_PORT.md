@@ -98,3 +98,7 @@ costume-2 texels (teal) until the bomb pickup's rebind: the area load's
 0015C1F0 sends the player's texture packet again, which the port skipped
 (not a card-start artefact). Fixed by lane PORT-GS-PICS2: 114,643 / 114,653
 / 114,550 RGB exact (DRAW_LIST_AUDIT.md section 4 (f)).
+
+## Sound against the original
+
+g42 rows 0..600: 599 of 601 exchanges equal; the repeating 0x7E6 is reset a tick late (the SFX-side IOP tick phase), and at 420285 two voices of a key-on find no free voice in the port (audible; open). Tools, results and open items: SOUND_SECOND_HALF.md (lane PORT-SND2, 2026-11-19).

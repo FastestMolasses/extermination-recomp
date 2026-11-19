@@ -192,3 +192,7 @@ on the guided run's rows (the takes g73 / g74 were re-recorded and kept on
   0x275A3C; 0x823580 / 0x823600 / 0x823780 appear in the same tables), so
   they are probably effect-table rows an effect spawner reads while AREA20
   is resident. Their translations are ready either way.
+
+## Sound against the original
+
+g73 rows 2440..2680 (the arrival scene, chain g20): every key equal but the card start's stale delayed cues; the steps' volumes were fixed by this lane (the distance listener is the record's +0xB0). Tools, results and open items: SOUND_SECOND_HALF.md (lane PORT-SND2, 2026-11-19).
