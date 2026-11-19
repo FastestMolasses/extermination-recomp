@@ -832,17 +832,26 @@ it:
   screen-module loader reads too (`record_drive_replay_guided.py --loader`,
   IOP_STREAM.md "Guided takes"; `--no-loader-replay` without; a take with no
   recording keeps the old timing): a status page's or a room's load then passes
-  the original's frames. An area load's sound-bank transfer (001FB370) is still
-  the port's (29 frames against the fork's 46 on g73's AREA20 load) and the reads
-  after it miss their 2-counter window, so an area load stays shorter; the bank
-  holds across it when the difference is even (g73's AREA20 load: 194, g75's
-  AREA21 load: 220).
+  the original's frames. Since lane PORT-LOAD-TIMING (2026-11-19) the chains also
+  serve the takes' recorded sound-bank transfers (`record_drive_replay_guided.py
+  --bank`, the table's `B` lines; IOP_STREAM.md "The sound-bank transfer's recorded
+  answers"; `--no-bank-replay` without): an area load's 001FB370 step then takes
+  the original's calls (29 against the fork's 46 on g73's AREA20 load before), the
+  reads after it meet their counters, and the load passes the original's frames
+  (g73's AREA20 load: 348, where it passed 194 with the loader reads alone and 154
+  without).
 
-g20 with the default drive replay and nothing else: g73 and g74 to row 3643
-in the other bank from the card, g75 in the original's, g76 from its row-2008
-load 1764 of 6383, g77 and g78 all, g79 2780, g80 424. With the dwell and the
-loader replay: every compared row of g73 .. g77 in the original's bank, the
-rows unchanged.
+Measured 2026-11-19 (port branch loadtiming; every chain with the drive, loader
+and bank replays, the default): g16, g20, g11, `g17 --steer g45` and `g18 --steer
+g41` keep their rows (the table above); every recorded sound-bank load is served
+at the recording's own counter with the recording's 001FB370 calls (12, 5, 36, 40
+and 48 loads), and every load of 10 or more recorded frames passes the original's
+frames but one (g80's row-19921 load: 13 against 79; its rows stay exact). No row
+of g16, g20 or g11 is in the other bank any more (g20 had g79 from row 416 and all
+of g80 there; g18 had g49, g53, g54); g18's are only in its first take g41 (from
+row 656, off the row from row 6), and g17's start in its first take g45 at row 216
+(off the row from row 163, no load there) and stay in the other bank to g58: the
+card stretch, not a load.
 
 ### EM_SKIP_STARTUP=1: the older debug fixture
 
@@ -1081,7 +1090,12 @@ sectors busy` are the screen-module loader's reads (2026-10-20): read
 once at the loader's boot (a `module loader replay:` line on stderr), they
 give a bank load's reads the fork recording's busy polls (IOP_STREAM.md
 "Drive replay", MODULE_LOADER.md 1.7); `tools/drive_replay.py` derives
-them from the fork traces.
+them from the fork traces. Lines `B counter end calls answers` (2026-11-19)
+are a guided take's area loads' sound-bank transfers: handed to
+`em_sound_bank` when the bank is bound, a load begun within 2 counters of an
+entry with its record count answers its SIF DMA status and IOP
+acknowledgement queries as the fork did (IOP_STREAM.md "The sound-bank
+transfer's recorded answers"; the run's `stream drive: bank replay:` line).
 
 The tables are recorded on the fork from the user's own disc by
 `tools/record_drive_replay.py` (hidden, under the run lock, through the

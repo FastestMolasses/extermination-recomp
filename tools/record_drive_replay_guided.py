@@ -60,11 +60,27 @@ so its loads pass fewer frames than the original's and the chains' frames sit in
 the other bank after a load with an odd difference (AREA21_PORT.md "Step K's Z
 read-back").
 
+BANK (--bank, lane PORT-LOAD-TIMING 2026-11-19): each area load's sound-bank
+transfer (001FB370 -> 001FB3E0 -> 001FB910, IOP_STREAM.md "The sound-bank
+transfer"). Its pace is set by two answers the port models at host speed: the
+kernel's sceSifDmaStat in 001FB910 (pending while the SIF DMA runs) and
+00119450(0) in 001FB3E0 (the IOP's acknowledgement of command 0x20, the SPU
+upload). Log probes on a replay of the take (the start of 001FB3E0's state 0,
+the returns of those calls and of 001FB370's call sites) give, per load, the
+answers in call order: <take>.bank ("B counter end calls answers": the counter
+of the load's first call, the bank's end 001FB370 returns, the recording's
+001FB370 calls; answers p / d pending / done, 0 / 1 / n not yet /
+acknowledged / negative), bank_calls.bin and bank_rows.tbl (the raw recording,
+never deleted) and bank_receipt.json. The port's em_sound_bank serves them
+under the drive replay ("B" lines). --loader --bank records both in one replay.
+
 Usage (native arm64 macOS; run with the decomp's .venv python, which has numpy):
   ../Extermination/.venv/bin/python tools/record_drive_replay_guided.py g36_area00_area14 [more takes]
   ../Extermination/.venv/bin/python tools/record_drive_replay_guided.py --all       # every kept take not yet recorded
   ../Extermination/.venv/bin/python tools/record_drive_replay_guided.py --loader g73_area04_area20 [more]
   ../Extermination/.venv/bin/python tools/record_drive_replay_guided.py --loader --all
+  ../Extermination/.venv/bin/python tools/record_drive_replay_guided.py --bank g73_area04_area20 [more]
+  ../Extermination/.venv/bin/python tools/record_drive_replay_guided.py --loader --bank g01_title_newgame [more]
 """
 import argparse
 import json
@@ -287,18 +303,20 @@ def write_loader(name, out, exact=None, replay=None, seconds=None):
     return info
 
 
-def record_loader(name):
+def probe_replay(name, pcs, binname, tag, split=None):
+    """Replays the kept take on the fork with inline log probes at pcs (no
+    observer effect) into out/<binname>, with the replay's rows as
+    out/<tag>_rows.tbl(.json). With split {file: (tag, pcs)} the log is written
+    as one file per entry instead (its records at those pcs), each with the
+    rows as <tag>_rows.tbl. Returns (out, exact, replay, seconds)."""
     import record_guided_run as rgr
     rop = rgr.rop
     take = rgr.take_dir(name)
     out = OUT / name
-    if (out / 'loader_calls.bin').exists():
-        print(f'{name}: loader already recorded ({out}); kept as it is', flush=True)
-        return None
     start, end = (json.loads((take / f).read_text()) for f in ('start.json', 'end.json'))
     rows = rop.records(take)
     card = take / 'card_start.ps2'
-    scratch = SCRATCH / f'{name}-loader-{time.strftime("%Y%m%d-%H%M%S")}'
+    scratch = SCRATCH / f'{name}-{tag}-{time.strftime("%Y%m%d-%H%M%S")}'
     scratch.mkdir(parents=True)
     t0 = time.monotonic()
     with rgr.GuidedSession(Path(start['state_abs']), scratch, card if card.exists() else None, 'replay',
@@ -310,19 +328,179 @@ def record_loader(name):
         c.call('input_timeline', entries=rgr.timeline(rows, start['vsync'], rgr.SHIFT), index='vsync',
                mode='replace')
         rop.schedule_card_events(c, take, s.server_version)
-        c.call('probe_add', pcs=[LOADER_READ_PC, LOADER_POLL_PC], action='log', path='loader_calls.bin')
+        c.call('probe_add', pcs=pcs, action='log', path=binname)
         c.call('run', timeout=86400 + 60, until={'vsyncs': end['vsync'] - start['vsync']}, timeout_s=86400)
         got = rop.machine(c)
         c.call('run', timeout=3600, until={'vsyncs': EXTEND}, timeout_s=3600)
         c.call('probe_remove', all=True)
         rop.disarm(c, s.root, scratch, 'replay_')
         out.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(s.root / 'loader_calls.bin', out / 'loader_calls.bin')
-        for f in ('rows.tbl', 'rows.tbl.json'):
-            shutil.copyfile(scratch / f'replay_{f}', out / f'loader_{f}')
+        if split:
+            blob = (s.root / binname).read_bytes()
+            recs = [blob[k:k + CALL.size] for k in range(0, len(blob) - CALL.size + 1, CALL.size)]
+            for fname, (ftag, fpcs) in split.items():
+                (out / fname).write_bytes(b''.join(r for r in recs if CALL.unpack(r)[5] in fpcs))
+                for f in ('rows.tbl', 'rows.tbl.json'):
+                    shutil.copyfile(scratch / f'replay_{f}', out / f'{ftag}_{f}')
+        else:
+            shutil.copyfile(s.root / binname, out / binname)
+            for f in ('rows.tbl', 'rows.tbl.json'):
+                shutil.copyfile(scratch / f'replay_{f}', out / f'{tag}_{f}')
     exact = got['hashes'] == end['hashes'] and got['ee_cycle'] == end['ee_cycle']
-    return write_loader(name, out, exact, dict(hashes=got['hashes'], ee_cycle=got['ee_cycle'], vsync=got['vsync']),
-                        round(time.monotonic() - t0, 1))
+    return out, exact, dict(hashes=got['hashes'], ee_cycle=got['ee_cycle'], vsync=got['vsync']), \
+        round(time.monotonic() - t0, 1)
+
+
+def record_loader(name):
+    if (OUT / name / 'loader_calls.bin').exists():
+        print(f'{name}: loader already recorded ({OUT / name}); kept as it is', flush=True)
+        return None
+    out, exact, replay, seconds = probe_replay(name, [LOADER_READ_PC, LOADER_POLL_PC], 'loader_calls.bin',
+                                               'loader')
+    return write_loader(name, out, exact, replay, seconds)
+
+
+# BANK: the area loads' sound-bank transfer (001FB370 -> 001FB3E0 -> 001FB910;
+# IOP_STREAM.md "The sound-bank transfer"). Log probes at the start of
+# 001FB3E0's state 0 (the bank's first call: jtbl_0026EBF0's case 0), at the
+# return of 001FB910's sceSifDmaStat call (v0 >= 0: pending), at the returns of
+# 001FB3E0's three 00119450(0) calls (the IOP's acknowledgement: v0 1 acknowledged,
+# 0 not yet) and at the returns of 001FB370's four call sites in the boot ELF
+# (v0 != 0: the bank's end, the load's last call). The answers, in call order,
+# are what the port's model answers at host speed (and, for the New Game's
+# 0x492D0-byte transfer, by the measured rule); a load's sequence is the fork's.
+BANK_START_PC, BANK_STAT_PC = 0x001FB450, 0x001FB9AC
+BANK_ACK_PCS = (0x001FB5DC, 0x001FB700, 0x001FB720)
+BANK_END_PCS = (0x001AB868, 0x001AC574, 0x001FF7F8, 0x001FFBA4)
+
+
+def bank_extract(calls, tick_counter, last_counter):
+    """(loads, opened, cont, omitted). loads: (counter, end, calls, answers,
+    counters) of the loads whose state 0 ran at or before the take's last
+    counter and that ended in the recording. answers: p / d the status query
+    pending / done, 0 / 1 / n the acknowledgement query not yet / acknowledged
+    / negative. A load still running at the take's last counter (it ends in
+    the next take) is `opened` (counter, calls, answers) with its calls and
+    answers up to that counter; the end of a load begun in the previous take
+    is `cont` (end, calls, answers) from the take's first tick (guided_table
+    joins the two)."""
+    loads, omitted, cur, cont, opened = [], [], None, None, None
+    head = dict(calls=0, answers='')               # a load begun before the take
+    for rec in calls:
+        tick, pc, v0 = rec[2], rec[5], rec[12]
+        sv0 = v0 - (1 << 32) if v0 & 0x80000000 else v0
+        counter = tick_counter.get(tick)
+        if pc == BANK_START_PC:
+            if cur is not None:
+                omitted.append(dict(cur, why='a new bank before this one ended'))
+            head = None
+            cur = dict(tick=tick, calls=0, answers='', calls_in=0, answers_in='')
+            continue
+        tgt = cur if cur is not None else head
+        if tgt is None:
+            continue
+        inside = counter is not None and counter <= last_counter
+        if pc == BANK_STAT_PC or pc in BANK_ACK_PCS:
+            a = ('p' if sv0 >= 0 else 'd') if pc == BANK_STAT_PC else '1' if sv0 == 1 else '0' if sv0 == 0 else 'n'
+            tgt['answers'] += a
+            if cur is not None and inside:
+                cur['answers_in'] += a
+        elif pc in BANK_END_PCS:
+            tgt['calls'] += 1
+            if cur is not None and inside:
+                cur['calls_in'] += 1
+            if v0 == 0:
+                continue
+            if cur is None:                         # the end of the previous take's load
+                if head['calls']:
+                    cont = (v0, head['calls'], head['answers'])
+                head = None
+                continue
+            load, cur = cur, None
+            i = tick_counter.get(load['tick'])
+            if i is None:
+                omitted.append(dict(load, why='tick not in the replay\'s rows'))
+                continue
+            if i > last_counter:
+                continue                            # the next take's
+            if counter is None or counter > last_counter:
+                opened = (i, load['calls_in'], load['answers_in'])   # ends in the next take
+                continue
+            loads.append((i, v0, load['calls'], load['answers'], counter - i))
+    if cur is not None:
+        i = tick_counter.get(cur['tick'])
+        if i is not None and i <= last_counter:
+            opened = (i, cur['calls_in'], cur['answers_in'])
+        elif i is None:
+            omitted.append(dict(cur, why='not ended at the end'))
+        # else: begun past the take's last counter, the next take's
+    return sorted(loads), opened, cont, omitted
+
+
+def write_bank(name, out, exact=None, replay=None, seconds=None):
+    """<take>.bank (or .bank.diverged) and bank_receipt.json from the kept raw
+    recording (bank_calls.bin, bank_rows.tbl). Lines: "B counter end calls
+    answers" a load inside the take; "O counter calls answers" a load still
+    running at the take's end (its part up to the take's last counter); "C end
+    calls answers" the rest of the previous take's load, from the take's start."""
+    take = GUIDED / name
+    receipt = out / 'bank_receipt.json'
+    if exact is None:
+        old = json.loads(receipt.read_text())
+        exact, replay, seconds = old['exact'], old['replay'], old['seconds']
+    last_counter = u32(table_rows(take / 'rows.tbl')[-1]['counter'])
+    tick_counter = {int(r['tick']): u32(r['counter']) for r in table_rows(out / 'bank_rows.tbl')}
+    blob = (out / 'bank_calls.bin').read_bytes()
+    calls = sorted((CALL.unpack_from(blob, k) for k in range(0, len(blob) - CALL.size + 1, CALL.size)),
+                   key=lambda r: r[0])
+    loads, opened, cont, omitted = bank_extract(calls, tick_counter, last_counter)
+    fname = f'{name}.bank' if exact else f'{name}.bank.diverged'
+    text = f'# {name}: B counter end calls answers (fork replay of the kept take; comparison only; ' \
+        'answers p/d status pending/done, 0/1/n acknowledgement; O: running at the take\'s end, C: the ' \
+        'previous take\'s load\'s rest)\n' + \
+        ('C %d %d %s\n' % cont if cont else '') + \
+        ''.join('B %d %d %d %s\n' % x[:4] for x in loads) + \
+        ('O %d %d %s\n' % opened if opened else '')
+    path = out / fname
+    if path.exists() and path.read_text() != text:
+        path.rename(out / f'{fname}.superseded-{time.strftime("%Y%m%d-%H%M%S")}')
+    path.write_text(text)
+    info = dict(take=name, tool='tools/record_drive_replay_guided.py --bank',
+                recorded=time.strftime('%Y-%m-%d %H:%M:%S'), exact=exact, calls=len(calls),
+                loads=[dict(counter=x[0], end=x[1], calls=x[2], answers=x[3], counters=x[4]) for x in loads],
+                opened=opened, cont=cont, omitted=omitted, seconds=seconds, replay=replay)
+    receipt.write_text(json.dumps(info, indent=1) + '\n')
+    print(f'{name}: {"EXACT" if exact else "DIFFERS"} replay, {len(loads)} bank loads '
+          f'({[(x[2], x[4]) for x in loads]} calls/counters){", one running at the end" if opened else ""}'
+          f'{", the previous take\'s load ended" if cont else ""}, {len(omitted)} omitted, {seconds} s', flush=True)
+    return info
+
+
+def record_loader_bank(name):
+    """--loader --bank: one replay with both probe sets, written as the two
+    recordings (loader_calls.bin, bank_calls.bin, each with its rows)."""
+    have = [f for f in ('loader_calls.bin', 'bank_calls.bin') if (OUT / name / f).exists()]
+    if len(have) == 2:
+        print(f'{name}: loader and bank already recorded ({OUT / name}); kept as they are', flush=True)
+        return None
+    if have:
+        return record_bank(name) if have == ['loader_calls.bin'] else record_loader(name)
+    lpcs, bpcs = (LOADER_READ_PC, LOADER_POLL_PC), (BANK_START_PC, BANK_STAT_PC, *BANK_ACK_PCS, *BANK_END_PCS)
+    out, exact, replay, seconds = probe_replay(name, [*lpcs, *bpcs], 'loader_bank_calls.bin', 'loader',
+                                               split={'loader_calls.bin': ('loader', lpcs),
+                                                      'bank_calls.bin': ('bank', bpcs)})
+    a = write_loader(name, out, exact, replay, seconds)
+    b = write_bank(name, out, exact, replay, seconds)
+    return dict(exact=a['exact'] and b['exact'])
+
+
+def record_bank(name):
+    if (OUT / name / 'bank_calls.bin').exists():
+        print(f'{name}: bank already recorded ({OUT / name}); kept as it is', flush=True)
+        return None
+    out, exact, replay, seconds = probe_replay(
+        name, [BANK_START_PC, BANK_STAT_PC, *BANK_ACK_PCS, *BANK_END_PCS], 'bank_calls.bin', 'bank')
+    return write_bank(name, out, exact, replay, seconds)
 
 
 def reextract(name, human=False):
@@ -388,6 +566,9 @@ def main():
     ap.add_argument('--loader', action='store_true', help='record (or, with --reextract, derive again) the named '
                     'takes\' screen-module loader reads instead (<take>.loader: the area loads\' and the bank '
                     'loads\' per-read busy polls; LOADER below)')
+    ap.add_argument('--bank', action='store_true', help='record (or, with --reextract, derive again) the named '
+                    'takes\' sound-bank transfers instead (<take>.bank: each area load\'s 001FB370 answers; BANK '
+                    'below)')
     a = ap.parse_args()
     takes = chain_takes() if a.all else a.takes
     if not takes:
@@ -395,7 +576,13 @@ def main():
     bad = 0
     t0 = time.monotonic()
     for name in takes:
-        if a.loader:
+        if a.bank and a.loader and not a.reextract:
+            assert not a.human, '--loader --bank records Claude\'s guided takes only'
+            info = record_loader_bank(name)
+        elif a.bank:
+            assert not a.human, '--bank records Claude\'s guided takes only'
+            info = write_bank(name, OUT / name) if a.reextract else record_bank(name)
+        elif a.loader:
             assert not a.human, '--loader records Claude\'s guided takes only'
             info = write_loader(name, OUT / name) if a.reextract else record_loader(name)
         else:

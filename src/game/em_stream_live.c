@@ -59,6 +59,11 @@ static struct {
     /* The comparison-only drive replay (EM_PS2_DRIVE_REPLAY): its table. */
     EmIopDriveReplayRead *replay;
     uint32_t replay_n;
+    /* its 'B' lines: the sound-bank transfers' recorded answers (handed to
+     * em_sound_bank_set_replay when the bank is bound; the answers' strings
+     * are owned here) */
+    EmSoundBankReplayLoad *bank_replay;
+    uint32_t bank_replay_n;
     /* its anchors: a compared phase and the recording's counter at its row 0;
      * the recording's counter minus the run's, from the last anchor reached */
     struct { char phase[24]; uint32_t counter; } anchor[96];
@@ -207,7 +212,7 @@ static int tick_phase_from_env(EmIopStream *iop)
 static int drive_replay_from_env(EmIopStream *iop)
 {
     const char *path = getenv("EM_PS2_DRIVE_REPLAY");
-    char line[256];
+    char line[4096];
     uint32_t cap = 0, n = 0, lineno = 0;
     EmIopDriveReplayRead *reads = NULL;
     FILE *f;
@@ -231,6 +236,41 @@ static int drive_replay_from_env(EmIopStream *iop)
          * them: em_module_loader_set_drive_replay). */
         if (line[0] == '#' || line[0] == '\n' || line[0] == 'L')
             continue;
+        /* 'B' lines: the sound-bank transfers' recorded answers
+         * (em_sound_bank_set_replay; IOP_STREAM.md "The sound-bank transfer's
+         * recorded answers"). */
+        if (line[0] == 'B') {
+            unsigned long b[3];
+            char answers[sizeof line];
+            if (sscanf(line, "B %lu %lu %lu %4095s %c", &b[0], &b[1], &b[2], answers, &extra) != 4 ||
+                b[0] > UINT32_MAX || b[1] > UINT32_MAX || b[2] > UINT32_MAX ||
+                strspn(answers, "pd01n") != strlen(answers)) {
+                fprintf(stderr, "stream lanes: EM_PS2_DRIVE_REPLAY %s:%u is not \"B counter end calls "
+                                "answers\"\n", path, lineno);
+                fclose(f);
+                free(reads);
+                return -1;
+            }
+            if (S.bank_replay_n % 32 == 0) {
+                EmSoundBankReplayLoad *more =
+                    realloc(S.bank_replay, (S.bank_replay_n + 32) * sizeof *S.bank_replay);
+                if (!more) {
+                    fclose(f);
+                    free(reads);
+                    return -1;
+                }
+                S.bank_replay = more;
+            }
+            char *own = strdup(answers);
+            if (!own) {
+                fclose(f);
+                free(reads);
+                return -1;
+            }
+            S.bank_replay[S.bank_replay_n++] =
+                (EmSoundBankReplayLoad){(uint32_t)b[0], (uint32_t)b[1], (uint32_t)b[2], own, 0};
+            continue;
+        }
         if (line[0] == '@') {
             char name[sizeof S.anchor[0].phase];
             unsigned long c;
@@ -275,8 +315,9 @@ static int drive_replay_from_env(EmIopStream *iop)
     }
     S.replay = reads;
     S.replay_n = n;
-    fprintf(stderr, "stream lanes: drive replay of %u recorded reads, %u anchors from %s "
-                    "(EM_PS2_DRIVE_REPLAY, comparison only)\n", (unsigned)n, (unsigned)S.anchor_n, path);
+    fprintf(stderr, "stream lanes: drive replay of %u recorded reads, %u anchors, %u sound-bank loads from %s "
+                    "(EM_PS2_DRIVE_REPLAY, comparison only)\n", (unsigned)n, (unsigned)S.anchor_n,
+            (unsigned)S.bank_replay_n, path);
     return 0;
 }
 
@@ -401,6 +442,9 @@ void em_stream_live_shutdown(void)
     if (S.ctx.iop) em_iop_stream_destroy(S.ctx.iop);
     if (S.disc.blob) em_iop_stream_disc_free(&S.disc);
     free(S.replay);
+    for (uint32_t i = 0; i < S.bank_replay_n; ++i)
+        free((char *)S.bank_replay[i].answers);
+    free(S.bank_replay);
     memset(&S, 0, sizeof S);
 }
 
@@ -606,12 +650,22 @@ static const int32_t *bank_handles(void)
     return S.bank_bound ? S.bank.load.d281D50 : NULL;
 }
 
+static int bank_replay_counter(void *ctx, uint32_t *counter)
+{
+    (void)ctx;
+    return em_stream_live_drive_replay_counter(counter);
+}
+
 int em_stream_live_bind_sound_bank(const int32_t base[5])
 {
     if (S.fault) return -1;
     if (!S.booted) return fail("the sound bank bound before the boot");
     if (em_sound_bank_init(&S.bank, S.ctx.iop, base) != 0) return fail("em_sound_bank_init");
     em_sound_bank_set_voice(&S.bank, bank_voice, NULL);
+    /* The comparison-only replay's sound-bank answers ('B' lines), set only. */
+    if (S.bank_replay_n &&
+        em_sound_bank_set_replay(&S.bank, S.bank_replay, S.bank_replay_n, bank_replay_counter, NULL) != 0)
+        return fail("EM_PS2_DRIVE_REPLAY's B lines (out of counter order)");
     S.bank_bound = 1;
     em_sfx_bind_bank_handles(bank_handles); /* 001FB9F0's D_00281D50 */
     return 0;
@@ -735,6 +789,23 @@ void em_stream_live_drive_report(FILE *out)
                         S.replay[i].counter, S.replay[i].sector, S.replay[i].count, S.replay[i].fields);
                 ++k;
             }
+    }
+    /* The sound-bank transfers' recorded answers ('B' lines), set only. */
+    if (S.bank_replay_n) {
+        EmSoundBankReplayStats b;
+        uint32_t unused = 0;
+        em_sound_bank_replay_stats(S.bank_bound ? &S.bank : NULL, &b);
+        for (uint32_t i = 0; i < S.bank_replay_n; ++i)
+            unused += !S.bank_replay[i].served;
+        fprintf(out, "stream drive: bank replay: %u of %u recorded sound-bank loads served (%u at a counter "
+                     "other than the recording's, %u with the recording's 001FB370 calls), %u answers (%u "
+                     "other than the model's), %u entries broken, %u loads with no recorded entry, %u entries "
+                     "not reached\n",
+                b.loads, S.bank_replay_n, b.near, b.calls_equal, b.answers, b.differed, b.broken, b.missed,
+                unused);
+        for (uint32_t i = 0; i < b.missed && i < 4; ++i)
+            fprintf(out, "stream drive: bank replay: no recorded entry for the load at the recording's counter %u, "
+                         "%u records\n", b.first_missed[i][0], b.first_missed[i][1]);
     }
 }
 

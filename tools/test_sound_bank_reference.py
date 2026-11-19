@@ -142,6 +142,24 @@ int nb_queue(uint32_t *out) { uint32_t n; const uint32_t (*q)[4] = em_iop_stream
 void nb_ram(uint32_t spu, uint32_t iop, uint32_t size, uint8_t *spu_out, uint8_t *iop_out)
 { memcpy(spu_out, em_iop_stream_spu_ram(S) + spu, size); memcpy(iop_out, em_iop_stream_iop_ram(S) + iop, size); }
 uint32_t nb_heap_next(void) { return em_iop_stream_heap_next(S); }
+/* The comparison-only replay of the sound-bank transfer: one entry at the
+ * recording's counter 100, which the counter answers throughout. */
+static EmSoundBankReplayLoad RL[1];
+static char RA[512];
+static int rc_cb(void *c, uint32_t *v) { (void)c; *v = 100; return 1; }
+int nb_replay(uint32_t counter, uint32_t calls, const char *answers)
+{
+    strncpy(RA, answers, sizeof RA - 1);
+    RL[0] = (EmSoundBankReplayLoad){counter, 0, calls, RA, 0};
+    return em_sound_bank_set_replay(&B, RL, 1, rc_cb, 0);
+}
+void nb_replay_stats(uint32_t *o)
+{
+    EmSoundBankReplayStats st;
+    em_sound_bank_replay_stats(&B, &st);
+    o[0] = st.loads; o[1] = st.answers; o[2] = st.differed; o[3] = st.broken; o[4] = st.calls_equal;
+    o[5] = st.missed;
+}
 
 /* ---- the library alone ---- */
 static EmIopStream *L;
@@ -518,14 +536,43 @@ class HostModel:
         return count
 
 
-def run_chain(elf, native, bank, ack_fields=2, compare=True, ps2=False):
+class ReplayModel(HostModel):
+    """The comparison-only replay's recorded answers (IOP_STREAM.md "The
+    sound-bank transfer's recorded answers"; record_drive_replay_guided.py
+    --bank's alphabet, a synthetic sequence here): the kernel's sceSifDmaStat
+    answers 'p' pending (0) / 'd' done (-1) and 00119450(0) '0' / '1' in order."""
+
+    def __init__(self, answers):
+        super().__init__(ps2=True)
+        self.answers = list(answers)
+
+    def take(self, kinds):
+        assert self.answers and self.answers[0] in kinds, ('recorded answers', kinds, self.answers[:1])
+        return self.answers.pop(0)
+
+    def hooks(self, o, bank):
+        super().hooks(o, bank)
+
+        def dma_stat(ee):
+            ee.ret_int(0 if self.take('pd') == 'p' else -1)
+
+        def ack(ee):
+            assert ee.r[4] & MASK == 0
+            ee.ret_int(int(self.take('01')))
+        o.hooks[KERNEL[3]] = dma_stat
+        o.hooks[0x119450] = ack
+
+
+def run_chain(elf, native, bank, ack_fields=2, compare=True, ps2=False, model=None, setup=None):
     o = SoundEE(elf, bytearray(RAM['title']['eeMemory.bin']))
     o.write(BANK_AT, bank)
-    model = HostModel(ack_fields, ps2)
+    model = model or HostModel(ack_fields, ps2)
     model.hooks(o, bank)
     if compare:
         assert native.lib.nb_init((C.c_int32 * 5)(*BASES)) == 0
         native.lib.nb_ps2(1 if ps2 else 0)
+        if setup:
+            setup()
         n, ref = native.dump(), oracle_dump(o)
         if not refs.FORK_MODE:
             # The seed D_002821A0 (the kernel's SIF DMA id) is the fork
@@ -604,6 +651,38 @@ def check_chain(elf, native, bank, ps2=False):
     return calls, size, n[DUMP_NAMES.index('D_00275B18')]
 
 
+REPLAY_ANSWERS = 'ppd1' + '0' * 9 + '1'    # synthetic: two pending queries, ten acknowledgement queries
+
+
+def check_replay(elf, native, bank):
+    """The recorded answers: the ORIGINAL chain with its status query and
+    00119450(0) answering them against em_sound_bank with one replay entry of
+    the same answers (the timing switch on, whose own rule would answer the
+    first query pending once): every call equal, the call count the
+    answers'; mutants (one acknowledgement fewer, another end, the counter
+    outside the window, an entry of another record count) fail."""
+    _o, m, calls, result = run_chain(elf, native, bank, compare=False, model=ReplayModel(REPLAY_ANSWERS))
+    assert result == BANK_END and not m.answers, (hex(result), m.answers)
+    end = C.c_char_p(REPLAY_ANSWERS.encode())
+
+    def setup(answers=end, at=100):
+        assert native.lib.nb_replay(at, calls, answers) == 0
+    _o, _m, calls_n, _r = run_chain(elf, native, bank, ps2=True, model=ReplayModel(REPLAY_ANSWERS), setup=setup)
+    st = (C.c_uint32 * 6)()
+    native.lib.nb_replay_stats(st)
+    assert calls_n == calls and st[0] == 1 and st[1] == len(REPLAY_ANSWERS) and st[2] > 0 and \
+        list(st)[3:] == [0, 1, 0], (calls_n, calls, list(st))
+    mutants = 0
+    for answers, at in ((REPLAY_ANSWERS[:-2] + '1', 100), (REPLAY_ANSWERS, 103), (REPLAY_ANSWERS + 'pd', 100)):
+        try:
+            run_chain(elf, native, bank, ps2=True, model=ReplayModel(REPLAY_ANSWERS),
+                      setup=lambda a=C.c_char_p(answers.encode()), e=at: setup(a, e))
+        except AssertionError:
+            mutants += 1
+    assert mutants == 3, ('replay mutants not refuted', mutants)
+    return calls
+
+
 def check_mutants(elf, native, bank, wait):
     out = []
     for fields in (1, 3):
@@ -637,6 +716,7 @@ def main():
     calls_ps2, size_ps2, wait_ps2 = check_chain(elf, native, bank, ps2=True)
     assert (calls_ps2, size_ps2, wait_ps2) == (calls + 1, size, wait), ('PS2 drive', calls_ps2, hex(wait_ps2))
     mutants = check_mutants(elf, native, bank, wait)
+    calls_replay = check_replay(elf, native, bank)
     banner(part(ran, total, 'library cases'),
            f'the chain: {calls} 001FB370 calls on the AREA11 bank at host speed, {calls_ps2} with the PS2 '
            f'disc-drive timing switch (the SIF DMA pending at its first query; 0x{size:X} bytes uploaded), every modelled '
@@ -644,7 +724,9 @@ def main():
            'state equal to route 00 (SPU RAM at 0x1A0000 and IOP RAM at 0xDE800 included; D_00275B18 against '
            'v2.6.3\'s, the exchange-timing pin)',
            'exchange mutants refuted by D_00275B18: ' +
-           ', '.join(f'ack after {f} field(s) -> {c} calls, 0x{b:X}' for f, c, b in mutants))
+           ', '.join(f'ack after {f} field(s) -> {c} calls, 0x{b:X}' for f, c, b in mutants),
+           f'the drive replay\'s recorded answers ({REPLAY_ANSWERS}, synthetic): {calls_replay} calls, each equal '
+           'to the original answering them; one acknowledgement fewer, the counter 3 off and another record count refuted')
     print('test_sound_bank_reference: PASS')
     return 0
 

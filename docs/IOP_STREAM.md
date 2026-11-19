@@ -520,7 +520,9 @@ are unchanged (the disc answers at host speed; the user's decision of 2026-09-27
   0x492D0 bytes: "The sound-bank transfer"). With every read served (an
   experiment with a 400-counter window) the load passes 329 frames, 17 short,
   all of them in that step; every other gap between reads is the fork's. So equal
-  load lengths need the bank transfer's per-load timing too (open). A status
+  load lengths needed the bank transfer's per-load timing too: recorded since
+  lane PORT-LOAD-TIMING (2026-11-19, "The sound-bank transfer's recorded answers"
+  below), g73's AREA20 load passes the original's 348 frames. A status
   page's or a room's load (no bank) passes the original's frames with them:
   over chain g20 g73 .. g77 every compared row is then in the original's frame
   index (STARTUP.md "Guided chains").
@@ -536,6 +538,76 @@ are unchanged (the disc answers at host speed; the user's decision of 2026-09-27
   (g67 6355 / 6355 and g68 2801 / 2801; without it g67 6352 and g68 675 / 2805:
   AREA16_PORT.md "Open: g67 rows 6866 .. 6868" was the stream timing), so the
   chains serve it by default.
+
+### The sound-bank transfer's recorded answers (lane PORT-LOAD-TIMING, 2026-11-19)
+
+An area load's sound-bank step (001FB370 -> 001FB3E0 -> 001FB910, "The sound-bank
+transfer" below) moves one state per call, and two answers set how many calls it
+takes: the kernel's sceSifDmaStat in 001FB910 (pending while the EE-to-IOP SIF DMA
+runs) and 00119450(0) in 001FB3E0 (whether the IOP has acknowledged command 0x20,
+the bank's SPU upload). The port answers both at host speed (done at the first
+query; the acknowledgement at the exchange two fields after the command), with the
+one measured exception of the New Game's 0x492D0-byte transfer. On the fork both
+are emulator DMA and IOP timing, so under the same comparison-only switch they are
+now recorded and replayed, not modelled.
+
+- **Recording** (`record_drive_replay_guided.py --bank <takes>`; `--loader --bank`
+  records the loader reads and these in one replay): log probes on the take's
+  replay at the start of 001FB3E0's state 0 (jtbl_0026EBF0's case 0, the load's
+  first call), at the return of 001FB910's sceSifDmaStat call, at the returns of
+  001FB3E0's three 00119450 calls and at the returns of 001FB370's four call sites
+  in the boot ELF (v0 nonzero: the load's last call). Per load, `<take>.bank`
+  holds `B counter end calls answers`: the counter of the load's first call, the
+  original's result (the bank's end, in the original's EE layout: information
+  only), the original's 001FB370 calls and the answers in call order (`p` / `d`
+  the status pending / done, `0` / `1` / `n` the acknowledgement not yet /
+  acknowledged / negative). A load running across a take's end is written as its
+  part (`O counter calls answers`, up to the take's last counter) and the next
+  take's rest (`C end calls answers`, from its first tick); `drive_replay.
+  guided_table` joins them. Raw recording kept beside: `bank_calls.bin`,
+  `bank_rows.tbl`, `bank_receipt.json` (the replay checked against end.json; a
+  replay that differs writes `.bank.diverged`, which no tool reads).
+- **Replay** (`em_sound_bank_set_replay`; the table's `B` lines, read by
+  `em_stream_live` and handed over when the bank is bound): a load that begins
+  (001FB370 entering with D_00282150 0) while the recording's counter is known
+  takes the nearest unserved entry within 2 counters whose record count (the
+  file's word +0x0C; the entry's `d` answers) is the bank's; its status and
+  acknowledgement queries then answer the recorded answers in order. A query of
+  the other kind than the next answer, or no answer left, stops the entry there
+  (counted as broken; the model answers from there). The bank's EE address is the
+  port's own (g73's AREA20 bank ends at 0x1337640 in the port, 0x1350A80 in the
+  original), so the end is not a key. The run's `stream drive: bank replay:` line
+  counts the loads served, those with the recording's 001FB370 calls, the answers
+  that differ from the model's, broken entries and loads with no entry (the first
+  four listed). The translations are unchanged: `make test-sound-bank-reference`
+  runs the ORIGINAL 001FB370 chain with its status query and 00119450(0) hooked to
+  a synthetic answer sequence against `em_sound_bank` with one replay entry of
+  it: every call's modelled bytes equal, 17 calls; one acknowledgement fewer, or
+  an entry with another record count, fails.
+- **Switches**: `guided_chain.py` and `watch_takes.py` serve them by default with
+  the drive replay (`--no-bank-replay` without). Unset, or with the PS2 disc-drive
+  timing switch off, nothing changes (the Original profile never sets it).
+- **g73's AREA04 -> AREA20 load**: the fork's two bank loads there take 46 and 9
+  001FB370 calls (four records: each transfer one pending status answer, each
+  upload's acknowledgement at the 10th or 5th query); the port's host-speed answers
+  gave 29. With them (`guided_chain.py g20 --until g73`) both loads are served at
+  the recording's own counter with the recording's call counts (43 answers, 18 of
+  them other than the model's), all 7 recorded loader reads of the take are then
+  served at their counters (3 before), and the load passes 348 frames, the
+  original's (154 without; 194 in the 400-counter window experiment).
+- **Recorded** (2026-11-19): g41 .. g80 (`--bank`, 40 takes, every replay exact;
+  no load runs across a take's end there: no `O` / `C` lines) and g01 .. g09
+  (`--loader --bank`, both halves in one replay each, every replay exact). **Left
+  (open):** g10 .. g40 (`record_drive_replay_guided.py --loader --bank g10_area13
+  .. g40_area14_booster`, about 2 minutes a take on a loaded machine), then the
+  chain from the title once (`watch_takes.py --check --root
+  ../Extermination/build/guided_play g01_title_newgame`: it must stay exact on
+  every segment; count the load segments that pass the original's frames). The card chains g16, g20, g11, `g17 --steer g45` and `g18 --steer g41`
+  then serve every recorded bank load (12, 5, 36, 40, 48) at its own counter with
+  the recording's calls, keep their rows, and pass every load of 10 or more
+  recorded frames in the original's frames but one (g80's row-19921 load, 13
+  against 79, rows exact); the frame-index flips after area loads are gone
+  (STARTUP.md "Guided chains").
 
 ## The sound-bank transfer (chain step H7, 2026-09-29)
 
