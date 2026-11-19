@@ -116,6 +116,11 @@ built from one codebase (full rules: `docs/PORT_PROFILES.md`).
   `tools/mid_route_beats.py` (beats from start cards), `tools/watch_takes.py`
   (the user's takes; `--root` for Claude's guided chain), `tools/guided_chain.py`
   (guided takes as one continuous run from one card, compared every frame).
+  Disc timing in those comparisons: `tools/record_drive_replay_guided.py` records
+  each take's per-read drive timing on the fork (decomp `build/drive_replay_guided/`,
+  never deleted); watch_takes serves it by default, guided_chain with
+  `--drive-replay` (a comparison aid only; IOP_STREAM.md "Guided takes"). A new
+  kept take needs its table recorded (`--all` records the missing ones).
 - `docs/WHOLE_GAME_CENSUS.md` — every original function the game can reach
   (boot + 19 overlays), whether a kept recording ran it, and whether the port
   translates or binds it; its list (B) is the hidden-gap list (reachable, never

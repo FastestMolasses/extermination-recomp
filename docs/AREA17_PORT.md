@@ -603,7 +603,11 @@ all).
   read took 7 fields, the spread the model cannot predict (IOP_STREAM.md
   "Drive replay": a01_03's far seeks took 6 or 7). The fix is a drive
   replay recording of g56 (tools/record_drive_replay.py on the fork), not
-  a model change.
+  a model change. Done 2026-11-18 (lane PORT-DRIVE-REPLAY, IOP_STREAM.md
+  "Guided takes"): with `--drive-replay` g56 is 7665 / 7665 in both g11 and
+  `g17 --steer g45`, and its rand() words equal from row 3034 on; every
+  other take of both chains is unchanged (g45 667 / 1819, g49 .. g58 as
+  above). Without it the chains stay as above.
 - Left: rand() differs with no position change at g49 row 1 (g11's card
   only; g17 matches there) / row 127 (g17), g51 row 1984 (g17 1056), g53
   row 3987; g45 from row 1 (the card).

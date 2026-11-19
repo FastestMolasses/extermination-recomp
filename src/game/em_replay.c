@@ -50,6 +50,7 @@
 #include "game/em_game_internal.h"
 #include "game/em_replay_audio.h"
 #include "game/em_scene_bindings.h"
+#include "game/em_stream_live.h"
 #include "game/em_task.h"
 
 #define REC_MAGIC "EMREC 1"
@@ -60,6 +61,7 @@ typedef struct {
     uint8_t axis[4]; /* lx ly rx ry, raw bytes (0x80 = centre) */
     uint32_t rand;   /* rand()'s state at the tick's start, with s.rands */
     uint32_t clock;  /* the world clock 0x70003B68 at the tick's start, with s.clocks */
+    uint32_t counter; /* the recording's main-loop counter (its column 2) */
 } RecPad;
 
 typedef struct {
@@ -120,7 +122,7 @@ static float axis_float(uint8_t b) { return ((float)b - 128.0f) / 128.0f; }
 
 static RecPad pad_of(const EmPadState *p)
 {
-    RecPad r = {p->buttons, {axis_byte(p->lx), axis_byte(p->ly), axis_byte(p->rx), axis_byte(p->ry)}, 0, 0};
+    RecPad r = {p->buttons, {axis_byte(p->lx), axis_byte(p->ly), axis_byte(p->rx), axis_byte(p->ry)}, 0, 0, 0};
     return r;
 }
 
@@ -183,7 +185,7 @@ static int load_recording(const char *path)
             last = strrchr(line, ' ');
         }
         RecPad pad = {(uint16_t)btn, {(uint8_t)lx, (uint8_t)ly, (uint8_t)rx, (uint8_t)ry},
-                      s.rands && last ? (uint32_t)strtoul(last + 1, NULL, 16) : 0, clock};
+                      s.rands && last ? (uint32_t)strtoul(last + 1, NULL, 16) : 0, clock, counter};
         if (mv) {
             if (!movie_open) {
                 if (!(s.movie_skip = grow(s.movie_skip, &s.cap_movies, s.nmovies + 1, 1))) goto oom;
@@ -322,6 +324,12 @@ static void stop(const char *why)
     if (!s.done) {
         s.done = 1;
         printf("replay: %s at step %u (counter %u)\n", why, s.step, em_frame_counter());
+        /* With the comparison-only drive replay: how its table served the run. */
+        uint32_t mapped;
+        if (s.playing && em_stream_live_drive_replay_counter(&mapped)) {
+            fflush(stdout);
+            em_stream_live_drive_report(stdout);
+        }
         em_frame_request_quit();
     }
 }
@@ -341,7 +349,7 @@ static void filter(EmPadState *pad, void *user)
         s.in_movie = 1;
         if (s.playing) {
             int skip = s.movie_index > s.nmovies || s.movie_skip[s.movie_index - 1];
-            RecPad r = {skip ? (uint16_t)EM_PAD_START : 0, {0x80, 0x80, 0x80, 0x80}, 0, 0};
+            RecPad r = {skip ? (uint16_t)EM_PAD_START : 0, {0x80, 0x80, 0x80, 0x80}, 0, 0, 0};
             pad_set(pad, &r);
         }
     } else {
@@ -373,6 +381,12 @@ static void filter(EmPadState *pad, void *user)
             const uint32_t i = s.off < g0->len ? s.off : g0->len - 1;
             pad_set(pad, &s.ticks[g0->start + i]);
             if (s.rands && s.cur_seg && s.off < g0->len) em_random_seed(s.ticks[g0->start + i].rand);
+            /* The comparison-only drive replay (EM_PS2_DRIVE_REPLAY): this
+             * tick plays the recording's tick, so a read issued now keys on
+             * the recording's counter (em_stream_live_drive_replay_align;
+             * IOP_STREAM.md "Guided takes"). Past a segment's end the last
+             * mapping holds. Nothing happens without a table. */
+            if (s.off < g0->len) em_stream_live_drive_replay_align(s.ticks[g0->start + i].counter);
             if (s.clocks && s.cur_seg && s.off < g0->len) {
                 const int32_t behind = (int32_t)(s.ticks[g0->start + i].clock - (uint32_t)st->spad3B68);
                 st->spad3B68 = (int32_t)((uint32_t)st->spad3B68 + (uint32_t)behind);

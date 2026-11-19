@@ -295,6 +295,19 @@ void em_stream_live_drive_replay_anchor(const char *phase, uint32_t counter)
     }
 }
 
+void em_stream_live_drive_replay_map(uint32_t recording_counter, uint32_t run_counter)
+{
+    if (!S.replay_n)
+        return;
+    S.offset = recording_counter - run_counter;
+    S.anchored = 1;
+}
+
+void em_stream_live_drive_replay_align(uint32_t recording_counter)
+{
+    em_stream_live_drive_replay_map(recording_counter, em_frame_counter());
+}
+
 int em_stream_live_drive_replay_counter(uint32_t *counter)
 {
     if (!S.replay_n || !S.anchored || !counter)

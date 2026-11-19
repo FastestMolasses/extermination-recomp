@@ -279,5 +279,8 @@ port's logic (AREA19_PORT.md, "Segment 940 and the g41 push"):
   (001E7050). The beast 0x7A99D0 (00141D20) draws its chase turns and leaves the
   original's path at 390,155. In g41 it lies dormant 14 units from the run north to the
   plane, and the player is deflected away from it (segment 979, offset 436).
-- What is left: the stream drive's start latency. A drive replay of the guided takes
-  would close it (IOP_STREAM.md "Drive replay").
+- Closed by the drive replay of the guided takes (lane PORT-DRIVE-REPLAY, 2026-11-18;
+  IOP_STREAM.md "Guided takes"): with the original's recorded per-read drive timing the
+  arrival stream answers in 26 ticks, segment 940 and segment 979 (g41) are exact, and the
+  chain from the title is exact through segment 1056 (AREA19_PORT.md, "The drive replay of
+  the guided takes").

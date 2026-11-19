@@ -273,6 +273,23 @@ its statuses are the ones that count.
     9.599849). A comparison setting like `EM_IOP_TICK_PHASE`, never a player
     or launcher option (STARTUP.md "Developer switches"; IOP_STREAM.md
     "Drive replay").
+    Since 2026-11-18 (lane PORT-DRIVE-REPLAY; IOP_STREAM.md "Guided takes") the
+    same switch serves Claude's guided takes and the user's own takes: one table
+    per take recorded on the fork's exact replay of it
+    (`tools/record_drive_replay_guided.py`, ignored decomp
+    `build/drive_replay_guided/` and `build/drive_replay_takes/`), mapped by the
+    input playback tick by tick (`EM_INPUT_PLAY`) or by `EM_START_AT_COUNTER0`.
+    **Watching the takes uses it by default as a comparison aid**:
+    `tools/watch_takes.py` (the `--check` runs and the user's `--from` / `--at`
+    viewing alike) serves every take of the chain that has a table, so a
+    playback follows the original's disc timing read for read and stays on the
+    recording (the guided chain from the title was exact only to segment 978
+    without it); `--no-drive-replay` plays with the drive model instead.
+    `tools/guided_chain.py` takes it only with `--drive-replay`. This is never
+    game behaviour: the game itself, every launcher setting and the Original
+    profile answer at host speed (the user's decision of 2026-09-27), and the
+    PS2 disc-drive timing switch the playbacks set stays the optional switch it
+    is.
   - `EM_SPU2_OUTPUT_TEST=voice` (the SPU2 output model, SPU2_OUTPUT.md;
     recorded 2026-10-29): replaces the SFX mix with the experimental pre-core
     dry voice sum of the public DSP model, for waveform comparisons only (no

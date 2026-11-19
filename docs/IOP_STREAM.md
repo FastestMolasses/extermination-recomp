@@ -435,6 +435,77 @@ at row 957 (LEVEL2_BINDING.md).
   reads). `tools/test_level_smoke_area00.py --run` runs with the replay too
   (the AREA01 main beats, then the AREA00 phases on its path).
 
+### Guided takes (lane PORT-DRIVE-REPLAY, 2026-11-18)
+
+Claude's guided chain from the title (`tools/watch_takes.py --check --root
+../Extermination/build/guided_play g01_title_newgame`) was exact for 403k ticks
+through segment 978, and every break left was the drive model's one value per
+distance class against the original's per-read busy polls: segment 454 (g15's
+13-line voiced message, start latencies off by 1..2 ticks, net -2), segment 940
+(g36's AREA14 arrival stream answering in 25 ticks against 26) and, from it,
+segment 979 (g41: AREA14's owners one tick behind, a beast's rand() chase 13.8
+units from the player). AREA19_PORT.md has the traces. The same comparison-only
+switch now serves the guided takes; the default play and the Original profile
+are unchanged (the disc answers at host speed; the user's decision of 2026-09-27).
+
+- **Recording** (`tools/record_drive_replay_guided.py`, run with the decomp's
+  `.venv` python): each kept take is replayed hidden on the fork from its own start
+  state, pad and card events, as the decomp's `record_guided_run.py verify` and
+  `guided_take_probe.py` do, under the decomp's run lock; the session is shut down
+  at the take's end. One more watch table at the main-loop top (trigger `tick`, the
+  trigger of the take's own rows.tbl) samples 0x70003B64, 001FA0D0's block at
+  D_00282150 and the three lane records at D_00281FD0. The read rule is
+  record_drive_replay.py's (issued when the phase goes 1 -> 2, seek fields = the
+  following samples still in phase 2 on that lane, ending at the lane's done
+  mark; a break is left out), but the key is the issuing tick's own counter (the
+  level-smoke tables key one later, on the first sample showing phase 2, under
+  their own anchors). Measured: keyed one later, 2115 of the 2321 reads served
+  over the chain's first 80,000 ticks were served off their counter; keyed on
+  the issuing tick, 238. Sampling runs 40 ticks past the take's end for a read
+  still in flight; a read issued in the take's last tick is this take's (the
+  next replay starts already in phase 2). The replay must reproduce
+  the take: its machine at the take's last vsync (EE RAM, scratchpad, VU, IOP
+  hashes, EE cycle) equals end.json, else the table is written as
+  `.reads.diverged` and no tool reads it. Every sample's counter is checked
+  against the take's rows.tbl (all equal on every take recorded).
+- **Tables** (decomp `build/drive_replay_guided/<take>/`, ignored, disc-derived,
+  never committed and never deleted: `drv.tbl` (the raw samples), `<take>.reads`
+  (`counter sector count fields`), `receipt.json`). `--reextract` derives the
+  table again from drv.tbl without the emulator; a different earlier table is
+  kept beside it as `<take>.reads.superseded-<time>` (the first tables keyed one
+  tick later; g41's first also missed the read issued in its last tick). `--all` records every kept take not yet
+  recorded; `--human <take>` records one of the user's own takes (read only) into
+  `build/drive_replay_takes/`.
+- **Keying**: take.rec's own counter. No anchors: the input playback
+  (em_replay.c, `EM_INPUT_PLAY`) knows which recorded tick each played tick
+  plays (segment and offset), and on every such tick maps the run's counter onto
+  that tick's recorded counter (`em_stream_live_drive_replay_align`); past a
+  segment's end the last mapping holds. So a read issued on the same tick of a
+  segment as the original's keys on the original's counter even though the port's
+  loads are shorter. `tools/guided_chain.py --drive-replay` does the same through
+  `EM_START_AT_COUNTER0` (the recording's counter at script frame 0; every script
+  frame t maps onto it + t, a hook at a frame's end standing for the next frame).
+  The serving rule is unchanged (same sector and count, nearest unserved entry
+  within 2 counters, `EM_IOP_REPLAY_WINDOW`).
+- **Tools**: `tools/drive_replay.py guided_table` merges the chain's tables in
+  chain order (a take without a table takes the model and is listed);
+  `watch_takes.py` serves them by default wherever a take of the chain has a
+  table (`--no-drive-replay` without; the user's takes have none unless recorded
+  with `--human`); `guided_chain.py` only with `--drive-replay`. A playback that
+  ends prints the run's `stream drive:` lines (watch_takes shows the replay's).
+- **Not covered**: the screen-module loader's bank reads (`L` lines) are not
+  recorded for the guided takes (the area loads keep their rules either way);
+  reads the port issues during its shorter loads seldom find their entry and take
+  the model.
+- **Result** (2026-11-18): all 79 kept takes recorded, every replay exact (84
+  minutes, one batch). The chain from the title is exact through segment 1056
+  (449,925 ticks; segments 454, 940 and 979 closed; next stop a static-world fault
+  in g48, not the drive: AREA19_PORT.md "The drive replay of the guided takes").
+  The user's test1 (recorded with `--human`): 413 of 413 reads served, 17212 /
+  17212 with and without. `guided_chain.py g11 --drive-replay` and `g17 --steer
+  g45 --drive-replay`: g56 7665 / 7665 (7664 without, AREA17_PORT.md).
+  `guided_chain.py g16` and `g20` without it are unchanged.
+
 ## The sound-bank transfer (chain step H7, 2026-09-29)
 
 The area load's first bank step, 001FF590(0xAB, 0), hands the area's sound bank to 001FB370 (MODULE_LOADER.md

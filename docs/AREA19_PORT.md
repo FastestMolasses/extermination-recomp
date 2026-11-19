@@ -396,3 +396,27 @@ PORT-A14-PLANE, 2026-11-18).** No port logic differs; nothing was changed.
   from the title stays as above: segments 0 .. 978 exact but segment 454's last tick and segment
   940's settle tick, 403,653 ticks compared, 402,719 on the recording, and the run overruns at step
   430,291.
+
+**The drive replay of the guided takes (lane PORT-DRIVE-REPLAY, 2026-11-18).** Done as planned above:
+`tools/record_drive_replay_guided.py` replays each of the 79 kept takes hidden on the fork (every
+replay exact against its end.json; 84 minutes for the whole run, about 140 ticks a second) and
+tabulates 001FA0D0's reads per main-loop tick, keyed by the issuing tick's take.rec counter
+(15,021 reads; tables in the decomp's ignored `build/drive_replay_guided/`). The input playback
+maps the run's counter onto the recording's tick by tick, so `watch_takes.py` serves every read the
+original's measured busy polls (IOP_STREAM.md "Guided takes"; on by default when watching,
+`--no-drive-replay` without; a comparison aid, never game behaviour).
+
+Chain now (`watch_takes --check --root ../Extermination/build/guided_play g01_title_newgame`, every
+take's table): **segments 0 .. 1056 exact, 449,925 ticks compared, 449,925 on the recording**, through
+g41 .. g47 and into g48. Segment 454 (g15's message) and segment 940 (g36's arrival) are exact, and
+with them segment 979 (g41's run to the plane) and everything after. Over the chain's first 80,000
+ticks 2,321 reads took a table entry, 238 of them within the 2-counter window rather than on their own
+counter, and 15 found none (the model). **Next divergence**: segment 1056 (g48 `area17_cable`, the
+AREA11 entry 3 arrival scene after the cable ride, original counter 466,803, its first tick): the
+render context faults reading original address 0x4513113C, which no view covers (module 2,
+EM_RC_FAULT_BAD_INDEX: a float-looking word used as an address), as the scene's static world is
+composed (`assets/scene_snow`); the game fail-stops. The card chain does not show it:
+`guided_chain.py g17 --steer g45` (card g45) plays g48 26,433 / 26,433 and on through g58. So it
+is state the continuous run carries into AREA11 (AREA11 was last loaded in g02) that the card
+does not; not traced yet. Without the replay the chain stays as before (segment 454's last tick,
+segment 940's settle, segment 979 at offset 436).

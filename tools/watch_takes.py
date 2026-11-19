@@ -39,6 +39,12 @@ Usage (native arm64 macOS; build/extermination first, native):
                                                # (EM_FAST_UNTIL, docs/STARTUP.md); the point's (segment:offset)
                                                # is printed, and a warning when it is past the last --check's frontier
 
+Disc timing: every playback runs with the PS2 disc-drive timing switch, and where a take of
+the chain has a recorded drive table (tools/record_drive_replay_guided.py: the original's
+per-read drive timing on the fork's exact replay of the take) each read takes the original's
+time (EM_PS2_DRIVE_REPLAY; docs/IOP_STREAM.md "Guided takes"). A comparison aid only, never
+game behaviour (docs/LAUNCHER_OPTIONS.md); --no-drive-replay plays with the drive model.
+
 --root DIR plays the chains of another take folder; the default is the user's
 own takes. A chain never mixes the two: under --root, a take whose start state or
 card lies outside DIR is refused, and the output goes to build/guided_takes/.
@@ -69,6 +75,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TAKES = ROOT.parent / 'Extermination/build/human_play'
+USER_TAKES = TAKES
 OUT = ROOT / 'build/takes'
 BIN = ROOT / 'build/extermination'
 COLS = ('step counter mv ph btn lx ly rx ry area sub entry bd8 s8d t9 tb x y z yaw seg off cap af').split()
@@ -352,6 +359,7 @@ def compare(rec, log):
     offset. Prints the segments' first differences; returns (ticks, exact)."""
     segs, played = segments(parse(rec)), parse(log)
     per, ticks, exact = {}, 0, 0
+    compare.last = None
     for row in played:
         seg, off = int(row['seg']), int(row['off'])
         if seg < 0 or seg >= len(segs) or off >= len(segs[seg]) or row['ph'] == 'T':
@@ -364,6 +372,7 @@ def compare(rec, log):
         same = away <= SAME and turned <= TURNED and row['area'] == want['area'] and row['sub'] == want['sub']
         ticks += 1
         exact += same
+        compare.last = (seg, off)
         entry = per.setdefault(seg, dict(ticks=0, first=None, worst=0.0, phase=want['ph'], area=want['area'], sub=want['sub']))
         entry['ticks'] += 1
         entry['worst'] = max(entry['worst'], away)
@@ -461,6 +470,26 @@ def choose_start(args, names, marks):
     return seg, o, idx
 
 
+def drive_replay_env(names, out):
+    """The comparison-only drive replay (IOP_STREAM.md "Drive replay", "Guided
+    takes"): the original's per-read drive timing, recorded on the fork's replay
+    of each take (tools/record_drive_replay_guided.py), merged over the chain into
+    out/drive_replay.txt and served through EM_PS2_DRIVE_REPLAY. The disc-drive
+    timing switch is on in every playback here already. A take with no table takes
+    the drive model. Never game behaviour: LAUNCHER_OPTIONS.md "Not launcher options"."""
+    import drive_replay
+    table_dir = drive_replay.GUIDED_DIR if TAKES != USER_TAKES else drive_replay.TAKES_DIR
+    info = drive_replay.guided_table(names, out / 'drive_replay.txt', table_dir)
+    if not info['entries']:
+        print('drive replay: no recorded tables for this chain (the drive model)', flush=True)
+        return {}
+    gaps = f'; {len(info["missing"])} with no table take the drive model ({", ".join(info["missing"][:4])}' \
+        f'{", ..." if len(info["missing"]) > 4 else ""})' if info['missing'] else ''
+    print(f'drive replay: {info["entries"]} recorded reads from {len(info["takes"])} of {len(names)} takes{gaps}',
+          flush=True)
+    return dict(EM_PS2_DRIVE_REPLAY=info['table'])
+
+
 def main():
     global BIN
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -482,6 +511,8 @@ def main():
                         '(developer: e.g. EM_FRAME_TIMING=<file>)')
     parser.add_argument('--hidden', action='store_true', help='with --from/--at: no window even after the switch, '
                         'and no sound (a test of the switch)')
+    parser.add_argument('--no-drive-replay', action='store_true', help='leave out the recorded drive timing (the '
+                        'default uses it wherever a take of the chain has a table: a comparison aid, below)')
     args = parser.parse_args()
     if args.root:
         use_root(args.root)
@@ -519,6 +550,8 @@ def main():
     env.update(item.split('=', 1) for item in args.env)
     if until:
         env.update(EM_FAST_UNTIL=f'{until[0]}:{until[1]}')
+    if not args.no_drive_replay:
+        env.update(drive_replay_env(names, out))
     if args.hidden:
         env.update(EM_HEADLESS='1', EM_MUTE='1')
     if args.check:
@@ -533,12 +566,15 @@ def main():
     for line in (out / 'run.log').read_text(errors='replace').splitlines():
         stopped = 'FAULT' in line or 'player stage worker' in line or ' fault code ' in line or \
             line.startswith('chain page:')
-        if line.startswith('replay:') or stopped or 'fail-stop' in line:
+        if line.startswith(('replay:', 'stream drive: replay')) or stopped or 'fail-stop' in line:
             print(line[:200], flush=True)
             faulted = faulted or stopped
     print(f'port exit {code}', flush=True)
     compare(rec, log)
     if args.check and not args.ticks and not fast:
+        if faulted and compare.frontier['segment'] is None and compare.last:
+            # every compared tick on the recording, but the game stopped: the frontier is the stop
+            compare.frontier.update(segment=compare.last[0], offset=compare.last[1] + 1, fault=True)
         (out / 'frontier.json').write_text(json.dumps(compare.frontier) + '\n')
     if faulted:
         print('The game stopped at the FAULT above: a difference after it is the stopped game, not a new one.')

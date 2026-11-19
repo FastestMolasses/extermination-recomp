@@ -72,7 +72,7 @@ COMPATIBLE = {
     'EM_NEW_GAME',  # its own; EM_NEW_GAME=1 refused apart
     'EM_HEADLESS', 'EM_HEADLESS_RASTER', 'EM_UNCAPPED', 'EM_MUTE', 'EM_INPUT_TEST',  # the host; the pad's changes printed
     'EM_NO_RENDER', 'EM_STATE_TRACE',                                     # no draws (state only); the state digests
-    'EM_PS2_DRIVE_REPLAY', 'EM_IOP_TICK_PHASE',                           # the disc-drive timing
+    'EM_PS2_DRIVE_REPLAY', 'EM_IOP_TICK_PHASE', 'EM_START_AT_COUNTER0',   # the disc-drive timing
     'EM_GS_BANDS', 'EM_GS_EARLY_OPS', 'EM_GS_EARLY_PARSE', 'EM_GS_LIST', 'EM_GS_SPEC', 'EM_GS_SPEC_CHECK',
     'EM_GS_TEXCACHE', 'EM_GS_THREADS',                                    # the GS head (the same bytes)
     'EM_HUD_FORCE', 'EM_HUD_HOVER', 'EM_AIM_FIRE_TABLES',                 # presentation; a data path

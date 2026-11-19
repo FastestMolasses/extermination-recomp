@@ -381,6 +381,9 @@ def main(argv):
                         'player falls behind, through TAKE (a prefix; default the whole chain); without it the '
                         'pad alone plays')
     parser.add_argument('--compare-only', action='store_true', help='compare the last run\'s trace again')
+    parser.add_argument('--drive-replay', action='store_true', help='serve the original\'s recorded per-read drive '
+                        'timing (tools/record_drive_replay_guided.py tables, EM_PS2_DRIVE_REPLAY with '
+                        'EM_START_AT_COUNTER0; docs/IOP_STREAM.md "Guided takes"): a comparison aid, off by default')
     args = parser.parse_args(argv)
     if args.list or not args.chain:
         for n, (card, route, takes) in CHAINS.items():
@@ -418,8 +421,18 @@ def main(argv):
                 k = takes.index(take)
                 state = json.loads((refs.capture(take_route(route, take)) / take / 'trace.json').read_text())
                 more.append((Path(state['source_state']).parent / 'eeMemory.bin', starts[k]))
+        extra = list(args.set)
+        if args.drive_replay:
+            import drive_replay
+            info = drive_replay.guided_table(takes, out / 'drive_replay.txt')
+            gaps = f'; {len(info["missing"])} with no table take the drive model ({", ".join(info["missing"][:4])}' \
+        f'{", ..." if len(info["missing"]) > 4 else ""})' if info['missing'] else ''
+            print(f'drive replay: {info["entries"]} recorded reads from {len(info["takes"])} of {len(takes)} '
+                  f'takes{gaps}', flush=True)
+            if info['entries']:
+                extra += [f'EM_PS2_DRIVE_REPLAY={info["table"]}', f'EM_START_AT_COUNTER0={rows[0]["counter"]}']
         seconds, faults, trace, log_path = run(args.chain, card, rows, files, timeout,
-                                               args.kinds or KINDS.get(args.chain), args.set, steer, source_ram,
+                                               args.kinds or KINDS.get(args.chain), extra, steer, source_ram,
                                                args.chain in RESTORE_AT_START, args.chain in SCENE_WAIT_AT_START, more)
         print(f'run: {seconds:.0f} s, {log_path.relative_to(ROOT)}')
         for f in faults[:3]:

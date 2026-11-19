@@ -487,7 +487,7 @@ recording-derived and stay in the ignored `build/`.
   tools/test_start_at.py checks that each is refused or named here): the
   host's `EM_HEADLESS`, `EM_HEADLESS_RASTER`, `EM_UNCAPPED`, `EM_MUTE`, `EM_NO_RENDER` (headless runs
   that read no picture skip the draws, em_norender.h), `EM_STATE_TRACE` (a per-frame state digest file),
-  `EM_INPUT_TEST` (prints the pad's changes), the disc-drive timing `EM_PS2_DRIVE_REPLAY` and
+  `EM_INPUT_TEST` (prints the pad's changes), the disc-drive timing `EM_PS2_DRIVE_REPLAY` (with `EM_START_AT_COUNTER0`) and
   `EM_IOP_TICK_PHASE`, the GS head's `EM_GS_BANDS`, `EM_GS_EARLY_OPS`,
   `EM_GS_EARLY_PARSE`, `EM_GS_LIST`, `EM_GS_SPEC`, `EM_GS_SPEC_CHECK`,
   `EM_GS_TEXCACHE`, `EM_GS_THREADS` (the same bytes); the presentation's
@@ -605,6 +605,12 @@ recording-derived and stay in the ignored `build/`.
   `tools/guided_chain.py g21 --set EM_START_AT_CARD_SWAP=27800:<empty folder
   with slot1/ and slot2/>`, docs/AREA21_PORT.md "Ending 2"). The host card
   needs no re-seat of its own: em_memcard answers a formatted card every time.
+  `EM_START_AT_COUNTER0=<counter>` (comparison only, with `EM_PS2_DRIVE_REPLAY`;
+  `tools/guided_chain.py --drive-replay`) is the recording's main-loop counter at
+  script frame 0: every script frame maps the run's counter onto that counter
+  plus the frame, so a disc read keys on the recording's counter in the guided
+  takes' drive replay tables (IOP_STREAM.md "Guided takes"). Without a table it
+  does nothing.
   `EM_START_AT_FRAMES=1` (comparison only, tools/guided_chain.py) keeps the
   script's clock on the engine's frames: the frontend steps the script at a
   world frame's head in play but at the frame's end on a status page (states
@@ -1020,7 +1026,16 @@ they are disc-derived timing data and never committed.
 `tools/test_level_smoke_area01.py` merges the tables of the phases it runs
 (`tools/drive_replay.py`) and runs with the replay by default
 (`--no-drive-replay` without; `--strict-drive-replay` also fails on a read
-inside the recorded span with no entry). Unset (the default) changes
+inside the recorded span with no entry). Claude's guided takes (2026-11-18,
+IOP_STREAM.md "Guided takes"): `tools/record_drive_replay_guided.py` records
+one table per kept take, keyed by take.rec's own counter, and needs no anchor
+lines: the input playback (`EM_INPUT_PLAY`, em_replay.c) maps the run's
+counter onto the recording's on every tick it plays
+(`em_stream_live_drive_replay_align`), and `EM_START_AT_COUNTER0` does the same
+for `EM_START_AT`'s script frames; `tools/watch_takes.py` uses the tables by
+default (`--no-drive-replay` without) and `tools/guided_chain.py` with
+`--drive-replay`. A playback that ends prints the run's `stream drive:` lines.
+Unset (the default) changes
 nothing: the first-level smokes' tick logs are byte-identical to the build
 without the switch, and newgame-control gives 9.599849. It is not a player
 or launcher option, and the Original profile never sets it.

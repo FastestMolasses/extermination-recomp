@@ -3119,7 +3119,10 @@ The tool warns when the chosen point lies past the first tick of the last full
 `--check` run that left the recording (`build/guided_takes/<first take>/frontier.json`,
 written by `--check` with no `--ticks`); after that point the recorded pad no longer fits the
 port's game. `--hidden` (no window or sound even after the switch) and `--then N` (stop
-N ticks after it) are for tests.
+N ticks after it) are for tests. Every watch serves the original's recorded per-read disc
+timing where a take has a table (all 79 guided takes since 2026-11-18; "What we
+deliberately do not emulate" below says why this is a comparison aid only);
+`--no-drive-replay` plays with the drive model instead.
 
 ## What we deliberately do not emulate
 
@@ -3139,6 +3142,18 @@ from the PS2 hardware rather than the code is not reproduced by default.
     (MODULE_LOADER.md 1.7). It is off by default
     (`LAUNCHER_OPTIONS.md`; `src/em_settings.h`, `EM_PS2_DISC_DRIVE_TIMING=1`
     until the launcher exists). The level smoke runs both ways.
+  - **Comparison aid, not a feature (2026-11-18):** the recorded drive
+    replay (`EM_PS2_DRIVE_REPLAY`, LAUNCHER_OPTIONS.md "Not launcher
+    options"; IOP_STREAM.md "Guided takes"). The drive model above gives a
+    read one seek time per distance class; the PS2 drive's busy polls vary
+    read by read, and that alone moved Claude's guided chain off the
+    recording (a voiced line's start a tick early, a cutscene a tick short,
+    then a creature's rand() chase). Playing back a recorded take, the port
+    can serve each read the time the original's own replay of that take
+    measured, so the comparison follows the disc read for read and what is
+    left is the port's logic. `tools/watch_takes.py` does this by default
+    for every take with a table; it is never part of the game, the
+    launcher or the Original profile.
 - **No PS2 slowdowns or hitches.** The port runs one game tick per field. On
   the recorded first-level route the original under PCSX2 also ran one field
   per iteration (`MAIN_LOOP_AND_GAP.md` 2.4); the extra fields seen in some

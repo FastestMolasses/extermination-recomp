@@ -173,3 +173,44 @@ def report(run_text):
     keys = ('served', 'entries', 'differed', 'near', 'missed', 'missed_in_span', 'last_missed_counter',
             'last_missed_sector', 'not_reached')
     return dict(zip(keys, map(int, m.groups())))
+
+
+# Claude's guided takes (tools/record_drive_replay_guided.py; IOP_STREAM.md "Drive
+# replay", "Guided takes"): one table per kept take in the decomp's ignored
+# build/drive_replay_guided/<take>/, keyed by take.rec's own main-loop counter.
+# The input playback (em_replay.c, EM_INPUT_PLAY) maps the run's counter onto the
+# recording's every tick it plays (em_stream_live_drive_replay_align), so the
+# merged table needs no anchors.
+GUIDED_DIR = ROOT.parent / 'Extermination/build/drive_replay_guided'
+# The user's own takes (build/human_play), recorded the same way.
+TAKES_DIR = ROOT.parent / 'Extermination/build/drive_replay_takes'
+
+
+def guided_table(takes, out_path, table_dir=GUIDED_DIR):
+    """Merge the tables of the chain's takes, in chain order, into out_path.
+    A take with no table (not recorded yet) is listed as missing: its reads take
+    the model. A take whose replay did not reproduce it (.reads.diverged) is
+    refused. Returns a summary dict (entries 0: write nothing, no table)."""
+    table_dir = Path(table_dir)
+    entries, used, missing, last = [], [], [], None
+    for take in takes:
+        path = table_dir / take / f'{take}.reads'
+        if not path.exists():
+            missing.append(take)
+            continue
+        receipt = json.loads((table_dir / take / 'receipt.json').read_text())
+        assert receipt['exact'], (take, 'the fork replay that recorded this table did not reproduce the take')
+        reads = read_beat(path)
+        assert all(a[0] <= b[0] for a, b in zip(reads, reads[1:])), (take, 'table out of counter order')
+        if reads and last is not None:
+            assert reads[0][0] > last, (take, 'drive replay tables overlap on this chain', reads[0][0], last)
+        if reads:
+            last = reads[-1][0]
+        entries.extend(reads)
+        used.append(take)
+    if entries:
+        lines = ['# merged guided drive replay (comparison only; disc-derived, never committed)']
+        lines.extend(f'# {take}' for take in used)
+        lines.extend('%d %d %d %d' % e for e in entries)
+        Path(out_path).write_text('\n'.join(lines) + '\n')
+    return dict(table=str(out_path), takes=used, missing=missing, entries=len(entries))

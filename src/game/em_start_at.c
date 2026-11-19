@@ -7,6 +7,7 @@
 #include "game/em_random.h"
 #include "em_input.h"
 #include "game/em_scene_bindings.h"
+#include "game/em_stream_live.h"
 #include "game/em_task.h"
 
 
@@ -287,6 +288,12 @@ static struct {
      * recording's stream from the beat's start). */
     int rand_set;
     uint32_t rand_state;
+    /* EM_START_AT_COUNTER0=<counter> (comparison only, with the drive replay
+     * EM_PS2_DRIVE_REPLAY: IOP_STREAM.md "Guided takes"): the recording's
+     * main-loop counter at script frame 0; each frame maps the run's counter
+     * onto counter + the script's frame, so a read keys on the recording's. */
+    int counter0_set;
+    uint32_t counter0;
     /* EM_START_AT_FADE=<level 0..255>: the transition level at the
      * recording's row 0 (D_0028A9A0 +4; 0 when no fade runs there). A
      * loaded game fades in with the player's input refused; the script's
@@ -781,6 +788,14 @@ int em_start_at_check(void)
             pad.rand_set = 1;
             pad.rand_state = (uint32_t)v;
         }
+        const char *counter0 = getenv("EM_START_AT_COUNTER0");
+        if (counter0 && counter0[0]) {
+            char *end;
+            const unsigned long v = strtoul(counter0, &end, 10);
+            if (*end || v > 0xFFFFFFFFul) return refuse("EM_START_AT_COUNTER0: not a 32-bit counter", counter0);
+            pad.counter0_set = 1;
+            pad.counter0 = (uint32_t)v;
+        }
         const char *rands = getenv("EM_START_AT_RANDS");
         if (rands && rands[0]) {
             FILE *g = fopen(rands, "r");
@@ -1124,6 +1139,11 @@ int em_start_at_pad_frame(unsigned counter, const float pos[3], const float fwd[
         pad.phase_was_load = load;
     }
     const int t = pad.t;
+    /* The comparison-only drive replay's counter (EM_START_AT_COUNTER0): the
+     * frame this hook stands for is script frame t (a hook at a frame's end
+     * stands for the next frame). Nothing happens without a table. */
+    if (pad.counter0_set && t >= 0)
+        em_stream_live_drive_replay_map(pad.counter0 + (uint32_t)t, counter + (at_frame_end ? 1u : 0u));
     /* The frame's start (em_start_at_frame_end): what a recording's row
      * samples. A hook at a world frame's head has the frame machine's own
      * work before it (state 4's re-place on a room move draws rand() in

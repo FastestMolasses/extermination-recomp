@@ -154,6 +154,16 @@ void em_stream_live_drive_replay_anchor(const char *phase, uint32_t counter);
 /* The recording's counter for the main-loop counter now (1), or 0 without
  * a table or before its first anchor (the module loader's replay reads it). */
 int em_stream_live_drive_replay_counter(uint32_t *counter);
+/* The input playback's alignment (em_replay.c, EM_INPUT_PLAY; IOP_STREAM.md
+ * "Drive replay", "Guided takes"): the tick now plays the recording's tick
+ * whose main-loop counter is `recording_counter`, so the run's counter maps
+ * onto it from here (the same mapping an anchor sets, without the line).
+ * Nothing happens without a table. */
+void em_stream_live_drive_replay_align(uint32_t recording_counter);
+/* The same with the run's counter given: the run's `run_counter` is the
+ * recording's `recording_counter` (EM_START_AT's script frames, whose hook at
+ * a frame's end stands for the next frame: em_start_at.c). */
+void em_stream_live_drive_replay_map(uint32_t recording_counter, uint32_t run_counter);
 /* The drive's counters (em_iop_stream_drive_stats) and whether the PS2
  * disc-drive timing switch was on at the boot (*ps2_timing; em_settings);
  * 0 before the boot. */
