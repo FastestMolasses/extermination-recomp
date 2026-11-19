@@ -288,6 +288,9 @@ void em_owner_draw_live_post_step(void);
  * i.e. those before the frame's em_owner_draw_live_post_step (all of them
  * without one), in build order. 0, or -1 (as em_owner_draw_live_flush). */
 int em_owner_draw_live_flush_walk(EmGfx *gfx);
+/* The walk's units up to (not including) unit `end` of the frame's build
+ * order: em_render_frame draws an actor's shadow passes between them. */
+int em_owner_draw_live_flush_walk_to(EmGfx *gfx, uint32_t end);
 
 /* Draw this frame's remaining units in build order, then forget every kept
  * unit and keep the frame's calls as the last drawn frame's log. The first

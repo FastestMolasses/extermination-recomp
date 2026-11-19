@@ -298,6 +298,7 @@ static int s_entry_state = -1;
 static int s_demo;
 static int32_t s_demo_bd4;
 static int demo_in(int s09);
+static EmModuleLoader *s_loader;
 static int w_00122BA8(void *ctx, uint32_t a0);
 static int32_t r_0028A564(void *ctx);
 static int w_00200830(void *ctx, int32_t a0);
@@ -3554,13 +3555,19 @@ static int c1f0_bone_count(void *ctx, uint32_t model, uint8_t *count)
 static int c1f0_00200890(void *ctx)
 {
     (void)ctx;
-    /* A room move's 001B07C0 can change D_00810C60 (AREA13's outdoor entries
-     * with the coat): the packet goes up as at a rebind. An area load sends
-     * it from the loader's state 7 (the boundary, see above). The attract
-     * demo's 001ACA20 state 4 sub 0 runs 001B07C0 after its own area load,
-     * and its D_00810C60 can differ from the one the loader sent (demo 1,
-     * AREA13 entry 8: the coat): sent there as well. */
-    if (s_entry_state == 4 || demo_in(4))
+    /* The original's 0015C1F0 always ends in 00200890: every 001B07C0 sends
+     * the packet D_00810C60 now names. A room move's (state 4) can change
+     * D_00810C60 (AREA13's outdoor entries with the coat). So can an area
+     * load's (state 0, the rebuild): the loader's state 7 sent the packet
+     * of the D_00810C60 the previous area left, and 001B07C0 sets it from
+     * the area flag D_008106C8 bit 2 just before this call (the guided
+     * run's g41, AREA14 -> AREA18: costume 2 -> 0; with the state-7 packet
+     * alone the player's hair kept the costume-2 texels until the bomb
+     * pickup's rebind, DRAW_LIST_AUDIT.md section 4). The attract demo's
+     * 001ACA20 state 4 sub 0 runs 001B07C0 after its own area load (demo 1,
+     * AREA13 entry 8: the coat). A fixture with no screen-module loader has
+     * no packet to send. */
+    if (s_entry_state == 4 || demo_in(4) || (s_entry_state == 0 && s_loader))
         return em_scene_bindings_00200890();
     return 0;
 }

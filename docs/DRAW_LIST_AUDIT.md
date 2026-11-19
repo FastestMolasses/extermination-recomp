@@ -179,9 +179,11 @@ row 300 went from 23,841 to 114,278 exact.
 | g76 800 | AREA21 entry 3 | the arrival room | 114,652 (max 2) | same |
 | g76 1300 | AREA21 entry 4, the deck | snow from the +0x2520 node | 113,803 (max 68) | **114,664 (max 1)** |
 | g73 2700 | AREA20 | the dock, the player's shadow | 114,622 (max 53) | same (open: 18 pixels on the shadow's edge) |
-| g73 3500 | AREA20 | a letterboxed scene with its message | 114,671 RGB, **35,140 RGBA** | same (open: alpha, below) |
-| g42 300 / 1500 / 2400 | AREA18 | cargo hold, weather node | 114,278 / 114,507 / 114,547 | same (open: the player's hair, below) |
+| g73 3500 | AREA20 | a letterboxed scene with its message | 114,671 RGB, **35,140 RGBA** | **114,671 RGB and RGBA** (lane PORT-GS-PICS2: (g) below) |
+| g42 300 / 1500 / 2400 | AREA18 | cargo hold, weather node | 114,278 / 114,507 / 114,547 | **114,643 / 114,653 / 114,550 (max 4 / 55 / 2)** (lane PORT-GS-PICS2: (f) below) |
 | g42 2600 / 3000 / 5600 | AREA18 | deck, crates | 114,577 / 114,642 / 114,671 (max 2) | same |
+| g12 17500 / 20000, g13 300 / 2600 / 3600 | AREA15 sub 0 | the weather node's area (+0x2520, 001E5AC0's strips) | not compared | **114,688 / 114,682 / 114,681 / 114,675 / 114,677 (max 0 / 3 / 1 / 4 / 2)** (lane PORT-GS-PICS2: the continuous chain from the title, `watch_takes.py --gs-dump`, before the g73 interleave fix; nothing to fix) |
+| g79 1718 / 3131 | AREA21 phase 3 | the grenade launcher's sight while aiming | not compared | **114,566 / 114,581 (max 2 / 4)** (lane PORT-GS-PICS2) |
 
 - **(a) The sea grid's colour (+0x1E8): verified.** In g77 5000 and 8000 every
   pixel of the sea (the screen grid sampling the ripple texture, colour only)
@@ -200,30 +202,69 @@ row 300 went from 23,841 to 114,278 exact.
   original's own 001E67C0 instructions with flags 2 and area 0x1500 (3 quick,
   12 full cases: post-state, matrices, parameters and descriptors equal; the
   normal rows on the reversed cases fail it).
-- **Open: the player's hair in AREA18 (g42 300, 1500, 2400).** Drawn with other
-  texels (teal where the original is brown; up to 188 off), exact from g42
-  2600 on, after the bomb pickup's scene (phase C, rows ~2405..2505). The
-  chain starts from card g41 (a LOAD GAME into AREA14), so a state the card
-  start leaves (the player's face record, a CLUT the scene reloads) is the
-  first candidate; the GS memory outside the per-frame buffers was not found
-  to differ at row 300. Not traced.
-- **Open: g73 3500's alpha.** RGB 99.99 % exact, but the original's buffer
-  holds A = 0x80 over the whole picture inside the letterbox where the
-  port's holds 0: one primitive writes alpha there in the original (an
-  alpha-only pass) that the port does not. Nothing shows it (the display
-  ignores A); a later read of destination alpha would. Not traced.
+- **(f) The player's hair in AREA18 (g42 300, 1500, 2400): fixed** (lane
+  PORT-GS-PICS2). Not a card-start artefact: the GS memory at row 300
+  (EM_GS_DUMP_MEM against the original's local memory) differed in the
+  player's texture packet, GS pages 0xDC..0xDF (blocks 0x1B80..0x1BFF), and
+  equalled the original's from row 2600 on (the bomb pickup's rebind). The
+  packet is 00200890's choice by D_00810707 and the costume D_00810C60 (decomp
+  func_00200890.c), and D_00810C60 is 2 in AREA14 (g40's end state) and 0 in
+  AREA18 (g41's end state). The original sends the packet twice at an area
+  load: the loader's state 7 with the previous area's costume, then 001B07C0's
+  0015C1F0 (frame state 0, the rebuild) after it set D_00810C60 from the area
+  flag D_008106C8 bit 2 (func_001B07C0.c). The port's 0015C1F0 binding sent
+  only at a room move (state 4) and in the attract demo, so the costume-2
+  texels stayed until the rebind: the same in the continuous chain from the
+  title (g41's AREA14 -> AREA18 door is the same path). em_scene_bindings.c
+  c1f0_00200890 now sends at state 0 too (with the screen-module loader
+  bound). After: 114,278 / 114,507 / 114,547 -> 114,643 / 114,653 / 114,550
+  RGB exact; 2600 unchanged (114,577). The remaining pixels are one-LSB texel
+  residue (max 4) and, at 1500, a small patch with max 55 (not traced).
+- **The persistent GS memory difference outside the frame buffers**: GS
+  pages 0x1CC..0x1E3 hold data in the original at every compared AREA18 row
+  and zeros in the port; nothing compared samples them (all those points are
+  exact there). Not traced: a texture the port does not upload.
+- **(g) g73 3500's alpha: fixed** (lane PORT-GS-PICS2). The original's GS
+  stream of that frame (tools/capture_gs_original.py --gs-dump, the fork's
+  gs_dump; tools/gs_dump_prims.py lists its primitives with their state) is:
+  the clear (A = 0x80), 2,969 primitives, then a drop shadow's passes (its
+  first, the alpha strip: PRIM 0x044, TEST 0x51001, ALPHA (Cd - 0) x FIX 0x80
+  + 0, writes A only), then 13,392 more channel-0 primitives (TFX HIGHLIGHT
+  with CLUT alpha 0x80: A = 0x80), then the player. At row 2700 the shadow
+  follows the whole world (9,627 primitives) instead. So the shadow is drawn
+  at its call time inside the actor walk (001AFD70's behaviours, decomp
+  func_001AE6B0.c / func_001AFD70.c: an actor's 001DA6A0 lands in channel 0
+  between the units built before and after it), and the units after it
+  write their own alpha. The port drew every walk unit first and the walk's
+  shadows after them, so the strip cleared their alpha. em_shadow_live keeps
+  each walk call's place (em_owner_draw_live_count at the call) and
+  em_render_frame draws the walk's units and shadows interleaved
+  (em_shadow_live_walk_next / flush_walk_until, em_owner_draw_live_flush_walk_to).
+  After: RGBA 35,140 -> 114,671 (= RGB exact); g73 2700 unchanged. The
+  17 RGB pixels left (max 171, inside x 168..507, y 70..204) are not traced.
 - **Open: g73 2700's shadow edge** (18 pixels, two lines at the player's
   shadow decal's edge) and the one-LSB texel residue elsewhere (GS_EXACT.md
   section 8).
 - **(e) The 2D layer:** the gauge bar (AREA21's 0x8260A0), the Gatling's
   sight, the area-title and message glyphs and the letterbox are exact in
-  the points above (g77 5000 / 8000, g75 2600 / 3500, g73 3500, g77 10).
+  the points above (g77 5000 / 8000, g75 2600 / 3500, g73 3500, g77 10);
+  the grenade launcher's aiming sight at g79 1718 / 3131 within 2 / 4 of the
+  original's (lane PORT-GS-PICS2: one-LSB residue, nothing missing).
   The radar (item 0x06 on the upper rail) is not in any kept take's AREA20 /
   21 frame: not compared.
 
 Reference test: `tools/test_gs_second_half_reference.py` (quick: g76 1300;
-EM_TEST_FULL=1: every pinned point through g77), skipped where the
-original's captures are absent; timeout 900 s in tools/test_sweep.py.
+EM_TEST_FULL=1: every pinned point through g79, g73 3500 with its alpha,
+and chain g18's g42 300 / 2400), skipped where the original's captures are
+absent; timeout 900 s in tools/test_sweep.py.
+
+**The original's GS stream** (lane PORT-GS-PICS2): `capture_gs_original.py
+TAKE ROW --gs-dump --out <dir>` also records the fork's gs_dump (upstream
+GS dump format) from loop top R + 1 (r<R>/s1.gs.zst: the frame drawn in
+R + 1 -> R + 2 and the next one's start); `tools/gs_dump_prims.py` decodes
+the GIF tags and lists each primitive with PRIM, FRAME, TEST, ALPHA, TEX0,
+ZBUF and its window box (filters --big, --pixel X,Y). Kept for g73 2700 /
+3500 in decomp build/gspics/gsdump/ (disc-derived, local only).
 
 ## 5. Summary
 
@@ -233,5 +274,9 @@ original's captures are absent; timeout 900 s in tools/test_sweep.py.
   fixed.
 - GPU renderer (Enhanced): rows 4 and 5 are not drawn there (open).
 - Open: the channel-0 dynamic census (section 3). Pictures (section 4):
-  AREA21 verified after one fix (the reversed snow rows); open the hair in
-  AREA18 after a card start, g73's alpha-only pass, one shadow edge.
+  AREA21 verified after one fix (the reversed snow rows); AREA18's hair
+  (the area load's second texture packet) and g73's alpha (a walk shadow at
+  its call's place) fixed by lane PORT-GS-PICS2; g79's sights and AREA15
+  sub 0 (five points from the title) verified;
+  open one shadow edge (g73 2700), 17 pixels at g73 3500 and GS pages
+  0x1CC..0x1E3.

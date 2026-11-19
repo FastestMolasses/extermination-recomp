@@ -1553,8 +1553,14 @@ static int draw_units(EmGfx *gfx, uint32_t end)
 
 int em_owner_draw_live_flush_walk(EmGfx *gfx)
 {
+    return em_owner_draw_live_flush_walk_to(gfx, UINT32_MAX);
+}
+
+int em_owner_draw_live_flush_walk_to(EmGfx *gfx, uint32_t end)
+{
     const uint32_t frame = em_frame_counter();
-    return draw_units(gfx, L.post_frame == frame && L.unit_frame == frame ? L.post_first : UINT32_MAX);
+    const uint32_t walk = L.post_frame == frame && L.unit_frame == frame ? L.post_first : UINT32_MAX;
+    return draw_units(gfx, end < walk ? end : walk);
 }
 
 int em_owner_draw_live_flush(EmGfx *gfx)

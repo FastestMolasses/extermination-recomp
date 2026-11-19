@@ -1388,7 +1388,9 @@ page):
    their REF names, D_00815360 (001D1F80(0, 1, 0)), read from the boot
    builder's GS blocks; the object triangles keep the kernel's template PRIM
    (the clip pass's PRIM is one lower);
-4. the drop shadow's passes in 001DA6A0's order: state block (2,9)
+4. the drop shadow's passes in 001DA6A0's order (an actor's call in the
+   walk at its place among the walk's units of step 3, since lane
+   PORT-GS-PICS2: DRAW_LIST_AUDIT.md section 4 (g)): state block (2,9)
    D_00815E10 and 001DA1E0's DIRECT strip (its four rows D_002531D0 from
    the effect tables export); the boxes (00237180's triangles, then
    00239C90's, PRIM 0x044 / 0x043, the call's RGBAQ); the target packet
