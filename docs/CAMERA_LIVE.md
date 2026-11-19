@@ -489,7 +489,15 @@ collision world; the math through em_sdk_math_original; 001D2610 /
 
 **Reached only outside what AREA11 sets up** (fail-stops, each reported
 when reached): 00182F90 (001912B0's area-0x10 lift; AREA11 is area 0xB);
-0022E7F0 (D_00810CA5 == 6); 001B0300 (camera +5 == 1; the specials module
+0022E7F0 (D_00810CA5 == 6: the upper-rail part item 0x06 fitted on the
+SPR4 page UPPER U.R.S. (00217090 commits entry 1 + 5); the guided run owns
+the item from g40 on but never fits it, CA5 stays 5 in every take. In aim
+frames (00197D20's state, 001999C0's D_00810CA7 arms) it draws a radar:
+the 2D open 00207D00(1, 0), a 200-unit blip 0022E630 (00207E40
+sprite) per live entry of the list D_00275B54 / D_00275B58, the heading
+fan 00208040 and three 002082B0 icons, all into slot 1; 001B17A0 is the
+same item's object highlight. Not translated: lane PORT-FAILSTOPS ran out
+of budget after the reticle); 001B0300 (camera +5 == 1; the specials module
 requires its worker before it runs 00197490, so it is bound to a
 fail-stop). Evidence: every route and AIM capture holds D_00810CA4..CA7 =
 FF 05 00 07 and camera +5 = 0; their writers are the New Game reset
@@ -519,10 +527,9 @@ slot-1 packets byte-exact into the render context (001D64A0 em_rcl_001D64A0,
 profile's GS frame draws a world frame's slot-1 segment after the world
 and the chain page, as 001D2300 kicks it (GS_EXACT.md section 9 "Slot
 1"): the sights are on the field, the zoom scope's pixels equal the
-original's displayed field (`make test-slot1-field`). One fail-stop remains:
-00199770's lock mark 001DD170 (the missile launcher with a class-2 target
-within 360 and on screen), whose vf23 input has no certified value at the
-camera step (AIM_FIRE.md section 7). Verified by `make
+original's displayed field (`make test-slot1-field`). 00199770's lock mark
+001DD170 (the missile launcher with a class-2 target within 360 and on
+screen) is bound since lane PORT-FAILSTOPS (2026-11-18): em_sight_lock runs the reticle translations with vf23 = the fog quadword *D_00275670 + 0xA0 (measured in the original: the same vf23 at 001999C0, 00199770 and every 001DD170 entry of a tick, that quadword in 57 of 90 ticks, another owner's leftover in 33; a leftover changes only the w lane 0x7000360C, `make test-sight-lock-reference`); AIM_FIRE.md section 7. Verified by `make
 test-sight-reference` (tools/test_sight_reference.py; the original
 instructions of all sixteen over designed memory, each 001999C0 arm as a
 chain at one sp).

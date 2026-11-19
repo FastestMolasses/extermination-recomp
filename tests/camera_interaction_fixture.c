@@ -126,6 +126,9 @@ static int retarget(const char *ramfile,const char *world,const char *scratch,ui
     em_collision_world_unload();em_collision_free(&g.coll);free(ram);return ok;
 }
 int player_pose_script_euler_w(float *out) { *out=s_seed_w; return 1; }
+/* 0018CBD0 copies the player's +0xAC to cam+0x2C (em_camera.c, since 2026-10-28):
+ * the captured player record. */
+const EmPlayerLiveActor *player_states_actor(void) { return &player; }
 int test_retarget(const char *ramfile,const char *world,const char *scratch,uint8_t *out)
 {return retarget(ramfile,world,scratch,out,0);}
 int test_refusal(const char *ramfile,const char *world,const char *scratch,uint8_t *out)

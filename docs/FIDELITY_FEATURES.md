@@ -3087,7 +3087,9 @@ recording one pi/8 turn step ahead: the tool fed a guided take's pad one tick ea
 - Status: **PARTIAL**. The zoom scope is verified on the picture; the
   other four sights draw through the same path with no capture to compare.
   00199770's lock mark 001DD170 (the missile launcher with a class-2 target
-  in range) is a fail-stop.
+  in range) is translated and bound (oracle-verified, vf23 measured); live
+  it is not reached yet (a class-2 entry's record is not served) and its
+  pixels are unverified.
 
 ### Watching Claude's run
 

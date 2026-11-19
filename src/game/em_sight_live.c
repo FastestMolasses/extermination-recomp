@@ -7,12 +7,14 @@
 
 #include "game/em_actor_collision.h"
 #include "game/em_aim_fire_sdk_memory.h"
+#include "game/em_aim_fire_tables.h"
 #include "game/em_camera_live.h"
 #include "game/em_collision_world.h"
 #include "game/em_player_stage_workers.h"
 #include "game/em_render_context_live.h"
 #include "game/em_render_verify_rest.h"
 #include "game/em_sight.h"
+#include "game/em_sight_lock.h"
 
 #define STACK_BASE  UINT32_C(0x7F000000)   /* the window below the aim host's sp */
 #define STACK_SIZE  0x1000u
@@ -32,6 +34,7 @@ static struct {
     uint8_t d253240[0x190], d26E6F0[0x120];
     uint8_t stack[STACK_SIZE];
     uint8_t class2_cursor[4], class2_count[2], class2_words[4 * EM_ACTOR_LIST_MAX];
+    uint8_t number[16]; /* 001C5FB0's D_008111D0, this module's copy (as em_status_pages_live's) */
     void *(*map)(void *, uint32_t, size_t, int);    /* the aim camera's, for the call */
     int (*call)(void *, EmAimFireTargetCall *);
     int reported;
@@ -130,6 +133,15 @@ static void *sight_map(void *ctx, uint32_t a, size_t n, int write)
     void *p;
     if (!write && (p = class2(a, n))) return p;
     if (within(a, n, 0x70003600u, 0x40)) return scratch3600(a, n);
+    if (within(a, n, 0x008111D0u, sizeof L.number)) return L.number + (a - 0x008111D0u);
+    /* 001DD2F0 / 001DD600's templates D_002533D0..D_0025348F (assets/aim_fire_tables.emaf) */
+    if (within(a, n, 0x002533D0u, 0xC0u)) {
+        const uint8_t *t;
+        if (write) return NULL;
+        if (!(t = em_aim_fire_tables_bytes(a, (uint32_t)n)) && em_aim_fire_tables_load() == 0)
+            t = em_aim_fire_tables_bytes(a, (uint32_t)n);
+        return (void *)(uintptr_t)t;
+    }
     if (L.map && (p = L.map(ctx, a, n, write))) return p;
     if ((p = write ? em_rcl_bytes_mut(a, (uint32_t)n) : (void *)(uintptr_t)em_rcl_bytes(a, (uint32_t)n))) return p;
     /* a class-2 entry's fields: its publishing owner's record */
@@ -154,6 +166,24 @@ static int refuse(uint32_t fn, const char *why)
         fprintf(stderr, "em_sight_live: callee %08X refused: %s\n", fn, why);
     }
     return -1;
+}
+
+static int leaf(void *ctx, EmAimFireTargetCall *c);
+
+/* The reticle's 001CBA50 and 001281C0, through the drawers' leaf. */
+static int lock_leaf(void *ctx, EmAimFireReticleCall *k)
+{
+    EmAimFireTargetCall c;
+    memset(&c, 0, sizeof c);
+    c.function = k->function;
+    c.sp = k->sp;
+    c.na = k->na;
+    c.nf = k->nf;
+    memcpy(c.a, k->a, sizeof k->a);
+    c.f[0] = k->f12;
+    const int status = leaf(ctx, &c);
+    k->v0 = c.v0;
+    return status;
 }
 
 /* The drawers' leaf callees. */
@@ -218,9 +248,23 @@ static int leaf(void *ctx, EmAimFireTargetCall *c)
     case 0x00183C40u:
         if (!L.services.frame) return refuse(c->function, "no aim/fire composition bound");
         return L.services.frame(c) < 0 ? refuse(c->function, "the composition faulted") : 0;
-    case 0x001DD170u:
-        return refuse(c->function, "00199770's lock mark 001DD170: its vf23 input has no certified value at the "
-                                   "camera step (docs/AIM_FIRE.md)");
+    case 0x001DD170u: {
+        /* 00199770's lock mark (em_sight_lock: vf23 = the fog quadword) */
+        EmSightLock k;
+        memset(&k, 0, sizeof k);
+        k.context = ctx;
+        k.map = sight_map32;
+        k.call = lock_leaf;
+        if (em_sight_lock_001DD170(&k, c->sp, (uint32_t)c->a[0], (uint32_t)c->a[1], (uint32_t)c->a[2],
+                                   (uint32_t)c->a[3], (uint32_t)c->a[4]) < 0) {
+            if (!L.reported) {
+                L.reported = 1;
+                fprintf(stderr, "em_sight_live: 001DD170 fault in %08X at %08X\n", k.fault_function, k.fault_address);
+            }
+            return -1;
+        }
+        return 0;
+    }
     default:
         /* sin 0011E2A8, cos 0011DE90, sqrt 0011E748, fabs 0011DF78 */
         if (c->function != 0x0011E2A8u && c->function != 0x0011DE90u && c->function != 0x0011E748u &&

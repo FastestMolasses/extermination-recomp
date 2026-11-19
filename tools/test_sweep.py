@@ -30,6 +30,10 @@ BASELINE = os.path.join(ROOT, 'tests', 'sweep_baseline.json')
 ARGS = {
     'level14_shared_player': [(f':{s}', ['--suite', s]) for s in ('closure', 'ladder', 'major2', 'heal')],
 }
+# Original-capture fixtures that are not named test_*_reference.py but run the same way.
+FIXTURES = {
+    'camera_interaction_fixture': 'test_camera_interaction_fixture.py',
+}
 # Oracles that read a log their make target writes from the current binary: the
 # sweep runs the target (it rebuilds the binary first, incrementally), never a stale log.
 COMMANDS = {
@@ -106,6 +110,9 @@ def main():
         for suffix, extra in ARGS.get(name, [('', [])]):
             cmd = COMMANDS.get(name) or [sys.executable, path] + extra
             jobs.append((name + suffix, cmd, TIMEOUTS.get(name, a.timeout)))
+    for name, script in sorted(FIXTURES.items()):
+        if name not in SKIP:
+            jobs.append((name, [sys.executable, os.path.join(ROOT, 'tools', script)], TIMEOUTS.get(name, a.timeout)))
     if a.make:
         for t in make_targets():
             jobs.append(('make:' + t[5:], ['make', t], TIMEOUTS.get('make:' + t[5:], a.timeout)))

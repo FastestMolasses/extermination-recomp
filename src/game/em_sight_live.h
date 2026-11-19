@@ -32,11 +32,10 @@
  * the aim/fire composition's frame); sin, cos, sqrt and fabs through the
  * aim camera's call.
  *
- * Fail-stop: 001DD170 (00199770's lock mark) is not bound: its vf23 input
- * (the fog ramp 001CD520 loads earlier in the frame) has no certified
- * value at the camera step (docs/AIM_FIRE.md, "Not reachable in AREA11"),
- * so reaching it faults, named. Any other refusal faults too and is
- * reported once. */
+ * 00199770's lock mark 001DD170 runs em_sight_lock (vf23 = the fog
+ * quadword *D_00275670 + 0xA0; em_sight_lock.h), its number at this
+ * module's copy of D_008111D0, its templates D_002533D0.. from
+ * assets/aim_fire_tables.emaf. Any refusal faults and is reported once. */
 #ifndef EM_SIGHT_LIVE_H
 #define EM_SIGHT_LIVE_H
 

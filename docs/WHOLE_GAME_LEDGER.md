@@ -136,7 +136,7 @@ em_camera_live's aim_call does not serve, so they fault).
 | 0x002032C0 | boot | 144 | iop_services | boundary | host file reads of the exported assets (em_frontend's file table note) | Called only by the CD stream service 001FEE60 (class C): fills the 9-entry disc file table D_00821010 through the IOP |
 | 0x0021B860 | boot | 128 | area_state | boundary | em_render_context_live.c load (RENDER_CONTEXT.md section 8) | The boot builder's fog pair and the +0xA0 copies; the area load rewrites them before a bound routine reads them (the +0x100 copy is read only by 001D2730(0, 0)) |
 | 0x00140004 | boot | 1080 | entity_logic | unreachable | none needed | Its only static reach is three overlay words (AREA03 0x827A20, AREA04 0x82A680 / 0x82B5B0) that sit right after a placement record's behaviour pointer: record fields (halfwords 4 and 0x14), not a pointer. No call or code constant reaches it |
-| 0x00199770 | boot | 592 | init_io | live | em_sight.c em_sight_00199770, served by em_sight_live (aim_call); its 001DD170 is a named fail-stop (vf23 uncertified) | test-sight-reference (original instructions); test-sight-live sight_missile: served live, no fault (constructed start; no original capture: no recording owns the item). The missile launcher (D_00810CA4 == 2): lock marks on class-2 entries within 360 |
+| 0x00199770 | boot | 592 | init_io | live | em_sight.c em_sight_00199770, served by em_sight_live (aim_call); its lock mark 001DD170 runs em_sight_lock (vf23 = the fog quadword; test-sight-lock-reference, original instructions) | test-sight-reference (original instructions); test-sight-live sight_missile: served live, no fault (constructed start; no original capture: no recording owns the item). The missile launcher (D_00810CA4 == 2): lock marks on class-2 entries within 360 |
 | 0x001DB830 | boot | 404 | weapon_equip | live | em_sight.c, served by em_sight_live | test-sight-reference (original instructions); test-sight-live sight_night / sight_missile: served live, no fault (constructed start; no original capture: no recording owns the item). The four corner brackets (001D64A0) of the night vision scope and the missile launcher |
 | 0x001DB9D0 | boot | 724 | weapon_equip | live | em_sight.c (NEARMISS; the instructions followed), served by em_sight_live | test-sight-reference (16 functions as original code); test-sight-live sight_zoom: the live packets equal the original's captured slot-1 bytes (decomp build/sights_ref/zoom) on all 21,443 written bytes at zoom 0, 1.0 and 0.5. The 33-step ring strip of the zoom scope, the DELTA auto sight and the interceptor unit |
 | 0x001DBCB0 | boot | 148 | weapon_equip | live | em_sight.c, served by em_sight_live | test-sight-reference (16 functions as original code); test-sight-live sight_zoom: the live packets equal the original's captured slot-1 bytes (decomp build/sights_ref/zoom) on all 21,443 written bytes at zoom 0, 1.0 and 0.5. The zoom scope's WIDE-ZOOM bar marker (001D64A0 at D_00810248) |
@@ -216,10 +216,12 @@ fades; nothing draws a gameplay frame's slot-1 packets, so the sight is
 not on the port's picture (by construction, not measured), like AREA21's
 Gatling gauge bars (em_sgp_00207F80). The capture's fields
 (build/sights_ref/zoom/frame_aim*/original.png) are the reference for the
-step that draws slot 1 in world frames. 00199770's lock mark 001DD170
-stays a named fail-stop (its vf23 input is uncertified at the camera step,
-AIM_FIRE.md); it needs the missile launcher and a class-2 target within
-360 on screen.
+step that draws slot 1 in world frames. 00199770's lock mark 001DD170 is
+bound since lane PORT-FAILSTOPS (2026-11-18): em_sight_lock runs the reticle translations with vf23 = the fog quadword *D_00275670 + 0xA0 (measured in the original: the same vf23 at 001999C0, 00199770 and every 001DD170 entry of a tick, that quadword in 57 of 90 ticks, another owner's leftover in 33; a leftover changes only the w lane 0x7000360C, `make test-sight-lock-reference`); AIM_FIRE.md section 7. Live it is not yet reached: from the constructed start
+sight_missile_a22 (AREA22 past door 18, nine class-2 entries in range)
+00199770 faults reading the entry 0x7A8830, whose record no owner's view
+serves (open; `EM_SIGHT_OPEN=1 make test-sight-live`). The marks' pixels
+are unverified (no picture capture).
 
 ## 5. Lane GAP-3 (2026-11-18): the effects, the script commands, two oracles
 

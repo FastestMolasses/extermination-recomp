@@ -46,6 +46,12 @@ DRAWERS = {
     'sight_interceptor': ('001DB9D0', '001DC610', '001DC890'),
     'sight_missile': ('001DB830', '001DBE20', '00199770'),
 }
+# AREA22 past door 18 with class-2 targets in range, where 00199770 would draw lock marks
+# (001DD170). Open (lane PORT-FAILSTOPS): 00199770 faults reading the class-2 entry 0x7A8830
+# (no owner's record view serves it), so it runs only with EM_SIGHT_OPEN=1 and is not a pass
+# condition yet.
+if os.environ.get('EM_SIGHT_OPEN') == '1':
+    DRAWERS['sight_missile_a22'] = ('001DB830', '001DBE20', '00199770')
 
 
 def pad_script():
@@ -188,6 +194,11 @@ def check(point):
     if lack:
         problems.append('drawers never ran: ' + ' '.join(lack))
     note = '%d drawer calls' % len(calls)
+    if point == 'sight_missile_a22':
+        marks = [c for c in calls if c['fn'] == '00199770' and c['bytes']]
+        if not marks:
+            problems.append('00199770 drew no lock mark (001DD170)')
+        note += '; %d frames with lock marks' % len(marks)
     if point == 'sight_zoom' and not problems:
         note += '; ' + compare_capture(calls, problems)
     return point, problems, note

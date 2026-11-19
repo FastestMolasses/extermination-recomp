@@ -452,6 +452,30 @@ em_effects_live faults on each (an untranslated handler).
   001DD170, the numeric reticle (kind 1, 001CBA50 / 001CBC20) and the vf23
   bookkeeping are not reached; the render adapter keeps refusing an
   uncertified vf23.
+  **00199770's call (lane PORT-FAILSTOPS, 2026-11-18).** Measured in the
+  original: a hidden fork run (decomp build/failstops, scratch) from the
+  end of beat a01v_02 (AREA22 past door 18, nine class-2 entries, the
+  nearest about 10 away) with the launcher fitted as the constructed start
+  sight_missile does (items 0x0C..0x0E, CA4..CA7 = 02 FF FF FF), R2 held:
+  watch tables at 001999C0, 00199770 and 001DD170 recorded vf23 and the
+  fog quadword over 90 aim ticks (189 001DD170 calls, all kind 1 from
+  00199770). vf23 is identical at the three entries within every tick (no
+  callee in between writes it); it equals the fog quadword *D_00275670 +
+  0xA0 in 57 ticks and one constant leftover of another owner (a matrix
+  row) in the other 33, switching once and staying. At the camera step
+  D_00275B90 / D_00275B98 equal the class-2 list's cursor and count
+  (D_00275B8C / D_00275B94), as em_sight_live serves them (a tick-top
+  snapshot shows the base and 0). vf23 reaches only the depth-ramp lane:
+  the word 0x7000360C (and vf2.w / ACC.w after the call); the packets,
+  the label and every other byte are the same for any vf23. So
+  em_sight_lock (src/game/em_sight_lock.c) binds 001DD170 with vf23 = the
+  fog quadword: exact in the fog ticks, and in the leftover ticks exact
+  except 0x7000360C. `make test-sight-lock-reference`: the original
+  001DD170 with 001DD2F0 / 001DD600 / 001C5FB0 / 001281C0 as original code
+  over designed memory and the AREA22 snapshot, 001CBA50 scripted; fog
+  cases equal in every byte, leftover cases (the measured value and random
+  ones) differ only in 0x7000360C; 120 quick / 338 full cases; four
+  binding mutants killed (--mutations).
 - **The projectiles 0018AF50 / 0018B3E0** (001869A0 / 001872C0; 0018AF50
   is translated and bound since lane PORT-A21-G79, section 2) need the
   sub-weapon byte +275 != 0; with D_00810CA4 = 0xFF and D_00810CA6 = 0,

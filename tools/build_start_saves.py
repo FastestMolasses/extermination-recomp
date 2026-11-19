@@ -412,6 +412,13 @@ CONSTRUCTED['sight_missile'] = _sight([
     (0x810CA4, bytes((0x02, 0xFF, 0xFF, 0xFF)),
      'CA4 = 2, CA5..CA7 = 0xFF: MULTIPLE ATTACHMENT commits the launcher (all three parts held)')])
 
+# The launcher's lock marks need class-2 targets within 360 and on screen (00199770's 001DD170,
+# lane PORT-FAILSTOPS): the end of beat a01v_02 in AREA22, past door 18 (nine class-2 entries, the nearest ~10
+# away) with the launcher fitted as sight_missile does. The same constructed state ran in the fork
+# (decomp build/failstops: R2 held, 189 001DD170 calls in 90 ticks).
+CONSTRUCTED['sight_missile_a22'] = {
+    'state': 'levels-recordings-20261018-10/s87/route_a01v/a01v_02_door18', 'area': 0x16, 'check_area00_sub': False,
+    'patches': CONSTRUCTED['sight_missile']['patches']}
 
 def constructed(name):
     """The arrival dict of a constructed start: the beat folder's own state, patched."""
