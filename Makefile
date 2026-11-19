@@ -54,7 +54,7 @@ COMMON  := src/main.c src/em_model.c src/em_input.c src/em_settings.c \
            src/game/em_face_slot.c \
            src/game/em_examine.c src/game/em_panel.c src/game/em_panel_program.c src/game/em_panel_runtime.c src/game/em_battery_ui.c src/game/em_battery_page_live.c src/game/em_status_page_record.c src/game/em_camera_retarget.c \
            src/game/em_camera_rotation.c src/game/em_camera_live.c src/game/em_camera_commit_original.c \
-           src/game/em_camera_follow_original.c src/game/em_camera_area11_specials.c src/game/em_camera_aim.c src/game/em_sight.c src/game/em_sight_live.c src/game/em_area22_port.c src/game/em_area00_low.c \
+           src/game/em_camera_follow_original.c src/game/em_camera_area11_specials.c src/game/em_camera_aim.c src/game/em_sight.c src/game/em_sight_live.c src/game/em_sight_lock.c src/game/em_area22_port.c src/game/em_area00_low.c \
            src/game/em_area06_port.c src/game/em_area06_port_node.c src/game/em_area00_arena_camera.c \
            src/game/em_area06_port_overlay.c src/game/em_level8_port_gap.c src/game/em_level8_port_creature.c \
            src/game/em_level8_port_lift.c src/game/em_level8_port_overlay.c src/game/em_level8_port_probe.c \
@@ -1901,6 +1901,21 @@ test-camera-aim-reference:
 # (docs/CAMERA_LIVE.md section 7). EM_TEST_FULL=1 runs every case.
 test-sight-reference:
 	python3 tools/test_sight_reference.py
+
+.PHONY: test-sight-lock-reference
+# 00199770's lock mark as em_sight_lock binds it (001DD170 kind 1 with
+# 001DD2F0 / 001DD600 / 001C5FB0 as original code, vf23 = the fog quadword;
+# a leftover vf23 changes only 0x7000360C). EM_TEST_FULL=1 runs every case.
+test-sight-lock-reference:
+	python3 tools/test_sight_lock_reference.py
+
+.PHONY: test-radar-reference
+# The radar of D_00810CA5 == 6 (item 0x06, UPPER U.R.S.): 0022E7F0 and its
+# blip 0022E630 (em_sight.c) against the original instructions over designed
+# memory, 002082B0 and the SDK leaves as original code on both sides
+# (docs/WHOLE_GAME_LEDGER.md section 4.3). EM_TEST_FULL=1 runs every case.
+test-radar-reference:
+	python3 tools/test_radar_reference.py
 
 .PHONY: test-sight-live
 # The five sights live from their start points (build/start_saves/sight_*,

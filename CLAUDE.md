@@ -205,6 +205,15 @@ mode (4 jobs, 120 s cap each, a few heavier tests with their own cap; `-k name`,
 failures not listed in `tests/sweep_baseline.json` (each known failure carries a reason and an
 owner). Run it at merges; fix or re-baseline with `--update-baseline` (and edit the reasons).
 
+**Asset freshness.** The sweep ends with `python3 tools/asset_freshness.py` (~2 s, a warning,
+never a failure): it lists installed assets whose exporter changed since they were made
+(`tools/asset_exporters.json` maps each export step to the paths it writes; the local
+`assets/.freshness.json` stamps each asset with its step's code hash, last commit and input
+hashes). Re-export a flagged step with `python3 tools/asset_freshness.py record <step>` in a
+worktree on a real copy of `assets/`, check it, then `mv` the files over main's (atomic, as the
+decomp orchestrator skill section 4 says); after a by-hand export, `stamp <step>`. A new
+exporter or output: add the step with `map` over a run's step reports, or edit the JSON.
+
 **Quiet output.** Every `make test-*` target prints a compact summary
 (tools/quiet.py through tools/quiet_shell): one PASS/FAIL line per check cut to
 130 characters, compiler warnings, a `[quiet]` footer with the log path

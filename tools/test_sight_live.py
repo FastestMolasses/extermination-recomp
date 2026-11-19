@@ -10,7 +10,11 @@ Checked per sight: no fault, the pad script ends, and the drawers of that
 sight's arm ran (the zoom scope: 001DB9D0, 001DC960, 001DBCB0; the night
 vision scope: 001DB830, 001DBD50; the DELTA auto sight: 001DB9D0, 001DBF00,
 001DC020; the interceptor unit: 001DB9D0, 001DC610, 001DC890; the missile
-launcher: 001DB830, 001DBE20, 00199770).
+launcher: 001DB830, 001DBE20, 00199770). sight_missile_a22 (AREA22, nine
+class-2 entries in range) must draw lock marks (001DD170). sight_upper
+(g60's start, AREA06, item 0x06 on the upper rail: D_00810CA5 = 6) must run
+the radar 0022E7F0 every aim frame with blips (0022E630) for the two
+class-2 type-7 owners within 200.
 
 The zoom scope against the original (decomp build/sights_ref/zoom, a
 hidden fork capture: g66's end, the scope fitted on its own SCOPE MOUNT
@@ -45,6 +49,13 @@ DRAWERS = {
     'sight_delta': ('001DB9D0', '001DBF00', '001DC020'),
     'sight_interceptor': ('001DB9D0', '001DC610', '001DC890'),
     'sight_missile': ('001DB830', '001DBE20', '00199770'),
+    # AREA22 past door 18 with nine class-2 entries (the small bugs 0012A5D0, pool records
+    # 0x7A70B0..0x7A8830) within 360 and on screen: 00199770 draws their lock marks (001DD170);
+    # the entries' fields are their area actor view's (em_sight_live owner_view).
+    'sight_missile_a22': ('001DB830', '001DBE20', '00199770'),
+    # the UPPER U.R.S. (item 0x06, CA5 = 6): no sight arm (CA4 0xFF, CA7 7), so 001999C0's tail
+    # draws the radar 0022E7F0 every aim frame
+    'sight_upper': ('0022E7F0',),
 }
 
 
@@ -188,6 +199,18 @@ def check(point):
     if lack:
         problems.append('drawers never ran: ' + ' '.join(lack))
     note = '%d drawer calls' % len(calls)
+    if point == 'sight_missile_a22':
+        marks = [c for c in calls if c['fn'] == '00199770' and c['bytes']]
+        if not marks:
+            problems.append('00199770 drew no lock mark (001DD170)')
+        note += '; %d frames with lock marks' % len(marks)
+    if point == 'sight_upper':
+        # each blip 0022E630 draws is one 00207E40 sprite carrying tex0 0x20041605113222CD
+        blips = [c['bytes'].count('cd22321105160420') for c in calls if c['fn'] == '0022E7F0']
+        if not any(blips):
+            problems.append('0022E7F0 drew no blip (0022E630)')
+        note += '; %d radar frames, %d with blips (at most %d)' % (len(blips), sum(1 for b in blips if b),
+                                                                    max(blips, default=0))
     if point == 'sight_zoom' and not problems:
         note += '; ' + compare_capture(calls, problems)
     return point, problems, note

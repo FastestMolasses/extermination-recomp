@@ -158,6 +158,21 @@ placements [1] .. [3]). No AREA15 node behaviour or door is at 0x823580
 Port loaders as in AREA13_ASSETS.md "Outputs"; `dynamic_objects.emsc`
 loads through `em_script_image_load` (as AREA01's).
 
+**The background (lane ASSET-FRESH, 2026-11-18).** Both subs' captures arm it
+(render ctx flags 0x20 / 0x21; the channel-3 list sends TEX0 2006590121322F82 in
+sub 0, 2006B48121323280 in sub 1, colour 80808080). The port loads it at the area
+read from `sub<n>/background.embg` directly (em_scene_bindings.c, the later areas'
+`mid_area` branch, since 97cb5892), not from a `scene.txt` line: sub 1's
+`background` line (export_area13_level.export_target, since a594b905) loads the same
+file once more and replaces it with itself; sub 0's export (`export_dynamic`, a copy
+of that sequence) writes no line, nor do the other `export_dynamic` areas, and
+none is needed. Evidence: with `background.embg` moved aside, `EM_START_AT=a15_00`
+and `a15b_00` stop at the background gate (the list's TEX0 above, no asset loaded);
+with it, beat a15b_00 replayed with drawing (`EM_MID_ROUTE_RENDER=1
+EM_MID_ROUTE_FB=...`, port tick 2310) against the original's GS freeze of
+`a15b_00_event` (FBP 0x38): the sky box rows 0..21 x 0..159 equal in 3,460 of 3,520
+pixels (the rest are snow flakes, at most 24 levels off).
+
 ## Tools
 
 Pure Python on native arm64 macOS; run from the port root.

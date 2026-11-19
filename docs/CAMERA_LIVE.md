@@ -489,7 +489,11 @@ collision world; the math through em_sdk_math_original; 001D2610 /
 
 **Reached only outside what AREA11 sets up** (fail-stops, each reported
 when reached): 00182F90 (001912B0's area-0x10 lift; AREA11 is area 0xB);
-0022E7F0 (D_00810CA5 == 6); 001B0300 (camera +5 == 1; the specials module
+0022E7F0 is no longer one (lane PORT-RADAR, 2026-11-18: item 0x06 UPPER
+U.R.S. on the upper rail, D_00810CA5 == 6; the radar and its blips
+0022E630 are em_sight's, routed to em_sight_live by aim_call; the
+001B1CE0 radar pushes of 001B17A0 are bound; WHOLE_GAME_LEDGER.md section
+4.3); 001B0300 (camera +5 == 1; the specials module
 requires its worker before it runs 00197490, so it is bound to a
 fail-stop). Evidence: every route and AIM capture holds D_00810CA4..CA7 =
 FF 05 00 07 and camera +5 = 0; their writers are the New Game reset
@@ -519,10 +523,9 @@ slot-1 packets byte-exact into the render context (001D64A0 em_rcl_001D64A0,
 profile's GS frame draws a world frame's slot-1 segment after the world
 and the chain page, as 001D2300 kicks it (GS_EXACT.md section 9 "Slot
 1"): the sights are on the field, the zoom scope's pixels equal the
-original's displayed field (`make test-slot1-field`). One fail-stop remains:
-00199770's lock mark 001DD170 (the missile launcher with a class-2 target
-within 360 and on screen), whose vf23 input has no certified value at the
-camera step (AIM_FIRE.md section 7). Verified by `make
+original's displayed field (`make test-slot1-field`). 00199770's lock mark
+001DD170 (the missile launcher with a class-2 target within 360 and on
+screen) is bound since lane PORT-FAILSTOPS (2026-11-18): em_sight_lock runs the reticle translations with vf23 = the fog quadword *D_00275670 + 0xA0 (measured in the original: the same vf23 at 001999C0, 00199770 and every 001DD170 entry of a tick, that quadword in 57 of 90 ticks, another owner's leftover in 33; a leftover changes only the w lane 0x7000360C, `make test-sight-lock-reference`); AIM_FIRE.md section 7. Verified by `make
 test-sight-reference` (tools/test_sight_reference.py; the original
 instructions of all sixteen over designed memory, each 001999C0 arm as a
 chain at one sp).

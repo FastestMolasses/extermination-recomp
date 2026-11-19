@@ -59,7 +59,10 @@ SOURCES = ['tests/camera_interaction_fixture.c', 'src/game/em_camera.c', 'src/ga
            # The aim camera (docs/CAMERA_LIVE.md section 7) and its callees.
            'src/game/em_camera_aim.c', 'src/game/em_aim_fire_sdk_memory.c', 'src/game/em_area22_port.c',
            # 001999C0's sight drawers (em_sight) and their live host
-           'src/game/em_sight.c', 'src/game/em_sight_live.c', 'src/game/em_aim_fire_target.c',
+           'src/game/em_sight.c', 'src/game/em_sight_live.c', 'src/game/em_sight_lock.c',
+           'src/game/em_aim_fire_reticle.c', 'src/game/em_status_draw.c', 'src/game/em_aim_fire_tables.c',
+           'src/game/em_area14_overlay.c',
+           'src/game/em_aim_fire_target.c',
            'src/game/em_area06_port.c', 'src/game/em_area06_port_node.c', 'src/game/em_area06_port_overlay.c',
            'src/game/em_area00_arena_camera.c',
            'src/game/em_area06_port_strip.c', 'src/game/em_level9_port_area13.c',
@@ -167,7 +170,16 @@ def build(library, sources):
                     '-Wl,-exported_symbol,_test_retarget', '-Wl,-exported_symbol,_test_refusal',
                     '-Wl,-exported_symbol,_test_dispatch', '-Wl,-exported_symbol,_test_chain', '-O1', '-g',
                     '-ffp-contract=off', '-Isrc', *sources, '-lm', '-o', str(library)], cwd=ROOT, check=True)
-    native = C.CDLL(str(library))
+    # The camera binder re-enters later levels' ports by address (AREA14's 00230230, the
+    # level 9 / 13 exits, the area change); this fixture never reaches them. They bind
+    # lazily, so reaching one aborts in dyld ("symbol not found") instead of running a
+    # stand-in (as tools/test_area01_door_live_reference.py does).
+    libc = C.CDLL(None)
+    libc.dlopen.restype = C.c_void_p
+    libc.dlopen.argtypes = [C.c_char_p, C.c_int]
+    handle = libc.dlopen(str(library).encode(), os.RTLD_LAZY)
+    assert handle, 'dlopen failed'
+    native = C.CDLL(str(library), handle=handle)
     native.test_dispatch.argtypes = [C.c_char_p, C.c_char_p, C.c_char_p, C.c_int, C.c_int, C.c_int, C.c_int,
                                      C.POINTER(C.c_uint8)]
     native.test_chain.argtypes = [C.c_char_p, C.c_char_p, C.c_char_p, C.c_int, C.c_int, C.c_int,

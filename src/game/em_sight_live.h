@@ -4,20 +4,28 @@
  *
  * em_camera_live's aim_call hands it the eleven drawer calls of 001999C0
  * (001DB830, 001DB9D0, 001DBCB0, 001DBD50, 001DBE20, 001DBF00, 001DC020,
- * 001DC610, 001DC890, 001DC960, 00199770) with its own map and call. The
+ * 001DC610, 001DC890, 001DC960, 00199770) and the radar 0022E7F0 (001999C0's
+ * and 00197D20's D_00810CA5 == 6 call) with its own map and call. The
  * translation runs over:
  *   - the stack below the aim host's sp: a private window 0x7F000000..
  *     0x7F000FFF (the aim camera's frames start at 0x7F001000); the drawers'
  *     locals sit at their original offsets, so a callee reads what the
  *     original's would;
  *   - the ELF's .data the drawers read (D_00253240..D_002533CF, the strings
- *     D_0026E6F0..D_0026E80F), read only, from assets/sight_tables.emst
+ *     D_0026E6F0..D_0026E80F, the radar's corners and rings D_0026A990..
+ *     D_0026AADF), read only, from assets/sight_tables.emst
  *     (tools/export_sight_tables.py), loaded at the first call;
  *   - the class-2 list words D_00275B90 / D_00275B98 and its entry words,
  *     read only, from the collision world's live class-2 list (cursor =
  *     0x0028AF30 - 4 live, count = live; an entry's word is its owner's
  *     original address), and the entries' bytes through the owners'
  *     record views;
+ *   - the radar list D_00275B54 / D_00275B58 and its words, read only, from
+ *     the collision world's radar pushes (001B1CE0; cursor = 0x0028AAB0 -
+ *     4 count); the entries' bytes as the class-2 entries' (their owners'
+ *     records, then the area actor view);
+ *   - 0x700036A0..0x7000371F, the radar's matrices: this module's own (the
+ *     radar writes every word there before it reads it);
  *   - 0x70003600..0x7000363F (002082B0's colour ramp): the camera's shared
  *     scratch quadwords when they are one contiguous owner (the collision
  *     face scratch the area build binds); otherwise 0x70003620 faults;
@@ -29,14 +37,16 @@
  * em_aim_fire_sdk_memory_call, 00102850 em_rvr_00102850, 00183B80
  * em_aim_fire_target_00183B80 over the same map; 00207F80, 001CBA50 and
  * 00183C40 through the bound services (em_sgp_00207F80, em_sgp_001CBA50,
- * the aim/fire composition's frame); sin, cos, sqrt and fabs through the
- * aim camera's call.
+ * the aim/fire composition's frame); 00207D00, 00207E40, 00208040 through
+ * the bound services (em_sgp_00207D00 / 00207E40 / 00208040); 001029C0,
+ * 00102760, 00102BB0, 001026D0, 001031E0 em_aim_fire_sdk_memory_call; sin,
+ * cos, sqrt, fabs, atan2 0011E620 and the wrap 001B1470 through the aim
+ * camera's call.
  *
- * Fail-stop: 001DD170 (00199770's lock mark) is not bound: its vf23 input
- * (the fog ramp 001CD520 loads earlier in the frame) has no certified
- * value at the camera step (docs/AIM_FIRE.md, "Not reachable in AREA11"),
- * so reaching it faults, named. Any other refusal faults too and is
- * reported once. */
+ * 00199770's lock mark 001DD170 runs em_sight_lock (vf23 = the fog
+ * quadword *D_00275670 + 0xA0; em_sight_lock.h), its number at this
+ * module's copy of D_008111D0, its templates D_002533D0.. from
+ * assets/aim_fire_tables.emaf. Any refusal faults and is reported once. */
 #ifndef EM_SIGHT_LIVE_H
 #define EM_SIGHT_LIVE_H
 
@@ -60,6 +70,12 @@ typedef struct {
                 uint32_t avail, const uint8_t style[8]);
     /* A callee the aim/fire composition serves (00183C40): 0, or -1. */
     int (*frame)(EmAimFireTargetCall *call);
+    /* The radar's packets (0022E7F0 / 0022E630): 00207D00(slot, mode),
+     * 00207E40(slot, x, y, w, h, rgba, tex0), 00208040(slot, a, b, c, rgba)
+     * with each corner's +0 / +8 words. 1, or 0 refused. */
+    int (*blend)(int32_t slot, int32_t mode);
+    int (*sprite)(int32_t slot, int32_t x, int32_t y, int32_t w, int32_t h, uint32_t rgba, uint64_t tex0);
+    int (*fan)(int32_t slot, const uint32_t a[2], const uint32_t b[2], const uint32_t c[2], uint32_t rgba);
 } EmSightLiveServices;
 
 /* Binds the services (copied); NULL unbinds. */

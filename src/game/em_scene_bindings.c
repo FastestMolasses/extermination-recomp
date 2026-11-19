@@ -3095,8 +3095,9 @@ static int state0_001AF8E0(void *ctx)
     k_camera_host.area_worker = arrival_scene() ? camera_area_worker : NULL;
     /* The aim camera's sight drawers (001999C0's; em_sight_live): their
      * 2D rectangles and text runs into the frame's slot-1 packets, 00183C40
-     * through the aim/fire composition. */
-    static const EmSightLiveServices k_sight = {em_sgp_00207F80, em_sgp_001CBA50, em_aim_fire_binding_frame};
+     * through the aim/fire composition; the radar's sprites and fan. */
+    static const EmSightLiveServices k_sight = {em_sgp_00207F80, em_sgp_001CBA50, em_aim_fire_binding_frame,
+                                                em_sgp_00207D00, em_sgp_00207E40, em_sgp_00208040};
     em_sight_live_bind(&k_sight);
     if (world_scene() && em_camera_live_bind(&k_camera_host) < 0)
         return state0_fault(b, 0x0018B9C0u, EM_SCENE_FAULT_NULL_WORKER);

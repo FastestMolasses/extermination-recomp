@@ -30,6 +30,10 @@ BASELINE = os.path.join(ROOT, 'tests', 'sweep_baseline.json')
 ARGS = {
     'level14_shared_player': [(f':{s}', ['--suite', s]) for s in ('closure', 'ladder', 'major2', 'heal')],
 }
+# Original-capture fixtures that are not named test_*_reference.py but run the same way.
+FIXTURES = {
+    'camera_interaction_fixture': 'test_camera_interaction_fixture.py',
+}
 # Oracles that read a log their make target writes from the current binary: the
 # sweep runs the target (it rebuilds the binary first, incrementally), never a stale log.
 COMMANDS = {
@@ -106,6 +110,9 @@ def main():
         for suffix, extra in ARGS.get(name, [('', [])]):
             cmd = COMMANDS.get(name) or [sys.executable, path] + extra
             jobs.append((name + suffix, cmd, TIMEOUTS.get(name, a.timeout)))
+    for name, script in sorted(FIXTURES.items()):
+        if name not in SKIP:
+            jobs.append((name, [sys.executable, os.path.join(ROOT, 'tools', script)], TIMEOUTS.get(name, a.timeout)))
     if a.make:
         for t in make_targets():
             jobs.append(('make:' + t[5:], ['make', t], TIMEOUTS.get('make:' + t[5:], a.timeout)))
@@ -159,6 +166,11 @@ def main():
     for n in fixed:
         print(f"  FIXED  {n} passes now; remove it from the baseline")
     print(f"results: {os.path.relpath(outdir, ROOT)}/results.json")
+    # Installed assets made by an older exporter (tools/asset_freshness.py): a warning, never a failure.
+    fresh = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'asset_freshness.py')], cwd=ROOT,
+                           capture_output=True, text=True)
+    lines = (fresh.stdout or fresh.stderr or 'asset_freshness: no output').strip().splitlines()
+    print(('WARNING ' if ' 0 stale' not in lines[0] else '') + '\n'.join(lines[:12]))
 
     if a.update_baseline:
         nb = {}

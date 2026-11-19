@@ -119,6 +119,7 @@ static void view_load(void);
 static void view_store(void);
 static int services_visible(void *context, uint32_t x, uint32_t y, uint32_t z, uint8_t *visible);
 static int services_publish(void *context, EmOwnerServicesOwner *owner);
+static int services_radar(void *context, EmOwnerServicesOwner *owner);
 
 static int fail(const char *operation)
 {
@@ -1085,6 +1086,7 @@ static int publish_view(EmActor *actor, EmOwnerServicesOwner *view)
     services.workers.ctx = actor;
     services.workers.w_001B1630 = services_visible;
     services.workers.w_001B1B70 = services_publish;
+    services.workers.w_001B1CE0 = services_radar;
     int drawn = em_owner_services_001B17A0(&services, view);
     if (drawn < 0) return -1;
     actor->drawn = view->drawn; /* +0x01 */
@@ -1314,6 +1316,14 @@ static int services_publish(void *context, EmOwnerServicesOwner *owner)
     if (!actor || !owner) return -1;
     actor->cls = owner->cls;
     return em_collision_world_publish_001B1B70(actor) < 0 ? -1 : 0;
+}
+
+/* 001B1CE0(owner): the radar list push (001B17A0 with D_00810CA5 == 6). */
+static int services_radar(void *context, EmOwnerServicesOwner *owner)
+{
+    EmActor *actor = context;
+    if (!actor || !owner) return -1;
+    return em_collision_world_push_001B1CE0(actor) < 0 ? -1 : 0;
 }
 
 static int pickup_event(void *context, uint32_t source_id, EmPickupOwnerEvent event,
