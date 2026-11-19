@@ -105,3 +105,7 @@ GS model's one-LSB residue.
 - The 0013D2D0 family's other states (00140760, 001408D0, 00140A90, 0013D980 ..
   00140440) run through whatever translation the fallback has; a fight in
   AREA03 is unrecorded.
+
+## Sound against the original
+
+g12 rows 16485..17085 (the arrival): every exchange equal (after 00116DB8's bank-volume re-send, this lane); open: the music refill read phase (4 ticks). Tools, results and open items: SOUND_SECOND_HALF.md (lane PORT-SND2, 2026-11-19).

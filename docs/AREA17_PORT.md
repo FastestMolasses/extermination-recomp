@@ -674,3 +674,7 @@ at 0x4513113C (module 2, code 4: a float read as an object address).
 - 0x8235E0 and 0x823860, and the group holding 0x823580 / 0x8236F0 /
   0x823800, have no static reference in the overlay or its code; whether any
   path reaches them is open.
+
+## Sound against the original
+
+g46 rows 0..600: equal until 438399, where 0x411 takes track 0 in the port and track 1 in the original (a track freed a tick apart: the SFX-side IOP tick phase). Tools, results and open items: SOUND_SECOND_HALF.md (lane PORT-SND2, 2026-11-19).

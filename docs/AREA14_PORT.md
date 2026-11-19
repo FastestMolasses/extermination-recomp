@@ -284,3 +284,7 @@ port's logic (AREA19_PORT.md, "Segment 940 and the g41 push"):
   arrival stream answers in 26 ticks, segment 940 and segment 979 (g41) are exact, and the
   chain from the title is exact through segment 1056 (AREA19_PORT.md, "The drive replay of
   the guided takes").
+
+## Sound against the original
+
+g40 rows 4000..4600: every exchange equal; open: a voice reset a tick apart (the SFX-side IOP tick phase) and the music refill read phase. Tools, results and open items: SOUND_SECOND_HALF.md (lane PORT-SND2, 2026-11-19).

@@ -163,8 +163,10 @@ class VoiceMap:
         return self.learned.get(v, self.rotation(v))
 
     def learn(self, pv, ov):
-        if self.learned.get(pv, ov) != ov:
-            self.conflicts += 1
+        """A key-on: the port's voice is the original's from now on (a voice's number is reused, and
+        the two runs reuse them apart once a voice's end lands a tick apart)."""
+        for k in [k for k, w in self.learned.items() if w == ov and k != pv]:
+            del self.learned[k]
         self.learned[pv] = ov
 
     def by_serial(self, pv, ov):
@@ -175,6 +177,7 @@ class VoiceMap:
             if v in self.learned or f[6] != 2:
                 continue
             hits = [w for w, g in ov.items() if w not in taken and g[6] == 2 and g[4] == f[4] and g[1] == f[1]]
+            self.conflicts += len(hits) > 1
             if len(hits) == 1:
                 self.learned[v] = hits[0]
                 taken.add(hits[0])
@@ -194,16 +197,22 @@ class VoiceMap:
 
 
 def same_exchange(vm, psfx, orest):
-    """The port's SFX commands against the original's (the stream's taken out), through the map."""
-    if len(psfx) != len(orest):
+    """The port's SFX commands against the original's (the stream's taken out), through the map.
+    The key-ons (command 5 names a key-on: 00115850 sends 6, 1, 5, 3 for it) teach the map in their
+    order; the rest is compared as a multiset: 00116598's re-sends go in voice-number order, which is
+    the history's."""
+    if len(psfx) != len(orest) or sorted(c[0] for c in psfx) != sorted(c[0] for c in orest):
         return False
-    for pc, oc in zip(psfx, orest):
-        if pc[0] != oc[0]:
-            return False
-        if pc[0] in (1, 3, 5, 6):
-            vm.learn(pc[1], oc[1])
+    pk = [c[1] for c in psfx if c[0] == 5]
+    ok_ = [c[1] for c in orest if c[0] == 5]
+    if len(pk) != len(ok_):
+        return False
+    for pv, ov in zip(pk, ok_):
+        vm.learn(pv, ov)
+    pairs = list(zip(sorted(psfx, key=lambda c: (c[0], vm(c[1]) if c[0] in (1, 3, 5, 6) else c[1], c[2], c[3])),
+                     sorted(orest, key=lambda c: (c[0], c[1], c[2], c[3]))))
     ok = True
-    for pc, oc in zip(psfx, orest):
+    for pc, oc in pairs:
         c = pc[0]
         if c in (1, 3, 6):
             ok &= [vm(pc[1]), pc[2], pc[3]] == oc[1:]

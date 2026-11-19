@@ -577,3 +577,7 @@ page consumer (em_chain_page) walks CNT, DIRECT and the PACKED RGBAQ / ST /
 XYZ2 the strips use. `make test-norender-equal` passes, and g61 stops at
 the same place with and without drawing. The live packets are not yet
 compared with a capture (section "Open").
+
+## Sound against the original
+
+g60 rows 1334..1761 (the arrival) captured; not yet compared against the port. Tools, results and open items: SOUND_SECOND_HALF.md (lane PORT-SND2, 2026-11-19).
