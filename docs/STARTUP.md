@@ -502,7 +502,8 @@ recording-derived and stay in the ignored `build/`.
   `EM_PRESENT_PX`, `EM_PROBE_TRACE`, `EM_RAND_TRACE`,
   `EM_STARTUP_CAPTURE_DIR`, `EM_STATUS_GS_DUMP`, `EM_LAMP_PAGE_DUMP` (the gun lamp's cone
   pages, tools/test_aim_fire_lamp_cone.py), `EM_SIGHT_DUMP` (the weapon sights' slot-1
-  packets, tools/test_sight_live.py), `EM_STATUS_PAGES_TRACE`, `EM_STEP_TRACE`; and
+  packets, tools/test_sight_live.py), `EM_SLOT1_LOG` (the frames whose GS field took a 2D layer),
+  `EM_STATUS_PAGES_TRACE`, `EM_STEP_TRACE`; and
   the ones that work only under a refused fixture: `EM_LEVEL_SMOKE_FB_CAPTURE`,
   `EM_LEVEL_SMOKE_HUB_CAPTURE`, `EM_LEVEL_SMOKE_MESSAGE_CAPTURE`,
   `EM_LEVEL_SMOKE_PAGES_CAPTURE`, `EM_LEVEL_SMOKE_PAGES_DEBUG`,

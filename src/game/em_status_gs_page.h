@@ -104,6 +104,10 @@ int em_sgp_field_frame(void);
  * status page's list (em_sgp_kick). Otherwise the GPU overlay pass draws
  * them (em_frame.c frame_2d_overlays, em_message_live_render). */
 int em_sgp_2d_in_field(void);
+/* The load veil's list frame (em_load_veil_live) drew the whole kicked list,
+ * its slot 1 included, through the GS model: this frame's 2D layer is in
+ * the field (em_sgp_2d_in_field answers 1 until the next frame). */
+void em_sgp_2d_layer_drawn(void);
 /* Main-loop step V after 001D2300's kick (and the load veil's frame): a
  * claimed frame's list through the GS model. 0 (done, or not claimed), or
  * -1 (reported). */
@@ -111,9 +115,8 @@ int em_sgp_kick(struct EmGfx *gfx);
 /* Main-loop step V after 001D2300, before the GS frame's kick of a recorded
  * world frame (Original profile; docs/GS_EXACT.md section 9 "Slot 1"): the
  * kicked list's slot-1 segment (001D2300 sends it after slot 0 and the
- * chain page) as GIF data, the message service's glyph runs left out (the
- * GPU overlay still draws them, with the letterbox bars and the fade), into
- * the GS frame: register packets recorded into the body
+ * chain page) as GIF data, the 2D layer included (the letterbox bars, the
+ * message glyph runs, the fade, in the original's order), into the GS frame: register packets recorded into the body
  * (em_gfx_gs_world_gif); a stream with transfers (the sights' glyph
  * uploads) kept for em_sgp_world_tail. With D_008106C4 set (slot 1 kicked
  * first) a segment that draws is refused. Nothing without the GS frame, in a

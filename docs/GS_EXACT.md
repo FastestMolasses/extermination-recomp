@@ -1787,13 +1787,45 @@ frames with a 2D layer in the field (most only the level-0 fade); take
 test1 rendered, 18,875 frames, 4,182 of the 4,229 that differ have a 2D
 layer, 8 are frames shown again from such a buffer, and 39 field frames
 differ without one (counter 16574, 17577 and every other counter
-18553..18625): not traced (a candidate: the fade's alpha 0x80 left in a
-buffer the next world frame does not fully redraw). Not done: the
-letterbox / fade / area-title pixels against the fb2 references 14 and
-15, because `EM_TEST_FULL=1 make test-fb2-pixels` stops in the level
-smoke's AREA11-exit check on main (test_area_load_reference replay_chain:
-tick log 168 bytes against the oracle's 208 since the attract-demo
-commit), before any point is compared.
+18553..18627; traced by PORT-SLOT1-C below).
+
+Evidence, PORT-SLOT1-C (2026-11-18):
+- The pixels and the alpha against the original's GS memory (`EM_TEST_FULL=1
+  make test-fb2-pixels`, which runs again since the scene tick log carries
+  the oracle's 208-byte snapshot: em_scene_bindings log_snapshot had stayed
+  at 168 bytes since the ending's 001AD740 and the attract demo's 001ACA20
+  grew tools/test_scene_task_reference.py LAYOUT). The RGB counts are the
+  ones recorded before the branch (10: 109,547; 14: 105,947; 15: 114,672
+  of 114,688), so the bars, the fade and the glyphs in the field moved no
+  shown pixel. The fb2 dumps hold the field's alpha too (not shown: PMODE
+  EN1 0): the original's is 0x80 at every pixel of 14_roger_encounter and
+  15_level_exit (only a full-field sprite writes that: the fade's REF at
+  level 0, A 0x80) and mixed at 10 and first_control (no fade). The port's
+  alpha equals the original's at all 114,688 pixels of 10, 14 and 15 (the
+  camera-exact points; before the branch 14 and 15 lacked the fade's 0x80),
+  and first_control has no fade either (12,885 / 13,406 pixels of 0x80;
+  that point's camera is not the original's). The harness now asserts a
+  camera-exact point's alpha (tools/test_fb2_pixels.py).
+- The 39 frames: each follows a frame of the same buffer that drew the
+  fade (16572, 18551: all 114,688 alpha bytes 0x80, the RGB darkened).
+  Against port main, 1 to 3 pixels differ by at most 3 per channel
+  ((457, 207) in buffer 0x0 at 18553..18627; three at 16574), alpha
+  equal: pixels a translucent draw blends over the buffer's previous
+  colour, which in the field is now the faded frame, not the unfaded one
+  main kept (it drew the fade on the GPU over the picture). That is what
+  GS memory holds when the fade's sprite writes the field, as the
+  original's does (14 and 15 above). No original dump exists at those
+  counters; measured with field dumps of both builds (scratch only).
+- The load veil's list frames (em_load_veil_live) carry the slot-1 REFs too:
+  in beat k01_02's load the letterbox ramps (two context-2 sprites a frame,
+  FRAME_2 / XYOFFSET_2 / SCISSOR_2 equal to context 1's, TEST_2 0x50000,
+  ZBUF_2 0x1000070, ALPHA_2 0xA1 / FIX 0x80). em_chain_page's list mode
+  records the context-2 registers (EmGfxGsEnv frame2 .. alpha2) and the GS
+  model replays them (em_gs_world_prims, em_gs_replay_prims), so the bars
+  draw as the GS draws them, and the frame's 2D layer counts as in the field
+  (em_sgp_2d_layer_drawn). The GPU list path (no GS frame) has no context 2:
+  it drops the context-2 sprites and the overlay pass draws the bars there,
+  as before.
 
 The producers of a world frame's slot-1 packets (a census of the boot ELF
 and the 19 overlays: every call of a slot-argument builder with slot 1 and

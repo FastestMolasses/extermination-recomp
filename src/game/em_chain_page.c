@@ -424,10 +424,23 @@ static int address_data_list(Walk *w, uint32_t reg, uint64_t data, uint32_t at)
     case 0x4A: e->fba = data;        e->set |= EM_GFX_GS_ENV_FBA;        return 1;
     case 0x4C: e->frame = data;      e->set |= EM_GFX_GS_ENV_FRAME;      return 1;
     case 0x4E: e->zbuf = data;       e->set |= EM_GFX_GS_ENV_ZBUF;       return 1;
-    case 0x19: case 0x41: case 0x48: case 0x4D: case 0x4F:        /* context 2 */
-    case 0x3D:                                                    /* FOGCOL */
+    case 0x19: case 0x41: case 0x43: case 0x48: case 0x4D: case 0x4F:   /* context 2 */
         /* A pass's writes are all replayed: one the GS model would not get
-         * faults (the pass never holds one). */
+         * faults (the pass never holds one). List mode records them for the
+         * context-2 sprites a frame's slot 1 sends (the letterbox and fade
+         * blocks D_0028A7B0 / D_0028A8E0: ALPHA_2 and PRIM CTXT 1). */
+        if (!w->list) return fault(w, EM_CHAIN_PAGE_FAULT_GIF, at, reg);
+        switch (reg) {
+        case 0x19: e->xyoffset2 = data; e->set |= EM_GFX_GS_ENV_XYOFFSET2; break;
+        case 0x41: e->scissor2 = data;  e->set |= EM_GFX_GS_ENV_SCISSOR2;  break;
+        case 0x43: e->alpha2 = data;    e->set |= EM_GFX_GS_ENV_ALPHA2;    break;
+        case 0x48: e->test2 = data;     e->set |= EM_GFX_GS_ENV_TEST2;     break;
+        case 0x4D: e->frame2 = data;    e->set |= EM_GFX_GS_ENV_FRAME2;    break;
+        default:   e->zbuf2 = data;     e->set |= EM_GFX_GS_ENV_ZBUF2;     break;
+        }
+        return 1;
+    case 0x3D:                                                    /* FOGCOL */
+        /* (accepted: no context-1 primitive of a list reads it) */
         if (!w->list) return fault(w, EM_CHAIN_PAGE_FAULT_GIF, at, reg);
         return 1;
     default:

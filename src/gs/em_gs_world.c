@@ -1907,6 +1907,13 @@ void em_gs_world_prims(EmGsWorld *w, const EmGfxGsPrim *prims, const EmGfxGsEnv 
             if (e->set & EM_GFX_GS_ENV_PABE) em_gs_world_write(w, EM_GS_PABE, e->pabe);
             if (e->set & EM_GFX_GS_ENV_TEXA) em_gs_world_write(w, EM_GS_TEXA, e->texa);
             if (e->set & EM_GFX_GS_ENV_SCANMSK) em_gs_world_write(w, EM_GS_SCANMSK, e->scanmsk);
+            /* context 2 (the letterbox and fade sprites of a list's slot 1) */
+            if (e->set & EM_GFX_GS_ENV_FRAME2) em_gs_world_write(w, EM_GS_FRAME_2, e->frame2);
+            if (e->set & EM_GFX_GS_ENV_ZBUF2) em_gs_world_write(w, EM_GS_ZBUF_2, e->zbuf2);
+            if (e->set & EM_GFX_GS_ENV_XYOFFSET2) em_gs_world_write(w, EM_GS_XYOFFSET_2, e->xyoffset2);
+            if (e->set & EM_GFX_GS_ENV_SCISSOR2) em_gs_world_write(w, EM_GS_SCISSOR_2, e->scissor2);
+            if (e->set & EM_GFX_GS_ENV_TEST2) em_gs_world_write(w, EM_GS_TEST_2, e->test2);
+            if (e->set & EM_GFX_GS_ENV_ALPHA2) em_gs_world_write(w, EM_GS_ALPHA_2, e->alpha2);
             /* the buffer drawn, after the environment's writes: a FRAME_1 or
              * SCISSOR_1 change has ended the span where the mark places a
              * barrier (the same buffer with taller rows changes SCISSOR_1

@@ -834,6 +834,13 @@ static void slot1_fade(int parity, int16_t level, uint8_t colour, int draw)
     if (tag) effect_appended(cursor);
 }
 
+void em_sgp_2d_layer_drawn(void)
+{
+    G.in_field_serial = em_frame_serial();
+    G.in_field_set = 1;
+    slot1_log("veil");
+}
+
 int em_sgp_2d_in_field(void)
 {
     return G.in_field_set && G.in_field_serial == em_frame_serial();
