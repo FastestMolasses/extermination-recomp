@@ -573,9 +573,14 @@ int em_stream_live_field(void)
      * side ticks on the stream backend's clock (its half-lines at this
      * field's start and its tick phase). */
     uint64_t half_lines = 0;
-    if (S.ctx.iop) em_iop_stream_clock(S.ctx.iop, &half_lines, NULL, NULL);
-    if (em_sfx_field_at(half_lines, em_iop_stream_tick_phase(S.ctx.iop)) != 0)
-        return fail("the SFX sequencer's tick (001152D8)");
+    int sfx;
+    if (S.ctx.iop) {
+        em_iop_stream_clock(S.ctx.iop, &half_lines, NULL, NULL);
+        sfx = em_sfx_field_at(half_lines, em_iop_stream_tick_phase(S.ctx.iop));
+    } else {
+        sfx = em_sfx_field();   /* no stream backend: the SFX side's own clock */
+    }
+    if (sfx != 0) return fail("the SFX sequencer's tick (001152D8)");
     if (s_xlog.on) xlog_add();   /* EM_SOUND_DUMP (comparison only) */
     if (em_iop_stream_field(S.ctx.iop) != 0) return fail("the IOP field (RPC 0x64, driver ticks)");
     sound_sample();
