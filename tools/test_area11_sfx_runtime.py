@@ -195,8 +195,9 @@ def registry_runtime():
     if out.exists():shutil.rmtree(out)
     (out/'assets/sfx/area11').mkdir(parents=True)
     (out/'assets/sfx/sfx_registry.emsr').write_bytes(raw)
-    # Byte offsets of the v2 layout.
-    first_entry=24+2*len(ladder)
+    # Byte offsets of the v2 layout: the header, the ladder, then the pan
+    # table (D_00242630, the header's +20 count: 0 or 64 words).
+    first_entry=24+2*len(ladder)+2*struct.unpack_from('<I',raw,20)[0]
     first=entries[0];assert first['state']==1 and first['ops'][0]['kind']==1
     op=first_entry+16
     second=op+32*len(first['ops'])

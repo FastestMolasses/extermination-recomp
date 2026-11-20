@@ -421,6 +421,12 @@ uint16_t em_iop_stream_effect_volume(const EmIopStream *s, int core, int side);
  * the clock has started. */
 int em_iop_stream_set_tick_phase(EmIopStream *s, uint32_t half_lines);
 uint32_t em_iop_stream_tick_phase(const EmIopStream *s);
+/* Comparison only (EM_IOP_TICK_ALIGN, em_scene_bindings.c; docs/
+ * SOUND_SECOND_HALF.md): moves the driver tick grid, from now on, so that the
+ * next field's first tick comes half_lines (1..128) after its exchange, as a
+ * capture of the original measured it. The SFX side follows (one timer).
+ * -1 (unchanged) outside 1..128. */
+int em_iop_stream_align_next_tick(EmIopStream *s, uint32_t half_lines);
 /* Half-lines elapsed, driver ticks run, SPU2 samples rendered. */
 void em_iop_stream_clock(const EmIopStream *s, uint64_t *half_lines, uint64_t *ticks,
                          uint64_t *samples);

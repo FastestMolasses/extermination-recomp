@@ -311,11 +311,17 @@ void em_sfx_bind_bank_volumes(uint8_t *(*reader)(void));
  * the calls since the last one queued go to the IOP driver's ring; the
  * reply is the status its last tick wrote), then the field's 800 or 801
  * samples at 48 kHz into the mixer ring, the commands reaching the SPU2
- * model at the IOP driver's ticks (every 128 half-lines of the SFX side's
- * own clock, phase 0 at the first field after the registry's load), each
- * of which snapshots every voice's ENVX. Game thread; em_stream_live_field
- * calls it once per field from the boot on. 0, or -1 once a fault
- * latched. */
+ * model at the IOP driver's ticks, each of which snapshots every voice's
+ * ENVX. The ticks are the IOP driver's one timer (SNDN2DRV.IRX's driver
+ * thread, which runs the SFX and the stream commands and writes every
+ * voice's status at each wake): em_sfx_field_at takes its clock, the IOP
+ * stream backend's half-lines at this field's start and its tick phase
+ * (em_iop_stream_clock, em_iop_stream_tick_phase): a tick at every h with
+ * (h + phase) a multiple of 128. em_stream_live_field calls it once per
+ * field from the boot on. em_sfx_field (unit fixtures without the stream
+ * backend) counts its own clock from the registry's load, phase 0. Game
+ * thread; 0, or -1 once a fault latched. */
+int em_sfx_field_at(uint64_t half_line, uint32_t tick_phase);
 int em_sfx_field(void);
 
 /* Comparison only (EM_SOUND_DUMP: em_scene_bindings_sound_dump,

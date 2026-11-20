@@ -33,6 +33,8 @@ ARGS = {
 # Original-capture fixtures that are not named test_*_reference.py but run the same way.
 FIXTURES = {
     'camera_interaction_fixture': 'test_camera_interaction_fixture.py',
+    # the native SFX driver against an independent SPU2 model (ASan/UBSan build; ~80 s)
+    'area11_sfx_runtime': 'test_area11_sfx_runtime.py',
 }
 # Oracles that read a log their make target writes from the current binary: the
 # sweep runs the target (it rebuilds the binary first, incrementally), never a stale log.
@@ -49,7 +51,7 @@ SKIP = {
 }
 # Oracles whose quick run legitimately exceeds the default cap (name -> seconds).
 # Measured under load 25+ (quick mode, solo CPU time is about a third of these).
-TIMEOUTS = {'area11_sfx': 900, 'area21_groups': 300, 'far_light_readback': 900, 'gs_second_half': 900, 'sound_second_half': 600, 'area01_revisit_runtime': 240, 'area00_delivery': 240}
+TIMEOUTS = {'area11_sfx': 900, 'area11_sfx_runtime': 300, 'area21_groups': 300, 'far_light_readback': 900, 'gs_second_half': 900, 'sound_second_half': 600, 'area01_revisit_runtime': 240, 'area00_delivery': 240}
 SEVERITY = {'PASS': 0, 'SKIP': 0, 'FAIL': 1, 'TIMEOUT': 2, 'BUILD': 3}
 
 BUILD_RE = re.compile(r"Undefined symbols|ld: |linker command failed|error: |"

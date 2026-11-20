@@ -88,13 +88,14 @@ static struct {
     uint64_t ticks;          /* sequencer ticks run (fields)          */
     /* The IOP side (em_sfx_field): the EE queue, the IOP driver's ring,
      * its status block (ENVX per voice) and the reply the last exchange
-     * delivered (D_002817C0), on the SFX side's own half-line clock. */
+     * delivered (D_002817C0), on the IOP driver's half-line clock. */
     uint32_t queue[SFX_QUEUE][4];
     unsigned queued, queue_drops;
     uint32_t ring[SFX_IOP_RING][4];
     unsigned ring_n;
     int32_t  status[EM_SFX_VOICES], reply[EM_SFX_VOICES], feedback[EM_SFX_VOICES];
-    uint64_t half_line;      /* the SFX side's IOP clock at the next field */
+    uint64_t half_line;      /* the IOP clock at the next field (em_sfx_field) */
+    int      clock_started;  /* the samples start at the clock's position */
     uint64_t samples;        /* SPU2 samples rendered (absolute)      */
     long     frames_mixed;   /* summed voice frames rendered          */
     int      max_concurrent; /* peak sounding voices                  */
@@ -207,14 +208,24 @@ const uint32_t (*em_sfx_last_exchange(unsigned *count))[4]
 
 int em_sfx_field(void)
 {
+    return em_sfx_field_at(s.half_line, 0);
+}
+
+int em_sfx_field_at(uint64_t half_line, uint32_t tick_phase)
+{
     if (s.fault) return -1;
     if (!s.registry.entries) return 0;
-    /* The IOP driver's tick grid on the SFX side's own field clock, phase 0
-     * at the first field after the registry's load (the New Game's area
-     * load): the timer's phase against the frame is hardware timing (in
-     * the original it follows how long the title ran), and a clock of the
-     * port's own keeps every run's sound state the same from New Game on. */
-    const uint64_t half_line = s.half_line;
+    /* The IOP driver's tick grid: one timer for the SFX and the stream
+     * commands (SNDN2DRV.IRX's driver thread, woken by the hard timer that
+     * command 0x1E arms at the boot; docs/SFX_SEQUENCER.md "Where the driver
+     * runs"), so the SFX side runs on the stream backend's clock, counted
+     * from its boot. The first field after the registry's load starts the
+     * SPU2 model's samples at the clock's sample position. */
+    if (!s.clock_started) {
+        s.clock_started = 1;
+        s.samples = half_line * SFX_SAMPLES_NUM / SFX_SAMPLES_DEN;
+    }
+    tick_phase %= SFX_HALF_LINES_PER_TICK;
     /* 001192D0 waits for the previous exchange; its reply is D_002817C0,
      * which the tick's reaper reads. */
     memcpy(s.feedback, s.reply, sizeof s.feedback);
@@ -240,7 +251,8 @@ int em_sfx_field(void)
      * clock); each runs the ring's commands on the SPU2 model, then
      * snapshots every voice's ENVX & 0x7FFF into the status block. */
     const uint64_t end = half_line + SFX_HALF_LINES_PER_FIELD;
-    for (uint64_t h = (half_line / SFX_HALF_LINES_PER_TICK + 1) * SFX_HALF_LINES_PER_TICK;
+    for (uint64_t h = ((half_line + tick_phase) / SFX_HALF_LINES_PER_TICK + 1) * SFX_HALF_LINES_PER_TICK
+                      - tick_phase;
          h <= end; h += SFX_HALF_LINES_PER_TICK) {
         render_to(h * SFX_SAMPLES_NUM / SFX_SAMPLES_DEN);
         for (unsigned i = 0; i < s.ring_n; ++i)
@@ -797,6 +809,7 @@ void em_sfx_shutdown(void)
     em_sfx_registry_free(&s.registry);
     s.fault = NULL;
     s.ticks = s.samples = s.half_line = 0;
+    s.clock_started = 0;
     s.queued = s.queue_drops = s.ring_n = 0;
     memset(s.status, 0, sizeof s.status);
     memset(s.reply, 0, sizeof s.reply);

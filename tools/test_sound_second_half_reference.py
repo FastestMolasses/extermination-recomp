@@ -43,15 +43,16 @@ NAME = 'sound_second_half_test'
 # delayed cues D_00281F30 hold what the continuous run's earlier areas left (stale, cue -1).
 QUICK = {'g73_area04_area20:2080-2680': (241, {'f30': 241})}
 QUICK_DUMP = 'g73:2440-2680'
+# EM_TEST_FULL: the continuous run with --iop-align (lane PORT-SFX-PHASE, SOUND_SECOND_HALF.md 5.1);
+# the windows from g60 on are not reached: the run faults in AREA16 with the dump on (5.7)
 FULL = {
     'g02_area11:100-160': (61, {}),
-    'g12_area19_area15:16485-17085': (601, {'lane': 4, 'f30': 601, 'vo': 2, 'envx': 2}),
-    'g40_area14_booster:4000-4600': (601, {'lane': 8, 'f30': 601, 'cur': 147, 'vo': 3, 'envx': 3}),
-    'g42_area18_area14:0-600': (601, {'f30': 601, 'cur': 295, 'ser': 47, 'vo': 66, 'envx': 64, 'tlr': 39,
-                                      'xsfx': 2}),
-    'g46_area17_ramp:0-600': (600, {'lane': 4, 'b70': 180, 'c30': 180, 'f30': 600, 'cur': 183, 'vo': 185,
-                                    'envx': 185, 'tlr': 184}),
-    # captured, not yet measured against the port (SOUND_SECOND_HALF.md section 3): reported, not pinned
+    'g12_area19_area15:16485-17085': (601, {'f30': 601, 'vo': 2, 'envx': 2}),
+    'g40_area14_booster:4000-4600': (601, {'lane': 4, 'f30': 601, 'cur': 93}),
+    'g42_area18_area14:0-600': (601, {'lane': 8, 'f30': 601, 'cur': 234, 'ser': 47, 'vo': 59, 'envx': 57,
+                                      'tlr': 38, 'xsfx': 1}),
+    'g46_area17_ramp:0-600': (601, {'b70': 180, 'c30': 180, 'f30': 601, 'cur': 184, 'vo': 186, 'envx': 186,
+                                    'tlr': 185}),
     'g60_area06_area16:1334-1761': None,
     'g73_area04_area20:2080-2680': None,
     'g75_area20_area21:1884-2484': None,
@@ -97,11 +98,12 @@ def main():
     if reference_mode.FULL:
         dump = ','.join(f'{k.split("_")[0]}:{k.split(":")[1]}' for k in points)
         cmd = [sys.executable, str(ROOT / 'tools/watch_takes.py'), '--check', '--root',
-               str(ROOT.parent / 'Extermination/build/guided_play'), 'g01_title_newgame', '--snd-dump', dump]
+               str(ROOT.parent / 'Extermination/build/guided_play'), 'g01_title_newgame', '--snd-dump', dump,
+               '--iop-align']
         port = ROOT / 'build/sndpics/watch_g01_title_newgame/port/sound.jsonl'
     else:
         cmd = [sys.executable, str(ROOT / 'tools/guided_chain.py'), 'g20', '--until', 'g73', '--name', NAME,
-               '--snd-dump', QUICK_DUMP]
+               '--snd-dump', QUICK_DUMP, '--iop-align']
         port = ROOT / 'build/sndpics' / NAME / 'port/sound.jsonl'
     if port.exists():
         port.unlink()

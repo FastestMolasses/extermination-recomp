@@ -478,6 +478,15 @@ int em_iop_stream_set_tick_phase(EmIopStream *s, uint32_t half_lines)
 
 uint32_t em_iop_stream_tick_phase(const EmIopStream *s) { return s ? s->tick_phase : 0; }
 
+int em_iop_stream_align_next_tick(EmIopStream *s, uint32_t half_lines)
+{
+    if (!s || half_lines < 1 || half_lines > HALF_LINES_PER_TICK)
+        return -1;
+    s->tick_phase = (HALF_LINES_PER_TICK - (uint32_t)((s->half_lines + half_lines) % HALF_LINES_PER_TICK)) %
+                    HALF_LINES_PER_TICK;
+    return 0;
+}
+
 void em_iop_stream_clock(const EmIopStream *s, uint64_t *half_lines, uint64_t *ticks, uint64_t *samples)
 {
     if (half_lines)

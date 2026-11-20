@@ -36,6 +36,8 @@ commands are equal, which this establishes first.
 | `tools/watch_takes.py --snd-dump TAKE:R0-R1,...` | port | the whole guided run from the title in one process, dumping the windows (quits after the last) |
 | `tools/guided_chain.py --snd-dump TAKE:R0-R1,...` | port | the same from a chain's card start (only windows after the chain's first area load compare: a LOAD GAME restarts the music and leaves the history's voices and delayed cues behind) |
 | `tools/capture_sound_original.py TAKE R0 R1` | original | replays the kept take on the fork (hidden, the run lock, Metal as the takes), watch tables at every loop top and at 0x001157B4; every loop-top row checked against take.rec (counter, position). Output `../Extermination/build/sndpics/orig/<take>/r<R0>_<R1>/` (a kept recording) |
+| `tools/capture_sound_original.py ... --iop-ticks --out .../iop_r<R0>_<R1>` | original | also three tables: every IOP driver wake (SNDN2DRV.IRX +0x328), every RPC 0x64 (+0x12C) and every vsync, each row with its EE cycle (section 5.1). The eleven windows' are in decomp `build/sndpics/orig/<take>/iop_r<R0>_<R1>/` (kept) |
+| `tools/iop_tick_align.py IOPDIR [COUNTER...]` | original | from an `--iop-ticks` capture: the half-lines from each exchange to the fitted next driver tick, as `EM_IOP_TICK_ALIGN` entries (one every 150 counters by default); `watch_takes.py` / `guided_chain.py --iop-align` use it for the `--snd-dump` windows |
 | `tools/compare_sound_ticks.py PORT ORIG...` | both | pairs by engine counter and compares, per tick: lanes, cues, music clip, voice ring, D_00281B70 / C30, delayed cues, cursor and serial (by difference), every live voice record (17 fields), the reaper's ENVX test, the tracks' volume requests and each exchange (SFX commands through a voice map; stream commands in order) |
 | `tools/test_sound_second_half_reference.py` | both | the pinned windows (quick: chain g20 to g73 row 2680; `EM_TEST_FULL=1`: every window from the continuous run) |
 
@@ -77,6 +79,28 @@ at every paired tick after the normalisations of section 2.
 | g46 0..600 | AREA17 arrival (load, play) | 600 | cues, ring, requests until 438399 | the looped sound 0x411 starts on track 0 in the port, track 1 in the original (438399: 00119EA0's lowest free track; the original's track 0 still held), so D_00281B70 / C30 slots, the track's requests and the voices' owner differ from there (180 ticks); lane 4 ticks |
 | g73 2440..2680 (chain g20 from card g73) | AREA20 arrival scene | 241 | every key but one | D_00281F30: the card start's (a LOAD GAME leaves the earlier areas' records behind) |
 | g60 1334..1761, g73 2080..2680, g75 1884..2484, g77 1000..1600, g80 100..700 and 21000..21600 | AREA16 arrival, AREA20 arrival, AREA21 arrival and the Gatling phase, the ending scene and the credits | captured | | the port's continuous run had not reached them at hand-back (about 95 minutes from the title); `compare_sound_ticks.py` with section 2's command |
+
+**With one IOP timer and the capture's tick (lane PORT-SFX-PHASE,
+2026-11-19).** The port at sfxphase (the SFX side on the stream backend's
+grid, section 5.1) playing the whole guided run from the title with
+`--iop-align` (`EM_IOP_TICK_ALIGN` from each window's `--iop-ticks`
+capture); g73..g80 from chain g20 (card g73) with `--iop-align`. The
+compare tool's voice map now rotates over the 44 SFX voices (it had mapped
+a voice into the stream voices 0..3).
+
+| Window | Paired | Differences now (first counter) | Before (section 3) |
+|---|---|---|---|
+| g02 100..160 | 61 | none | none |
+| g12 16485..17085 | 601 | f30 (stale, 5.3); vo / envx 2 at the window's first row (before the first alignment entry) | + lane 4 |
+| g40 4000..4600 | 601 | lane 4 (413216); f30; cur 93 (413155) | lane 8, vo 3, envx 3, cur 147 |
+| g42 0..600 | 601 | 0x7E6 still reset a tick late (419783: vo 59, envx 57), the key-on at 420286 still two voices short (ser 47, xsfx 1), tlr 38, cur 234; lane 8; f30 | vo 66, envx 64, tlr 39, xsfx 2 |
+| g46 0..600 | 601 | 0x411 still on track 0 (438399: b70 / c30 180, vo / envx 186, tlr 185, cur 184); f30 | + lane 4 |
+| g60 1334..1761 | 364 | the run faults at counter ~525336 (5.7); from the window's first row vo 115 / envx 113, from 525284 serial, exchanges, b70 / c30 | not reached |
+| g73 2440..2680 (chain g20) | 241 | f30 (the card start's) | the same |
+| g75 1884..2484 (chain g20) | 245 | the load row 605901 (clip 3, xsfx / xstr 1); lane 4 (606000); f30 | not compared |
+| g77 1000..1600 (chain g20) | 601 | lane 12 (615542); f30 | not compared |
+| g80 100..700 (chain g20) | 601 | vo / envx 418, tlr 94, xsfx 267 from the first row: the card start's history (the original holds one more track: owners 10 / 11 against 9 / 10, three more key-ons before the window), not comparable from a card | not compared |
+| g80 21000..21600 | 0 | the credits run no world frame, so only the continuous run can dump them, and it stops in AREA16 (5.7) | not compared |
 
 Before the fixes, every window above also differed in the tracks' requests
 and the volume words of the player's steps (g02: 4865 / 4870 against 4878 /
@@ -125,31 +149,55 @@ comparison and each first visible in every area (the first level included):
 
 ## 5. Open
 
-1. **The IOP driver's tick phase on the SFX side (the reaper's input).**
-   Every remaining voice difference above is one class: a voice's end (a
-   sample's end, or a hard stop) reaches the EE's D_002817C0 one exchange
-   apart, because the IOP driver ticks every 128 half-lines and the port's
-   SFX clock starts at phase 0 at the New Game's registry load, while the
-   original's follows the IOP's boot (SFX_SEQUENCER.md "Where the driver
-   runs"; IOP_STREAM.md). The first level saw it once (a fence door voice,
-   105 against 106 ticks). In the second half it reaches the game code: in
-   AREA18 the repeating 0x7E6 is reset a tick late at every repeat, its
-   tracks are freed a tick late, and at 420285 two voices of a three-voice
-   key-on are refused by 00117428 (the previous instance still holds
-   voices): an audible difference. AREA17's 0x411 lands on another track
-   for the same reason (a track freed a tick apart). Not a rule the code
-   shows: it is the IOP timer's phase, hardware timing (PORT_PROFILES.md).
-   Proposed next step: fit the original's SFX-side tick phase from the
-   captured reply timings (each sample end is a known function of the
-   phase; the windows above hold dozens) and, if one phase reproduces all of
-   them, start the port's SFX clock there (a decision for the user: it is a
-   measured hardware phase, like EM_IOP_TICK_PHASE on the stream side).
-2. **The music lanes' refill read phase** (lane bytes D_00282157 / 58: 4 to 8
-   ticks per window, AREA14, 15, 17): a refill read starts a tick apart. The
-   stream backend's IOP clock (counted from the boot) and the drive replay
-   set when a refill is due; AREA20_PORT.md records the same family (the
-   port's lane-0 refills a block behind at g73). The cues, the music clip,
-   the voice ring and every stream command are equal.
+1. **The IOP driver's tick against the exchange: one timer, and the
+   capture's drift** (lane PORT-SFX-PHASE, 2026-11-19; was "the IOP
+   driver's tick phase on the SFX side"). The remaining voice differences
+   of section 3 are one class: a voice's end (a sample's end, or a hard
+   stop) reaches the EE's D_002817C0 one exchange apart, because the driver
+   tick that sees it falls on the other side of an exchange.
+   - **One timer.** SNDN2DRV.IRX has one driver thread, woken by the hard
+     timer that command 0x1E arms (64 H-lines); each wake runs every command
+     in the ring that the exchanges fill, the SFX driver's and the stream
+     library's alike, then writes every voice's status (IOP_STREAM.md "What
+     was read", +0x328), and one RPC 0x64 per field carries both kinds. The
+     fork's capture agrees: one wake every 127.998 half-lines, no other.
+     The port ran two grids: the stream backend's from its boot and the SFX
+     side's own from the New Game's registry load. Now the SFX side ticks on
+     the stream backend's grid (`em_sfx_field_at`, SFX_SEQUENCER.md "Where
+     the driver runs"), by default in every profile: what the code does.
+   - **The capture's timer.** `capture_sound_original.py --iop-ticks`
+     records the EE cycle of every driver wake (+0x328), every RPC 0x64
+     (+0x12C) and every vsync. Over all eleven windows: the RPC runs 7.7
+     half-lines after the vsync (7.69..9.8); the wakes spread over about 14
+     half-lines (late outliers around a fitted line); and the fork's tick is
+     **127.998 half-lines**, not 128, in every window, so its phase against
+     the field drifts 0.0088 half-lines a field, a whole period every
+     ~14,500 fields (g80's rows 100..700 and 21000..21600: 56 half-lines
+     apart, the drift's 184 mod 128). A state load keeps it (g41's end and
+     g42's start agree within the spread). No one phase reproduces the
+     windows, and the drift is the emulator's, not the code's (64 H-lines
+     are 128 half-lines).
+   - **Comparison aid.** `EM_IOP_TICK_ALIGN` (comparison only, off by
+     default; STARTUP.md "Developer switches") moves the port's one grid, at
+     recorded counters, so that the next tick comes where the capture's
+     fitted tick came after its exchange; `tools/iop_tick_align.py` derives
+     an entry every 150 counters from a window's `--iop-ticks` capture, and
+     `watch_takes.py` / `guided_chain.py --iop-align` pass them. With it the
+     port's tick sits on the capture's fitted line (g02: mean +0.08
+     half-lines, the spread the wake's). The results table (section 3)
+     records each window with it: AREA14 / 15's voice reset a tick apart
+     goes (the window's first rows aside), and so does the lane phase in
+     g12 and g46; AREA18's 0x7E6 and AREA17's 0x411 stay (item 8: not the
+     phase).
+2. **The music lanes' refill read phase** (lane bytes D_00282157 / 58).
+   The same timer: with the capture's tick the lane differences leave g12
+   and g46 (4 ticks each before) and halve in g40 (8 to 4); in g42 they stay
+   at 8, and a sweep of the alignment on chain g18's g42 (every entry moved
+   -48, -24, 0, +24, +48 half-lines; `IOP_TICK_ALIGN_SHIFT`) removes them at
+   +24 and +48 while every SFX difference stays. So the stream side's
+   refill reads follow the tick a little later than the fitted wake (the
+   wakes' late spread, or the transfer completion model); g77 keeps 12.
+   Not settled.
 3. **D_00281F30's inactive records.** The ten delayed-cue records hold the
    gains of the last cue each slot played, long after (cue -1). Slot 1
    (sounds 0x19F..0x1A1) holds 3499 / 2782 where the original holds 3498 /
@@ -159,13 +207,36 @@ comparison and each first visible in every area (the first level included):
    played; the write is not traced (not in a compared window).
 4. **The original's never-keyed voice records hold bank handle 0** (and the
    stream voices' records too), the port's 0xFFFF (`em_sfx_driver_init`).
-   The free records are left out of the comparison; 001195A8's scan reads
-   +0x22 (em_sound_bank), so the difference is not proven harmless. Boot
-   history (the title's sounds the port's driver does not key).
+   001195A8 (the bank free, em_ee_sound_lib.c) refuses a handle while a
+   voice with state 1 holds it at +0x22, so only the stream voices (state 1)
+   could matter, and only for handle 0. Measured (lane PORT-SFX-PHASE, a
+   temporary print in the continuous run from the title to AREA16): every
+   001195A8 call frees handle 3, 4, 5, 6 or 7 (375 calls), never 0. Harmless
+   on that route; not proven for every route.
 5. **The voice numbers, serials and cursor differ from the title on**: the
    original's title keys sounds through the driver; the port's SFX side
    starts at the New Game's registry load. Normalised (section 2).
 6. **00116DB8's swap** of the bank pair's volume with the track's +0x6C is
    not modelled; nothing compared reads them.
-7. **Not compared:** the mixed PCM and everything below the IOP command
+7. **The sound dump faults the run in AREA16.** With `EM_SOUND_DUMP` on,
+   the port stops at g60 row ~1584 (counter ~525336) with "chain page: GIF
+   packet fault at 006673BC", in the continuous run and in chain g16 alike;
+   without the dump chain g16 plays g59..g68 on the row. The serial and the
+   exchanges already differ from 525284. An observer effect of the dump
+   (comparison-only code) or a real difference the dump's run order
+   exposes: not traced. It keeps g60 and every later window of the
+   continuous run (the credits included) from being compared.
+8. **0x7E6 and 0x411 are not the tick phase.** With the capture's tick
+   (and the sweep of item 2: -48..+48 half-lines) AREA18's 0x7E6 is still
+   reset one exchange late and the key-on at 420286 still finds no voice
+   for two of its three; AREA17's 0x411 still lands on track 0. 0x7E6's
+   voices play sample 1866 (10192 frames, non-looping, pitch 0x540) at full
+   ENVX until the end: 159.13 driver ticks of output in the port's model,
+   so its end lands 17 half-lines past the 159th tick and is seen at the
+   160th; the original sees it a tick sooner, so its sample ends at least
+   17 half-lines (26 output samples) earlier. Where a non-looping sample's
+   end takes the voice off (the end block's flag against the decoded
+   length, the decoder's read-ahead) is a model question for black-box
+   measurement on the fork. Next step for these voices.
+9. **Not compared:** the mixed PCM and everything below the IOP command
    boundary (SPU2_OUTPUT.md).

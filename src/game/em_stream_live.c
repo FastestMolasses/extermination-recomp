@@ -515,6 +515,11 @@ static struct {
     EmSoundExchange x[XLOG_MAX];
 } s_xlog;
 
+int em_stream_live_iop_align(uint32_t half_lines)
+{
+    return S.ctx.iop ? em_iop_stream_align_next_tick(S.ctx.iop, half_lines) : -1;
+}
+
 void em_stream_live_exchange_log(int on)
 {
     s_xlog.on = on != 0;
@@ -542,6 +547,10 @@ static void xlog_add(void)
     }
     EmSoundExchange *e = &s_xlog.x[s_xlog.n++];
     e->vblank = S.globals.d810E90;
+    uint64_t h = 0;
+    const uint32_t ph = S.ctx.iop ? em_iop_stream_tick_phase(S.ctx.iop) : 0;
+    if (S.ctx.iop) em_iop_stream_clock(S.ctx.iop, &h, NULL, NULL);
+    e->next_tick = (uint32_t)(((h + ph) / 128u + 1u) * 128u - ph - h);
     unsigned n = 0;
     const uint32_t (*q)[4] = em_sfx_last_exchange(&n);
     e->nsfx = n > EM_SOUND_EXCHANGE_MAX ? EM_SOUND_EXCHANGE_MAX : n;
@@ -560,7 +569,13 @@ int em_stream_live_field(void)
      * 001FB0C0, whose 001152B0 runs the SFX sequencer's tick (em_sfx);
      * then the field's IOP work (the tick's RPC 0x64 exchange). */
     S.globals.d810E90 += 1u;
-    if (em_sfx_field() != 0) return fail("the SFX sequencer's tick (001152D8)");
+    /* One IOP driver timer for the SFX and the stream commands: the SFX
+     * side ticks on the stream backend's clock (its half-lines at this
+     * field's start and its tick phase). */
+    uint64_t half_lines = 0;
+    if (S.ctx.iop) em_iop_stream_clock(S.ctx.iop, &half_lines, NULL, NULL);
+    if (em_sfx_field_at(half_lines, em_iop_stream_tick_phase(S.ctx.iop)) != 0)
+        return fail("the SFX sequencer's tick (001152D8)");
     if (s_xlog.on) xlog_add();   /* EM_SOUND_DUMP (comparison only) */
     if (em_iop_stream_field(S.ctx.iop) != 0) return fail("the IOP field (RPC 0x64, driver ticks)");
     sound_sample();

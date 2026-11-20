@@ -73,6 +73,7 @@ COMPATIBLE = {
     'EM_START_AT_FIELD',  # comparison only: the field bit's relation (a chain's half line)
     'EM_GS_DUMP_AT', 'EM_GS_DUMP_DIR', 'EM_GS_DUMP_MEM',  # comparison only: the exact GS field / memory of chosen frames
     'EM_SOUND_DUMP', 'EM_SOUND_DUMP_AT',  # comparison only: the EE sound state and exchanges of chosen ticks
+    'EM_IOP_TICK_ALIGN',  # comparison only: the IOP driver's tick where a capture measured it
     'EM_NEW_GAME',  # its own; EM_NEW_GAME=1 refused apart
     'EM_HEADLESS', 'EM_HEADLESS_RASTER', 'EM_UNCAPPED', 'EM_MUTE', 'EM_INPUT_TEST',  # the host; the pad's changes printed
     'EM_NO_RENDER', 'EM_STATE_TRACE',                                     # no draws (state only); the state digests
