@@ -485,6 +485,10 @@ def main(argv):
                         'prefix and its rows; EM_SOUND_DUMP keyed by the recording\'s counter, comparison only; it '
                         'needs the drive replay\'s EM_START_AT_COUNTER0) into build/sndpics/<name>/port/sound.jsonl; '
                         'the run quits after the last one (tools/compare_sound_ticks.py, docs/SOUND_SECOND_HALF.md)')
+    parser.add_argument('--iop-align', action='store_true',
+                        help='with --snd-dump: move the IOP driver\'s tick grid, in each window, to where the '
+                        'original\'s capture measured it (EM_IOP_TICK_ALIGN from tools/iop_tick_align.py and the '
+                        'windows\' capture_sound_original.py --iop-ticks captures; comparison only)')
     args = parser.parse_args(argv)
     if args.list or not args.chain:
         for n, (card, route, takes) in CHAINS.items():
@@ -558,6 +562,19 @@ def main(argv):
             dump_dir.mkdir(parents=True, exist_ok=True)
             extra += [f'EM_SOUND_DUMP={dump_dir / "sound.jsonl"}',
                       f'EM_SOUND_DUMP_AT={",".join(f"{a}-{b}" for a, b in sorted(ranges))}']
+            if args.iop_align:
+                import iop_tick_align
+                windows = []
+                for item in args.snd_dump.split(','):
+                    prefix, _, span = item.partition(':')
+                    lo, _, hi = span.partition('-')
+                    windows.append(([t for t in takes if t.startswith(prefix)][0], int(lo), int(hi or lo)))
+                value, missing = iop_tick_align.for_windows(windows)
+                if missing:
+                    print(f'iop align: no --iop-ticks capture for {", ".join(missing)}', flush=True)
+                if value:
+                    extra.append(f'EM_IOP_TICK_ALIGN={value}')
+                    print(f'iop align: EM_IOP_TICK_ALIGN={value}', flush=True)
         if args.drive_replay:
             import drive_replay
             info = drive_replay.guided_table(takes, out / 'drive_replay.txt', loader=args.loader_replay,

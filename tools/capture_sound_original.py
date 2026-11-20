@@ -55,6 +55,15 @@ SND_SPANS = (('counter', 0x70003B64, 4), ('pos', 0x810350, 12), ('vblank', 0x810
              ('lib', 0x27F740, 0x50), ('iopbuf', 0x275B18, 0x40))
 XCHG_SPANS = (('counter', 0x70003B64, 4), ('vblank', 0x810E90, 4), ('lib', 0x27F740, 0x50),
               ('queue', 0x27F7C0, 0x2000))
+# --iop-ticks: the IOP driver SNDN2DRV.IRX (loaded at 0x56330 in every capture,
+# docs/IOP_STREAM.md "What was read"): its driver thread's per-wake routine
+# (+0x328: the ring's commands, then the status snapshot) and its RPC function
+# 0x64 (+0x12C: the exchange's commands join the ring; the reply is the status
+# block). Each row's EE cycle places the driver's ticks against the exchanges.
+IRX_BASE = 0x56330
+IOP_TICK_PC = IRX_BASE + 0x328
+IOP_RPC_PC = IRX_BASE + 0x12C
+IOP_SPANS = (('ring_write', IRX_BASE + 0x34A0, 4),)
 
 if __name__ == '__main__' and os.environ.get('SNDPICS_VENV') != '1':
     venv = DECOMP / '.venv/bin/python'
@@ -67,8 +76,8 @@ sys.path.insert(0, str(ROOT / 'tools'))
 from capture_gs_original import take_rows, trace_rows, movies_before, session_records  # noqa: E402
 
 
-def spans(table):
-    return [dict(name=n, src='ee', addr=f'0x{a:08X}', len=ln) for n, a, ln in table]
+def spans(table, src='ee'):
+    return [dict(name=n, src=src, addr=f'0x{a:08X}', len=ln) for n, a, ln in table]
 
 
 def main(argv):
@@ -78,6 +87,8 @@ def main(argv):
     ap.add_argument('r1', type=int)
     ap.add_argument('--out', type=Path, default=None)
     ap.add_argument('--renderer', type=int, default=17, help='17 = Metal, the takes\' own')
+    ap.add_argument('--iop-ticks', action='store_true',
+                    help='also the IOP driver\'s ticks and RPC 0x64 calls and each vsync (iop_tick.tbl, iop_rpc.tbl, vsync.tbl)')
     a = ap.parse_args(argv)
     import pcsx2_session as session
     import record_guided_run as rgr
@@ -119,9 +130,18 @@ def main(argv):
         c.call('table_add', name='snd', path='snd.tbl', trigger='tick', spans=spans(SND_SPANS))
         c.call('table_add', name='xchg', path='xchg.tbl', trigger={'pc': EXCHANGE_PC, 'cpu': 'ee'},
                spans=spans(XCHG_SPANS))
+        names = ['snd', 'xchg']
+        if a.iop_ticks:
+            for name, pc in (('iop_tick', IOP_TICK_PC), ('iop_rpc', IOP_RPC_PC)):
+                c.call('table_add', name=name, path=f'{name}.tbl', trigger={'pc': pc, 'cpu': 'iop'},
+                       spans=spans(IOP_SPANS, 'iop'))
+                names.append(name)
+            c.call('table_add', name='vsync', path='vsync.tbl', trigger='vsync',
+                   spans=spans((('vblank', 0x810E90, 4),)))
+            names.append('vsync')
         last = step(a.r1)
         c.call('run', timeout=3600, until={'ticks': last - ticks}, timeout_s=3600)
-        for name in ('snd', 'xchg'):
+        for name in names:
             c.call('table_remove', name=name)
             for suffix in ('.tbl', '.tbl.json'):
                 os.replace(s._inst.root / f'{name}{suffix}', out / f'{name}{suffix}')

@@ -161,11 +161,16 @@ const EmSoundSample *em_stream_live_sound_sample(void);
 enum { EM_SOUND_EXCHANGE_MAX = 255 };
 typedef struct {
     uint32_t vblank;                         /* D_00810E90 after the field's += 1 */
+    uint32_t next_tick;                      /* half-lines from the exchange to the IOP
+                                                driver's next tick (1..128) */
     unsigned nsfx, nstr;
     uint32_t sfx[EM_SOUND_EXCHANGE_MAX][4];
     uint32_t str[EM_SOUND_EXCHANGE_MAX][4];
 } EmSoundExchange;
 void em_stream_live_exchange_log(int on);
+/* Comparison only (EM_IOP_TICK_ALIGN): em_iop_stream_align_next_tick on the
+ * live backend; -1 without one. */
+int em_stream_live_iop_align(uint32_t half_lines);
 const EmSoundExchange *em_stream_live_exchanges(unsigned *count, unsigned *dropped);
 void em_stream_live_exchanges_clear(void);
 /* The comparison-only drive replay (EM_PS2_DRIVE_REPLAY, em_stream_live.c):

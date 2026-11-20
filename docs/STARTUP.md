@@ -488,7 +488,7 @@ recording-derived and stay in the ignored `build/`.
   host's `EM_HEADLESS`, `EM_HEADLESS_RASTER`, `EM_UNCAPPED`, `EM_MUTE`, `EM_NO_RENDER` (headless runs
   that read no picture skip the draws, em_norender.h), `EM_STATE_TRACE` (a per-frame state digest file),
   `EM_INPUT_TEST` (prints the pad's changes), the disc-drive timing `EM_PS2_DRIVE_REPLAY` (with `EM_START_AT_COUNTER0`) and
-  `EM_IOP_TICK_PHASE`, the GS head's `EM_GS_BANDS`, `EM_GS_EARLY_OPS`,
+  `EM_IOP_TICK_PHASE`, `EM_IOP_TICK_ALIGN`, the GS head's `EM_GS_BANDS`, `EM_GS_EARLY_OPS`,
   `EM_GS_EARLY_PARSE`, `EM_GS_LIST`, `EM_GS_SPEC`, `EM_GS_SPEC_CHECK`,
   `EM_GS_TEXCACHE`, `EM_GS_THREADS` (the same bytes); the presentation's
   `EM_HUD_FORCE`, `EM_HUD_HOVER`, `EM_SLOT1_FIELD` (world frames' slot 1 left undrawn, an A/B
@@ -657,6 +657,10 @@ recording-derived and stay in the ignored `build/`.
   engine counter lies in a range, the EE sound state and the fields' RPC
   0x64 exchanges as one JSON line, and quits after the last range
   (SOUND_SECOND_HALF.md).
+  `EM_IOP_TICK_ALIGN=<counter>:<half-lines>[,...]` (comparison only;
+  --iop-align next to --snd-dump) moves the IOP driver's tick grid at those
+  recorded counters to where the window's fork capture measured it
+  ("Developer switches").
   `EM_START_AT_RANDS=<file>` (lines `f state`) puts
   the rand() word in place at those script frames.
   `EM_START_AT_CLOCK=<f>:<hex>` (comparison only) sets 0x70003B68 to the
@@ -1080,6 +1084,33 @@ playback's movie skips take 204 fields fewer than the smoke fixture's,
 which moves it by 13 x 204 mod 128 = 92 half-lines). A value fitted to one
 fork run is that run's: on a PS2 the phase follows the time since the
 driver armed its timer.
+
+Since 2026-11-19 (lane PORT-SFX-PHASE) the grid is the SFX side's too: one
+IOP driver timer runs the SFX and the stream commands (SFX_SEQUENCER.md
+"Where the driver runs"), so the switch moves both.
+
+### EM_IOP_TICK_ALIGN=<counter>:<half-lines>[,...]: the IOP driver's tick where a capture measured it (comparison only)
+
+Added 2026-11-19 (lane PORT-SFX-PHASE; the kind of comparison aid the user's
+decision of 2026-10-17, "Align it for the video", made for
+`EM_IOP_TICK_PHASE`; LAUNCHER_OPTIONS.md "Not launcher options"). The
+original's captures of the guided takes run on the PCSX2 fork, whose IOP
+driver ticks every 127.998 half-lines (not 128) with wake-ups spread over
+about 14 half-lines: its tick phase against the field drifts through a
+whole period every ~14,500 fields (SOUND_SECOND_HALF.md 5.1), so no boot
+phase (`EM_IOP_TICK_PHASE`) holds for a whole run. Each entry, at the
+replay tick before the recording's main-loop counter `<counter>` (the
+input playback EM_INPUT_PLAY or a pad script with EM_START_AT_COUNTER0),
+moves the driver tick grid (the stream backend and the SFX side: one
+timer) so that the next field's first tick comes `<half-lines>` (1..128)
+after its exchange (`em_iop_stream_align_next_tick`). The values come from
+the window's `tools/capture_sound_original.py --iop-ticks` capture through
+`tools/iop_tick_align.py` (the fitted tick against the RPC 0x64 call, an
+entry every 150 counters); `tools/watch_takes.py` and
+`tools/guided_chain.py` pass them with `--iop-align` next to `--snd-dump`.
+Each applied entry writes a `startup: EM_IOP_TICK_ALIGN:` line. Unset (the
+default) nothing is read or changed; the Original profile and the launcher
+never set it.
 
 ### EM_PS2_DRIVE_REPLAY=<file>: the recorded seek time per read (comparison only)
 

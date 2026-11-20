@@ -1542,7 +1542,8 @@ static void log_sound(FILE *f)
  * pair, "n": the port's own counter, "snd": log_sound's object (the EE sound
  * state at this tick's main-loop top), "x": the fields' RPC 0x64 exchanges
  * since the previous replay tick as [D_00810E90, [SFX commands], [stream
- * commands], dropped], each command [command, voice, a, b]}. The run quits
+ * commands], dropped, the half-lines from the exchange to the IOP driver's
+ * next tick], each command [command, voice, a, b]}. The run quits
  * after the last range. Unset: nothing is read, logged or changed. */
 static struct {
     int parsed, count, written;
@@ -1589,8 +1590,49 @@ static void sound_dump_cmds(FILE *f, const uint32_t (*q)[4], unsigned n)
     fputc(']', f);
 }
 
+/* EM_IOP_TICK_ALIGN=<counter>:<half-lines>[,...] (comparison only,
+ * docs/SOUND_SECOND_HALF.md "The IOP driver's tick against the exchange"):
+ * at the replay tick before the recording's counter <counter>, the IOP
+ * driver's tick grid (one timer: the stream backend and the SFX side) moves
+ * so that the next field's first tick comes <half-lines> (1..128) after its
+ * exchange, where the original's capture of that window measured it
+ * (capture_sound_original.py --iop-ticks). The PCSX2 fork's driver tick runs
+ * 127.998 half-lines and its wake-up spreads over about 14, so its phase
+ * against the field drifts through a whole period every ~14,500 fields: one
+ * value per compared window. Unset: nothing changes. */
+static struct {
+    int parsed, count;
+    uint32_t counter[32], d[32];
+} iop_align;
+
+static void iop_align_tick(uint32_t counter, int has_counter)
+{
+    if (!iop_align.parsed) {
+        iop_align.parsed = 1;
+        const char *v = getenv("EM_IOP_TICK_ALIGN");
+        while (v && *v && iop_align.count < 32) {
+            char *end = NULL;
+            const unsigned long c = strtoul(v, &end, 10);
+            if (end == v || *end != ':') break;
+            const unsigned long d = strtoul(end + 1, &end, 10);
+            iop_align.counter[iop_align.count] = (uint32_t)c;
+            iop_align.d[iop_align.count++] = (uint32_t)d;
+            v = *end == ',' ? end + 1 : end;
+        }
+        if (iop_align.count)
+            printf("startup: EM_IOP_TICK_ALIGN: %d alignment(s) of the IOP driver's tick (comparison only)\n",
+                   iop_align.count);
+    }
+    if (!has_counter) return;
+    for (int i = 0; i < iop_align.count; ++i)
+        if (iop_align.counter[i] == counter + 1u && em_stream_live_iop_align(iop_align.d[i]) == 0)
+            printf("startup: EM_IOP_TICK_ALIGN: the next tick %u half-lines after counter %u's exchange\n",
+                   iop_align.d[i], iop_align.counter[i]);
+}
+
 void em_scene_bindings_sound_dump(uint32_t counter, int has_counter, unsigned seg, unsigned off)
 {
+    iop_align_tick(counter, has_counter);
     if (!snd_dump.parsed) sound_dump_parse();
     if (!snd_dump.f) return;
     int in = 0;
@@ -1609,7 +1651,7 @@ void em_scene_bindings_sound_dump(uint32_t counter, int has_counter, unsigned se
             sound_dump_cmds(f, (const uint32_t (*)[4])x[i].sfx, x[i].nsfx);
             fputs(", ", f);
             sound_dump_cmds(f, (const uint32_t (*)[4])x[i].str, x[i].nstr);
-            fputs(", 0]", f);
+            fprintf(f, ", 0, %u]", x[i].next_tick);
         }
         if (dropped) fprintf(f, "%s[0, [], [], %u]", n ? ", " : "", dropped);
         fputs("]}\n", f);

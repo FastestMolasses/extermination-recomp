@@ -37,7 +37,7 @@ comparison therefore maps the port's voices to the original's: learned from
 each exchange's per-voice commands (1, 3, 5, 6 in order), and for a voice no
 command names yet (keyed before the window) the original's live voice with the
 same relative key-on serial (+0x0A) and note, else the rotation the cursors
-give (00117428 starts at the cursor mod 48); the stream voices 0..3 map to
+give over the 44 SFX voices (00117428 never hands out 0..3); the stream voices 0..3 map to
 themselves; the cursor and the global
 serial are compared by their difference from the first row's; the KON / KOFF / EON / NON masks are
 compared through that map (EON / NON on the mapped voices' bits only: the
@@ -153,11 +153,12 @@ class VoiceMap:
     """The port's voice numbers -> the original's (module docstring)."""
 
     def __init__(self, port_cur, orig_cur):
-        self.rot = (orig_cur - port_cur) % 48
+        # 00117428 never hands out the stream voices 0..3: the rotation turns the 44 SFX voices
+        self.rot = (orig_cur - port_cur) % 44
         self.learned, self.conflicts, self.samples = {}, 0, {}
 
     def rotation(self, v):
-        return v if v < 4 else (v + self.rot) % 48
+        return v if v < 4 else (v - 4 + self.rot) % 44 + 4
 
     def __call__(self, v):
         return self.learned.get(v, self.rotation(v))
@@ -279,7 +280,7 @@ def compare(port_path, orig_dir, report_only=False, quiet=False, max_lines=40):
             ok_n = len(px) == len(mine) and not dropped
             sfx_ok = str_ok = ok_n
             if ok_n:
-                for (_, psfx, pstr, _), oq in zip(px, mine):
+                for (_, psfx, pstr, _, *_more), oq in zip(px, mine):
                     split = split_exchange(oq, pstr)
                     str_ok = str_ok and split is not None and not split[1]
                     sfx_ok = sfx_ok and split is not None and same_exchange(vm, psfx, split[0])

@@ -169,11 +169,11 @@ int main(int argc, char **argv)
     /* Refusals are counted and allocate nothing. */
     assert(em_sfx_set_area(-1, -1));
     const int plays = em_sfx_plays();
-    em_sfx_play(0x401);             /* AREA11-scoped */
+    em_sfx_play(0x401);             /* area-dependent, no scope bound */
     assert(em_sfx_unscoped_cues() == 1 && em_sfx_plays() == plays);
-    assert(em_sfx_set_area(3, 0));
+    assert(em_sfx_set_area(5, 0));
     assert(em_sfx_cue_state(0x401) == 0);
-    em_sfx_play(0x401);             /* not exported for 3.0: no borrowing */
+    em_sfx_play(0x401);             /* not exported for 5.0: no borrowing */
     assert(em_sfx_unscoped_cues() == 2 && em_sfx_plays() == plays);
     assert(!device_calls);
 

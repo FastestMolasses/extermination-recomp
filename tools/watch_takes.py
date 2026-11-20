@@ -546,6 +546,10 @@ def main():
                         'ranges (EM_SOUND_DUMP, keyed by the recording\'s engine counter; comparison only) into '
                         'build/sndpics/watch_<take>/port/sound.jsonl; the port quits after the last one (with '
                         '--check; tools/compare_sound_ticks.py, docs/SOUND_SECOND_HALF.md)')
+    parser.add_argument('--iop-align', action='store_true',
+                        help='with --snd-dump: move the IOP driver\'s tick grid, in each window, to where the '
+                        'original\'s capture measured it (EM_IOP_TICK_ALIGN from tools/iop_tick_align.py and the '
+                        'windows\' capture_sound_original.py --iop-ticks captures; comparison only)')
     args = parser.parse_args()
     if args.root:
         use_root(args.root)
@@ -603,6 +607,15 @@ def main():
         (dump_dir / 'points.json').write_text(json.dumps(points, indent=1) + '\n')
         dump_env.update(EM_SOUND_DUMP=str(dump_dir / 'sound.jsonl'),
                         EM_SOUND_DUMP_AT=','.join(f'{lo}-{hi}' for lo, hi in sorted(ranges)))
+        if args.iop_align:
+            import iop_tick_align
+            value, missing = iop_tick_align.for_windows(
+                [(k.partition(':')[0], *map(int, k.partition(':')[2].split('-'))) for k in points])
+            if missing:
+                print(f'iop align: no --iop-ticks capture for {", ".join(missing)}', flush=True)
+            if value:
+                dump_env['EM_IOP_TICK_ALIGN'] = value
+                print(f'iop align: EM_IOP_TICK_ALIGN={value}', flush=True)
     print(f'{" + ".join(names)}: {ticks} ticks, {ticks / 59.94 / 60:.1f} minutes', flush=True)
     until = None
     if fast:

@@ -1576,7 +1576,10 @@ compared.
   tick: 00118EC0's reaper, 00115850's key-on through 00117428, 001176E0,
   00118078, 00116598) on the game thread at every field, with the IOP
   exchange modelled: the reaper reads the IOP's previous reply, the
-  commands reach the SPU2 model at the IOP driver's own ticks. The panel's
+  commands reach the SPU2 model at the IOP driver's own ticks: one timer
+  for the SFX and the stream commands, as SNDN2DRV.IRX has (since
+  2026-11-19 the SFX side ticks on the stream backend's grid, counted from
+  its boot, instead of a grid of its own from New Game). The panel's
   0x3EF plays through it like every id; the voices carry the bank handles
   the game registered (chain step AUDIO, `SFX_SEQUENCER.md`).
 - Evidence: the level smoke compares the port's per-frame sound state

@@ -33,13 +33,20 @@ the reaper reading the previous exchange's reply, then the exchange (the
 tick's commands, and those the game's stops queued since the last tick,
 join the IOP side's ring; the reply is the last status), then the field's
 800 or 801 samples at 48 kHz: the commands reach the SPU2 model at the IOP
-driver's ticks (every 128 half-lines of the SFX side's own clock, phase 0
-at the first field after the registry's load, the New Game's area load:
-the IOP timer's phase against the frame is hardware timing, which in the
-original follows how long the title ran; a clock of the port's own keeps
-every run's sound state the same from New Game on, as the stream
-backend's clock, counted from the boot, would not),
-each of which snapshots every voice's ENVX into the status. The samples go
+driver's ticks, each of which snapshots every voice's ENVX into the status.
+**The ticks are the IOP driver's one timer** (lane PORT-SFX-PHASE,
+2026-11-19): SNDN2DRV.IRX has a single driver thread, woken by the hard
+timer that its command 0x1E arms (64 H-lines), and each wake runs every
+command in the ring the exchanges fill, the SFX driver's and the stream
+library's alike, then writes every voice's status (IOP_STREAM.md "What was
+read": +0x328); one RPC 0x64 per field carries both kinds of command. The
+fork's capture shows the same: one wake every 127.998 half-lines and no
+other (`capture_sound_original.py --iop-ticks`, SOUND_SECOND_HALF.md 5.1).
+So the SFX side runs on the IOP stream backend's clock, counted from its
+boot, with its tick phase (em_sfx_field_at from em_stream_live_field), by
+default in every profile. Before, the SFX side kept a clock of its own,
+phase 0 at the New Game's registry load: a port inconsistency, two grids
+for one timer. The samples go
 into a lock-free ring the audio thread drains (em_sfx_mix), as the stream
 backend's do. The earlier port ran the ticks in the audio device's
 callback on wall-clock time, so the track a sound got, the voice records
